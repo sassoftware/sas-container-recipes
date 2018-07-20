@@ -1,0 +1,21 @@
+#
+# Copyright 2018 SAS Institute Inc.
+#
+# This work is licensed under a Creative Commons Attribution 4.0 International License.
+# You may obtain a copy of the License at https://creativecommons.org/licenses/by/4.0/ 
+#
+
+version: '2'
+services:
+  sasawb:
+    build: .
+    image: sasawb:18w30
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+    ports: 
+     - "80:80"
+     - "5570:5570"
+    volumes: 
+     - /run
+     - /sys/fs/cgroup:/sys/fs/cgroup:ro
