@@ -1,7 +1,7 @@
 # Background
 A collections of recipes for building containers with SAS and other tools.
 
-* [all-in-one] (all-in-one/README.md) is a set of tools in one single container, for convenience and simplicity for the person using said container.
+* [all-in-one](all-in-one/README.md) is a set of tools in one single container, for convenience and simplicity for the person using said container.
 
 We are planning other examples to show how one might spread the different tools into different containers, or to show how to add vendor libraries to connect to databases like Hadoop, Oracle or Teradata.  Please raise an issue if you have ideas for a different example, or consider contributing your own - PR's are gladly considered!
 
