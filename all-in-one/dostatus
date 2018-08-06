@@ -9,4 +9,4 @@
 
 set -x
 
-docker exec -ti allinone_sasawb_1 /etc/init.d/sas-viya-all-services status
+docker exec -ti all-in-one_sasawb_1 /etc/init.d/sas-viya-all-services status

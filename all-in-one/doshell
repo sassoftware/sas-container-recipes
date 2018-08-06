@@ -10,4 +10,4 @@
 
 set -x
 
-docker exec -ti allinone_sasawb_1 bash
+docker exec -ti all-in-one_sasawb_1 bash
