@@ -1,10 +1,10 @@
 # How to Add vendor dependencies
 
-Different SAS/Access Software modules often require you to load or configure vendor specific libraries before the SAS/Access Software is operational.  This "all-in-one" example has a [files/install_vendor.sh](files/install_vendor.sh) that helps automate this, but you have to put the vendor artefacts in a directory under "./vendor" - we cannot make these available from this repo - you have to get them some other way, usually directly from the vendors download page.
+Different SAS/Access Software modules often require you to load or configure vendor specific libraries before the SAS/Access Software is operational.  This "all-in-one" example has a [files/install_vendor](files/install_vendor) shell script that helps automate this, but you have to put the vendor artefacts in a directory under "./vendor" - we cannot make these available from this repo - you have to get them some other way, usually directly from the vendors download page.
 
 # Hadoop
 
-The SAS Documentation describes how to run the hadooptracer script to produce a ./conf and ./jar folder of artefacts that match your hadoop cluster. Copy these artefacts into vendor/hadoop and the ```install_vendor.sh``` will configure SAS/Access to Hadoop for you.
+The SAS Documentation describes how to run the hadooptracer script to produce a ./conf and ./jar folder of artefacts that match your hadoop cluster. Copy these artefacts into vendor/hadoop and the ```install_vendor``` will configure SAS/Access to Hadoop for you.
 
 ```
 mkdir -p $HOME/sas-container-recipes/all-in-one/vendor/hadoop
