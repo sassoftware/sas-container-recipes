@@ -10,6 +10,18 @@
 # name: start.sh
 # thanks jozwal for the ideas
 
+
+#
+# if given a command, run that
+#
+if [[ "$#" -gt 1 ]]
+then
+  echo Arguments to run are: "$@"
+  exec "$@"
+  exit
+fi
+
+
 #
 # Start Viya
 #	Remove unnecessary services and start remaining (in order)

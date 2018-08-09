@@ -60,6 +60,14 @@ cd $HOME/sas-container-recipes/all-in-one
 docker-compose down
 ```
 
+# How to run myjob.sas (a good old batch sas execution)
+
+You can override the commands run when the docker container starts - see the ```dosas``` script.
+
+```
+cd $HOME/mysas
+$HOME/sas-container-recipes/all-in-one/dosas -nodms -myjob.sas -ls 120
+```
 
 # Curious?
 You can use the `./doshell` script to ssh into the container while it is running and take a look around.

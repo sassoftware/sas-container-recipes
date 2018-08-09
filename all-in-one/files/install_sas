@@ -143,7 +143,7 @@ sed -i "/ notify/,+9d" roles/httpd-x64_redhat_linux_6-yum/tasks/configure-and-st
 sed -i 's/- include: validate.yml/#- include: validate.yml/' internal/deploy-preinstall.yml
 sed -i 's/MAXIMUM_RECOMMENDED_ANSIBLE_VERSION: 2.[0-9]/MAXIMUM_RECOMMENDED_ANSIBLE_VERSION: 2.7/' vars.yml
 
-ansible-playbook -vv -i dockerinv site.yml 2>&1 | tee dockerinv.log
+ansible-playbook -i dockerinv site.yml 2>&1 | tee dockerinv.log
 
 # Uninstall ~10 GB worth of QKB and Sample Maps Data
 rpm -e sas-mapsgfka1

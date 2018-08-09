@@ -61,17 +61,6 @@ export PATH=$PATH:$ORACLE_HOME/bin
 export LD_LIBRARY_PATH=$ORACLE_HOME/lib:\$LD_LIBRARY_PATH
 EOF
 
-    cat <<EOF >>/opt/sas/viya/config/etc/cas/default/cas_usermods.settings
-export ORACLE_HOME=$ORACLE_HOME
-export PATH=$ORACLE_HOME/bin:$PATH
-export LD_LIBRARY_PATH=$ORACLE_HOME/lib:\$LD_LIBRARY_PATH
-EOF
-
-    cat <<EOF >>/etc/profile.d/oracle.sh
-export ORACLE_HOME=$ORACLE_HOME
-export PATH=$ORACLE_HOME/bin:$PATH
-export LD_LIBRARY_PATH=$ORACLE_HOME/lib:\$LD_LIBRARY_PATH
-EOF
 
     # SAS has an unhealthy desire for version11.1 of this library.  make a symlink if you need to
     if [[ ! -f $ORACLE_HOME/lib/libclntsh.so.11.1 ]]
@@ -83,9 +72,23 @@ EOF
     then
         cp oracle/tnsnames.ora /etc
         echo "export TNS_ADMIN=/etc" >> /opt/sas/viya/config/etc/workspaceserver/default/workspaceserver_usermods.sh
-        echo "export TNS_ADMIN=/etc" >> /opt/sas/viya/config/etc/cas/default/cas_usermods.settings
         echo "export TNS_ADMIN=/etc" >> /etc/profile.d/oracle.sh
     fi
+
+
+    #
+    # setup useful environment variables
+    #
+    cat <<EOF >>/etc/profile.d/oracle.sh
+export ORACLE_HOME=$ORACLE_HOME
+export PATH=$ORACLE_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:\$LD_LIBRARY_PATH
+EOF
+
+    cat /etc/profile.d/oracle.sh >>/opt/sas/viya/config/etc/cas/default/cas_usermods.settings
+    cat /etc/profile.d/oracle.sh >>/opt/sas/spre/home/SASFoundation/bin/sasenv_local
+
+
 fi
 
 
