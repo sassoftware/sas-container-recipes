@@ -24,6 +24,10 @@ mkdir -p download/$ORDER
 docker-compose build
 ```
 
+# How to add Vendor dependencies
+
+If the SAS/Access Software in your order requires some collateral vendor dependencies, please read [VENDOR.md].  The [files/install_vendor.sh] script tries to help configure the components for you, provided you have placed the necessary artefats inside vendor/xxx subfolders.
+
 # How to run
 
 ```
