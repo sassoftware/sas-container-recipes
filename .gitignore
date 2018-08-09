@@ -1,1 +1,5 @@
-download/
+./download/
+!./download/README.md
+./all-in-one/vendor/
+!./all-in-one/vendor/README.md
+./all-in-one/files/samples/kent*
