@@ -94,6 +94,8 @@ RUN wget -q -O /tmp/anaconda.shar ${anaREPO}/Anaconda${anaVERSION}-Linux-x86_64.
    /opt/anaconda3/bin/conda update conda; \
    /opt/anaconda3/bin/pip install jupyterlab; \
    /opt/anaconda3/bin/pip install sas_kernel; \
+   /opt/anaconda3/bin/pip install msgpack; \
+   /opt/anaconda3/bin/pip install sas-dlpy; \
    /opt/anaconda3/bin/pip install ${swatRELEASE}/download/v${swatVERSION}/python-swat-${swatVERSION}-linux64.tar.gz; \
    rm /tmp/anaconda.shar
 
