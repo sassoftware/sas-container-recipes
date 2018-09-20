@@ -1,0 +1,951 @@
+#! /bin/bash -e
+#
+# Copyright 2018 SAS Institute Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+#
+# Define some common variables
+#
+
+[[ -z ${SASROOT+x} ]]           && export SASROOT=/opt/sas
+[[ -z ${SASDEPLOYID+x} ]]       && export SASDEPLOYID=viya
+[[ -z ${SASINSTANCE+x} ]]       && export SASINSTANCE=default
+[[ -z ${SASHOME+x} ]]           && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
+[[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
+[[ -z ${SASCASINSTANCE+x} ]]    && export SASCASINSTANCE="${SASINSTANCE}"
+[[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
+[[ -z ${SAS_LOGS_TO_DISK+x} ]]  && export SAS_LOGS_TO_DISK=false
+
+_deployid=${SASDEPLOYID}
+export CASCONFIG="${SASROOT}/${_deployid}/config"
+
+# Enable debugging if SAS_DEBUG is set
+[[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
+if [ ${SAS_DEBUG} -gt 0 ]; then
+    set -x
+fi
+
+###############################################################################
+# Shutdown
+###############################################################################
+function gracefulshutdown {
+    echo
+    echo "Shutting down!"
+    echo
+
+    echo "    Stop httpd"
+    /usr/sbin/httpd -k stop
+
+    echo "    Stop SAS services"
+    #/etc/init.d/sas-viya-all-services stop
+
+    pidfiles="/var/run/sas/sas-viya-sasstudio-default.pid /var/run/sas/sas-viya-spawner-default.pid /var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
+    for _pidf in ${pidfiles}; do
+        if [ -f ${_pidf} ]; then
+            SERVICE_PID=$(cat ${_pidf})
+            set +e
+            ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
+            process_check_rc=$?
+            set -e
+            if (( ${process_check_rc} == 0 )); then
+                echo "      Stopping process from ${_pidf}"
+                kill -TERM $(cat ${_pidf})
+            fi
+        fi
+    done
+
+    n_stop_count=$(find /tmp -type f -name "*stop.sh" | wc -c)
+    if (( ${n_stop_count} > 0 )); then
+        for str_stop_script in $(ls -1 /tmp/*stop.sh); do
+            echo "Running stop script \"${str_stop_script}\""
+            ${str_stop_script}
+        done
+    fi
+
+    exit 0
+}
+
+trap gracefulshutdown SIGTERM
+trap gracefulshutdown SIGINT
+
+function start_cas() {
+    echo "Starting Cloud Analytic Services..."
+    str_cas_pid="/var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
+    touch ${str_cas_pid}
+    chown cas ${str_cas_pid}
+    chmod 0644 ${str_cas_pid}
+    if ! ${SAS_LOGS_TO_DISK}; then
+        runuser -l cas -c "${SASHOME}/bin/sas-cas.sh \
+            -p ${str_cas_pid} \
+            -r ${SASROOT} \
+            -d ${SASDEPLOYID} \
+            -i ${SASCASINSTANCE}"
+    else
+        runuser -l cas -c "${SASHOME}/bin/sas-cas.sh \
+            -p ${str_cas_pid} \
+            -r ${SASROOT} \
+            -d ${SASDEPLOYID} \
+            -i ${SASCASINSTANCE} \
+            -l ${SASCONFIG}/var/log/cas/${SASCASINSTANCE}"
+    fi
+}
+
+###############################################################################
+# Configure
+###############################################################################
+
+#
+# Run any pre deploy scripts
+#
+
+if [ ! -z "${PRE_DEPLOY_SCRIPT}" ]; then
+    echo "Creating pre deploy script"
+    echo "${PRE_DEPLOY_SCRIPT}" > /tmp/pre_deploy.sh
+    chmod --verbose a+x /tmp/pre_deploy.sh
+fi
+
+n_pre_deploy_count=$(find /tmp -type f -name "*pre_deploy.sh" | wc -c)
+if (( ${n_pre_deploy_count} > 0 )); then
+    for str_pre_script in $(ls -1 /tmp/*pre_deploy.sh); do
+        echo "Running pre deploy script \"${str_pre_script}\""
+        ${str_pre_script}
+    done
+fi
+
+###############################################################################
+# Configuration by convention
+###############################################################################
+
+#
+# Take a collection of configurations and cat them into the usermod files.
+#
+
+# Process anything that might have come from a build first
+if [ -d ${SASCONFIG}/etc/cas/${SASCASINSTANCE} ]; then
+    n_config_count=$(find /tmp -type f -name "*_casconfig.lua" | wc -c)
+    if (( ${n_config_count} > 0 )); then
+        for str_casconfig in $(ls -1 /tmp/*_casconfig.lua); do
+            echo "Dumping contents of \"${str_casconfig}\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua"
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua
+            cat ${str_casconfig} >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua
+        done
+    fi
+
+    n_settings_count=$(find /tmp -type f -name "*_cas.settings" | wc -c)
+    if (( ${n_settings_count} > 0 )); then
+        for str_cassettings in $(ls -1 /tmp/*_cas.settings); do
+            echo "Dumping contents of \"${str_cassettings}\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings"
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings
+            cat ${str_cassettings} >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings
+        done
+    fi
+
+    n_startup_count=$(find /tmp -type f -name "*_casstartup.lua" | wc -c)
+    if (( ${n_settings_count} > 0 )); then
+        for str_casstartup in $(ls -1 /tmp/*_casstartup.lua); do
+            echo "Dumping contents of \"${str_casstartup}\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua"
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua
+            cat ${str_casstartup} >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua
+        done
+    fi
+fi
+
+if [ -d ${SASCONFIG}/etc/batchserver/${SASINSTANCE} ]; then
+    n_autoexec_count=$(find /tmp -type f -name "*_autoexec.sas" | wc -c)
+    if (( ${n_autoexec_count} > 0 )); then
+        for str_autoexec in $(ls -1 /tmp/*_autoexec.sas); do
+            echo "Dumping contents of \"${str_autoexec}\" into ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/autoexec_usermods.sas"
+            echo "" >> ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/autoexec_usermods.sas
+            cat ${str_autoexec} >> ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/autoexec_usermods.sas
+            echo "" >> ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/autoexec_usermods.sas
+        done
+    fi
+
+    n_sasv9_count=$(find /tmp -type f -name "*_sasv9.cfg" | wc -c)
+    if (( ${n_sasv9_count} > 0 )); then
+        for str_sasv9 in $(ls -1 /tmp/*_sasv9.cfg); do
+            echo "Dumping contents of \"${str_sasv9}\" into ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/sasv9_usermods.cfg"
+            echo "" >> ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/sasv9_usermods.cfg
+            cat ${str_sasv9} >> ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/sasv9_usermods.cfg
+            echo "" >> ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/sasv9_usermods.cfg
+        done
+    fi
+
+    n_sasserver_count=$(find /tmp -type f -name "*_sasserver.sh" | wc -c)
+    if (( ${n_sasserver_count} > 0 )); then
+        for str_sasserver in $(ls -1 /tmp/*_sasserver.sh); do
+            echo "Dumping contents of \"${str_sasserver}\" into ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/batchserver_usermods.sh"
+            echo "" >> ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/batchserver_usermods.sh
+            cat ${str_sasserver} >> ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/batchserver_usermods.sh
+            echo "" >> ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/batchserver_usermods.sh
+        done
+    fi
+fi
+
+if [ -d ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE} ]; then
+    n_autoexec_count=$(find /tmp -type f -name "*_autoexec.sas" | wc -c)
+    if (( ${n_autoexec_count} > 0 )); then
+        for str_autoexec in $(ls -1 /tmp/*_autoexec.sas); do
+            echo "Dumping contents of \"${str_autoexec}\" into ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/autoexec_usermods.sas"
+            echo "" >> ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/autoexec_usermods.sas
+            cat ${str_autoexec} >> ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/autoexec_usermods.sas
+            echo "" >> ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/autoexec_usermods.sas
+        done
+    fi
+
+    n_sasv9_count=$(find /tmp -type f -name "*_sasv9.cfg" | wc -c)
+    if (( ${n_sasv9_count} > 0 )); then
+        for str_sasv9 in $(ls -1 /tmp/*_sasv9.cfg); do
+            echo "Dumping contents of \"${str_sasv9}\" into ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/sasv9_usermods.cfg"
+            echo "" >> ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/sasv9_usermods.cfg
+            cat ${str_sasv9} >> ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/sasv9_usermods.cfg
+            echo "" >> ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/sasv9_usermods.cfg
+        done
+    fi
+
+    n_sasserver_count=$(find /tmp -type f -name "*_sasserver.sh" | wc -c)
+    if (( ${n_sasserver_count} > 0 )); then
+        for str_sasserver in $(ls -1 /tmp/*_sasserver.sh); do
+            echo "Dumping contents of \"${str_sasserver}\" into ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/workspaceserver_usermods.sh"
+            echo "" >> ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/workspaceserver_usermods.sh
+            cat ${str_sasserver} >> ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/workspaceserver_usermods.sh
+            echo "" >> ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/workspaceserver_usermods.sh
+        done
+    fi
+fi
+
+if [ -d ${SASCONFIG}/etc/connectserver/${SASINSTANCE} ]; then
+    n_autoexec_count=$(find /tmp -type f -name "*_autoexec.sas" | wc -c)
+    if (( ${n_autoexec_count} > 0 )); then
+        for str_autoexec in $(ls -1 /tmp/*_autoexec.sas); do
+            echo "Dumping contents of \"${str_autoexec}\" into ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/autoexec_usermods.sas"
+            echo "" >> ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/autoexec_usermods.sas
+            cat ${str_autoexec} >> ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/autoexec_usermods.sas
+            echo "" >> ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/autoexec_usermods.sas
+        done
+    fi
+
+    n_sasv9_count=$(find /tmp -type f -name "*_sasv9.cfg" | wc -c)
+    if (( ${n_sasv9_count} > 0 )); then
+        for str_sasv9 in $(ls -1 /tmp/*_sasv9.cfg); do
+            echo "Dumping contents of \"${str_sasv9}\" into ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/sasv9_usermods.cfg"
+            echo "" >> ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/sasv9_usermods.cfg
+            cat ${str_sasv9} >> ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/sasv9_usermods.cfg
+            echo "" >> ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/sasv9_usermods.cfg
+        done
+    fi
+
+    n_sasserver_count=$(find /tmp -type f -name "*_sasserver.sh" | wc -c)
+    if (( ${n_sasserver_count} > 0 )); then
+        for str_sasserver in $(ls -1 /tmp/*_sasserver.sh); do
+            echo "Dumping contents of \"${str_sasserver}\" into ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/connectserver_usermods.sh"
+            echo "" >> ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/connectserver_usermods.sh
+            cat ${str_sasserver} >> ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/connectserver_usermods.sh
+            echo "" >> ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/connectserver_usermods.sh
+        done
+    fi
+fi
+
+if [ -d ${SASCONFIG}/etc/sasstudio/${SASINSTANCE} ]; then
+    n_sasstudio_count=$(find /tmp -type f -name "*_sasstudio.properties" | wc -c)
+    if (( ${n_sasstudio_count} > 0 )); then
+        for str_sasstudio in $(ls -1 /tmp/*_sasstudio.properties); do
+            echo "Dumping contents of \"${str_sasstudio}\" into ${SASCONFIG}/etc/sasstudio/${SASINSTANCE}/init_usermods.properties"
+            echo "" >> ${SASCONFIG}/etc/sasstudio/${SASINSTANCE}/init_usermods.properties
+            cat ${str_sasstudio} >> ${SASCONFIG}/etc/sasstudio/${SASINSTANCE}/init_usermods.properties
+            echo "" >> ${SASCONFIG}/etc/sasstudio/${SASINSTANCE}/init_usermods.properties
+        done
+    fi
+fi
+
+# Process any user provided content second so that it can override any baked in options.
+[[ -z ${SASINSIDE+x} ]] && export SASINSIDE="/sasinside"
+
+if [ -d "${SASINSIDE}" ]; then
+    if [ -d ${SASCONFIG}/etc/cas/${SASCASINSTANCE} ]; then
+        if [ -f ${SASINSIDE}/casconfig_usermods.lua ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/casconfig_usermods.lua\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua"
+            cat ${SASINSIDE}/casconfig_usermods.lua >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua
+        fi
+
+        if [ -f ${SASINSIDE}/cas_usermods.settings ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/cas_usermods.settings\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings"
+            cat ${SASINSIDE}/cas_usermods.settings >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings
+        fi
+
+        if [ -f ${SASINSIDE}/casstartup_usermods.lua ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/casstartup_usermods.lua\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua"
+            cat ${SASINSIDE}/casstartup_usermods.lua >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua
+        fi
+    fi
+
+    if [ -d ${SASCONFIG}/etc/batchserver/${SASINSTANCE} ]; then
+        if [ -f ${SASINSIDE}/autoexec_usermods.sas ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/autoexec_usermods.sas\" into ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/autoexec_usermods.sas"
+            cat ${SASINSIDE}/autoexec_usermods.sas >> ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/autoexec_usermods.sas
+        fi
+
+        if [ -f ${SASINSIDE}/sasv9_usermods.cfg ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/sasv9_usermods.cfg\" into ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/sasv9_usermods.cfg"
+            cat ${SASINSIDE}/sasv9_usermods.cfg >> ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/sasv9_usermods.cfg
+        fi
+
+        if [ -f ${SASINSIDE}/batchserver_usermods.sh ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/batchserver_usermods.sh\" into ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/batchserver_usermods.sh"
+            cat ${SASINSIDE}/batchserver_usermods.sh >> ${SASCONFIG}/etc/batchserver/${SASINSTANCE}/batchserver_usermods.sh
+        fi
+    fi
+
+    if [ -d ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE} ]; then
+        if [ -f ${SASINSIDE}/autoexec_usermods.sas ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/autoexec_usermods.sas\" into ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/autoexec_usermods.sas"
+            cat ${SASINSIDE}/autoexec_usermods.sas >> ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/autoexec_usermods.sas
+        fi
+
+        if [ -f ${SASINSIDE}/sasv9_usermods.cfg ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/sasv9_usermods.cfg\" into ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/sasv9_usermods.cfg"
+            cat ${SASINSIDE}/sasv9_usermods.cfg >> ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/sasv9_usermods.cfg
+        fi
+
+        if [ -f ${SASINSIDE}/workspaceserver_usermods.sh ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/workspaceserver_usermods.sh\" into ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/workspaceserver_usermods.sh"
+            cat ${SASINSIDE}/workspaceserver_usermods.sh >> ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/workspaceserver_usermods.sh
+        fi
+    fi
+
+    if [ -d ${SASCONFIG}/etc/connectserver/${SASINSTANCE} ]; then
+        if [ -f ${SASINSIDE}/autoexec_usermods.sas ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/autoexec_usermods.sas\" into ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/autoexec_usermods.sas"
+            cat ${SASINSIDE}/autoexec_usermods.sas >> ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/autoexec_usermods.sas
+        fi
+
+        if [ -f ${SASINSIDE}/sasv9_usermods.cfg ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/sasv9_usermods.cfg\" into ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/sasv9_usermods.cfg"
+            cat ${SASINSIDE}/sasv9_usermods.cfg >> ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/sasv9_usermods.cfg
+        fi
+
+        if [ -f ${SASINSIDE}/connectserver_usermods.sh ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/connectserver_usermods.sh\" into ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/connectserver_usermods.sh"
+            cat ${SASINSIDE}/connectserver_usermods.sh >> ${SASCONFIG}/etc/connectserver/${SASINSTANCE}/connectserver_usermods.sh
+        fi
+    fi
+
+    if [ -d ${SASCONFIG}/etc/sasstudio/${SASINSTANCE} ]; then
+        if [ -f ${SASINSIDE}/sasstudio_usermods.properties ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/sasstudio_usermods.properties\" into ${SASCONFIG}/etc/sasstudio/${SASCASINSTANCE}/init_usermods.properties"
+            cat ${SASINSIDE}/sasstudio_usermods.properties >> ${SASCONFIG}/etc/sasstudio/${SASINSTANCE}/init_usermods.properties
+        fi
+    fi
+
+fi
+
+###############################################################################
+# Configure SAS services
+###############################################################################
+
+#
+# Make sure all old logs are removed
+#
+
+for old_log in $(find /opt/sas/viya/config/var/log -name "*.log"); do
+    rm --verbose ${old_log}
+done
+
+for old_log in $(find /opt/sas/viya/config/var/log -name "*.out"); do
+    rm --verbose ${old_log}
+done
+
+#
+# Clean up some other CAS configuration for a Docker image
+#
+
+[[ -z ${SERVICE_NAME+x} ]] && export SERVICE_NAME="cascontroller"
+is_controller=true
+
+if [ "${SERVICE_NAME}" = "cascontroller" ]; then
+    export CASCONTROLLERHOST="${SAS_CURRENT_HOST}"
+    export CASWORKERHOSTS=""
+elif [ "${SERVICE_NAME}" = "cassecondary" ]; then
+    export CASBACKUPHOST="${SAS_CURRENT_HOST}"
+    export CASCFG_MODE=mpp
+elif [ "${SERVICE_NAME}" = "casworker" ]; then
+    is_controller=false
+    export CASWORKERHOSTS="${SAS_CURRENT_HOST}"
+    export CASCFG_MODE=mpp
+else
+    echo "[ERROR] - Unknown service type passed in."
+    exit 11
+fi
+
+# Update the ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+# to have updated settings.
+
+if [ -n "${CASCONTROLLERHOST}" ]; then
+    sed -i "s|SASCONTROLLERHOST=.*|SASCONTROLLERHOST=${CASCONTROLLERHOST}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+fi
+if [ -n "${CASWORKERHOSTS}" ]; then
+    sed -i "s|SASWORKERHOSTS=.*|SASWORKERHOSTS=${CASWORKERHOSTS}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+fi
+if [ -n "${CASENV_CASDATADIR}" ]; then
+    sed -i "s|SASCASDATADIR=.*|SASCASDATADIR=${CASENV_CASDATADIR}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+fi
+# DOCKER-404: Make sure the USERLOC starts from the CASDATADIR value
+if [ -n "${CASUSERLOCDIR}" ]; then
+    sed -i "s|SASUSERLOCDIR=.*|SASUSERLOCDIR=${CASUSERLOCDIR}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+else
+    sed -i "s|SASUSERLOCDIR=.*|SASUSERLOCDIR=\${SASCASDATADIR}/casuserlibraries/%USER|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+fi
+if [ -n "${CASENV_CASPERMSTORE}" ]; then
+    sed -i "s|SASPERMSTORE=.*|SASPERMSTORE=${CASENV_CASPERMSTORE}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+fi
+
+# Define JAVA_HOME and update the LD_LIBRARY_PATH
+source ${SASCONFIG}/etc/sysconfig/sas-javaesntl/sas-java
+
+[[ -z ${CASSET_JAVA_HOME+x} ]] && export CASSET_JAVA_HOME=$JAVA_HOME
+[[ -z ${CASLLP_JAVA+x} ]]      && export CASLLP_JAVA=\$LD_LIBRARY_PATH:\$JAVA_HOME/lib/amd64/server
+
+#
+# Take anything that was passed in as an environment variable and update the
+# configuration files.
+#
+
+echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua ""
+echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "-- Inserting section capturing variables set on container creation."
+
+set +e
+# Process configuration option settings
+while IFS='=' read -r name value ; do
+    key=$(cut -d'_' -f2- <<<"${name}")
+    if [[ ${name} == 'CASCFG_'* ]]; then
+        if [[ ${!name} =~ ^[0-9]+$ ]]; then
+            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "cas.$(echo $key | awk '{print tolower($0)}') = ${!name}"
+        else
+            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "cas.$(echo $key | awk '{print tolower($0)}') = '${!name}'"
+        fi
+    fi
+done < <(env | grep "CASCFG")
+
+# Process environment option settings
+while IFS='=' read -r name value ; do
+    key=$(cut -d'_' -f2- <<<"${name}")
+    if [[ ${name} == 'CASENV_'* ]]; then
+        if [[ ${!name} =~ ^[0-9]+$ ]]; then
+            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "env.$(echo $key | awk '{print toupper($0)}') = ${!name}"
+        else
+            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "env.$(echo $key | awk '{print toupper($0)}') = '${!name}'"
+        fi
+    fi
+done < <(env | grep "CASENV")
+
+echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings ""
+echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "# Inserting section capturing variables set on container creation."
+
+# Process settings option settings
+while IFS='=' read -r name value ; do
+    key=$(cut -d'_' -f2- <<<"${name}")
+    if [[ ${name} == 'CASSET_'* ]]; then
+        if [[ ${!name} =~ ^[0-9]+$ ]]; then
+            echo ${key} | grep -q ^[0-9]*_
+            if [ $? -eq 0 ]; then
+                echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key#*_} | awk '{print toupper($0)}')=${!name}"
+            else
+                echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key} | awk '{print toupper($0)}')=${!name}"
+            fi
+        else
+            echo ${key} | grep -q ^[0-9]*_
+            if [ $? -eq 0 ]; then
+                echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key#*_} | awk '{print toupper($0)}')='${!name}'"
+            else
+                echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key} | awk '{print toupper($0)}')='${!name}'"
+            fi
+        fi
+    fi
+done < <(env | grep "CASSET" | sort)
+set -e
+
+echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings ""
+echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "# LD_LIBRARY_PATH being pulled from passed in variables"
+
+# Process ld.library.path option settings
+while IFS='=' read -r name value ; do
+    key=$(cut -d'_' -f2- <<<"${name}")
+    if [[ ${name} == 'CASLLP_'* ]]; then
+        if [[ ${!name} == *'$LD_LIBRARY_PATH'* ]]; then
+            # If the value passed in already is adding the LD_LIBRARY_PATH, then do not add it
+            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export LD_LIBRARY_PATH=${!name}"
+        else
+            # If the value passed in does not have the LD_LIBRARY_PATH as part of the value, then add it
+            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:${!name}"
+        fi
+    fi
+done < <(env | grep "CASLLP" | sort)
+
+# Update the cas.settings file to process the Docker settings post what was done
+# setting up the image but before processing any settings in the usermods file
+
+sed -i '/cas_usermods.settings/i [ -f \$DIR/cas_docker.settings ]   && source \$DIR/cas_docker.settings' ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas.settings
+
+# echo some stuff back to the user for helpfulness
+
+if [ -n "${CASENV_CASDATADIR}" ]; then
+    echo "[INFO] : CASENV_CASDATADIR is '${CASENV_CASDATADIR}'"
+fi
+
+echo "[INFO] : CASENV_CAS_VIRTUAL_HOST is '${CASENV_CAS_VIRTUAL_HOST}'"
+echo "[INFO] : CASENV_CAS_VIRTUAL_PORT is '${CASENV_CAS_VIRTUAL_PORT}'"
+
+if [ -n "${CASENV_ADMIN_USER}" ]; then
+    echo "[INFO] : CASENV_ADMIN_USER is '${CASENV_ADMIN_USER}'"
+else
+    echo "[INFO] : CASENV_ADMIN_USER is 'cas'"
+fi
+
+# DOCKER-390: Make sure the location of the data directory is used for the referenceData path
+sed -i 's|casData = getDataPath()|casData = os.getenv("CASDATADIR")|' ${SASHOME}/share/cas/10caslibrefdat_startup.lua
+
+# When set to zero, will make sure that the system will not get the servicesbaseurl from Consul
+[[ -z ${CHECK_HTTP+x} ]] && export CHECK_HTTP=1
+sed -i "s|^CHECK_HTTP=.*|CHECK_HTTP=${CHECK_HTTP}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+
+if ! ${SAS_LOGS_TO_DISK}; then
+    # Fix logging
+    sed -i 's|_log_dir_passed_in} -ne 1|_log_dir_passed_in} -eq 1|' ${SASHOME}/bin/cas_setup.sh
+fi
+
+#
+# This will create directories and setup the configuration instance
+#
+
+${SASHOME}/bin/cas_setup.sh -r ${SASROOT} -d ${_deployid} -i ${SASCASINSTANCE}
+
+# Make sure node.lua is pointing to the correct spot
+sed -i "s/config_loc \.\./current_dir \.\./g" ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/node.lua
+sed -i "s/^config_loc/-- config_loc/g" ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/node.lua
+
+# Remove startup.lua files
+rm -v ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/start.d/05updateperms_startup.lua
+
+if ! ${SAS_LOGS_TO_DISK}; then
+    # Setup CAS to log to stdout
+    cp -v ${SASHOME}/SASFoundation/utilities/bin/logconfig.trace.xml.stdout.template ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/logconfig.xml
+fi
+
+# Disable waiting on the worker nodes. Cloud deployments are elastic in nature
+# and will not use this feature
+echo "export CAS_CONSUL_WAIT_DISABLED=true" >> ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+
+if ! ${SAS_LOGS_TO_DISK}; then
+    # Fix logging for sas-cas.sh
+    sed -i '/sascas_set_caslaunch_log_file_names;/i if [[ ! -z ${logdir} ]]; then' ${SASHOME}/bin/sas-cas.sh
+    sed -i '/sascas_initialize_caslaunch_log_files;/a fi' ${SASHOME}/bin/sas-cas.sh
+fi
+
+# DOCKER-392: Using a specific docker perms file that will create the public caslib
+cat > ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/perms.xml << PERMSXML
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- Customer permissions file/template -->
+
+<AccessControls version="1.0" readonly="TRUE">
+
+   <!-- CAS server initial launch identity -->
+   <Administrator name="\${ADMIN_USER}-User-SuperUser" user="\${ADMIN_USER}" type="SuperUser"/>
+
+   <!-- Manage Global Caslibs -->
+   <CASLib name='_GLOBAL'
+           desc='Permission for global caslib creation'
+           uuid='3a177916-96bf-2587-3170-9a735123413a'>
+
+      <!-- Global caslib creation is open to administrators -->
+      <Grant user='\${ADMIN_USER}' perm='ManageAccess'/>
+
+   </CASLib>
+
+   <!-- Manage Session Caslibs -->
+   <CASLib name='_SESSION'
+           desc='Permission for session caslib creation'
+           uuid='4b166916-169f-3557-2150-b8865123731b'>
+
+      <!-- Allow all users to create session caslibs -->
+      <Grant group='*' perm='ManageAccess'/>
+
+   </CASLib>
+
+   <CASLib name='Public'
+           desc='Shared and writeable caslib, accessible to all users.'
+           path='\${CASDATADIR}/public'
+           uuid='26ea7916-86af-4547-9180-9876512345cc'
+           subdirs='FALSE' type='PATH'>
+
+      <Grant user='\${ADMIN_USER}' perm='ManageAccess'/>
+      <Grant user='\${ADMIN_USER}' perm='AlterCaslib'/>
+
+      <Deny  group='*' perm='ManageAccess'/>
+      <Deny  group='*' perm='AlterCaslib'/>
+
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Select'/>
+      <Grant group='*' perm='LimitedPromote'/>
+      <Grant group='*' perm='Promote'/>
+      <Grant group='*' perm='CreateTable'/>
+      <Grant group='*' perm='DropTable'/>
+      <Grant group='*' perm='DeleteSource'/>
+      <Grant group='*' perm='Insert'/>
+      <Grant group='*' perm='Update'/>
+      <Grant group='*' perm='Delete'/>
+      <Grant group='*' perm='AlterTable'/>
+
+   </CASLib>
+
+   <!-- Manage Registered Action Sets -->
+   <ActionSet name='_REGISTERED'>
+
+      <!-- Grant access to create Action Set metadata -->
+
+   </ActionSet>
+
+   <!-- Manage Unregistered Action Sets -->
+   <ActionSet name='_UNREGISTERED'>
+
+      <!-- Nobody is allowed to use unregistered Action Sets by default -->
+      <Deny group='*' perm='ManageAccess'/>
+      <Deny group='*' perm='Load'/>
+
+   </ActionSet>
+
+   <ActionSet name='builtins' flags='system'>
+
+      <!-- Grant all users access to all actions -->
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Execute'/>
+      <Grant group='*' perm='Load'/>
+
+      <!-- Direct access controls required on shutdown -->
+      <Action name='shutdown'         flags='direct'>
+         <Grant group='*'             perm='ReadInfo'/>
+      </Action>
+
+      <!-- Direct access controls required on addNode -->
+      <Action name='addNode'          flags='direct'>
+         <Grant group='*'             perm='ReadInfo'/>
+      </Action>
+
+      <!-- Direct access controls required on removeNode -->
+      <Action name='removeNode'       flags='direct'>
+         <Grant group='*'             perm='ReadInfo'/>
+      </Action>
+
+      <!-- Direct access controls required on installActionSet -->
+      <Action name='installActionSet' flags='direct'>
+         <Grant group='*'             perm='ReadInfo'/>
+      </Action>
+
+      <!-- System actions -->
+      <Action name='help' flags='system'/>
+      <Action name='queryActionSet' flags='system'/>
+      <Action name='queryName' flags='system'/>
+      <Action name='reflect' flags='system'/>
+      <Action name='casCommon' flags='system'/>
+
+   </ActionSet>
+
+   <ActionSet name='configuration' flags='system'>
+
+      <!-- Grant all users read access to all actions -->
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Load'/>
+
+      <!-- Direct access controls required on setServOpt -->
+      <Action name='setServOpt' flags='direct'>
+         <Grant group='*'       perm='ReadInfo'/>
+      </Action>
+
+      <!-- Direct access controls required on getServOpt -->
+      <Action name='getServOpt' flags='direct'>
+         <Grant group='*'       perm='ReadInfo'/>
+      </Action>
+
+      <!-- Direct access controls required on listServOpts -->
+      <Action name='listServOpts' flags='direct'>
+         <Grant group='*'         perm='ReadInfo'/>
+      </Action>
+
+   </ActionSet>
+
+   <ActionSet name='accessControl' flags='system'>
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Execute'/>
+      <Grant group='*' perm='Load'/>
+   </ActionSet>
+
+   <ActionSet name='table' flags='system'>
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Execute'/>
+      <Grant group='*' perm='Load'/>
+      <Action name='queryCasLib' flags='system'/>
+   </ActionSet>
+
+   <ActionSet name='session' flags='system'>
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Execute'/>
+      <Grant group='*' perm='Load'/>
+   </ActionSet>
+
+   <ActionSet name='sessionProp' flags='system'>
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Execute'/>
+      <Grant group='*' perm='Load'/>
+   </ActionSet>
+
+</AccessControls>
+PERMSXML
+
+if ! ${SAS_LOGS_TO_DISK}; then
+    # Setup object spawner to log to stdout
+    sed -i 's|>\$spawner_logfile ||' ${SASCONFIG}/etc/spawner/${SASINSTANCE}/spawner.sh
+
+    # Setup workspace server to log to stdout
+    cp ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.stdout.xml ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.xml
+    sed -i 's|Debug|Info|' ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.xml
+
+    # Configure SAS Studio to log to stdout
+    sed -i 's|^\$command.*$|\$command 2>\&1 \&|' ${SASHOME}/SASStudio/bin/appserver.sh
+    cat > ${SASCONFIG}/etc/sasstudio/${SASINSTANCE}/SASStudio-log4j.xml << SASSTUDIO
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+        <Appenders>
+                <Console name="Console" target="SYSTEM_OUT">
+                        <PatternLayout pattern="%d [%t] %-5p %c (%F:%L) - %m%n"/>
+                </Console>
+        </Appenders>
+
+        <Loggers>
+                <Logger name="com.sas" level="ERROR">
+                        <AppenderRef ref="SYSTEM_OUT" />
+                </Logger>
+                <Root level="ERROR">
+                        <AppenderRef ref="SYSTEM_OUT" />
+                </Root>
+        </Loggers>
+</Configuration>
+SASSTUDIO
+
+fi
+
+#
+# Configure HTTP
+#
+
+cat > /etc/httpd/conf.d/proxy.conf << HTTPD
+RedirectMatch "^/$" /SASStudio
+
+<location /cas-shared-default-http>
+  ProxyPass         http://localhost:8777/cas-shared-default-http
+  ProxyPassReverse  http://localhost:8777/cas-shared-default-http
+  RequestHeader set Origin "http://localhost:8777"
+</Location>
+
+<Location /SASStudio/mobile>
+  RedirectMatch "^/SASStudio/mobile.*$" /SASStudio/not_supported
+</Location>
+
+<Location /SASStudio>
+  ProxyPass        http://localhost:7080/SASStudio
+  ProxyPassReverse http://localhost:7080/SASStudio
+  RequestHeader set Origin "http://localhost:7080"
+</Location>
+HTTPD
+
+# removed shared memory segment files between restarts
+rm --verbose --force /run/httpd/authdigest_shm.*
+
+#
+# Write out a help page to be displayed when browsing port 80
+#
+
+cat > /var/www/html/index.html <<'EOF'
+<html>
+ <h1> SAS Viya Programming Docker Container </h1>
+ <p> Access the software by browsing to:
+ <ul>
+  <li> <b><a href="/SASStudio">/SASStudio</a></b>
+ </ul> using HTTP on port 80.
+ <p> If port 80 is forwarded to a different port on the host machine, use the host port instead.
+ <p> Use the <b>sasdemo</b> / <b>sasdemo</b> login to access SAS Studio and CAS.
+</html>
+EOF
+
+###############################################################################
+# Run
+###############################################################################
+
+# if given a command, run that
+if [[ -n "$1" ]]; then
+    echo "Running \"$@\""
+
+    batch_user=''
+    if [ "--user" == "$1" ]; then
+        shift
+        batch_user=$1
+        shift
+    fi
+
+    if [ "--batch" == "$1" ]; then
+
+        # Start up CAS in case the SAS code that is run will connect to CAS
+        start_cas
+
+        # Pause to give time for CAS to come up
+        # TODO: find a better way to validate that CAS is up and ready
+        sleep 10
+
+        shift
+        pushd $(dirname $1)
+
+        set +e
+        if [ -n "${batch_user}" ]; then
+            runuser --shell "/bin/sh" --login ${batch_user} --command "${SASCONFIG}/etc/batchserver/default/batchserver.sh $@"
+            batch_user_home=$(getent passwd ${batch_user} | cut -f6 -d:)
+            cp --verbose ${batch_user_home}/*.log .
+            cat *.log
+        else
+            ${SASCONFIG}/etc/batchserver/default/batchserver.sh $@
+            cat *.log
+        fi
+        set -e
+
+        popd
+
+        gracefulshutdown
+    else
+        exec $@
+    fi
+else
+    #
+    # Start Viya Services
+    #
+
+    if ${is_controller}; then
+        # /etc/init.d/sas-viya-all-services start
+
+        echo "Starting SAS Object Spawner..."
+        touch /var/run/sas/sas-viya-spawner-default.pid
+        chown sas /var/run/sas/sas-viya-spawner-default.pid
+        chmod 0644 /var/run/sas/sas-viya-spawner-default.pid
+        runuser --shell "/bin/sh" --login sas \
+            --command "${SASCONFIG}/etc/spawner/${SASINSTANCE}/spawner.sh \
+            -p /var/run/sas/sas-viya-spawner-default.pid \
+            -d ${SASDEPLOYID} \
+            -i ${SASINSTANCE}"
+
+        echo "Starting SAS Studio..."
+        touch /var/run/sas/sas-viya-sasstudio-default.pid
+        chown sas /var/run/sas/sas-viya-sasstudio-default.pid
+        chmod 0644 /var/run/sas/sas-viya-sasstudio-default.pid
+        runuser --shell "/bin/sh" --login sas \
+            --command "${SASHOME}/SASStudio/bin/appserver.sh \
+            -p /var/run/sas/sas-viya-sasstudio-default.pid \
+            -r ${SASROOT}/${SASDEPLOYID} \
+            -l ${SASCONFIG}/var/log/sasstudio/${SASINSTANCE} \
+            -d ${SASDEPLOYID} \
+            -i ${SASINSTANCE}"
+
+        #
+        # Launch HTTPD
+        #
+
+        # Get logging to stdout
+        #sed -ri -e 's!^(\s*CustomLog)\s+\S+!\1 /proc/self/fd/1!g' /etc/httpd/conf/httpd.conf
+        sed -ri -e 's!^(\s*ErrorLog)\s+\S+!\1 /proc/self/fd/2!g' /etc/httpd/conf/httpd.conf
+
+        /usr/sbin/httpd -k start
+    fi
+
+    start_cas
+
+    #
+    # Run any post deploy scripts
+    #
+
+    if [ ! -z "${POST_DEPLOY_SCRIPT}" ]; then
+        echo "Creating post deploy script"
+        echo "${POST_DEPLOY_SCRIPT}" > /tmp/post_deploy.sh
+        chmod --verbose a+x /tmp/post_deploy.sh
+        echo
+    fi
+
+    n_post_deploy_count=$(find /tmp -type f -name "*post_deploy.sh" | wc -c)
+    if (( ${n_post_deploy_count} > 0 )); then
+        for str_post_script in $(ls -1 /tmp/*post_deploy.sh); do
+            echo "Running post deploy script \"${str_post_script}\""
+            ${str_post_script}
+        done
+    fi
+
+    #
+    # Output the file locations to make it a little easier to look at logs
+    #
+
+    if ${SAS_LOGS_TO_DISK}; then
+        # Pause to allow the processes to start and create log files
+        sleep 10
+
+        set +e
+        env | grep -q KUBERNATES
+        k8s_check=$?
+        set -e
+        for item in $(tree -fi --prune /opt/sas/viya/config/var/log/); do
+            if ((${k8s_check} == 0)); then
+                if [ -f ${item} ]; then echo kubectl exec -it ${HOSTNAME} -- tail -f ${item}; fi
+            elif [ -f /.dockerenv ]; then
+                if [ -f ${item} ]; then echo docker exec -it $(hostname) tail -f ${item}; fi
+            fi
+        done
+    fi
+
+    #
+    # Loop to keep the container alive
+    #
+
+    pidfiles="/var/run/httpd/httpd.pid /var/run/sas/sas-viya-sasstudio-default.pid /var/run/sas/sas-viya-spawner-default.pid /var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
+    while :; do
+        sleep 3
+        for _pidf in ${pidfiles}; do
+            if [ -f ${_pidf} ]; then
+                SERVICE_PID=$(cat ${_pidf})
+                set +e
+                ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
+                process_check_rc=$?
+                set -e
+                if (( ${process_check_rc} != 0 )); then
+                    echo;
+                    echo "Process is not running..."
+                    echo "    File = ${_pidf}";
+                    echo "    PID = ${SERVICE_PID}";
+                    gracefulshutdown
+                fi
+            else
+                echo; echo "PID file not found"; echo
+                gracefulshutdown
+            fi
+        done
+    done
+fi
+
+exit 0
