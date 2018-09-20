@@ -4,15 +4,6 @@ A docker container for a data scientist. An analytics work bench (awb) not unlik
 * R Studio
 * Jupyter Lab
 
-# How to clone from github
-
-These examples are for a linux host that has git and docker installed.  You can do this on Windows (with Powershell), and on a Mac too. To keep the example simple, we'll put the cloned folder in your $HOME directory.
-
-```
-cd $HOME
-git clone https://github.com/sassoftware/sas-container-recipes.git
-```
-
 # How to build
 
 ```

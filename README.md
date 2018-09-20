@@ -10,6 +10,18 @@ A collections of recipes for building containers with SAS and other tools.
 
 * A SAS order and the SAS_Viya_deployment_data.zip from the Software Order Email (SOE)
 * A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker(https://www.docker.com/)
+* Git
+
+# How to clone from github
+
+These examples are for a linux host that has git and docker installed.  
+This can be done on Windows (with Powershell), and on a Mac too. 
+To keep the example simple, we'll put the cloned folder in your $HOME directory.
+
+```
+cd $HOME
+git clone https://github.com/sassoftware/sas-container-recipes.git
+```
 
 # How To Quickly Build a Viya 3.4 Image
 
@@ -17,7 +29,7 @@ At the root level there is a script called _build.sh_. Once a user has cloned
 the _sassoftware/sas-container-recipes_ project, one can run _build.sh_ to 
 quickly build a set of Docker images that represent a Viya 3.4 image and a 
 Viya 3.4 image with a default user. The following assumes that you are in the 
-/path/to/sassoftware/sas-container-recipes directory.
+/$HOME/sas-container-recipes directory.
 
 ```
 cp /path/to/SAS_Viya_deployment_data.zip viya-programming/viya-single-container
