@@ -3,19 +3,10 @@
 This is a quickstart/recipe for creating a SAS Viya programming only Docker image
 based from a Linux SAS Viya order.
 
-# How to clone from github
-
-These examples are for a linux host that has git and docker installed.
-
-```
-# from current directory
-git clone https://gitlab.sas.com/jogate/recart.git
-```
-
 # How to build
 
 ```
-cd recart/viya-programming/viya-single-container
+cd $HOME/sas-container-recipes/viya-programming/viya-single-container
 
 #
 # **** DO ONE OF THE FOLLOWING: GENERATE PLAYBOOK ****
