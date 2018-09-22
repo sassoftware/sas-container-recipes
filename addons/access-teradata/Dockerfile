@@ -26,10 +26,24 @@ ARG BASETAG=latest
 
 FROM $BASEIMAGE:$BASETAG
 
+ARG PLATFORM=redhat
 
 USER root
-RUN yum install -y ksh
-RUN mkdir /tmp/teradata_tools
+RUN set -e; \
+    mkdir /tmp/teradata_tools
+    if [ "$PLATFORM" = "redhat" ]; then \
+        rpm --rebuilddb; \
+        yum install --assumeyes ksh; \
+        yum clean all; \
+        rm --verbose --recursive --force /root/.cache /var/cache/yum; \
+    elif [ "$PLATFORM" = "suse" ]; then \
+        echo; echo "####### [ERROR] SuSE is not a currently supported platform"; echo; \
+        exit 5; \
+    else \
+        echo; echo "####### [ERROR] : Unknown platform of \"$PLATFROM\" passed in"; echo; \
+        exit 1; \
+    fi
+
 ADD teradata.tgz /tmp/teradata_tools/
 RUN cd /tmp/teradata_tools/TeradataToolsAndUtilitiesBase && echo a|./setup.bat
 
