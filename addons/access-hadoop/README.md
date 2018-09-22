@@ -11,29 +11,29 @@ SAS/ACCESS to Hadoop orderable.
 * achadoop_external.sas
     * This SAS code that can be submitted in SAS Studio or via the batchserver.
       This is exercising SAS Foundation and that the SAS/ACCESS iterface to
-      Hadoop is configured correctly. This is expecting the Hadoop configuaration
+      Hadoop is configured correctly. This is expecting the Hadoop configuration
       and jar files to be outside the container.
 * dchadoop_external.sas
     * This SAS code that can be submitted in SAS Studio or via the batchserver.
       This is exercising Cloud Analytics Services and validating that the Data
       Connector to Hadoop is configured correctly. This is expecting the Hadoop 
-      configuaration and jar files to be outside the container.
+      configuration and jar files to be outside the container.
 * achadoop_internal.sas
     * This SAS code that can be submitted in SAS Studio or via the batchserver.
       This is exercising SAS Foundation and that the SAS/ACCESS iterface to
-      Hadoop is configured correctly. This is expecting the Hadoop configuaration
+      Hadoop is configured correctly. This is expecting the Hadoop configuration
       and jar files to be inside the container.
 * dchadoop_internal.sas
     * This SAS code that can be submitted in SAS Studio or via the batchserver.
       This is exercising Cloud Analytics Services and validating that the Data
       Connector to Hadoop is configured correctly. This is expecting the Hadoop
-      configuaration and jar files to be inside the container.
+      configuration and jar files to be inside the container.
 
 # How to build (OPTIONAL)
 
-NOTE: This is not a neccessary step. One can collect the Hadoop configuration
+NOTE: This is not a necessary step. One can collect the Hadoop configuration
 and jar files and have them in a volume that is mounted to the container at 
-startup.
+start-up.
 
 If one wants to create an image that has the Hadoop configuration and jar files
 bake into the image, collect the configuration and jar files and place them

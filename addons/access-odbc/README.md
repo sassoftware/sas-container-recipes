@@ -14,7 +14,7 @@ SAS/ACCESS to ODBC orderable.
 * acodbc.sas
     * This SAS code that can be submitted in SAS Studio or via the batchserver
       which will create and drop a table. This is exercising SAS Foundation and
-      that the SAS/ACCESS iterface to ODBC is configured correctly.
+      that the SAS/ACCESS interface to ODBC is configured correctly.
 * dcodbc.sas
     * This SAS code that can be submitted in SAS Studio or via the batchserver
       which will create and drop a table. This is exercising Cloud Analytics

@@ -1,10 +1,10 @@
 # Background
 A collections of recipes for building containers with SAS and other tools.
 
-* [all-in-one](all-in-one/README.md) is a set of tools for creating a Viya 3.3 single container, for convenience and simplicity for the person using said container.
-* [addons](addons/README.md) is a set of tools for adding to the Viya 3.4 containers.
-* [utilities](utilities/README.md) is a set of files that can be used when creating Viya 3.4 containers.
-* [viya-programming](viya-programming/README.md) is a set of tools for creating Viya 3.4 containers.
+* [viya-programming](viya-programming/README.md) is a set of tools for creating SAS Viya 3.4 containers.
+* [addons](addons/README.md) is a set of tools for adding to the SAS Viya 3.4 containers.
+* [utilities](utilities/README.md) is a set of files that can be used when creating SAS Viya 3.4 containers.
+* [all-in-one](all-in-one/README.md) is a set of tools for creating a SAS Viya 3.3 single container, for convenience and simplicity for the person using said container.
 
 # Prerequisites
 

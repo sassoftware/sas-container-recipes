@@ -61,6 +61,32 @@ docker build --file Dockerfile--build-arg BASEIMAGE=docker.company.com/rh/rhvari
 #
 ```
 
+# Extending
+
+To add to the base image, change into any of the subdirectories and run a build 
+with the provided Dockerfile. Below are an example of adding the _sasdemo_ user to 
+the initial image and then adding the Jupyter with python3 support to the 
+_svc-auth-demo_ image. 
+
+__Note:__ Unless a custom base image is provided that already
+supports host level authentication, the [addons/auth-sssd](../../addons/auth-sssd/README.md)
+or [addons/auth-demo] (../../addons/auth-demo/README.md) layers will need to be 
+added in order to support full functionality of the SAS Viya container.
+
+## To Create an Image with the sasdemo user
+```
+cd /path/to/sassoftware/sas-container-recipes/addons/auth-demo
+docker build -f Dockerfile . -t svc-auth-demo
+docker run --detach --publish-all --rm --name svc-auth-demo --hostname svc-auth-demo svc-auth-demo
+```
+
+## To Create an Image with Jupyter
+```
+cd /path/to/sassoftware/sas-container-recipes/addons/ide-jupyter-python3
+docker build -f Dockerfile --build-arg BASEIMAGE=svc-auth-dmeo . -t svc-ide-jupyter-python3
+docker run --detach --publish-all --rm --name svc-ide-jupyter-python3 --hostname svc-ide-jupyter-python3 svc-ide-jupyter-python3
+```
+
 # How to run
 
 ## Interactive
@@ -227,25 +253,6 @@ docker run --detach --publish-all --rm --volume /path/to/sasinside:/sasinside --
 The image will symlink the files at /sasinside to the location that the SAS and CAS software
 expects to find them. Allowing changes to be made if needed without having to stop
 container. New sessions would pick up the changes.
-
-# Extending
-
-To add to the base image, change into any of the subdirectories and run a build 
-with the provided Dockerfile. Below are an example of adding the _sasdemo_ user to 
-the initial image and then adding the Jupyter with python3 support to the 
-_svc-auth-demo_ image.
-
-```
-# to create an image with the sasdemo user
-cd /path/to/sassoftware/sas-container-recipes/addons/auth-demo
-docker build -f Dockerfile . -t svc-auth-demo
-docker run --detach --publish-all --rm --name svc-auth-demo --hostname svc-auth-demo svc-auth-demo
-
-# to create an image with jupyter added
-cd /path/to/sassoftware/sas-container-recipes/addons/ide-jupyter-python3
-docker build -f Dockerfile --build-arg BASEIMAGE=svc-auth-dmeo . -t svc-ide-jupyter-python3
-docker run --detach --publish-all --rm --name svc-ide-jupyter-python3 --hostname svc-ide-jupyter-python3 svc-ide-jupyter-python3
-```
 
 # Copyright
 

@@ -4,9 +4,9 @@ The content in this directory provides a simple way to smoke test the
 SAS/ACCESS to Teradata orderable.
 
 # Requirements
-___FIXME (is this how everyone gets their teradata client libs?)___ In order to build the Teradata layer,
-the Dockerfile is expecting to find a _teradata.tgz_ file in the current directory.
-The _teradata.tgz_ is expected to have the following basic content structure:
+In order to build the Teradata layer, the Dockerfile is expecting to find a 
+_teradata.tgz_ file in the current directory. The _teradata.tgz_ is expected to 
+have the following basic content structure:
 
 ```
 |____TeradataToolsAndUtilitiesBase

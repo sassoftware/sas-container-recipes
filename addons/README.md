@@ -1,12 +1,12 @@
 # Background
 A collection of items that can be added to a SAS Viya 3.4 Docker image
 
-* [access-hadoop](access-hadoop/README.md) is a set of tools for configuring the SAS/ACCESS Inteface to Hadoop.
-* [access-odbc](access-odbc/README.md) is a set of tools for configuring the SAS/ACCESS Inteface to ODBC.
-* [access-pcfiles](access-pcfiles/README.md) is a set of tools for configuring the SAS/ACCESS Inteface to PC Files.
-* [access-postgres](access-postgres/README.md) is a set of tools for configuring the SAS/ACCESS Inteface to PostgreSQL.
-* [access-redshift](access-redshift/README.md) is a set of tools for configuring the SAS/ACCESS Inteface to Redshift.
-* [access-teradata](access-teradata/README.md) is a set of tools for configuring the SAS/ACCESS Inteface to Teradata.
+* [access-hadoop](access-hadoop/README.md) is a set of tools for configuring the SAS/ACCESS Interface to Hadoop.
+* [access-odbc](access-odbc/README.md) is a set of tools for configuring the SAS/ACCESS Interface to ODBC.
+* [access-pcfiles](access-pcfiles/README.md) is a set of tools for configuring the SAS/ACCESS Interface to PC Files.
+* [access-postgres](access-postgres/README.md) is a set of tools for configuring the SAS/ACCESS Interface to PostgreSQL.
+* [access-redshift](access-redshift/README.md) is a set of tools for configuring the SAS/ACCESS Interface to Redshift.
+* [access-teradata](access-teradata/README.md) is a set of tools for configuring the SAS/ACCESS Interface to Teradata.
 * [auth-demo](auth-demo/README.md) is a set of tools for creating a user in the image.
 * [auth-sssd](auth-sssd/README.md) is a set of tools for adding System Security Services Daemon (sssd) support.
 * [ide-jupyter-python3](ide-jupyter-python3/README.md) is a set of tools for adding Jupyter Notebook and python 3.
