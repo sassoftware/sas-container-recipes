@@ -48,7 +48,10 @@ RUN set -e; \
         rpm --rebuilddb; \
         echo; echo "####### Add the packages to support running Jupyter Notebook"; echo; \
         yum install --assumeyes https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm ; \
-        yum install --assumeyes python34-devel python34-pip gcc-c++; \
+        yum install --assumeyes python36-devel gcc-c++; \
+        curl --silent --remote-name https://bootstrap.pypa.io/get-pip.py; \
+        python3.6 get-pip.py; \
+        rm --verbose get-pip.py; \
         pip3 --no-cache-dir install \
           jupyter \
           saspy \

@@ -60,9 +60,9 @@ export AUTHINFO="${RUN_USER_HOME}/authinfo.txt"
 export SSLCALISTLOC="${SASHOME}/SASSecurityCertificateFramework/cacerts/trustedcerts.pem"
 export CAS_CLIENT_SSL_CA_LIST="/data/casconfig/sascas.pem"
 
-cp /usr/lib/python3.4/site-packages/saspy/sascfg.py /usr/lib/python3.4/site-packages/saspy/sascfg_personal.py
+cp /usr/local/lib/python3.6/site-packages/saspy/sascfg.py /usr/local/lib/python3.6/site-packages/saspy/sascfg_personal.py
 sed -i -e "s#/opt/sasinside/SASHome/SASFoundation/9.4/bin/sas_u8#/opt/sas/spre/home/SASFoundation/sas#g" \
-    /usr/lib/python3.4/site-packages/saspy/sascfg_personal.py
+    /usr/local/lib/python3.6/site-packages/saspy/sascfg_personal.py
 
 _jupyterpid="/var/run/jupyter.pid"
 touch ${_jupyterpid}
@@ -70,11 +70,13 @@ touch ${_jupyterpid}
 runuser --shell "/bin/sh" --login ${RUN_USER} \
     --command "mkdir -p --verbose ~/jupyter"
 
+# In the following, the echo was added after switching to Python 3.6
+# http://forums.fast.ai/t/jupyter-notebook-fails-to-start/8370/5
 echo
 echo "[INFO] : Create jupyter config file"
 echo
 runuser --shell "/bin/sh" --login ${RUN_USER} \
-    --command "if [ ! -e \"${RUN_USER_HOME}/.jupyter/jupyter_notebook_config.py\" ]; then jupyter notebook --generate-config; fi"
+    --command "if [ ! -e \"${RUN_USER_HOME}/.jupyter/jupyter_notebook_config.py\" ]; then jupyter notebook --generate-config; echo \"c.NotebookApp.allow_remote_access = True\" >> ~/.jupyter/jupyter_notebook_config.py; fi"
 
 # This is bad, but pause for a moment to make sure the generate call has completed
 # There have been some cases where the image just stops after the above call.
