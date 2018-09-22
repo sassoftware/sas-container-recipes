@@ -8,7 +8,7 @@ SAS/ACCESS to Redshift orderable.
 * acredshift.sas
     * This SAS code that can be submitted in SAS Studio or via the batchserver
       which will create and drop a table. This is exercising SAS Foundation and
-      that the SAS/ACCESS iterface to Redshift is configured correctly.
+      that the SAS/ACCESS interface to Redshift is configured correctly.
 * dcredshift.sas
     * This SAS code that can be submitted in SAS Studio or via the batchserver
       which will create and drop a table. This is exercising Cloud Analytics

@@ -30,10 +30,10 @@ docker build \
 
 ## Build Arguments
 * BASEIMAGE
-    * Definitiion: Define the namespace and image name to build from
+    * Definition: Define the namespace and image name to build from
     * Default: sas-viya-programming
 * BASETAG
-    * Definition: The verision of the image to build from
+    * Definition: The version of the image to build from
     * Default: latest
 * PLATFORM
     * Definition: The type of host that the software is being installed on

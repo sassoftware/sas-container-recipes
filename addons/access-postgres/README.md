@@ -8,7 +8,7 @@ SAS/ACCESS to PostgreSQL orderable.
 * acpostgres.sas
     * This SAS code that can be submitted in SAS Studio or via the batchserver
       which will create and drop a table. This is exercising SAS Foundation and
-      that the SAS/ACCESS iterface to PostgreSQL is configured correctly.
+      that the SAS/ACCESS interface to PostgreSQL is configured correctly.
 * dcpostgres.sas
     * This SAS code that can be submitted in SAS Studio or via the batchserver
       which will create and drop a table. This is exercising Cloud Analytics

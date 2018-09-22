@@ -1,6 +1,6 @@
 # Overview
 
-This is an example on how to add Jupyter Notebeook with Python3 to a SAS Viya
+This is an example on how to add Jupyter Notebook with Python3 to a SAS Viya
 programming Docker image. The pre-requisite is that the SAS Viya programming Docker
 image has already been built. It is suggested to build this on top of an image
 that has host authentication already added, i.e. _auth-demo_ or _auth-sssd_.
