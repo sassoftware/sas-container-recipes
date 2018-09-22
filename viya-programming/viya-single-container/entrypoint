@@ -817,16 +817,19 @@ if [[ -n "$1" ]]; then
 
         shift
         pushd $(dirname $1)
+        str_file_name_no_extension=$(basename $(echo $1 | cut -d "." -f 1))
+        str_now=$(date +"%Y%m%d%H%M%S")
 
         set +e
         if [ -n "${batch_user}" ]; then
             runuser --shell "/bin/sh" --login ${batch_user} --command "${SASCONFIG}/etc/batchserver/default/batchserver.sh $@"
             batch_user_home=$(getent passwd ${batch_user} | cut -f6 -d:)
-            cp --verbose ${batch_user_home}/*.log .
-            cat *.log
+            cp --verbose ${batch_user_home}/${str_file_name_no_extension}.log ./${str_file_name_no_extension}_${str_now}.log
+            cat ${str_file_name_no_extension}_${str_now}.log
         else
             ${SASCONFIG}/etc/batchserver/default/batchserver.sh $@
-            cat *.log
+            mv --verbose ${str_file_name_no_extension}.log ${str_file_name_no_extension}_${str_now}.log
+            cat ${str_file_name_no_extension}_${str_now}.log
         fi
         set -e
 
