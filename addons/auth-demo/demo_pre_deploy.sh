@@ -34,11 +34,11 @@ else
     echo; echo "####### Create the '${ADMIN_USER_GROUP}' group"; echo;
     groupadd --gid ${ADMIN_USER_GID} ${ADMIN_USER_GROUP};
 fi;
-if [ $(/usr/bin/getent passwd ${CASENV_ADMIN_USER} 2>&1 > /dev/null) ]; then
+if [ $(/usr/bin/getent passwd ${CASENV_ADMIN_USER} 2>&1) ]; then
     echo; echo "####### [WARN] : User '${CASENV_ADMIN_USER}' already exists"; echo;
 else
     echo; echo "####### Create the '${CASENV_ADMIN_USER}' user"; echo;
-    /usr/sbin/useradd --uid ${ADMIN_USER_UID} --gid ${ADMIN_USER_GID} --home-dir ${ADMIN_USER_HOME} ${CASENV_ADMIN_USER};
+    /usr/sbin/useradd --uid ${ADMIN_USER_UID} --gid ${ADMIN_USER_GID} --home-dir ${ADMIN_USER_HOME} --create-home ${CASENV_ADMIN_USER};
     echo "${CASENV_ADMIN_USER}:${ADMIN_USER_PWD}" | chpasswd &&
     echo "default user ${CASENV_ADMIN_USER} password ${ADMIN_USER_PWD}" > ${ADMIN_USER_HOME}/authinfo.txt;
     chown --verbose ${ADMIN_USER_UID}:${ADMIN_USER_GID} ${ADMIN_USER_HOME}/authinfo.txt;
