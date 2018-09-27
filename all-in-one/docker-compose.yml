@@ -18,7 +18,7 @@ version: '2'
 services:
   sasawb:
     build: .
-    image: sasawb:18w30
+    image: sasawb:build
     privileged: true
     cap_add:
       - SYS_ADMIN
