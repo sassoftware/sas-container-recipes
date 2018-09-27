@@ -105,8 +105,12 @@ echo "[INFO]  : Listing Docker images:"
 echo
 docker images
 echo
-echo "For any of the docker images beginning with 'svc-', you can do run the following command to create and start the container:"
-echo "docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=$(hostname -f) --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 --name sas-viya-programming --hostname sas.viya.programming <docker image>"
+echo "For any of the docker images beginning with 'svc-', you can run the following command to create and start the container:"
+echo "docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=$(hostname -f) --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 --name <docker container name> --hostname <docker hostname> <docker image>"
 echo
+echo "To create and start a container with the 'viya-single-container' image and no addons, submit:"
+echo "docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=$(hostname -f) --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 --name sas-viya-programming --hostname sas.viya.programming viya-single-container"
+echo
+
 exit 0
 
