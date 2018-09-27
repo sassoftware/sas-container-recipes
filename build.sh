@@ -105,7 +105,7 @@ echo "[INFO]  : Listing Docker images:"
 echo
 docker images
 echo
-echo "For any of the docker images beginning with 'svp_', you can do run the following command to create and start the container:"
+echo "For any of the docker images beginning with 'svc-', you can do run the following command to create and start the container:"
 echo "docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=$(hostname -f) --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 --name sas-viya-programming --hostname sas.viya.programming <docker image>"
 echo
 exit 0

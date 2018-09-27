@@ -1,5 +1,5 @@
 # Background
-A collections of recipes for building containers with SAS and other tools.
+A collection of recipes for building containers with SAS and other tools.
 
 * [viya-programming](viya-programming/README.md) is a set of tools for creating SAS Viya 3.4 containers.
 * [addons](addons/README.md) is a set of tools for adding to the SAS Viya 3.4 containers.
@@ -12,7 +12,7 @@ A collections of recipes for building containers with SAS and other tools.
 * A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker(https://www.docker.com/)
 * Git
 
-# How to clone from github
+# How to clone from GitHub
 
 These examples are for a linux host that has git and docker installed.  
 This can be done on Windows (with Powershell), and on a Mac too. 
@@ -25,20 +25,24 @@ git clone https://github.com/sassoftware/sas-container-recipes.git
 
 # How To Quickly Build a Viya 3.4 Image
 
-At the root level there is a script called _build.sh_. Once a user has cloned
-the _sassoftware/sas-container-recipes_ project, one can run _build.sh_ to 
-quickly build a set of Docker images that represent a Viya 3.4 image and a 
-Viya 3.4 image with a default user. The following assumes that you are in the 
-/$HOME/sas-container-recipes directory.
+At the root level of this repository, there is a script called _build.sh_. 
+Once you have cloned the _sassoftware/sas-container-recipes_ project, you can run 
+_build.sh_ to quickly build a set of Docker images that represent a SAS Viya 3.4 
+image and a SAS Viya 3.4 image with a default user. 
+
+The following example assumes that you are in the _$HOME/sas-container-recipes_ 
+directory and that you want to add a demo user to allow you to log into SAS Studio 
+when the container is running.
 
 ```
 cp /path/to/SAS_Viya_deployment_data.zip viya-programming/viya-single-container
 build.sh addons/auth-demo
 ```
 
-Running build.sh will print what is happening to the console as well as to a file
-named _build_sas_container.log_. Once everything is built, looking at the available
-docker images we should see something like
+Running _build.sh_ will print what is happening to the console as well as to a 
+file named _build_sas_container.log_.
+
+When this example build completes, execute _docker images_ to see the images produced:
 
 ```
 REPOSITORY                                 TAG                 IMAGE ID            CREATED             SIZE
@@ -47,10 +51,33 @@ viya-single-container                      latest              2351f556f15a     
 centos                                     latest              5182e96772bf        6 weeks ago         200MB
 ```
 
-Note that the size of the _viya-single-container_ varies depending on your order.
-Also, there are not two images each with a size of 8.52 GB on the system. The two
-images are made from the same set of layers with the _svc-auth-demo_ image having
-some layers added to the image.
+Note that the size of the _viya-single-container_ and _svc-auth-demo_ vary depending on your order.
+
+Also, there are not two images of the same size, 8.52 GB for this example, on the 
+system. The _svc-auth-demo_ image is a small image layer stacked on the 
+_viya-single-container_ image, which is a large image layer stacked on the _centos_ image.
+
+Once the container is built one can run the container via the _docker run_ command
+
+```
+docker run \
+    --detach \
+    --rm \
+    --env CASENV_CAS_VIRTUAL_HOST=$(hostname) \
+    --env CASENV_CAS_VIRTUAL_PORT=8081 \
+    --publish-all \
+    --publish 8081:80 \
+    --name svc-auth-demo \
+    --hostname svc-auth-demo \
+    svc-auth-demo
+
+# Check the status
+docker ps --filter name=svc-auth-demo --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}} \t{{.Ports}}"
+CONTAINER ID        NAMES               IMAGE               STATUS              PORTS
+4b426ce49b6b        svc-auth-demo       svc-auth-demo       Up 2 minutes        0.0.0.0:8081->80/tcp, 0.0.0.0:33221->443/tcp, 0.0.0.0:33220->5570/tcp
+```
+
+Now go to the __http://\<hostname of Docker host\>:8081__ and login as user _sasdemo_ with password _sasdemo_.
 
 # Frequently Asked Questions
 ## Errors when building the Docker image
