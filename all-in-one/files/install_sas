@@ -48,6 +48,27 @@ fi
 rm order.oom
 
 #
+# Write out a help page to be displayed when browsing port 80
+#
+cat <<EOF  >/var/www/html/index.html
+<html>
+ <h1> SAS Viya $viya_rel Docker Container </h1>
+ <p> Access the software by browsing to:
+ <ul>
+  <li> <b><a href="/SASStudio">/SASStudio</a></b>
+  <li> <b><a href="/RStudio/auth-sign-in">/RStudio</a></b> (Not installed by default)
+  <li> <b><a href="/Jupyter">/Jupyter</a></b>
+ </ul> using HTTP on port 80.
+
+ <p> If port 80 is forwarded to a different port on the host machine, use the host port instead.
+
+ <p> Use the <b>sasdemo</b> / <b>sasDEMO</b> login to access SAS Studio, CAS, and Jupyter.
+</html>
+EOF
+
+
+
+#
 # for Viya3.3, we could use a simpler yum install
 #
 if [ "$viya_rel" == "3.3" ]
@@ -131,10 +152,16 @@ sed -i "/ notify/,+9d" roles/httpd-x64_redhat_linux_6-yum/tasks/configure-and-st
 sed -i 's/- include: validate.yml/#- include: validate.yml/' internal/deploy-preinstall.yml
 sed -i 's/MAXIMUM_RECOMMENDED_ANSIBLE_VERSION: 2.[0-9]/MAXIMUM_RECOMMENDED_ANSIBLE_VERSION: 2.7/' vars.yml
 
-ansible-playbook -vv -i dockerinv site.yml 2>&1 | tee dockerinv.log
+ansible-playbook -i dockerinv site.yml 2>&1 | tee dockerinv.log
 
 # Uninstall ~10 GB worth of QKB and Sample Maps Data
-rpm -e 'sas-qkb-ci1-*' 'sas-mapsgfka1-*' 'sas-mapsgfkb1-*'
+rpm -e sas-mapsgfka1
+rpm -e sas-mapsgfkb1
+rpm -e sas-nvidiacuda1
+rpm -e sas-nvidiacuda
+rpm -e sas-mapsvahdat
+rpm -e sas-reportvahdat
+rpm -e sas-orchestration-cli
 
 
 # Replace docker container name as hostname to localhost

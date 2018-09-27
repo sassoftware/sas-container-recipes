@@ -15,6 +15,10 @@ mkdir -p download/$ORDER
 docker-compose build
 ```
 
+# How to add Vendor dependencies
+
+If the SAS/Access Software in your order requires some collateral vendor dependencies, please read [VENDOR.md](VENDOR.md).  The ```files/install_vendor.sh``` script tries to help configure the components for you, provided you have placed the necessary artefacts inside vendor/xxx subfolders.
+
 # How to run
 
 ```
@@ -47,6 +51,14 @@ cd $HOME/sas-container-recipes/all-in-one
 docker-compose down
 ```
 
+# How to run myjob.sas (a good old batch sas execution)
+
+You can override the commands run when the docker container starts - see the ```dosas``` script.
+
+```
+cd $HOME/mysas
+$HOME/sas-container-recipes/all-in-one/dosas -nodms -myjob.sas -ls 120
+```
 
 # Curious?
 You can use the `./doshell` script to ssh into the container while it is running and take a look around.

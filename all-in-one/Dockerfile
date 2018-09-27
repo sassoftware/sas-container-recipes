@@ -96,13 +96,16 @@ RUN sed -i "/keepcache=/c\keepcache=1" /etc/yum.conf; \
 ENV anaREPO="https://repo.continuum.io/archive" \
     anaVERSION="3-5.2.0" \
     swatRELEASE="https://github.com/sassoftware/python-swat/releases" \
-    swatVERSION="1.3.1"
+    swatVERSION="1.4.0"
 
 RUN wget -q -O /tmp/anaconda.shar ${anaREPO}/Anaconda${anaVERSION}-Linux-x86_64.sh; \
    bash /tmp/anaconda.shar -p /opt/anaconda3 -b; \
+   /opt/anaconda3/bin/pip install --upgrade pip; \
    /opt/anaconda3/bin/conda update conda; \
    /opt/anaconda3/bin/pip install jupyterlab; \
    /opt/anaconda3/bin/pip install sas_kernel; \
+   /opt/anaconda3/bin/pip install msgpack; \
+   /opt/anaconda3/bin/pip install sas-dlpy; \
    /opt/anaconda3/bin/pip install ${swatRELEASE}/download/v${swatVERSION}/python-swat-${swatVERSION}-linux64.tar.gz; \
    rm /tmp/anaconda.shar
 
@@ -142,10 +145,25 @@ COPY download/$sasORDER/SAS_Viya_deployment_data.zip /opt/sas/install/SAS_Viya_d
 COPY files/install_sas /opt/sas/install
 RUN /opt/sas/install/install_sas
 
+#
+# copy extra vendor files into the vendor folder,
+# and with good luck, the install_vendor script will get them into the container
+#
+COPY vendor /opt/sas/vendor
+COPY files/install_vendor /opt/sas/vendor/install_vendor
+RUN /opt/sas/vendor/install_vendor
 
 # samples
 COPY files/notebooks  /home/sasdemo/notebooks
+COPY files/samples    /home/sasdemo/samples
 RUN chown -R sasdemo:sas /home/sasdemo
+
+# shared folder
+RUN mkdir /shared
+RUN chmod 777 /shared
+RUN ln -s /opt/sas/spre/home/SASFoundation/bin/sas_u8 /usr/local/bin/sas
+
+WORKDIR /shared
 
 
 # ask httpd to proxy our apps

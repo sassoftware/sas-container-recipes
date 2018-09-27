@@ -19,6 +19,18 @@
 # name: start.sh
 # thanks jozwal for the ideas
 
+
+#
+# if given a command, run that
+#
+if [[ "$#" -gt 1 ]]
+then
+  echo Arguments to run are: "$@"
+  exec "$@"
+  exit
+fi
+
+
 #
 # Start Viya
 #	Remove unnecessary services and start remaining (in order)
@@ -48,25 +60,6 @@ httpd
 su -c '/opt/anaconda3/bin/jupyter-notebook --ip="*" --no-browser --notebook-dir=/home/sasdemo --NotebookApp.base_url=/Jupyter' sasdemo &
 sleep 5
 
-
-#
-# Write out a help page to be displayed when browsing port 80
-#
-cat > /var/www/html/index.html <<'EOF'
-<html>
- <h1> SAS Viya 3.3 Docker Container </h1>
- <p> Access the software by browsing to:
- <ul>
-  <li> <b><a href="/SASStudio">/SASStudio</a></b>
-  <li> <b><a href="/RStudio/auth-sign-in">/RStudio</a></b> (Not installed by default)
-  <li> <b><a href="/Jupyter">/Jupyter</a></b>
- </ul> using HTTP on port 80.
-
- <p> If port 80 is forwarded to a different port on the host machine, use the host port instead.
-
- <p> Use the <b>sasdemo</b> / <b>sasDEMO</b> login to access SAS Studio, CAS, and Jupyter.
-</html>
-EOF
 
 #
 # Print out the help message without the HTML tags
