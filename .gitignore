@@ -3,3 +3,4 @@
 ./all-in-one/vendor/
 !./all-in-one/vendor/README.md
 ./all-in-one/files/samples/kent*
+SAS_Viya_deployment_data.zip
