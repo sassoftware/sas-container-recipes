@@ -14,8 +14,8 @@ A collection of recipes for building containers with SAS and other tools.
 
 # How to clone from GitHub
 
-These examples are for a linux host that has git and docker installed.  
-This can be done on Windows (with Powershell), and on a Mac too. 
+These examples are for a Linux host that has Git and Docker installed.  
+You can clone on Windows (with Powershell), and on a Mac too. 
 To keep the example simple, we'll put the cloned folder in your $HOME directory.
 
 ```
@@ -23,7 +23,7 @@ cd $HOME
 git clone https://github.com/sassoftware/sas-container-recipes.git
 ```
 
-# How To Quickly Build a Viya 3.4 Image
+# How To Quickly Build a SAS Viya 3.4 Image
 
 At the root level of this repository, there is a script called _build.sh_. 
 Once you have cloned the _sassoftware/sas-container-recipes_ project, you can run 
