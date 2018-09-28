@@ -51,7 +51,8 @@ RUN set -e; \
         yum install --assumeyes python36-devel gcc-c++; \
         curl --silent --remote-name https://bootstrap.pypa.io/get-pip.py; \
         python3.6 get-pip.py; \
-        rm --verbose get-pip.py; \
+        rm --verbose --force get-pip.py; \
+        pip3 --no-cache-dir install --upgrade ipython==6.5.0; \
         pip3 --no-cache-dir install \
           jupyter \
           saspy \
