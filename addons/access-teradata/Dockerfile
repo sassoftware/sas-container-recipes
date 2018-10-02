@@ -30,7 +30,7 @@ ARG PLATFORM=redhat
 
 USER root
 RUN set -e; \
-    mkdir /tmp/teradata_tools
+    mkdir /tmp/teradata_tools; \
     if [ "$PLATFORM" = "redhat" ]; then \
         rpm --rebuilddb; \
         yum install --assumeyes ksh; \
