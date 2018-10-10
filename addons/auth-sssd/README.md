@@ -1,17 +1,20 @@
 # Overview
 
-This provides a structure of how to hook in LDAP configuration that uses sssd and PAM.
+A structure for adding LDAP configuration that uses sssd and PAM.
 
 # Files
-Quick description of the files and if they are needed or not
-* sssd.conf : Required; contains a template sssd configuration. This should reflect an organizations configuration
-* sssd_pre_deploy.sh : Required; will start sssd. Called by the main entrypoint script
-* sssd.cert : Optional; contains the needed cert in order for encryption to work
 
-# How to build
+* sssd.conf
+  * A required file that contains a template sssd configuration, which should reflect an organization's configuration.
+* sssd_pre_deploy.sh
+  * A required file that starts sssd and is called by the main entrypoint script.
+* sssd.cert
+  * An optional file that contains the needed cert so that  encryption will work.
 
-Edit the _sssd.conf_ file and fill in the desired configuration. If a SSL cert is needed
-provide that via a file named _sssd.cert_.
+# How to Build
+
+Edit the sssd.conf file and fill in the desired configuration. If a SSL cert is needed, 
+provide it as a file named sssd.cert.
 
 ```
 # This is using the default name of the SAS Viya programming image and the default sssd.conf file
@@ -43,7 +46,7 @@ docker build \
     * Definition: The file that contains the organizations sssd configuration
     * Default: sssd.conf
 
-# How to run
+# How to Run
 ```
 docker run \
     --detach \
@@ -63,7 +66,7 @@ CONTAINER ID        NAMES               IMAGE               STATUS              
 4b426ce49b6b        svc-auth-sssd       svc-auth-sssd       Up 2 minutes        0.0.0.0:33222->80/tcp, 0.0.0.0:33221->443/tcp, 0.0.0.0:33220->5570/tcp
 ```
 
-Now go to the __http://\<hostname of Docker host\>:33222__ and login as user that is defined in the configured LDAP environment.
+Log on at http://_host-name-where-docker-is-running_:33222 as the user that is defined in the configured LDAP environment.
 
 # Copyright
 

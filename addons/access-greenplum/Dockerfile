@@ -15,10 +15,10 @@
 #
 #
 # BUILD:
-#   docker build --file Dockerfile --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest . --tag svc-access-hadoop
-#
+#   docker build --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest . --tag svc-accessgreenplum 
+# 
 # RUN:
-#   docker run --detach --rm --publish-all --name svc-access-hadoop --hostname svc-access-hadoop svc-access-hadoop
+#   docker run --detach --rm --publish-all --name svc-access-greenplum --hostname svc-access-greenplum svc-access-greenplum
 #
 
 ARG BASEIMAGE=viya-single-container
@@ -28,4 +28,5 @@ FROM $BASEIMAGE:$BASETAG
 
 USER root
 
-ADD hadoop_cas.settings /tmp/
+ADD greenplum_cas.settings /tmp/
+ADD greenplum_sasserver.sh /tmp/

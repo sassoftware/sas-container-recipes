@@ -1,15 +1,16 @@
 # Overview
 
-This is an example on how to add Jupyter Notebook with Python3 to a SAS Viya
-programming Docker image. The pre-requisite is that the SAS Viya programming Docker
-image has already been built. It is suggested to build this on top of an image
-that has host authentication already added, i.e. _auth-demo_ or _auth-sssd_.
+This is an example of how to add Jupyter Notebook with Python 3 to a SAS Viya
+programming-only Docker image.
 
-# How to build
+A prerequisite is that the SAS Viya programming-only Docker
+image must have already been built. It is recommended to build this on top of an image
+that has host authentication (auth-demo or auth-sssd) already added.
+
+# How to Build
 
 ```
-# This is using the default name of the SAS Viya programming image
-docker build \
+# This is using the default name of the SAS Viya programming-only Docker image build \
     --file Dockerfile \
     --build-arg BASEIMAGE=svc-auth-demo \
     --build-arg BASETAG=latest \
@@ -44,7 +45,7 @@ docker build \
     * Default: True
     * Valid values: True, False (case sensitive)
     
-# How to run
+# How to Run
 ```
 docker run \
     --detach \
@@ -63,7 +64,7 @@ CONTAINER ID        NAMES                       IMAGE                       STAT
 4b426ce49b6b        svc-ide-jupyter-python3     svc-ide-jupyter-python3     Up 2 minutes        0.0.0.0:8081->80/tcp, 0.0.0.0:33221->443/tcp, 0.0.0.0:33220->5570/tcp
 ```
 
-Now go to the __http://\<hostname of Docker host\>:8081/Jupyter__
+Go to  http://_host-name-where-docker-is-running_:8081/Jupyter
 
 # Copyright
 

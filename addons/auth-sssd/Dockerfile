@@ -65,4 +65,4 @@ RUN set -e; \
         exit 1; \
     fi
 
-COPY sssd_pre_deploy.sh /tmp/sssd_pre_deploy.sh
+COPY sssd_pre_deploy.sh /tmp/000_sssd_pre_deploy.sh
