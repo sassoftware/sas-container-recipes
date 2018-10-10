@@ -1,6 +1,6 @@
 # Overview
 
-This is an example on how to add a default user to a SAS Viya programming-only Docker image.
+This is an example about how to add a default user to a SAS Viya programming-only Docker image.
 * A prerequisite is that the SAS Viya programming-only Docker image has already been built.
 * The user created will also be used for the CAS Administrator and as the default
 user for running Jupyter Notebook if the _ide-jupyter-python3_ example is used.
