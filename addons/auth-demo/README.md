@@ -1,18 +1,18 @@
 # Overview
 
-This is an example on how to add a default user to a SAS Viya programming Docker image.
-The pre-requisite is that the SAS Viya programming Docker image has already been built.
-The user created here will also be used for the CAS Administrator and as the default
+This is an example on how to add a default user to a SAS Viya programming-only Docker image.
+* A prerequisite is that the SAS Viya programming-only Docker image has already been built.
+* The user created will also be used for the CAS Administrator and as the default
 user for running Jupyter Notebook if the _ide-jupyter-python3_ example is used.
 
-# How to build
+# How to Build
 
 ```
-# This is using the default name of the SAS Viya programming image and will create a user called sasdemo
+# This is using the default name of the SAS Viya programming-only image and will create a user called sasdemo
 docker build --file Dockerfile . --tag svc-auth-demo
 ```
 
-# How to run
+# How to Run
 ```
 docker run \
     --detach \
@@ -31,9 +31,9 @@ CONTAINER ID        NAMES               IMAGE               STATUS              
 4b426ce49b6b        svc-auth-demo       svc-auth-demo       Up 2 minutes        0.0.0.0:8081->80/tcp, 0.0.0.0:33221->443/tcp, 0.0.0.0:33220->5570/tcp
 ```
 
-Now go to the __http://\<hostname of Docker host\>:8081__ and login as user _sasdemo_ with password _sasdemo_.
+Log on at  http://_host-name-where-docker-is-running_:8081 with the user **sasdemo** and the password **sasdemo**.
 
-## Configure the default user
+## Configure the Default User
 ### Run Arguments
 * BASEIMAGE
     * Definitiion: Define the namespace and image name to build from
@@ -61,7 +61,7 @@ Now go to the __http://\<hostname of Docker host\>:8081__ and login as user _sas
     * Default: 1001
 
 ### Example
-The following will create a _foo_ user with a password of _bar_, a UID of _1010_ 
+Here is an example that will create a user named _foo_ with a password of _bar_, a UID of _1010_ 
 belonging to a group with name of _widget_ and a GID of _1011_.
 
 ```

@@ -1,31 +1,27 @@
 # Overview
 
-The content in this directory provides a simple way to smoke test the
-SAS/ACCESS to PostgreSQL orderable.
+The content in this directory provides a simple way for smoke testing 
+SAS/ACCESS Interface to PostgreSQL.
 
-# File list
+# File List
 
 * acpostgres.sas
-    * This SAS code that can be submitted in SAS Studio or via the batchserver
-      which will create and drop a table. This is exercising SAS Foundation and
-      that the SAS/ACCESS interface to PostgreSQL is configured correctly.
+    * SAS code that can be submitted in SAS Studio or by the SAS batch server. This code 
+creates and drops a table and uses SAS Foundation to confirm that SAS/ACCESS Interface to PostgreSQL is configured correctly.
 * dcpostgres.sas
-    * This SAS code that can be submitted in SAS Studio or via the batchserver
-      which will create and drop a table. This is exercising Cloud Analytics
-      Services and validating that the Data Connector to PostgreSQL is
+    * SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Cloud Analytic Services to confirm that the SAS Data Connector to PostgreSQL is
       configured correctly.
 
 # How to Use
 
 ## SAS Studio
 
-* Log into SAS Studio __http://\<hostname of Docker host\>:8081__
-* Paste the code from either _acpostgres.sas_ or _dcpostgres.sas_ into the code
-  window.
-* Edit the 'FIXME' text in _acpostgres.sas_ and _dcpostgres.sas_ with the
-  correct values for the environment.
-* Run code
-* There should be no errors and should get something like the following as a log
+1. Log on to SAS Studio: http://_host-name-where-docker-is-running_:8081
+2. Paste the code from either acpostgres.sas or dcpostgres.sas  into the code window.
+3. Edit the 'FIXME' text in acpostgres.sas and dcpostgres.sas with the correct values for the environment.
+4. Run the code.
+
+Here is an example of a log with no errors:
 
 ```
 # Here is the log for dcpostgres.sas
@@ -245,11 +241,11 @@ SAS/ACCESS to PostgreSQL orderable.
  211
 ```
 
-## Batchserver
+## SAS Batch Server
 
-* Edit the 'FIXME' text in _acpostgres.sas_ and _dcpostgres.sas_ with the
+1. Edit the 'FIXME' text in acpostgres.sas and dcpostgres.sas with the
   correct values for the environment.
-* From the parent directory, run the following
+2. From the parent directory, run the following commmand:
 
 ```
 docker run --interactive --tty --rm --volume ${PWD}/addons/access-postgres:/sasinside --env SAS_LOGS_TO_DISK=true viya-single-container --batch /sasinside/acpostgres.sas

@@ -34,7 +34,7 @@ else
     echo; echo "####### Create the '${ADMIN_USER_GROUP}' group"; echo;
     groupadd --gid ${ADMIN_USER_GID} ${ADMIN_USER_GROUP};
 fi;
-if [ $(/usr/bin/getent passwd ${CASENV_ADMIN_USER} 2>&1) ]; then
+if [[ $(/usr/bin/getent passwd ${CASENV_ADMIN_USER} 2>&1) ]]; then
     echo; echo "####### [WARN] : User '${CASENV_ADMIN_USER}' already exists"; echo;
 else
     echo; echo "####### Create the '${CASENV_ADMIN_USER}' user"; echo;

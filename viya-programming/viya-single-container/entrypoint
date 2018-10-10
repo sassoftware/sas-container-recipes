@@ -28,6 +28,26 @@
 [[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
 [[ -z ${SAS_LOGS_TO_DISK+x} ]]  && export SAS_LOGS_TO_DISK=false
 
+[[ -z $APACHE_ROOT ]] && APACHE_ROOT=
+[[ -z $APACHE_CTL ]] && APACHE_CTL=$APACHE_ROOT/usr/sbin/apachectl
+
+if [ -z $APACHE_CONF_D ]; then
+  if [ -d $APACHE_ROOT/etc/httpd/conf.d ]; then
+    APACHE_CONF_D=$APACHE_ROOT/etc/httpd/conf.d
+    APACHE_CONF=$APACHE_ROOT/etc/httpd/conf/httpd.conf
+    APACHE_BIN=/usr/sbin/httpd
+    APACHE_DOCROOT=/var/www/html
+    APACHE_PID=/var/run/httpd/httpd.pid
+  else
+    APACHE_CONF_D=$APACHE_ROOT/etc/apache2/conf.d
+    APACHE_CONF=$APACHE_ROOT/etc/apache2/httpd.conf
+    APACHE_BIN=/usr/sbin/apachectl
+    APACHE_DOCROOT=/srv/www/htdocs
+    APACHE_PID=/var/run/httpd.pid
+  fi
+fi
+
+
 _deployid=${SASDEPLOYID}
 export CASCONFIG="${SASROOT}/${_deployid}/config"
 
@@ -46,7 +66,7 @@ function gracefulshutdown {
     echo
 
     echo "    Stop httpd"
-    /usr/sbin/httpd -k stop
+    $APACHE_BIN -k stop
 
     echo "    Stop SAS services"
     #/etc/init.d/sas-viya-all-services stop
@@ -155,7 +175,7 @@ if [ -d ${SASCONFIG}/etc/cas/${SASCASINSTANCE} ]; then
     fi
 
     n_startup_count=$(find /tmp -type f -name "*_casstartup.lua" | wc -c)
-    if (( ${n_settings_count} > 0 )); then
+    if (( ${n_startup_count} > 0 )); then
         for str_casstartup in $(ls -1 /tmp/*_casstartup.lua); do
             echo "Dumping contents of \"${str_casstartup}\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua"
             echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua
@@ -720,6 +740,19 @@ if ! ${SAS_LOGS_TO_DISK}; then
     # Setup object spawner to log to stdout
     sed -i 's|>\$spawner_logfile ||' ${SASCONFIG}/etc/spawner/${SASINSTANCE}/spawner.sh
 
+    grep -q 'ConsoleAppender' /opt/sas/viya/config/etc/spawner/default/logconfig.xml  || sed -i '/<appender class="UNXFacilityAppender"/i \
+<!-- Console appender --> \
+   <appender class="ConsoleAppender" name="Console"> \
+      <param name="ImmediateFlush" value="true"/> \
+      <layout> \
+         <param name="HeaderPattern" value="Host: '%S{hostname}', OS: '%S{os_family}', Release: '%S{os_release}', Command: '%S{startup_cmd}'"/> \
+         <param name="ConversionPattern" value="%d %-5p [%t] %X{Client.ID}:%u - %m"/> \
+      </layout> \
+   </appender>\
+' /opt/sas/viya/config/etc/spawner/default/logconfig.xml
+   
+    sed -i -e 's#<appender-ref ref="TimeBasedRollingFile"/>#<appender-ref ref="Console"/>#g' -e '/<appender class="RollingFileAppender"/,/appender>/d' /opt/sas/viya/config/etc/spawner/default/logconfig.xml
+
     # Setup workspace server to log to stdout
     cp ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.stdout.xml ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.xml
     sed -i 's|Debug|Info|' ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.xml
@@ -752,7 +785,7 @@ fi
 # Configure HTTP
 #
 
-cat > /etc/httpd/conf.d/proxy.conf << HTTPD
+cat > $APACHE_CONF_D/proxy.conf << HTTPD
 RedirectMatch "^/$" /SASStudio
 
 <location /cas-shared-default-http>
@@ -779,7 +812,7 @@ rm --verbose --force /run/httpd/authdigest_shm.*
 # Write out a help page to be displayed when browsing port 80
 #
 
-cat > /var/www/html/index.html <<'EOF'
+cat > $APACHE_DOCROOT/index.html <<'EOF'
 <html>
  <h1> SAS Viya Programming Docker Container </h1>
  <p> Access the software by browsing to:
@@ -874,10 +907,10 @@ else
         #
 
         # Get logging to stdout
-        #sed -ri -e 's!^(\s*CustomLog)\s+\S+!\1 /proc/self/fd/1!g' /etc/httpd/conf/httpd.conf
-        sed -ri -e 's!^(\s*ErrorLog)\s+\S+!\1 /proc/self/fd/2!g' /etc/httpd/conf/httpd.conf
+        #sed -ri -e 's!^(\s*CustomLog)\s+\S+!\1 /proc/self/fd/1!g' $APACHE_CONF
+        sed -ri -e 's!^(\s*ErrorLog)\s+\S+!\1 /proc/self/fd/2!g' $APACHE_CONF
 
-        /usr/sbin/httpd -k start
+        $APACHE_BIN -k start
     fi
 
     start_cas
@@ -926,7 +959,7 @@ else
     # Loop to keep the container alive
     #
 
-    pidfiles="/var/run/httpd/httpd.pid /var/run/sas/sas-viya-sasstudio-default.pid /var/run/sas/sas-viya-spawner-default.pid /var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
+    pidfiles="$APACHE_PID /var/run/sas/sas-viya-sasstudio-default.pid /var/run/sas/sas-viya-spawner-default.pid /var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
     while :; do
         sleep 3
         for _pidf in ${pidfiles}; do
@@ -944,7 +977,7 @@ else
                     gracefulshutdown
                 fi
             else
-                echo; echo "PID file not found"; echo
+                echo; echo "PID file not found: $_pidf"; echo
                 gracefulshutdown
             fi
         done

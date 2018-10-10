@@ -13,19 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#
-# BUILD:
-#   docker build --file Dockerfile --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest . --tag svc-access-hadoop
-#
-# RUN:
-#   docker run --detach --rm --publish-all --name svc-access-hadoop --hostname svc-access-hadoop svc-access-hadoop
-#
 
-ARG BASEIMAGE=viya-single-container
-ARG BASETAG=latest
-
-FROM $BASEIMAGE:$BASETAG
-
-USER root
-
-ADD hadoop_cas.settings /tmp/
+export ORACLE_HOME=/usr/lib/oracle/12.2/client64
+export PATH=$ORACLE_HOME/bin:$PATH
+export TNS_ADMIN=/etc
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH

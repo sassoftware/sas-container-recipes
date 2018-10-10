@@ -2,10 +2,11 @@
 
 This directory contains sample files that can be used as part of the deployment.
 
-# File list
-* _viya_34_0_vars.yml_ : Template of a SAS Viya 3.4 vars.yml
+# File List
+* viya_34_0_vars.yml
+  * Template of a vars.yml file for SAS Viya 3.4 for Linux
 
-# How to use
+# How to Use
 
 ## vars.yml
 ```

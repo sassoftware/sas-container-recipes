@@ -1,30 +1,23 @@
 # Overview
 
-The content in this directory provides a simple way to smoke test the
-SAS/ACCESS to PC Files orderable.
+The content in this directory provides a simple way for smoke testing 
+SAS/ACCESS Interface to PC Files.
 
-# File list
+# File List
 
 * acpcfiles.sas
-    * This SAS code that can be submitted in SAS Studio or via the batchserver
-      which will create a table and write its contents to file. This is
-      exercising SAS Foundation and that the SAS/ACCESS interface to PC Files
+    * SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates a table and writes its contents to file and uses SAS Foundation to confirm that  SAS/ACCESS Interface to PC Files
       is working.
 * dcpcfiles.sas
-    * This SAS code that can be submitted in SAS Studio or via the batchserver
-      which will create a table, write its contents to file, and then read that
-      files contents back into CAS. This is exercising Cloud Analytics Services
-      and validating that the Data Connector to PC Files is working.
+    * SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates a table, write its contents to file, and then reads the file contents back into SAS Cloud Analytic Services (CAS). The code uses CAS to validate that the SAS Data Connector to PC Files is working.
 
 # How to Use
 
 ## SAS Studio
 
-* Log into SAS Studio __http://\<hostname of Docker host\>:8081__
-* Paste the code from either _acpcfiles.sas_ or _dcpcfiles.sas_ into the code
+1. Log on to SAS Studio: http://_host-name-where-docker-is-running_:8081
+2. Paste the code from either acpcfiles.sas or dcpcfiles.sas into the code
   window.
-* Edit the 'FIXME' text in _acpcfiles.sas_ and _dcpcfiles.sas_ with the
-  correct values for the environment.
 * Run code
 * There should be no errors and should get something like the following as a log
 
@@ -110,11 +103,11 @@ SAS/ACCESS to PC Files orderable.
  136     
 ```
 
-## Batchserver
+## SAS Batch Server
 
-* Edit the 'FIXME' text in _acpcfiles.sas_ and _dcpcfiles.sas_ with the
+1. Edit the 'FIXME' text in acpcfiles.sas and dcpcfiles.sas with the
   correct values for the environment.
-* From the parent directory, run the following
+2. From the parent directory, run the following command:
 
 ```
 docker run --interactive --tty --rm --volume ${PWD}/pcfilesql:/sasinside --env SAS_LOGS_TO_DISK=true viya-single-container --batch /sasinside/acpcfiles.sas

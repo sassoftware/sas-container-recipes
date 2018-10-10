@@ -47,12 +47,13 @@ RUN set -e; \
     if [ "$PLATFORM" = "redhat" ]; then \
         rpm --rebuilddb; \
         echo; echo "####### Add the packages to support running Jupyter Notebook"; echo; \
-        yum install --assumeyes https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm ; \
+        if [ ! -f "/etc/yum.repos.d/epel.repo" ]; then \
+            yum install --assumeyes https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm ; \
+        fi; \
         yum install --assumeyes python36-devel gcc-c++; \
         curl --silent --remote-name https://bootstrap.pypa.io/get-pip.py; \
         python3.6 get-pip.py; \
         rm --verbose --force get-pip.py; \
-        pip3 --no-cache-dir install --upgrade ipython==6.5.0; \
         pip3 --no-cache-dir install \
           jupyter \
           saspy \
@@ -65,11 +66,9 @@ RUN set -e; \
         jupyter nbextension enable sas_kernel.showSASLog --py; \
         jupyter nbextension install --py sas_kernel.theme; \
         jupyter nbextension enable sas_kernel.theme --py; \
-        # Uncomment the following to disable the terminal kernel; \
         if [ "${ENABLE_TERMINAL}" = "False" ]; then \
             pip3 uninstall -y terminado; \
         fi; \
-        # Uncomment the following to disable the python kernel; \
         if [ "${ENABLE_NATIVE_KERNEL}" = "False" ]; then \
             jupyter kernelspec remove python3 -f; \
         fi; \
