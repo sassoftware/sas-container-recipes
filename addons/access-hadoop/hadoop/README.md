@@ -1,8 +1,8 @@
 # Overview
 
-This directory is where the config and jar files should be placed
-after collecting them from the Hadoop environemt. A listing of this
-directory should show two directories named config and jars.
+This directory is where the Hadoop configuration files and JAR files should be placed
+after collecting them from the Hadoop environment. A listing of this
+directory should show two directories named /config and /jars.
 
 # Copyright
 
