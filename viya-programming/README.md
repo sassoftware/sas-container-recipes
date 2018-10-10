@@ -1,7 +1,7 @@
 # Background
-A quick start process for building SAS Viya 3.4 Docker images
+A recipe for creating a SAS Viya programming-only Docker image that is based on a SAS Viya 3.4 for Linux order.
 
-* [viya-single-container](viya-single-container/README.md) is a set of tools for creating Viya 3.4 programming container.
+* [viya-single-container](viya-single-container/README.md)
 
 # Copyright
 

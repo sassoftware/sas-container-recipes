@@ -6,5 +6,5 @@
 SAS_Viya_deployment_data.zip
 *sas*.conf
 sssd.cert
-tests/
+*test*/
 .DS_Store

@@ -1,31 +1,29 @@
 # Overview
 
-The content in this directory provides a simple way to smoke test the
-SAS/ACCESS to Redshift orderable.
+The content in this directory provides a simple way for smoke testing 
+SAS/ACCESS Interface to Amazon Redshift.
 
 # File list
 
 * acredshift.sas
-    * This SAS code that can be submitted in SAS Studio or via the batchserver
-      which will create and drop a table. This is exercising SAS Foundation and
-      that the SAS/ACCESS interface to Redshift is configured correctly.
+    * SAS code that can be submitted in SAS Studio or by the SAS batch server. This code
+      creates and drops a table and uses SAS Foundation to confirm that SAS/ACCESS Interface to Amazon Redshift is configured correctly.
 * dcredshift.sas
-    * This SAS code that can be submitted in SAS Studio or via the batchserver
-      which will create and drop a table. This is exercising Cloud Analytics
-      Services and validating that the Data Connector to Redshift is
+    * SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Cloud Analytic Services to confirm that SAS Data Connector to Amazon Redshift is
       configured correctly.
 
 # How to Use
 
 ## SAS Studio
 
-* Log into SAS Studio __http://\<hostname of Docker host\>:8081__
-* Paste the code from either _acredshift.sas_ or _dcredshift.sas_ into the code
+1. Log on to SAS Studio: http://_host-name-where-docker-is-running_:8081
+2. Paste the code from either acredshift.sas or dcredshift.sas into the code
   window.
-* Edit the 'FIXME' text in _acredshift.sas_ and _dcredshift.sas_ with the
+3. Edit the 'FIXME' text in acredshift.sas and dcredshift.sas with the
   correct values for the environment.
-* Run code
-* There should be no errors and should get something like the following as a log
+4. Run the code.
+
+Here is an example of a log with no errors:
 
 ```
 # Here is the log for acredshift.sas
@@ -143,11 +141,11 @@ SAS/ACCESS to Redshift orderable.
  166               
 ```
 
-## Batchserver
+## SAS Batch Server
 
-* Edit the 'FIXME' text in _acredshift.sas_ and _dcredshift.sas_ with the
+1. Edit the 'FIXME' text in  acredshift.sas and dcredshift.sas to include the
   correct values for the environment.
-* From the parent directory, run the following
+2. From the parent directory, run the following command:
 
 ```
 docker run --interactive --tty --rm --volume ${PWD}/addons/access-redshift:/sasinside --env SAS_LOGS_TO_DISK=true svc-access-redshift --batch /sasinside/acredshift.sas
