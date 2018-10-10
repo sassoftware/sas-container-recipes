@@ -13,6 +13,8 @@ A collection of items that can be added to a SAS Viya 3.4 Docker image.
 * [auth-sssd](auth-sssd/README.md) is a set of tools for adding System Security Services Daemon (sssd) support.
 * [ide-jupyter-python3](ide-jupyter-python3/README.md) is a set of tools for adding Jupyter Notebook and Python 3.
 
+**Note:** You can add multiple addons to a build.
+
 # Copyright
 
 Copyright 2018 SAS Institute Inc.
