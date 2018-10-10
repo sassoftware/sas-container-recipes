@@ -1,30 +1,25 @@
 # Overview
 
-The content in this directory provides a simple way to smoke test the
-SAS/ACCESS to Greenplum orderable.
+The content in this directory provides a simple way for smoke testing 
+SAS/ACCESS Interface to Greenplum.
 
-# File list
+# File List
 
 * greenplum_sasserver.sh:
-    * The contents of this file contain environment variables needed to ensure
-      greenplum code is executed properly. Update this file with your Greenplum client
-      library version number.
+    * The file contains environment variables that are required so that the Greenplum code executes properly. Update this file with your Greenplum client library version number.
 * acgreenplum.sas
-    * This SAS code that can be submitted in SAS Studio or via the batchserver
-      which will create and drop a table. This is exercising SAS Foundation and
-      that the SAS/ACCESS iterface to Greenplum is configured correctly.
+    * SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Foundation to confirm that SAS/ACCESS Interface to Greenplum is configured correctly.
 
 # How to Use
 
 ## SAS Studio
 
-* Log into SAS Studio __http://\<hostname of Docker host\>:8081__
-* Paste the code from either _acgreenplum.sas_ or _dcgreenplum.sas_ into the code
-  window.
-* Edit the 'FIXME' text in _acgreenplum.sas_ and _dcgreenplum.sas_ with the
-  correct values for the environment.
-* Run code
-* There should be no errors and should get something like the following as a log
+1. Log on to SAS Studio: http://_host-name-where-docker-is-running_:8081
+2. Paste the code from either acgreenplum.sas or dcgreenplum.sas into the code window.
+3. Edit the 'FIXME' text in acgreenplum.sas and dcgreenplum.sas with the correct values for the environment.
+4. Run the code.
+
+Here is an example of a log with no errors:
 
 ```
 # Here is the log for acgreenplum.sas
@@ -131,11 +126,10 @@ SAS/ACCESS to Greenplum orderable.
  148        
 ```
 
-## Batchserver
+## SAS Batch Server
 
-* Edit the 'FIXME' text in _acgreenplum.sas_ and _dcgreenplum.sas_ with the
-  correct values for the environment.
-* From the parent directory, run the following
+1. Edit the 'FIXME' text in acgreenplum.sas and dcgreenplum.sas to include the correct values for the environment.
+2. From the parent directory, run the following command:
 
 ```
 docker run --interactive --tty --rm --volume ${PWD}/addons/access-greenplum:/sasinside --env SAS_LOGS_TO_DISK=true svc-access-greenplum --batch /sasinside/acgreenplum.sas
