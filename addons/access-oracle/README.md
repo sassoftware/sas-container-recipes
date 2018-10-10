@@ -1,45 +1,35 @@
 # Overview
 
-The content in this directory provides a simple way to smoke test the
-SAS/ACCESS to Oracle orderable.
+The content in this directory provides a simple way for smoke testing 
+SAS/ACCESS Interface to Oracle.
 
 # Requirements
-Oracle client library RPMs must be placed in this directory. The Dockerfile will
+
+* Oracle client library RPMs must be placed in this directory. The Dockerfile will
 attempt to install any RPMs in this directory.
+* A file named tnsnames.ora is expected in this directory.
 
-A tnsnames.ora file is also expected to be in this directory.
-
-# File list
+# File List
 
 * oracle_cas.settings:
-    * The contents of this file contain environment variables needed to ensure
-      oracle code is executed properly. Update this file with your Oracle client
-      library version number.
+    * This file contains environment variables that are required so that the Oracle code executes properly. Update this file with your Oracle client library version number.
 * oracle_sasserver.sh:
-    * The contents of this file contain environment variables needed to ensure
-      oracle code is executed properly. Update this file with your Oracle client
-      library version number.
+    * This file contains environment variables that are required so that the Oracle code executes properly. Update this file with your Oracle client library version number.
 * acoracle.sas
-    * This SAS code that can be submitted in SAS Studio or via the batchserver
-      which will create and drop a table. This is exercising SAS Foundation and
-      that the SAS/ACCESS iterface to Oracle is configured correctly.
+    * SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table. The code uses SAS Foundation to validate that SAS/ACCESS Interface to Oracle is configured correctly.
 * dcoracle.sas
-    * This SAS code that can be submitted in SAS Studio or via the batchserver
-      which will create and drop a table. This is exercising Cloud Analytics
-      Services and validating that the Data Connector to Oracle is
-      configured correctly.
+    * SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table. The code uses SAS Cloud Analytic Services (CAS) to validate that the Data Connector to Oracle is configured correctly.
 
 # How to Use
 
 ## SAS Studio
 
-* Log into SAS Studio __http://\<hostname of Docker host\>:8081__
-* Paste the code from either _acoracle.sas_ or _dcoracle.sas_ into the code
-  window.
-* Edit the 'FIXME' text in _acoracle.sas_ and _dcoracle.sas_ with the
-  correct values for the environment.
-* Run code
-* There should be no errors and should get something like the following as a log
+1. Log on to SAS Studio: http://_host-name-where-docker-is-running_:8081
+2. Paste the code from either acoracle.sas or dcoracle.sas into the code window.
+3. Edit the 'FIXME' text in acoracle.sas and dcoracle.sas with the correct values for the environment.
+4. Run the code.
+
+Here is an example of a log with no errors:
 
 ```
 # Here is the log for acoracle.sas
@@ -146,11 +136,10 @@ A tnsnames.ora file is also expected to be in this directory.
  148        
 ```
 
-## Batchserver
+## SAS Batch Server
 
-* Edit the 'FIXME' text in _acoracle.sas_ and _dcoracle.sas_ with the
-  correct values for the environment.
-* From the parent directory, run the following
+1. Edit the 'FIXME' text in acoracle.sas and dcoracle.sas to include the correct values for the environment.
+2. From the parent directory, run the following command:
 
 ```
 docker run --interactive --tty --rm --volume ${PWD}/addons/access-oracle:/sasinside --env SAS_LOGS_TO_DISK=true svc-access-oracle --batch /sasinside/acoracle.sas
