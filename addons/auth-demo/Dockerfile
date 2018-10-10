@@ -30,12 +30,12 @@ USER root
 
 WORKDIR /tmp
 
-COPY demo_pre_deploy.sh .
+COPY demo_pre_deploy.sh ./010_demo_pre_deploy.sh
 
 #
 # Creation of the user is delayed until startup
 #
 
-#RUN /tmp/demo_pre_deploy.sh
+#RUN /tmp/010_demo_pre_deploy.sh
 
 #VOLUME ${ADMIN_USER_HOME}

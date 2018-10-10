@@ -1,9 +1,8 @@
 # Overview
 
-This is a quickstart/recipe for creating a SAS Viya programming only Docker image
-based from a Linux SAS Viya order.
+This is a recipe for creating a SAS Viya programming-only Docker image based on a SAS Viya 3.4 for Linux order.
 
-# How to build
+# How to Build
 
 ```
 cd $HOME/sas-container-recipes/viya-programming/viya-single-container
@@ -80,14 +79,14 @@ docker build -f Dockerfile . -t svc-auth-demo
 docker run --detach --publish-all --rm --name svc-auth-demo --hostname svc-auth-demo svc-auth-demo
 ```
 
-## To Create an Image with Jupyter
+## To Create an Image with Jupyter Notebook
 ```
 cd /path/to/sassoftware/sas-container-recipes/addons/ide-jupyter-python3
-docker build -f Dockerfile --build-arg BASEIMAGE=svc-auth-dmeo . -t svc-ide-jupyter-python3
+docker build -f Dockerfile --build-arg BASEIMAGE=svc-auth-demo . -t svc-ide-jupyter-python3
 docker run --detach --publish-all --rm --name svc-ide-jupyter-python3 --hostname svc-ide-jupyter-python3 svc-ide-jupyter-python3
 ```
 
-# How to run
+# How to Run
 
 ## Interactive
 
@@ -95,7 +94,7 @@ docker run --detach --publish-all --rm --name svc-ide-jupyter-python3 --hostname
 docker run --detach --publish-all --rm --name viya-single-container --hostname viya-single-container viya-single-container
 ```
 
-To check that the services are all started:
+To check that all the services are started:
 
 ```
 # There should be three services and status should be 'up'
@@ -108,14 +107,13 @@ docker exec --interactive --tty viya-single-container /etc/init.d/sas-viya-all-s
 sas-services completed in 00:00:00
 ```
 
-## Batch
+## SAS Batch Server
 
-Support is present to run the batchserver. The expectation is that the SAS
-program is not in the container and will be made available to the container
+The container can be run using the SAS batch server. The expectation is that the SAS program is not in the container and will be made available to the container
 at run time.
 
 ```
-# This example is expecting that on the Docker host there is a sasinside directory
+# This example is expecting that there is a /sasinside directory on the Docker host
 # that has the SAS program. When the container is started we will mount the
 # sasiniside directory to the container so that the code can be run
 
@@ -224,17 +222,20 @@ total 72
 
 # Customizing
 
-## During the Docker build
+## During the Docker Build
 
-If there are customizations that a user wants to provide during the creation of the image
-these can be fed in by providing a vars.yml file in the same directory as the Dockerfile.
+If there are customizations that you want to provide during the creation of the image,
+these can be added by providing a vars.yml file in the same directory as the Dockerfile.
 This file will be picked up and used during the running of the playbook.
 
-## Post Docker build
+## Post Docker Build
 
-If someone wants to apply a different configuration to the SAS workspace server or
-to CAS, then the following steps can be used. create a _sasiniside_ directory and
-in that directory create any of the following files with the desired content:
+To apply a different configuration to the SAS Workspace Server or
+to CAS, perform the following task.
+
+Create a sasinside directory, 
+create any of the following files with the desired content, and 
+add each file to the sasinside directory:
 
 * casconfig_usermods.lua
 * cas_usermods.settings
@@ -244,15 +245,13 @@ in that directory create any of the following files with the desired content:
 * workspaceserver_usermods.sh
 * sasstudio_usermods.properties
 
-With those in place then you would start the container in the following way:
+With the preceding files in place, start the container as shown below:
 
 ```
 docker run --detach --publish-all --rm --volume /path/to/sasinside:/sasinside --name viya-single-container --hostname viya-single-container viya-single-container
 ```
 
-The image will symlink the files at /sasinside to the location that the SAS and CAS software
-expects to find them. Allowing changes to be made if needed without having to stop
-container. New sessions would pick up the changes.
+The image will symlink the files at the /sasinside directory to the location that the SAS and CAS software expects to find them, which allows future changes without having to stop container. New sessions will pick up the changes.
 
 # Copyright
 

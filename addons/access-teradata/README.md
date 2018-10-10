@@ -1,12 +1,9 @@
 # Overview
 
-The content in this directory provides a simple way to smoke test the
-SAS/ACCESS to Teradata orderable.
+The content in this directory provides a simple way for smoke testing SAS/ACCESS Interface to Teradata.
 
 # Requirements
-In order to build the Teradata layer, the Dockerfile is expecting to find a 
-_teradata.tgz_ file in the current directory. The _teradata.tgz_ is expected to 
-have the following basic content structure:
+To build the Teradata layer, the Dockerfile expects that the teradata.tgz file is in the current directory and has the following stucture:
 
 ```
 |____TeradataToolsAndUtilitiesBase
@@ -19,34 +16,31 @@ have the following basic content structure:
 | |____ThirdPartyLicensesTTU.txt
 ```
 
-The Dockerfile looks for this file and runs the setup.bat script to install all of
+The Dockerfile looks for the teradata.tgz file and runs the setup.bat script to install all 
 the Teradata libraries.
 
-# File list
+# File List
 
 * terdata_cas.settings/teradata_sasserver.sh
-    * Files for CAS and the workspace server to configure ODBC and Teradata libraries.
+    * Files for SAS Cloud Analytic Services (CAS) and the SAS Workspace Server that are required to configure ODBC and Teradata libraries.
 * acteradata.sas
-    * This SAS code that can be submitted in SAS Studio or via the batchserver
-      which will create and drop a table. This is exercising SAS Foundation and
-      that the SAS/ACCESS iterface to Teradata is configured correctly.
+    * SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Foundation to confirm that  SAS/ACCESS Interface to Teradata is configured correctly.
 * dcteradata.sas
-    * This SAS code that can be submitted in SAS Studio or via the batchserver
-      which will create and drop a table. This is exercising Cloud Analytics
-      Services and validating that the Data Connector to Teradata is
+    * SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses CAS to confirm that the SAS Data Connector to Teradata is
       configured correctly.
 
 # How to Use
 
 ## SAS Studio
 
-* Log into SAS Studio __http://\<hostname of Docker host\>:8081__
-* Paste the code from either _acteradata.sas_ or _dcteradata.sas_ into the code
+1. Log on to SAS Studio: http://_host-name-where-docker-is-running_:8081
+2. Paste the code from either acteradata.sas or dcteradata.sas into the code
   window.
-* Edit the 'FIXME' text in _acteradata.sas_ and _dcteradata.sas_ with the
+3. Edit the 'FIXME' text in acteradata.sas and dcteradata.sas to include the
   correct values for the environment.
-* Run code
-* There should be no errors and should get something like the following as a log
+4. Run the code.
+
+Here is an example of a log with no errors:
 
 ```
 # Here is the log for acteradata.sas
@@ -174,11 +168,11 @@ the Teradata libraries.
 
 ```
 
-## Batchserver
+## SAS Batch Server
 
-* Edit the 'FIXME' text in _acteradata.sas_ and _dcteradata.sas_ with the
+1. Edit the 'FIXME' text in acteradata.sas and dcteradata.sas to include the
   correct values for the environment.
-* From the parent directory, run the following
+2. From the parent directory, run the following command:
 
 ```
 docker run --interactive --tty --rm --volume ${PWD}/addons/access-teradata:/sasinside --env SAS_LOGS_TO_DISK=true svc-access-teradata --batch /sasinside/acteradata.sas
@@ -371,8 +365,8 @@ NOTE: The SAS System used:
       cpu time            0.30 seconds
 ```      
 
-When running the dcteradata code, you need to pass in a user that has a 
-.authinfo file setup in their home directory
+When running the dcteradata code, you must pass in a user that has an 
+.authinfo file in their home directory.
 
 ```
 docker run --interactive --tty --rm --volume ${PWD}/addons/access-teradata:/sasinside --env SAS_LOGS_TO_DISK=true svc-access-teradata --user sasdemo --batch /sasinside/dcteradata.sas

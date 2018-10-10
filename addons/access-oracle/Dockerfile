@@ -15,10 +15,10 @@
 #
 #
 # BUILD:
-#   docker build --file Dockerfile  --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest . --tag svc-access-teradata
+#   docker build --file Dockerfile  --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest . --tag svc-access-oracle
 # 
 # RUN:
-#   docker run --detach --rm --publish-all --name svc-access-teradata --hostname svc-access-teradata svc-access-teradata
+#   docker run --detach --rm --publish-all --name svc-access-oracle --hostname svc-access-oracle svc-access-oracle
 #
 
 ARG BASEIMAGE=viya-single-container
@@ -29,25 +29,29 @@ FROM $BASEIMAGE:$BASETAG
 ARG PLATFORM=redhat
 
 USER root
+
+ADD *.rpm /tmp/oracle/
+ADD oracle_cas.settings /tmp/
+ADD oracle_sasserver.sh /tmp/
+ADD tnsnames.ora /etc/
+
 RUN set -e; \
-    mkdir /tmp/teradata_tools; \
+    mkdir -p /tmp/oracle; \
     if [ "$PLATFORM" = "redhat" ]; then \
         rpm --rebuilddb; \
-        yum install --assumeyes ksh; \
+        yum install --assumeyes /tmp/oracle/*.rpm; \
         yum clean all; \
         rm --verbose --recursive --force /root/.cache /var/cache/yum; \
     elif [ "$PLATFORM" = "suse" ]; then \
-        rpm --rebuilddb; \
-        zypper install --no-confirm ksh; \
-        zypper clean ; \
-        rm --verbose --recursive --force /var/cache/zypp; \
+        echo; echo "####### [ERROR] SuSE is not a currently supported platform"; echo; \
+        exit 5; \
     else \
         echo; echo "####### [ERROR] : Unknown platform of \"$PLATFROM\" passed in"; echo; \
         exit 1; \
     fi
 
-ADD teradata.tgz /tmp/teradata_tools/
-RUN cd /tmp/teradata_tools/TeradataToolsAndUtilitiesBase && echo a|./setup.bat
-
-ADD teradata_cas.settings /tmp/
-ADD teradata_sasserver.sh /tmp/
+# SAS needs v11.1 but symlinking to your installed version will work.
+RUN source /tmp/oracle_cas.settings; \
+    if [[ ! -f $ORACLE_HOME/lib/libclntsh.so.11.1 ]]; then \
+        ln -s $ORACLE_HOME/lib/libclntsh.so.* $ORACLE_HOME/lib/libclntsh.so.11.1; \
+    fi
