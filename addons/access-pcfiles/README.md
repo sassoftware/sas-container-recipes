@@ -18,8 +18,11 @@ SAS/ACCESS Interface to PC Files.
 1. Log on to SAS Studio: http://_host-name-where-docker-is-running_:8081
 2. Paste the code from either acpcfiles.sas or dcpcfiles.sas into the code
   window.
-* Run code
-* There should be no errors and should get something like the following as a log
+3. Edit the 'FIXME' text in acpcfiles.sas and dcpcfiles.sas with the
+  correct values for the environment.  
+4. Run the code. 
+
+Here is an example of a log with no errors:
 
 ```
 # Here is the log for acpcfiles.sas
