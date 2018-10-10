@@ -7,10 +7,15 @@ A collection of recipes for building containers with SAS and other tools.
 * [all-in-one](all-in-one/README.md) is a set of tools for creating a SAS Viya 3.4 single container, for convenience and simplicity.
 
 # Prerequisites
+## SAS Software
+* SAS Viya 3.4 software: a SAS Viya on Linux order and the SAS_Viya_deployment_data.zip from the Software Order Email (SOE). For more information, see [SAS Viya for Containers: Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0dkr&docsetTarget=n1se2eu5o1tc6xn17216v248cqpt.htm&docsetVersion=3.4).
+* It is strongly recommended that you create a mirror repository of the SAS Viya 3.4 software.
 
-* A SAS Viya on Linux order and the SAS_Viya_deployment_data.zip from the Software Order Email (SOE)
-* A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker
-* Git
+**Note:** To include any future updates of the SAS Viya 3.4 software, you must re-build the recipe with the updated SAS Viya 3.4 software.
+
+## Other Software
+* A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker is required.
+* Git is required.
 
 # How to Clone from GitHub
 
@@ -49,6 +54,7 @@ centos                                     latest              5182e96772bf     
 
 **Notes:** 
 
+* In this example, a single addon layer was included: auth-demo. You can include multiple [addon](addons/README.md) layers in a build.
 * The sizes of the   viya-single-container image and the svc-auth-demo image vary depending on your order.
 * In the example output, the identical size for two images is misleading. Instead, there is an image that is 8.52 GB, which includes the three images. The svc-auth-demo image is a small image layer stacked on the viya-single-container image, which is a large image layer stacked on the centos image.
 * If an [addon](addons/README.md) does not include a Dockerfile, an image is not created.  
