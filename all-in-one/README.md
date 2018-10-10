@@ -39,7 +39,7 @@ After all the services are started, you can access these links (substitute `loca
 * http://localhost:80/SASStudio for SAS Studio
 * http://localhost:80/Jupyter for Jupyter
 
-You may find that something is already using port 80 on the computer where the container is running. You can adjust the port by editing docker-compose.yml and change the first 80 in 80:80 - that line maps external-port:container-port, so if you change it to 8081:80, then you would visit http://my-computer:8081/SASStudio for SAS Studio.
+You may find that something is already using port 80 on the computer where the container is running. You can adjust the port by editing docker-compose.yml and change the first 80 in 80:80 - that line maps external-port:container-port, so if you change it to 8081:80, then you would visit http://_my-computer_:8081/SASStudio for SAS Studio.
 
 If you have not changed things, you can use `sasdemo` as the username; `sasDEMO` as the password.
 
