@@ -3,7 +3,7 @@
 The content in this directory provides a simple way for smoke testing 
 SAS/ACCESS Interface to ODBC.
 
-# File list
+# File List
 
 * odbc_cas.settings:
     * This file contains environment variables that are required so that ODBC code is executed properly.
