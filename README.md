@@ -8,10 +8,10 @@ A collection of recipes for building containers with SAS and other tools.
 
 # Prerequisites
 ## SAS Software
-* SAS Viya 3.4 software: a SAS Viya on Linux order and the SAS_Viya_deployment_data.zip from the Software Order Email (SOE). For more information, see [SAS Viya for Containers: Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0dkr&docsetTarget=n1se2eu5o1tc6xn17216v248cqpt.htm&docsetVersion=3.4).
-* It is strongly recommended that you create a mirror repository of the SAS Viya 3.4 software.
+* SAS Viya 3.4 software: a SAS Viya on Linux order and the SAS_Viya_deployment_data.zip from the Software Order Email (SOE).
+* It is strongly recommended that you create a mirror repository of the SAS Viya 3.4 software. For more information, see [Create a Mirror Repository](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=p1ilrw734naazfn119i2rqik91r0.htm&docsetVersion=3.4) in the SAS Viya for Linux: Deployment Guide.
 
-**Note:** To include any future updates of the SAS Viya 3.4 software, you must re-build the recipe with the updated SAS Viya 3.4 software.
+**Note:** To include any future updates of the SAS Viya 3.4 software, you must rebuild  recipes with the updated SAS Viya 3.4 software.
 
 ## Other Software
 * A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker is required.
