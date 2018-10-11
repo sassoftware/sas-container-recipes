@@ -3,7 +3,7 @@
 The content in this directory provides a simple way for smoke testing 
 SAS/ACCESS Interface to Amazon Redshift.
 
-# File list
+# File List
 
 * acredshift.sas
     * SAS code that can be submitted in SAS Studio or by the SAS batch server. This code
