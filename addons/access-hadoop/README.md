@@ -18,7 +18,7 @@ and JAR files in a volume and mount them to the container upon start-up.
 
 To create an image that includes the Hadoop configuration and JAR files:
 
-Collect the files and copy them to the /hadoop directory. Here is an example:
+Collect the files and copy them to the hadoop directory. Here is an example:
 
 ```
 ${PWD}/hadoop/config
