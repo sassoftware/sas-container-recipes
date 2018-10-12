@@ -111,16 +111,15 @@ If more space is needed, try pruning the Docker system:
 docker system prune --force --volumes
 ```
 
-If the error persists after the pruning, double check the storage driver for Docker:
+If the error persists after the pruning, check to see if the Device Mapper storage driver is used:
 
 ```
 docker system info 2>/dev/null | grep "Storage Driver"
 ```
 
-If the returning value is _Storage Driver: devicemapper_ then this might be the 
-source of the issue. The devicemapper storage driver has a default layer size of 10 GB, and the SAS Viya 
-image is typically bigger than this limit. A possible workaround is to change the layer size or switch to
-the [overlay2 driver](https://docs.docker.com/storage/storagedriver/overlayfs-driver/).
+If the output is _Storage Driver: devicemapper_, then the Device Mapper storage driver is used. The Device Mapper storage driver has a default layer size of 10 GB, and the SAS Viya 
+image is typically larger. Possible workarounds to free up space are to change the layer size or to switch to
+the [overlay2 storage driver](https://docs.docker.com/storage/storagedriver/overlayfs-driver/).
 
 
 ## Warnings When Building the Docker Image
