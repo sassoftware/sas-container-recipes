@@ -18,9 +18,7 @@ SAS/ACCESS Interface to PC Files.
 1. Log on to SAS Studio: http://_host-name-where-docker-is-running_:8081
 2. Paste the code from either acpcfiles.sas or dcpcfiles.sas into the code
   window.
-3. Edit the 'FIXME' text in acpcfiles.sas and dcpcfiles.sas with the
-  correct values for the environment.  
-4. Run the code. 
+3. Run the code. 
 
 Here is an example of a log with no errors:
 
@@ -108,9 +106,7 @@ Here is an example of a log with no errors:
 
 ## SAS Batch Server
 
-1. Edit the 'FIXME' text in acpcfiles.sas and dcpcfiles.sas with the
-  correct values for the environment.
-2. From the parent directory, run the following command:
+1. From the parent directory, run the following command:
 
 ```
 docker run --interactive --tty --rm --volume ${PWD}/pcfilesql:/sasinside --env SAS_LOGS_TO_DISK=true viya-single-container --batch /sasinside/acpcfiles.sas
