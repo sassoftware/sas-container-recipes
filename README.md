@@ -54,7 +54,12 @@ centos                                     latest              5182e96772bf     
 
 **Notes:** 
 
-* In this example, a single addon layer was included: auth-demo. You can include multiple [addon](addons/README.md) layers in a build.
+* In this example, a single addon was included: auth-demo. You can include multiple [addons](addons/README.md) in a build. Here is an example build.sh command that includes three addons:
+
+```
+build.sh addons/auth-demo addons/ide-jupyter-python3 addons/access-pcfiles
+```
+
 * The sizes of the   viya-single-container image and the svc-auth-demo image vary depending on your order.
 * In the example output, the identical size for two images is misleading. Instead, there is an image that is 8.52 GB, which includes the three images. The svc-auth-demo image is a small image layer stacked on the viya-single-container image, which is a large image layer stacked on the centos image.
 * If an [addon](addons/README.md) does not include a Dockerfile, an image is not created.  
