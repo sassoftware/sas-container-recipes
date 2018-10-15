@@ -27,5 +27,3 @@ ARG BASETAG=latest
 FROM $BASEIMAGE:$BASETAG
 
 USER root
-
-ADD hadoop_cas.settings /tmp/
