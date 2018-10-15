@@ -1,5 +1,5 @@
 # Background
-A collection of recipes for building containers with SAS and other tools.
+This repository contains a collection of recipes for building containers with SAS Viya software and other tools.
 
 * [viya-programming](viya-programming/README.md) is a set of tools for creating SAS Viya 3.4 containers.
 * [addons](addons/README.md) is a set of tools for adding to the SAS Viya 3.4 containers.
@@ -17,30 +17,33 @@ A collection of recipes for building containers with SAS and other tools.
 * A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker is required.
 * Git is required.
 
-# How to Clone from GitHub
+# How to Clone the Repository
 
-The following examples are for a Linux host that has Git and Docker installed.  This can be done on Windows using PowerShell and on a Mac, too. The following example assumes the project is cloned to the $HOME directory.
+Here is an example of the `git clone` command for a Linux host that has Git and Docker installed. 
+The command assumes that you will clone the repository in the $HOME directory.
 
 ```
 cd $HOME
 git clone https://github.com/sassoftware/sas-container-recipes.git
 ```
 
-# How To Quickly Build a SAS Viya 3.4 Image
+**Note:** On Windows, you can clone the repository by using PowerShell. Also, you can clone the repository on a Mac.
 
-A script named `build.sh` is at the root level. After the sassoftware/sas-container-recipes project is cloned, run `build.sh` to 
-quickly build a set of Docker images that represent a SAS Viya 3.4 image and a 
-SAS Viya 3.4 image that includes a default user.
+# How to Build the Images and Start the Container
+
+A script named `build.sh` is at the repository root level. After the sassoftware/sas-container-recipes project is cloned, run `build.sh` to build a set of Docker images for SAS Viya 3.4.
 
 The following example assumes that you are in the 
-/$HOME/sas-container-recipes directory and a demo user is added. The demo user allows you to log on to SAS Studio when the container is running.
+/$HOME/sas-container-recipes directory and that an [addon](addons/README.md) layer, auth-demo, is included in the build.
 
 ```
 cp /path/to/SAS_Viya_deployment_data.zip viya-programming/viya-single-container
 build.sh addons/auth-demo
 ```
+**Notes:**
 
-Running `build.sh` prints to the console and to a file
+* The auth-demo addon sets up a demo user, which allows you to log on to SAS Studio after the container is running.
+* Running `build.sh` prints to the console and to a file
 named build_sas_container.log. 
 
 After the build completes, execute `docker images` to see the images. Here is an example of the output:
@@ -54,15 +57,41 @@ centos                                     latest              5182e96772bf     
 
 **Notes:** 
 
-* In this example, a single addon was included: auth-demo. You can include multiple [addons](addons/README.md) in a build. Here is an example build.sh command that includes three addons:
+* In the preceding example, a single addon was included. You can include multiple [addons](addons/README.md) for the build.sh command. Here is an example build.sh command that includes three addons:
 
 ```
 build.sh addons/auth-demo addons/ide-jupyter-python3 addons/access-pcfiles
 ```
 
 * The sizes of the   viya-single-container image and the svc-auth-demo image vary depending on your order.
-* In the example output, the identical size for two images is misleading. Instead, there is an image that is 8.52 GB, which includes the three images. The svc-auth-demo image is a small image layer stacked on the viya-single-container image, which is a large image layer stacked on the centos image.
+* In the example output, the identical size for two images can be misleading. There is an image that is 8.52 GB, which includes the three images. The svc-auth-demo image is a small image layer stacked on the viya-single-container image, which is a large image layer stacked on the centos image.
 * If an [addon](addons/README.md) does not include a Dockerfile, an image is not created.  
+
+After the build is complete, use the `docker run` command to start the container.
+
+```
+docker run \
+    --detach \
+    --rm \
+    --env CASENV_CAS_VIRTUAL_HOST=<host-name-where-docker-is-running> \
+    --env CASENV_CAS_VIRTUAL_PORT=8081 \
+    --publish-all \
+    --publish 8081:80 \
+    --name svc-auth-demo \
+    --hostname svc-auth-demo \
+    svc-auth-demo
+
+# Check the status
+docker ps --filter name=svc-auth-demo --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}} \t{{.Ports}}"
+CONTAINER ID        NAMES               IMAGE               STATUS              PORTS
+4b426ce49b6b        svc-auth-demo       svc-auth-demo       Up 2 minutes        0.0.0.0:8081->80/tcp, 0.0.0.0:33221->443/tcp, 0.0.0.0:33220->5570/tcp    
+```
+
+After the container has started, log on to SAS Studio with the user name `sasdemo` and the password `sasdemo` at:
+ 
+ http://_host-name-where-docker-is-running_:8081
+
+ **Note:** The user name `sasdemo` and the password `sasdemo` are the credentials for the demo user that is set up by the auth-demo addon. 
 
 # Troubleshooting
 ## Errors When Building the Docker Image
