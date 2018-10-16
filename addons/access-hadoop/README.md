@@ -32,7 +32,7 @@ docker build --file Dockerfile . --tag svc-access-hadoop
 ```
 
 The files are added to the /hadoop directory. You will want to use
-the achadoop_internal.sas and dchadoop_internal.sas when testing.
+the achadoop.sas and dchadoop.sas when testing.
 
 # How to Use
 
