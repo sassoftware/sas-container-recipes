@@ -5,7 +5,7 @@ This repository contains a collection of recipes and other resources for buildin
 - [/viya-programming](viya-programming/README.md) is a folder that includes a set of tools for creating SAS Viya 3.4 programming-only Docker images.
 - [/addons](addons/README.md) contains recipes and resources for building images.  
 - [/utilities](utilities/README.md) is a set of files that can be used when building images.
-- A [build script](#Use-build.sh-to-Build-the-Images) that you can use to build a set of Docker images for SAS Viya 3.4.
+- A [build script](#use-buildsh-to-build-the-images) that you can use to build a set of Docker images for SAS Viya 3.4.
 
 ## Prerequisites
 ### SAS Software
