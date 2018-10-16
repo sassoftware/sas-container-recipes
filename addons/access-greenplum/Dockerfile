@@ -28,5 +28,4 @@ FROM $BASEIMAGE:$BASETAG
 
 USER root
 
-ADD greenplum_cas.settings /tmp/
 ADD greenplum_sasserver.sh /tmp/
