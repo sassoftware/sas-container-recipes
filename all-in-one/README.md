@@ -1,5 +1,5 @@
 # Historical Note
-This folder is the content that was presented at SAS Global Forum 2018.  It remains here as a historical artefact -- In September 2018, we published a more officially supported set on instructions and the `build.sh` script to help you build a multi-layered container for SAS Viya.  It has layers for many more access engines, and provides for sssd authorization rather that just hardcoding a `sasdemo` username.  Please use that approach instead.
+This folder is the content that was presented at SAS Global Forum 2018.  It remains here as a historical artefact -- In September 2018, we published a more officially supported set of instructions and the `build.sh` script to help you build a multi-layered container for SAS Viya.  It has layers for many more access engines, and provides for sssd authorization rather that just hardcoding a `sasdemo` username.  Please use that approach instead.
 
 # Background
 A docker container for a data scientist. An analytics work bench (awb) that is not unlike that wooden one in your garage ... a comfortable place to hack on your projects using your tools of choice.
