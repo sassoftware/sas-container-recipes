@@ -72,7 +72,7 @@ RUN set -e; \
         yum clean all; \
         rm --verbose --recursive --force /root/.cache /var/cache/yum; \
     elif [ "$PLATFORM" = "suse" ]; then \
-        zypper --non-interactive install -y java-1_8_0-openjdk tar curl hostname iproute2 which; \
+        zypper --non-interactive install -y java-1_8_0-openjdk tar curl hostname iproute2 which gzip; \
         zypper clean --all; \
         rm --verbose --recursive --force /var/cache/zypp; \
     fi;
@@ -90,7 +90,6 @@ RUN set -e; \
         yum clean all; \
         rm --verbose --recursive --force /root/.cache /var/cache/yum; \
     elif [ "$PLATFORM" = "suse" ]; then \
-        rpm --rebuilddb; \
         zypper install -y curl ; \
         #Package is unsigned, zypper instead. 
         curl --silent --output ${TINI_RPM_NAME} --location ${TINI_URL}/${TINI_RPM_NAME}; \
