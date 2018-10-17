@@ -8,3 +8,4 @@ SAS_Viya_deployment_data.zip
 sssd.cert
 *test*/
 .DS_Store
+*.log
