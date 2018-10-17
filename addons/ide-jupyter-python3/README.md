@@ -10,7 +10,9 @@ that has host authentication (auth-demo or auth-sssd) already added.
 # How to Build
 
 ```
-# This is using the default name of the SAS Viya programming-only Docker image build \
+# This is using the default name of the SAS Viya programming-only Docker image 
+
+docker build \
     --file Dockerfile \
     --build-arg BASEIMAGE=svc-auth-demo \
     --build-arg BASETAG=latest \
