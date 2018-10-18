@@ -202,11 +202,6 @@ NOTE: AUTOEXEC processing completed.
 4          %let db=FIXME;
 5          %let port=5432;
 6          
-7          %let server=wintergreen.unx.sas.com;
-8          %let username=smktst;
-9          %let password=Smktst1!;
-10         %let port=5432;
-11         %let db=sbosmk;
 12         
 13         %macro randomnum(input);
 14         %let mygen=%sysfunc(getoption(notes));
