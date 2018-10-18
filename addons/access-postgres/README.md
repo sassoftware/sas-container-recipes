@@ -32,10 +32,10 @@ Here is an example of a log with no errors:
  74         %let cashost=localhost;
  75         %let casport=5570;
  76
- 77         %let pghost=pungo.unx.sas.com;
- 78         %let pgdb=tktstst4;
- 79         %let pguser=tktstst4;
- 80         %let pgpass=Tester4;
+ 77         %let pghost=postgresql.server.com;
+ 78         %let pgdb=user;
+ 79         %let pguser=user;
+ 80         %let pgpass=password;
  81         %let pgport=5432;
  82
  83         %macro randomnum(input);
