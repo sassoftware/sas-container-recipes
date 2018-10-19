@@ -1,56 +1,54 @@
 # Overview
 
-The content in this directory provides a simple way for smoke testing SAS/ACCESS Interface to Hadoop.
+The content in this directory provides a recipe for including SAS/ACCESS Interface to Hadoop in a container image and for smoke testing SAS/ACCESS Interface to Hadoop.
 
-# File List
+## File List
 
-* achadoop.sas
-    * SAS code that can be submitted in SAS Studio or by the SAS batch server.
-	  The code expects the Hadoop configuration and JAR files to be available at /sasinside/hadoop and uses SAS Foundation to confirm that SAS/ACCESS Interface to Hadoop is configured correctly.
-* dchadoop.sas
-    * SAS code that can be submitted in SAS Studio or by the SAS batch server.
-	  The code expects the Hadoop configuration and JAR files to be available at /sasinside/hadoop and uses SAS Cloud Analytic Services to confirm that SAS Data Connector to Hadoop is configured correctly.
+- `Dockerfile` is the set of instructions for building a Docker image of the access-hadoop addon.
 
-# (Optional) How to Build
+- Files that can be used for smoke testing:
+  - `achadoop.sas` includes SAS code that can be submitted in SAS Studio or by the SAS batch server. The code expects the Hadoop configuration and JAR files to be available at /sasinside/hadoop and uses SAS Foundation to confirm that SAS/ACCESS Interface to Hadoop is configured correctly.
+  - `dchadoop.sas` includes SAS code that can be submitted in SAS Studio or by the SAS batch server. The code expects the Hadoop configuration and JAR files to be available at /sasinside/hadoop and uses SAS Cloud Analytic Services to confirm that SAS Data Connector to Hadoop is configured correctly.
 
-**Note:** Although this step is not required, it is helpful to collect the Hadoop configuration
-and JAR files in a volume and mount them to the container upon start-up.
+## Prerequisites for Builds
 
-To create an image that includes the Hadoop configuration and JAR files:
+Before you build an image with the access-hadoop addon, collect the Hadoop configuration files (/config) and JAR files (/jars), and add them to this directory: [sas-container-recipes/addons/access-hadoop/hadoop](hadoop/README.md). When the Hadoop configuration and JAR files are in this directory, the files are added to a /hadoop directory in an image that includes the access-hadoop addon. 
 
-Collect the files and copy them to the hadoop directory. Here is an example:
+Here is an example of the directory strucuture:
 
 ```
-${PWD}/hadoop/config
-${PWD}/hadoop/jars
-```
+sas-container-recipes/addons/access-hadoop/hadoop/config
+sas-container-recipes/addons/access-hadoop/hadoop/jars
 
-Build the image:
+```
+To use `docker build`, the SAS Viya programming-only Docker image must already exist.
+
+## How to Build
+
+Run the following command to build an image of the access-hadoop addon:
 
 ```
 docker build --file Dockerfile . --tag svc-access-hadoop
 ```
 
-The files are added to the /hadoop directory. You will want to use
-the achadoop.sas and dchadoop.sas when testing.
+**Notes** You can also build an image that includes an access-hadoop layer by using the [build.sh script](../../README.md).
 
-# How to Use
+## Perform a Smoke Test
 
-The achadoop.sas and dchadoop.sas test code work under
-the assumption that your Hadoop configuration and JAR files are located in the following
-location inside the container:
+The achadoop.sas and dchadoop.sas tests assume that your Hadoop configuration and JAR files are located in the following location inside the container:
 
-* Configuration files: /sasinside/hadoop/config
-* JAR files: /sasinside/hadoop/jars
+- Configuration files: /sasinside/hadoop/config
+- JAR files: /sasinside/hadoop/jars
 
-## SAS Studio
+### SAS Studio
 
-1. Log on to SAS Studio http://_host-name-where-docker-is-running_:8081
-2. Paste the code from either achadoop.sas or dchadoop.sas into the code
+1. Log on to SAS Studio: http://_host-name-where-docker-is-running_:8081
+1. Paste the code from either achadoop.sas or dchadoop.sas into the code
    window.
-3. Edit the 'FIXME' text in achadoop.sas and dchadoop.sas with the
+1. Edit the 'FIXME' text in achadoop.sas and dchadoop.sas with the
    correct values for the environment.
-4. Run the code.
+1. Edit the SAS_HADOOP_JAR_PATH and SAS_HADOOP_CONFIG_PATH to /sasinside/hadoop/jars and /sasinside/hadoop/config, respectively.
+1. Run the code.
 
 Here is an example of a log with no errors:
 
@@ -81,14 +79,15 @@ Here is an example of a log with no errors:
  100
 ```
 
-## SAS Batch Server
+### SAS Batch Server
 
 1. Edit the 'FIXME' text in achadoop.sas and dchadoop.sas with the
   correct values for the environment.
-2. From the parent directory, run the following command:
+1. Edit the SAS_HADOOP_JAR_PATH and SAS_HADOOP_CONFIG_PATH to /sasinside/hadoop/jars and /sasinside/hadoop/config, respectively.  
+1. From the parent directory, run the following command:
 
 ```
-docker run --interactive --tty --rm --volume ${PWD}/addons/access-hadoop:/sasinside svc-access-hadoop --batch /sasinside/achadoop.sas
+docker run --interactive --tty --rm --batch /sasinside/achadoop.sas
 [INFO] : CASENV_CAS_VIRTUAL_HOST is ''
 [INFO] : CASENV_CAS_VIRTUAL_PORT is ''
 [INFO] : CASENV_ADMIN_USER is 'cas'
@@ -196,7 +195,7 @@ NOTE: The SAS System used:
       cpu time            0.15 seconds
 ```
 
-# Copyright
+## Copyright
 
 Copyright 2018 SAS Institute Inc.
 
