@@ -1,6 +1,6 @@
 # Overview
 
-The content in this directory provides a recipe for including SAS/ACCESS Interface to Hadoop in a container image and for smoke testing SAS/ACCESS Interface to Hadoop.
+The content in this directory provides a recipe for including SAS/ACCESS Interface to Hadoop in a container image and files for smoke testing SAS/ACCESS Interface to Hadoop.
 
 ## File List
 
@@ -31,7 +31,7 @@ Run the following command to build an image of the access-hadoop addon:
 docker build --file Dockerfile . --tag svc-access-hadoop
 ```
 
-**Notes** You can also build an image that includes an access-hadoop layer by using the [build.sh script](../../README.md).
+**Note:** You can also build an image that includes an access-hadoop layer by using the [build.sh script](../../README.md).
 
 ## Perform a Smoke Test
 
@@ -47,7 +47,7 @@ The achadoop.sas and dchadoop.sas tests assume that your Hadoop configuration an
    window.
 1. Edit the 'FIXME' text in achadoop.sas and dchadoop.sas with the
    correct values for the environment.
-1. Edit the SAS_HADOOP_JAR_PATH and SAS_HADOOP_CONFIG_PATH to /sasinside/hadoop/jars and /sasinside/hadoop/config, respectively.
+1. Edit the SAS_HADOOP_JAR_PATH and SAS_HADOOP_CONFIG_PATH to /hadoop/jars and /hadoop/config, respectively.
 1. Run the code.
 
 Here is an example of a log with no errors:
@@ -83,7 +83,7 @@ Here is an example of a log with no errors:
 
 1. Edit the 'FIXME' text in achadoop.sas and dchadoop.sas with the
   correct values for the environment.
-1. Edit the SAS_HADOOP_JAR_PATH and SAS_HADOOP_CONFIG_PATH to /sasinside/hadoop/jars and /sasinside/hadoop/config, respectively.  
+1. Edit the SAS_HADOOP_JAR_PATH and SAS_HADOOP_CONFIG_PATH to /hadoop/jars and /hadoop/config, respectively.  
 1. From the parent directory, run the following command:
 
 ```
