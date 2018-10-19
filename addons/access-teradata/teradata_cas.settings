@@ -14,10 +14,6 @@
 # limitations under the License.
 #
 
-export ODBCSYSINI=/sasinside/odbc
-export ODBCINI=${ODBCSYSINI}/odbc.ini
-export ODBCINSTINI=${ODBCSYSINI}/odbcinst.ini
-
 export COPERR=/opt/teradata/client/16.10/lib
 export COPLIB=/opt/teradata/client/16.10/etc
 export NLSPATH=/opt/teradata/client/16.10/msg
