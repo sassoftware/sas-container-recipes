@@ -38,10 +38,11 @@ git clone https://github.com/sassoftware/sas-container-recipes.git
 A script named `build.sh` is at the repository root level. After the sassoftware/sas-container-recipes project is cloned, run `build.sh` to build a set of Docker images for SAS Viya 3.4.
 
 The following example assumes that you are in the 
-/$HOME/sas-container-recipes directory and that an [addon](addons/README.md) layer, auth-demo, is included in the build.
+/$HOME/sas-container-recipes directory, that a mirror is setup at _http://host.company.com/sas_repo, and that an [addon](addons/README.md) layer, auth-demo, is included in the build.
 
 ```
 cp /path/to/SAS_Viya_deployment_data.zip viya-programming/viya-single-container
+export SAS_RPM_REPO_URL=http://host.company.com/sas_repo
 build.sh addons/auth-demo
 ```
 **Notes:**
@@ -52,10 +53,11 @@ build.sh addons/auth-demo
 After the build completes, use the `docker images` command to see the images. Here is an example of the output:
 
 ```
-REPOSITORY                                 TAG                 IMAGE ID            CREATED             SIZE
-svc-auth-demo                              latest              965b522a213d        21 hours ago        8.52GB
-viya-single-container                      latest              2351f556f15a        2 days ago          8.52GB
-centos                                     latest              5182e96772bf        6 weeks ago         200MB
+REPOSITORY                TAG                               IMAGE ID            CREATED             SIZE
+sas-viya-programming      18.10.0-20181018113621-577b88f    965b522a213d        21 hours ago        8.52GB
+svc-auth-demo             latest                            965b522a213d        21 hours ago        8.52GB
+viya-single-container     latest                            2351f556f15a        2 days ago          8.52GB
+centos                    latest                            5182e96772bf        6 weeks ago         200MB
 ```
 
 **Notes:** 
@@ -82,14 +84,14 @@ docker run \
     --env CASENV_CAS_VIRTUAL_PORT=8081 \
     --publish-all \
     --publish 8081:80 \
-    --name svc-auth-demo \
-    --hostname svc-auth-demo \
-    svc-auth-demo
+    --name sas-viya-programming \
+    --hostname sas-viya-programming \
+    sas-viya-programming:18.10.0-20181018113621-577b88f
 
 # Check the status
-docker ps --filter name=svc-auth-demo --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}} \t{{.Ports}}"
-CONTAINER ID        NAMES               IMAGE               STATUS              PORTS
-4b426ce49b6b        svc-auth-demo       svc-auth-demo       Up 2 minutes        0.0.0.0:8081->80/tcp, 0.0.0.0:33221->443/tcp, 0.0.0.0:33220->5570/tcp    
+docker ps --filter name=sas-viya-programming --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}} \t{{.Ports}}"
+CONTAINER ID        NAMES                   IMAGE                   STATUS              PORTS
+4b426ce49b6b        sas-viya-programming    sas-viya-programming    Up 2 minutes        0.0.0.0:8081->80/tcp, 0.0.0.0:33221->443/tcp, 0.0.0.0:33220->5570/tcp    
 ```
 
 After the container has started, log on to SAS Studio with the user name `sasdemo` and the password `sasdemo` at:
