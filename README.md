@@ -38,7 +38,7 @@ git clone https://github.com/sassoftware/sas-container-recipes.git
 A script named `build.sh` is at the repository root level. After the sassoftware/sas-container-recipes project is cloned, run `build.sh` to build a set of Docker images for SAS Viya 3.4.
 
 The following example assumes that you are in the 
-/$HOME/sas-container-recipes directory, that a mirror is setup at _http://host.company.com/sas_repo, and that an [addon](addons/README.md) layer, auth-demo, is included in the build.
+/$HOME/sas-container-recipes directory, a mirror repository is set up at `http://host.company.com/sas_repo`, and an addon layer, [auth-demo](addons/auth-demo/README.md), is included in the build.
 
 ```
 cp /path/to/SAS_Viya_deployment_data.zip viya-programming/viya-single-container
@@ -47,10 +47,16 @@ build.sh addons/auth-demo
 ```
 **Notes:**
 
-- The auth-demo addon sets up a demo user, which allows you to log on to SAS Studio after the container is running.
+- The auth-demo addon sets up a demo user, which allows you to log on to SAS Studio after the container is running. No additional configuration is required before using the auth-demo addon.
+- You can include multiple [addons](addons/README.md) with the `build.sh` command. Here is an example that includes three addons:
+
+  ```
+  build.sh addons/auth-demo addons/ide-jupyter-python3 addons/access-pcfiles
+  ```
+- Some addons require additional configuration before they can be used with the `build.sh` command. For example, the [access-hadoop](addons/access-hadoop/README.md) addon requires Hadoop configuration and JAR files to be in a specific location. To understand if additional configuration is required, see the respective README file for each addon. 
 - Running `build.sh` prints to the console and to a file named build_sas_container.log. 
 
-After the build completes, use the `docker images` command to see the images. Here is an example of the output:
+To see the images after the build completes, use the `docker images` command. Here is an example of the output:
 
 ```
 REPOSITORY                TAG                               IMAGE ID            CREATED             SIZE
@@ -61,12 +67,6 @@ centos                    latest                            5182e96772bf        
 ```
 
 **Notes:** 
-
-- In the preceding example, a single addon was included. You can include multiple [addons](addons/README.md) for the build.sh command. Here is an example build.sh command that includes three addons:
-
-  ```
-  build.sh addons/auth-demo addons/ide-jupyter-python3 addons/access-pcfiles
-  ```
 
 - The sizes of the viya-single-container image and the svc-auth-demo image vary depending on your order.
 - In the example output, the identical size for two images can be misleading. There is an image that is 8.52 GB, which includes the three images. The svc-auth-demo image is a small image layer stacked on the viya-single-container image, which is a large image layer stacked on the centos image.
