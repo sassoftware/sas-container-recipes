@@ -7,8 +7,8 @@ The content in this directory provides a recipe for including SAS/ACCESS Interfa
 - `Dockerfile` is the set of instructions for building a Docker image of the access-hadoop addon.
 
 - Files that can be used for smoke testing:
-  - `achadoop.sas` includes SAS code that can be submitted in SAS Studio or by the SAS batch server. The code expects the Hadoop configuration and JAR files to be available at /sasinside/hadoop and uses SAS Foundation to confirm that SAS/ACCESS Interface to Hadoop is configured correctly.
-  - `dchadoop.sas` includes SAS code that can be submitted in SAS Studio or by the SAS batch server. The code expects the Hadoop configuration and JAR files to be available at /sasinside/hadoop and uses SAS Cloud Analytic Services to confirm that SAS Data Connector to Hadoop is configured correctly.
+  - `achadoop.sas` includes SAS code that can be submitted in SAS Studio or by the SAS batch server. The code expects the Hadoop configuration and JAR files to be available at /hadoop and uses SAS Foundation to confirm that SAS/ACCESS Interface to Hadoop is configured correctly.
+  - `dchadoop.sas` includes SAS code that can be submitted in SAS Studio or by the SAS batch server. The code expects the Hadoop configuration and JAR files to be available at /hadoop and uses SAS Cloud Analytic Services to confirm that SAS Data Connector to Hadoop is configured correctly.
 
 ## Prerequisites for Builds
 
@@ -37,8 +37,8 @@ docker build --file Dockerfile . --tag svc-access-hadoop
 
 The achadoop.sas and dchadoop.sas tests assume that your Hadoop configuration and JAR files are located in the following location inside the container:
 
-- Configuration files: /sasinside/hadoop/config
-- JAR files: /sasinside/hadoop/jars
+- Configuration files: /hadoop/config
+- JAR files: /hadoop/jars
 
 ### SAS Studio
 
@@ -59,9 +59,9 @@ Here is an example of a log with no errors:
  74         %let user=FIXME;
  75
  76         option set = SAS_HADOOP_JAR_PATH =
- 77           "/sasinside/hadoop/jars";
+ 77           "/hadoop/jars";
  78         option set = SAS_HADOOP_CONFIG_PATH =
- 79           "/sasinside/hadoop/config";
+ 79           "/hadoop/config";
  80
  81         libname hadoop hadoop server=&server.  user=&user;
  NOTE: HiveServer2 High Availability via ZooKeeper will not be used for this connection. Specifying the SERVER= or PORT= libname
@@ -143,9 +143,9 @@ NOTE: AUTOEXEC processing completed.
 2          %let user=FIXME;
 3
 4          option set = SAS_HADOOP_JAR_PATH =
-5            "/sasinside/hadoop/jars";
+5            "/hadoop/jars";
 6          option set = SAS_HADOOP_CONFIG_PATH =
-7            "/sasinside/hadoop/config";
+7            "/hadoop/config";
 8
 9          libname hadoop hadoop server=&server.  user=&user;
 NOTE: HiveServer2 High Availability via ZooKeeper will not be used for this connection. Specifying the SERVER= or PORT= libname

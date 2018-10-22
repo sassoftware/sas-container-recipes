@@ -11,8 +11,8 @@ caslib hdlib sessref=&sess
     dataTransferMode="serial",
     username=&server,
     server=&server.,
-    hadoopjarpath="/sasinside/hadoop/jars",
-    hadoopconfigdir="/sasinside/hadoop/config",
+    hadoopjarpath="/hadoop/jars",
+    hadoopconfigdir="/hadoop/config",
     schema="default");
     
     
