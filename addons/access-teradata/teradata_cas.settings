@@ -18,4 +18,4 @@ export COPERR=/opt/teradata/client/16.10/lib
 export COPLIB=/opt/teradata/client/16.10/etc
 export NLSPATH=/opt/teradata/client/16.10/msg
 export TERADATA_LIB=/opt/teradata/client/16.10/lib64
-export LD_LIBRARY_PATH=${ODBCSYSINI}/lib:${TERADATA_LIB}:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=${TERADATA_LIB}:$LD_LIBRARY_PATH
