@@ -2,9 +2,9 @@
 %let user=FIXME;
 
 option set = SAS_HADOOP_JAR_PATH =
-  "/sasinside/hadoop/jars";
+  "/hadoop/jars";
 option set = SAS_HADOOP_CONFIG_PATH =
-  "/sasinside/hadoop/config";
+  "/hadoop/config";
   
 libname hadoop hadoop server=&server.  user=&user;
 
