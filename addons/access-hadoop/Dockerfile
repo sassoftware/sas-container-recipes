@@ -27,3 +27,6 @@ ARG BASETAG=latest
 FROM $BASEIMAGE:$BASETAG
 
 USER root
+
+COPY hadoop/config/ /hadoop/config/
+COPY hadoop/jars/ /hadoop/jars/
