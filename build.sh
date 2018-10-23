@@ -51,6 +51,11 @@ if [ -n "${BASETAG}" ]; then
 fi
 
 if [ -n "${SAS_RPM_REPO_URL}" ]; then
+    if [[ "${SAS_RPM_REPO_URL}" != "http://"* ]]; then
+        echo "[ERROR] : The mirror URL of '${SAS_RPM_REPO_URL}' is not using an http based mirror."
+        echo "[INFO]  : For more information, see https://github.com/sassoftware/sas-container-recipes/blob/master/README.md#prerequisites"
+        exit 30
+    fi
     BUILD_ARG_SAS_RPM_REPO_URL="--build-arg SAS_RPM_REPO_URL=${SAS_RPM_REPO_URL}"
 fi
 
