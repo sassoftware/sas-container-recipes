@@ -55,7 +55,7 @@ docker run \
     --env CASENV_CAS_VIRTUAL_HOST=$(hostname) \
     --env CASENV_CAS_VIRTUAL_PORT=8081 \
     --publish-all \
-    --publish 8081:80 \
+    --publish 80:80 \
     --name svc-auth-sssd \
     --hostname svc-auth-sssd \
     svc-auth-sssd
@@ -63,10 +63,10 @@ docker run \
 # Check status
 docker ps --filter name=svc-auth-sssd --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}} \t{{.Ports}}"
 CONTAINER ID        NAMES               IMAGE               STATUS              PORTS
-4b426ce49b6b        svc-auth-sssd       svc-auth-sssd       Up 2 minutes        0.0.0.0:33222->80/tcp, 0.0.0.0:33221->443/tcp, 0.0.0.0:33220->5570/tcp
+4b426ce49b6b        svc-auth-sssd       svc-auth-sssd       Up 2 minutes        0.0.0.0:80->80/tcp, 0.0.0.0:33221->443/tcp, 0.0.0.0:33220->5570/tcp
 ```
 
-Log on at http://_host-name-where-docker-is-running_:33222 as the user that is defined in the configured LDAP environment.
+Log on at http://_host-name-where-docker-is-running_ as the user that is defined in the configured LDAP environment.
 
 # Copyright
 
