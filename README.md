@@ -45,6 +45,20 @@ cp /path/to/SAS_Viya_deployment_data.zip viya-programming/viya-single-container
 export SAS_RPM_REPO_URL=http://host.company.com/sas_repo
 build.sh addons/auth-demo
 ```
+
+To use a mirror repository, you must access it through an HTTP server. If you do not have an HTTP server, you can start a simple one:
+  
+```
+cd ~/sas_repo
+nohup python -m SimpleHTTPServer 8123 &
+```
+
+After you start the HTTP server, you can pass the following parameter as input to the build:
+
+```
+export SAS_RPM_REPO_URL=http://$(hostname -f):8123/
+```
+
 **Notes:**
 
 - The auth-demo addon sets up a demo user, which allows you to log on to SAS Studio after the container is running. No additional configuration is required before using the auth-demo addon.
