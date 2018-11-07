@@ -1,0 +1,411 @@
+#! /bin/bash
+
+# Exit out if any process returns a non zero return code
+set -e
+
+# Enable debugging if SAS_DEBUG is set
+[[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
+if [ ${SAS_DEBUG} -gt 0 ]; then
+    set -x
+fi
+
+# if given a command, run that
+if [[ -n "$1" ]]; then
+  exec "$@"
+fi
+
+###############################################################################
+# Variables
+###############################################################################
+
+[[ -z ${DEPLOYMENT_NAME+x} ]]   && export DEPLOYMENT_NAME="viya"
+[[ -z ${SASSERVICENAME+x} ]]    && export SASSERVICENAME="sas-cas"
+[[ -z ${SASSERVICECONTEXT+x} ]] && export SASSERVICECONTEXT=${SASSERVICENAME#sas-}
+[[ -z ${SASROOT+x} ]]           && export SASROOT=/opt/sas
+[[ -z ${SASDEPLOYID+x} ]]       && export SASDEPLOYID=viya
+[[ -z ${SASINSTANCE+x} ]]       && export SASINSTANCE=default
+[[ -z ${SASHOME+x} ]]           && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
+[[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
+[[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
+[[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
+
+
+# The following are used in sas-start-functions
+servicename=${SASSERVICENAME}
+servicecontext=${SASSERVICECONTEXT}
+
+# Set of functions for supporting docker containers
+source ${SASHOME}/lib/envesntl/docker-functions
+
+###############################################################################
+# Setup Consul
+###############################################################################
+
+# Write tokens to disk if needed and echo CONSUL_HTTP_ADDR to file
+docker_define_consul_environment
+
+if [ -e ${SASTOKENDIR}/client.token ]; then
+    # start local consul
+    /etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE} start
+
+    # Wait for Consul to be up
+    docker_wait_for_consul_leader
+fi
+
+###############################################################################
+# Configuration by convention
+###############################################################################
+
+[[ -z ${SASINSIDE+x} ]]         && export SASINSIDE="/sasinside"
+[[ -z ${SASLICENSEDIR+x} ]]     && export SASLICENSEDIR="${SASCONFIG}"
+[[ -z ${SASLICENSEFILE+x} ]]    && export SASLICENSEFILE="sas_license.txt"
+
+if [ -d "${SASINSIDE}" ]; then
+    # If the license dir is the default, then change it.
+    # Don't change it if the user set the variable.
+    if [ "${SASLICENSEDIR}" = "${SASCONFIG}" ]; then
+        echo_line "Set the license directory to ${SASINSIDE}"
+        export SASLICENSEDIR="${SASINSIDE}"
+    fi
+
+    if [ -e "${SASINSIDE}/host_auth_stop.sh" ]; then
+        cp -v ${SASINSIDE}/host_auth_stop.sh /tmp/host_auth_stop.sh
+    fi
+
+    if [ -e "${SASINSIDE}/host_auth.sh" ]; then
+        cp -v ${SASINSIDE}/host_auth.sh /tmp/host_auth.sh
+    fi
+
+    if [ -e "${SASINSIDE}/pre_deploy.sh" ]; then
+        cp -v ${SASINSIDE}/pre_deploy.sh /tmp/pre_deploy.sh
+    fi
+
+    if [ -e "${SASINSIDE}/pre_deploy.sh" ]; then
+        cp -v ${SASINSIDE}/post_deploy.sh /tmp/post_deploy.sh
+    fi
+fi
+
+###############################################################################
+# Shutdown
+###############################################################################
+function gracefulshutdown {
+    echo
+    echo_line "Shutting down CAS pid $(cat ${DOCKERPIDFILE})!"
+    echo
+
+    # new SAS init stuff
+    kill -TERM $(cat ${DOCKERPIDFILE})
+    result=$?
+    # sleep 10
+    echo
+    if [ $result -eq 0 ]; then
+        echo_line "SUCCESS: CAS is stopped"
+    else
+        echo_line "ERROR: CAS could not be stopped"
+    fi
+
+    if [ -e "/tmp/host_auth_stop.sh" ]; then
+        echo_line "Running host authentication stop script from /tmp"
+        /tmp/host_auth_stop.sh
+    fi
+
+    if [ -e ${SASTOKENDIR}/client.token ]; then
+        echo_line "Unregister CAS from Consul"
+        ${SASHOME}/bin/unregister_cas.sh -r ${SASROOT}/${_deployid} -i ${SASCASINSTANCE}
+
+        #echo_line "Pause to allow the unregister to finish before stopping consul"
+        #sleep 10
+
+        echo_line "Stop local consul"
+        ${SASHOME}/bin/consul leave && sleep 5
+        /etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE} stop
+    fi
+
+    exit 0
+}
+
+trap gracefulshutdown SIGTERM
+trap gracefulshutdown SIGINT
+
+###############################################################################
+# Host Auth
+###############################################################################
+
+if [[ ! -z ${HOST_AUTH+x} ]]; then
+    echo_line "Creating host authentication script"
+    echo "${HOST_AUTH}" > /tmp/host_auth.sh
+    chmod -v a+x /tmp/host_auth.sh
+fi
+
+if [[ ! -z ${HOST_AUTH_STOP+x} ]]; then
+    echo_line "Creating host authentication stop script"
+    echo "${HOST_AUTH_STOP}" > /tmp/host_auth_stop.sh
+    chmod -v a+x /tmp/host_auth_stop.sh
+fi
+
+if [ -e "/tmp/host_auth.sh" ]; then
+    echo_line "Running host authentication script from /tmp"
+    /tmp/host_auth.sh
+fi
+
+###############################################################################
+# Pre Deploy
+###############################################################################
+
+if [ ! -z "${PRE_DEPLOY_SCRIPT}" ]; then
+    echo_line "Creating pre deploy script"
+    echo "${PRE_DEPLOY_SCRIPT}" > /tmp/pre_deploy.sh
+    chmod -v a+x /tmp/pre_deploy.sh
+fi
+
+n_pre_deploy_count=$(find /tmp -type f -name "*pre_deploy.sh" | wc -c)
+if (( ${n_pre_deploy_count} > 0 )); then
+    for str_pre_script in $(ls -1 /tmp/*pre_deploy.sh); do
+        echo "Running pre deploy script \"${str_pre_script}\""
+        ${str_pre_script}
+    done
+fi
+
+###############################################################################
+# Configure CAS
+###############################################################################
+
+[[ -z ${SASTENANT+x} ]] && export SASTENANT="shared"
+_deployid=${SASDEPLOYID}
+
+if [ ${SASTENANT} != "shared" ]; then
+    echo_line "Multi-Tenancy enabled. Setting up for tenant ${SASTENANT}"
+    ${SASHOME}/bin/tenant_setup_docker.sh -r ${SASROOT} --tenant ${SASTENANT} --tenant-admin cas --tenant-admin-group sas
+    _deployid=${SASTENANT}
+else
+    echo_line "Multi-Tenancy not enabled. Using default tenant of ${SASTENANT}"
+fi
+
+export CASCONFIG="${SASROOT}/${_deployid}/config"
+
+# Default to the controller if the value is not passed in.
+[[ -z ${SERVICE_NAME+x} ]] && export SERVICE_NAME="cascontroller"
+
+if [ "${SERVICE_NAME}" = "cascontroller" ]; then
+    export CASCONTROLLERHOST="${SAS_CURRENT_HOST}"
+    export CASWORKERHOSTS=""
+elif [ "${SERVICE_NAME}" = "cassecondary" ]; then
+    export CASBACKUPHOST="${SAS_CURRENT_HOST}"
+    export CASCFG_MODE=mpp
+else
+    export SERVICE_NAME="casworker"
+    export CASWORKERHOSTS="${SAS_CURRENT_HOST}"
+    export CASCFG_MODE=mpp
+fi
+
+if [[ -z ${CASENV_CAS_START_MONITOR_UI+x} ]]; then
+    # As part of DOCKER-377, forcing the UI to show to support VI.
+    # If this image is to support VA, then we should uncomment the if/else
+    # as VA no longer supports the CAS Monitor UI. It uses EV.
+
+    # Going to use the existence of the token to drive whether to disable the Monitor UI
+    # As of now, a programming only environment will not have Consul. If it does, then
+    # we will need a different way to detect if we are in a programming only environment.
+    # The better place to do this would be in the product if possible.
+    if [ -e ${SASTOKENDIR}/client.token ]; then
+        unset CASENV_CAS_START_MONITOR_UI
+    else
+        export CASENV_CAS_START_MONITOR_UI="true"
+    fi
+else
+    echo "Starting CAS with CASENV_CAS_START_MONITOR_UI=${CASENV_CAS_START_MONITOR_UI}"
+fi
+
+[[ -z ${SASLOGROOT+x} ]]               && export SASLOGROOT="${SASCONFIG}/var/log"
+[[ -z ${SASLOGDIR+x} ]]                && export SASLOGDIR="${SASLOGROOT}/${SASSERVICECONTEXT}"
+[[ -z ${CASCFG_MODE+x} ]]              && export CASCFG_MODE=smp
+[[ -z ${CASCFG_GCPORT+x} ]]            && export CASCFG_GCPORT=5571
+[[ -z ${CASSET_JAVA_HOME+x} ]]         && export CASSET_JAVA_HOME=/usr/lib/jvm/jre
+[[ -z ${CASLLP_LD_LIBRARY_PATH+x} ]]   && export CASLLP_LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$JAVA_HOME/lib/amd64/server
+[[ -z ${CASENV_CAS_VIRTUAL_PROTO+x} ]] && export CASENV_CAS_VIRTUAL_PROTO=https
+[[ -z ${CASENV_CAS_VIRTUAL_PORT+x} ]]  && export CASENV_CAS_VIRTUAL_PORT=443
+
+if [[ -z ${CASENV_CAS_VIRTUAL_HOST+x} ]]; then
+    export CASENV_CAS_VIRTUAL_HOST=controller-${DEPLOYMENT_NAME}
+else
+    export CASENV_CAS_USER_PROVIDED_VIRTUAL_HOST=true
+fi
+
+if [[ ! -z ${CASCFG_SERVICESBASEURL+x} ]]; then
+    export CASENV_CAS_USER_PROVIDED_SERVICESBASEURL=true
+fi
+
+# Set defaults before we run cas_init.sh
+[[ -z ${SASUSER+x} ]]           && export SASUSER=sas
+[[ -z ${SASGROUP+x} ]]          && export SASGROUP=sas
+[[ -z ${CASUSER+x} ]]           && export CASUSER=cas
+[[ -z ${CASGROUP+x} ]]          && export CASGROUP=sas
+[[ -z ${SASCASINSTANCE+x} ]]    && export SASCASINSTANCE="${SASINSTANCE}"
+[[ -z ${CASCONTROLLERHOST+x} ]] && export CASCONTROLLERHOST='${CASCONTROLLERHOST}'
+[[ -z ${CASBACKUPHOST+x} ]]     && export CASBACKUPHOST=
+[[ -z ${CASWORKERHOSTS+x} ]]    && export CASWORKERHOSTS='${CASWORKERHOSTS}'
+[[ -z ${SASCONSULHOST+x} ]]     && export SASCONSULHOST=localhost
+[[ -z ${SASTENANT+x} ]]         && export SASTENANT=${SASTENANT}
+
+echo ""
+mkdir -vp ${CASCONFIG}/etc/sysconfig/${SASSERVICECONTEXT}/${SASCASINSTANCE}
+chown -vR ${CASUSER}:${CASGROUP} ${CASCONFIG}/etc/sysconfig/${SASSERVICECONTEXT}
+chmod -vR 0755 ${CASCONFIG}/etc/sysconfig/${SASSERVICECONTEXT}
+echo ""
+
+# cas_init.sh requires cas_grid_vars be present
+touch ${CASCONFIG}/etc/sysconfig/${SASSERVICECONTEXT}/${SASCASINSTANCE}/cas_grid_vars
+chown --verbose ${CASUSER}:${CASGROUP} ${CASCONFIG}/etc/sysconfig/${SASSERVICECONTEXT}/${SASCASINSTANCE}/cas_grid_vars
+chmod --verbose 0755 ${CASCONFIG}/etc/sysconfig/${SASSERVICECONTEXT}/${SASCASINSTANCE}/cas_grid_vars
+
+# If the license is being passed in via an environment variable then echo it into a file.
+[[ ! -z ${SETINIT_TEXT+x} ]]     && echo "${SETINIT_TEXT}" > ${SASLICENSEDIR}/${SASLICENSEFILE}
+[[ ! -z ${SETINIT_TEXT_ENC+x} ]] && echo "${SETINIT_TEXT_ENC}" | base64 --decode --ignore-garbage > ${SASLICENSEDIR}/${SASLICENSEFILE}
+
+# Tell CAS where the license lives if the user has not already set it.
+[[ -z ${CASENV_CAS_LICENSE+x} ]] && export CASENV_CAS_LICENSE=${SASLICENSEDIR}/${SASLICENSEFILE}
+
+# Fix logging
+sed -i 's|\-ne|\-eq|' ${SASHOME}/bin/cas_init.sh
+
+# Work around a bug in the cas_init script that has hardcoded the CASENV_CAS_VIRTUAL
+sed -i 's|^CASENV_CAS_VIRTUAL_HOST|#CASENV_CAS_VIRTUAL_HOST|' ${SASHOME}/bin/cas_init.sh
+sed -i 's|^CASENV_CAS_VIRTUAL_PORT|#CASENV_CAS_VIRTUAL_PORT|' ${SASHOME}/bin/cas_init.sh
+
+# DOCKER-390: Make sure the location of the data directory is used for the referenceData path
+sed -i 's|casData = getDataPath()|casData = os.getenv("CASDATADIR")|' ${SASHOME}/share/cas/10caslibrefdat_startup.lua
+
+# DOCKER-404: Make sure the USERLOC starts from the CASDATADIR value
+sed -i 's|    export CASUSERLOCDIR=.*$|    export CASUSERLOCDIR="\${CASENV_CASDATADIR}/casuserlibraries/%USER"|' ${SASHOME}/bin/cas_init.sh
+
+${SASHOME}/bin/cas_init.sh -r ${SASROOT} -d ${_deployid} -i ${SASCASINSTANCE}
+
+# When set to zero, will make sure that the system will not get the servicesbaseurl from Consul
+[[ -z ${CHECK_HTTP+x} ]] && export CHECK_HTTP=1
+
+# Fix logging
+sed -i 's|\-ne|\-eq|' ${SASHOME}/bin/cas_setup.sh
+
+${SASHOME}/bin/cas_setup.sh -r ${SASROOT} -d ${_deployid} -i ${SASCASINSTANCE}
+
+# Make sure node.lua is pointing to the correct spot
+sed -i "s/config_loc \.\./current_dir \.\./g" ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/node.lua
+sed -i "s/^config_loc/-- config_loc/g" ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/node.lua
+
+# Setup the logging configuration file.
+cp ${SASHOME}/SASFoundation/utilities/bin/logconfig.trace.xml.stdout.template ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/logconfig.xml
+
+# Disable waiting on the worker nodes. Cloud deployments are elastic in nature
+# and will not use this feature
+echo "export CAS_CONSUL_WAIT_DISABLED=true" >> ${CASCONFIG}/etc/sysconfig/${SASSERVICECONTEXT}/${SASCASINSTANCE}/sas-cas-usermods
+
+# Fix logging for sas-cas.sh
+sed -i '/sascas_set_caslaunch_log_file_names;/i if [[ ! -z ${logdir} ]]; then' ${SASHOME}/bin/sas-cas.sh
+sed -i '/sascas_initialize_caslaunch_log_files;/a fi' ${SASHOME}/bin/sas-cas.sh
+
+export SASPIDROOT="/var/run/sas/${SASSERVICECONTEXT}/${SASCASINSTANCE}/"
+export SASPIDFILE="${SASPIDROOT}/sas-${SASDEPLOYID}-${SERVICE_NAME}-${SASINSTANCE}.pid"
+docker_create_pid_file
+
+echo ""
+chown --verbose ${CASUSER}:${CASGROUP} ${DOCKERPIDFILE}
+echo ""
+
+#
+# Take a collection of configurations and cat them into the usermod files.
+#
+
+# Process anything that might have come from a Docker build first
+if [ -d ${SASCONFIG}/etc/cas/${SASCASINSTANCE} ]; then
+    n_config_count=$(find /tmp -type f -name "*_casconfig.lua" | wc -c)
+    if (( ${n_config_count} > 0 )); then
+        for str_casconfig in $(ls -1 /tmp/*_casconfig.lua); do
+            echo "Dumping contents of \"${str_casconfig}\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua"
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua
+            cat ${str_casconfig} >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua
+        done
+    fi
+
+    n_settings_count=$(find /tmp -type f -name "*_cas.settings" | wc -c)
+    if (( ${n_settings_count} > 0 )); then
+        for str_cassettings in $(ls -1 /tmp/*_cas.settings); do
+            echo "Dumping contents of \"${str_cassettings}\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings"
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings
+            cat ${str_cassettings} >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings
+        done
+    fi
+
+    n_startup_count=$(find /tmp -type f -name "*_casstartup.lua" | wc -c)
+    if (( ${n_settings_count} > 0 )); then
+        for str_casstartup in $(ls -1 /tmp/*_casstartup.lua); do
+            echo "Dumping contents of \"${str_casstartup}\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua"
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua
+            cat ${str_casstartup} >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua
+        done
+    fi
+fi
+
+if [ -d "${SASINSIDE}" ]; then
+    if [ -d ${SASCONFIG}/etc/cas/${SASCASINSTANCE} ]; then
+        if [ -f ${SASINSIDE}/casconfig_usermods.lua ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/casconfig_usermods.lua\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua"
+            cat ${SASINSIDE}/casconfig_usermods.lua >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua
+        fi
+
+        if [ -f ${SASINSIDE}/cas_usermods.settings ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/cas_usermods.settings\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings"
+            cat ${SASINSIDE}/cas_usermods.settings >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings
+        fi
+
+        if [ -f ${SASINSIDE}/casstartup_usermods.lua ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/casstartup_usermods.lua\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua"
+            cat ${SASINSIDE}/casstartup_usermods.lua >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua
+        fi
+
+        if [ -f ${SASINSIDE}/sas-cas-usermods ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/sas-cas-usermods\" into ${SASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-usermods"
+            cat ${SASINSIDE}/sas-cas-usermods >> ${SASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-usermods
+        fi
+    fi
+fi
+
+###############################################################################
+# Post Deploy
+###############################################################################
+
+if [ ! -z "${POST_DEPLOY_SCRIPT}" ]; then
+    echo_line "Creating post deploy script"
+    echo "${POST_DEPLOY_SCRIPT}" > /tmp/post_deploy.sh
+    chmod -v a+x /tmp/post_deploy.sh
+fi
+
+n_post_deploy_count=$(find /tmp -type f -name "*post_deploy.sh" | wc -c)
+if (( ${n_post_deploy_count} > 0 )); then
+    for str_post_script in $(ls -1 /tmp/*post_deploy.sh); do
+        echo "Running post deploy script \"${str_post_script}\""
+        ${str_post_script}
+    done
+fi
+
+###############################################################################
+# Run CAS
+###############################################################################
+
+echo_line "Starting ${SASSERVICENAME}..."
+
+runuser -l cas -c "${SASHOME}/bin/${SASSERVICENAME}.sh \
+    -p ${DOCKERPIDFILE} \
+    -r ${SASROOT} \
+    -d ${_deployid} \
+    -i ${SASCASINSTANCE}"
+
+###############################################################################
+# Keep the container alive until it is killed
+###############################################################################
+
+docker_check_process
+
+exit 0

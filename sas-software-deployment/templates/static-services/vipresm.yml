@@ -1,0 +1,21 @@
+  vipresm:
+    from: "centos:7"
+    roles:
+    - sas-java
+    - viprESM
+    ports:
+    - "8080:8080"
+    entrypoint: ["/opt/sas/viya/home/bin/vipresm-entrypoint.sh"]
+    dev_overrides:
+      environment:
+        - "SAS_DEBUG=1"
+    deployment_overrides:
+      volumes:
+        - "log=/opt/sas/viya/config/var/log"
+      secrets:
+        - "SETINIT_TEXT_ENC="
+      resources:
+        limits:
+        - "memory=10Gi"
+        requests:
+        - "memory=2Gi"

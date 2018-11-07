@@ -1,0 +1,28 @@
+  sas-casserver-primary:
+    from: "centos:7"
+    roles:
+    - tini
+    - sas-java
+    - sas-casserver-primary
+    ports:
+    - "5570:5570"
+    - "5571:5571"
+    - "8777:8777"
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/sas-casserver-primary-entrypoint.sh"]
+    deployment_overrides:
+      environment:
+        - "SERVICE_NAME=cascontroller"
+        - "CASCFG_MODE=smp"
+      resources:
+        limits:
+        - "memory=12000Mi"
+        requests:
+        - "memory=1024Mi"
+      secrets:
+        - "SETINIT_TEXT_ENC="
+        - "CASKEY="
+      volumes:
+        - "data=/cas/data"
+        - "cache=/cas/cache"
+        - "permstore=/cas/permstore"
+        - "log=/opt/sas/viya/config/var/log"

@@ -1,0 +1,162 @@
+---
+# tasks file for connect-config
+
+- name: Check if sas-connectcfg is installed
+  command: rpm -q --quiet sas-connectcfg
+  args:
+    warn: False
+  register: sas_connectcfg_query
+  failed_when: sas_connectcfg_query.rc > 1
+  changed_when: False
+
+- set_fact:
+    is_sas_connectcfg_installed: "{{ sas_connectcfg_query.rc == 0 }}"
+
+- block:
+
+    ###### START - Set connect ports #########
+    - name: "Edit config files and set connect port"
+      lineinfile:
+        dest: "{{ item.source }}"
+        line: "{{ item.line }}"
+        owner: "{{ INSTALL_USER }}"
+        group: "{{ INSTALL_GROUP }}"
+        regexp: "{{ item.regexpr }}"
+        state: present
+        backup: "yes"
+      become: 'yes'
+      become_user: root
+      with_items:
+        - { source: "{{ SAS_CONFIG_ROOT + '/etc/sysconfig/connect/' + INSTANCE_ID | string + '/sas-connect' }}", line: "{{ 'CONNECT_PORT=' + sas_connect_port | string }}", regexpr: "CONNECT_PORT\\s*=\\s*.+$" }
+        - { source: "{{ SAS_CONFIG_ROOT + '/etc/sysconfig/connect/' + INSTANCE_ID | string + '/sas-connect' }}", line: "{{ 'CONNECT_MGMTPORT=' + sas_connect_mgmt_port | string }}", regexpr: "CONNECT_MGMTPORT\\s*=\\s*.+$" }
+      register: connectport
+    ###### END - Set connect ports #########
+
+    ###### START - Manage cas host and port change in autoexec_deployment #########
+      ###### START - host #########
+    - name: Set CAS host to user-supplied value
+      set_fact:
+        controller_host: "{{ sasenv_cas_host }}"
+      when: sasenv_cas_host is defined and sasenv_cas_host
+
+    - name: Set CAS host
+      set_fact:
+        controller_host: "{% set cas_host_set = [False] %}{% if CLUSTER_DEFINITIONS is defined and CLUSTER_DEFINITIONS.cas is defined %}{% for key, value in CLUSTER_DEFINITIONS.cas.items() %}{% if not cas_host_set[0] and value.primary_host is defined %}{{ hostvars[value.primary_host].sas_vars.hostname_fqdn }}{% set _ = cas_host_set.append(not cas_host_set.pop()) %}{% endif %}{% endfor %}{% endif %}{% if not cas_host_set[0] %}&SYSTCPIPHOSTNAME{% endif %}"
+      when: sasenv_cas_host is not defined or (sasenv_cas_host is defined and not sasenv_cas_host)
+      ###### END - host #########
+
+      ###### START - port #########
+    - name: Set CAS port to user-supplied value
+      set_fact:
+        controller_port: "{{ sasenv_cas_port }}"
+      when: sasenv_cas_port is defined and sasenv_cas_port
+
+    - name: Set CAS port to controller port when user has not defined the CAS port to use
+      set_fact:
+        controller_port: "{% set cas_port_set = [False] %}{% if CLUSTER_DEFINITIONS is defined and CLUSTER_DEFINITIONS.cas is defined %}{% for key, value in CLUSTER_DEFINITIONS.cas.items() %}{% if not cas_port_set[0] and value.primary_host is defined %}{% if value.cas is defined and value.cas.port is defined %}{{ value.cas.port }}{% else %}5570{% endif %}{% set _ = cas_port_set.append(not cas_port_set.pop()) %}{% endif %}{% endfor %}{% endif %}{% if not cas_port_set[0] %}5570{% endif %}"
+      when: sasenv_cas_port is not defined or (sasenv_cas_port is defined and not sasenv_cas_port)
+      ###### END - port #########
+
+      ###### START - backup host #########
+    - name: Set CAS backup host
+      set_fact:
+        controller_backup_host: "{% set cas_host_backup_set = [False] %}{% if CLUSTER_DEFINITIONS is defined and CLUSTER_DEFINITIONS.cas is defined %}{% for key, value in CLUSTER_DEFINITIONS.cas.items() %}{% if not cas_host_backup_set[0] and value.secondary_host is defined and value.secondary_host %}{{ hostvars[value.secondary_host].sas_vars.hostname_fqdn }}{% set _ = cas_host_backup_set.append(not cas_host_backup_set.pop()) %}{% endif %}{% endfor %}{% endif %}"
+      when: sasenv_cas_backup_host is not defined or (sasenv_cas_backup_host is defined and not sasenv_cas_backup_host)
+      ###### END - backup host #########
+
+    ###### END - Manage cas host and port change in autoexec_usermods #########
+
+    ###### START - connectserver configuration #########
+    # Call template to create *_deployment files
+    - name: Create deployment files for CONNECT in {{ SAS_CONFIG_ROOT + '/etc/connectserver/' + INSTANCE_ID | string }}
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ INSTALL_USER }}"
+        group: "{{ INSTALL_GROUP }}"
+        mode: "{{ item.mode }}"
+      become: 'yes'
+      become_user: root
+      with_items:
+        - { src: "autoexec_deployment.sas.j2", dest: "{{ SAS_CONFIG_ROOT + '/etc/connectserver/' + INSTANCE_ID | string + '/autoexec_deployment.sas' }}", mode: "0644" }
+        - { src: "sasenv_deployment.j2", dest: "{{ SAS_CONFIG_ROOT + '/etc/connectserver/' + INSTANCE_ID | string + '/sasenv_deployment' }}", mode: "0755" }
+        - { src: "sasv9_deployment.cfg.j2", dest: "{{ SAS_CONFIG_ROOT + '/etc/connectserver/' + INSTANCE_ID | string + '/sasv9_deployment.cfg' }}", mode: "0644" }
+    ###### END - connectserver configuration #########
+
+    - name: started {{ SERVICE_NAME }} Service
+      become: 'yes'
+      become_user: root
+      register: service_start
+      service: name={{ SERVICE_NAME }} state=started
+
+  when: is_sas_connectcfg_installed and ansible_env.ANSIBLE_CONTAINER is not defined
+
+- block:
+
+    ###### START - Set connect ports #########
+    - name: "Edit config files and set connect port"
+      lineinfile:
+        dest: "{{ item.source }}"
+        line: "{{ item.line }}"
+        owner: "{{ INSTALL_USER }}"
+        group: "{{ INSTALL_GROUP }}"
+        regexp: "{{ item.regexpr }}"
+        state: present
+        backup: "yes"
+      with_items:
+        - { source: "{{ SAS_CONFIG_ROOT + '/etc/sysconfig/connect/' + INSTANCE_ID | string + '/sas-connect' }}", line: "{{ 'CONNECT_PORT=' + sas_connect_port | string }}", regexpr: "CONNECT_PORT\\s*=\\s*.+$" }
+        - { source: "{{ SAS_CONFIG_ROOT + '/etc/sysconfig/connect/' + INSTANCE_ID | string + '/sas-connect' }}", line: "{{ 'CONNECT_MGMTPORT=' + sas_connect_mgmt_port | string }}", regexpr: "CONNECT_MGMTPORT\\s*=\\s*.+$" }
+      register: connectport
+    ###### END - Set connect ports #########
+
+    ###### START - Manage cas host and port change in autoexec_deployment #########
+      ###### START - host #########
+    - name: Set CAS host to user-supplied value
+      set_fact:
+        controller_host: "{{ sasenv_cas_host }}"
+      when: sasenv_cas_host is defined and sasenv_cas_host
+
+    - name: Set CAS host
+      set_fact:
+        controller_host: "{% set cas_host_set = [False] %}{% if CLUSTER_DEFINITIONS is defined and CLUSTER_DEFINITIONS.cas is defined %}{% for key, value in CLUSTER_DEFINITIONS.cas.items() %}{% if not cas_host_set[0] and value.primary_host is defined %}{{ hostvars[value.primary_host].sas_vars.hostname_fqdn }}{% set _ = cas_host_set.append(not cas_host_set.pop()) %}{% endif %}{% endfor %}{% endif %}{% if not cas_host_set[0] %}&SYSTCPIPHOSTNAME{% endif %}"
+      when: sasenv_cas_host is not defined or (sasenv_cas_host is defined and not sasenv_cas_host)
+      ###### END - host #########
+
+      ###### START - port #########
+    - name: Set CAS port to user-supplied value
+      set_fact:
+        controller_port: "{{ sasenv_cas_port }}"
+      when: sasenv_cas_port is defined and sasenv_cas_port
+
+    - name: Set CAS port to controller port when user has not defined the CAS port to use
+      set_fact:
+        controller_port: "{% set cas_port_set = [False] %}{% if CLUSTER_DEFINITIONS is defined and CLUSTER_DEFINITIONS.cas is defined %}{% for key, value in CLUSTER_DEFINITIONS.cas.items() %}{% if not cas_port_set[0] and value.primary_host is defined %}{% if value.cas is defined and value.cas.port is defined %}{{ value.cas.port }}{% else %}5570{% endif %}{% set _ = cas_port_set.append(not cas_port_set.pop()) %}{% endif %}{% endfor %}{% endif %}{% if not cas_port_set[0] %}5570{% endif %}"
+      when: sasenv_cas_port is not defined or (sasenv_cas_port is defined and not sasenv_cas_port)
+      ###### END - port #########
+
+      ###### START - backup host #########
+    - name: Set CAS backup host
+      set_fact:
+        controller_backup_host: "{% set cas_host_backup_set = [False] %}{% if CLUSTER_DEFINITIONS is defined and CLUSTER_DEFINITIONS.cas is defined %}{% for key, value in CLUSTER_DEFINITIONS.cas.items() %}{% if not cas_host_backup_set[0] and value.secondary_host is defined and value.secondary_host %}{{ hostvars[value.secondary_host].sas_vars.hostname_fqdn }}{% set _ = cas_host_backup_set.append(not cas_host_backup_set.pop()) %}{% endif %}{% endfor %}{% endif %}"
+      when: sasenv_cas_backup_host is not defined or (sasenv_cas_backup_host is defined and not sasenv_cas_backup_host)
+      ###### END - backup host #########
+
+    ###### END - Manage cas host and port change in autoexec_usermods #########
+
+    ###### START - connectserver configuration #########
+    # Call template to create *_deployment files
+    - name: Create deployment files for CONNECT in {{ SAS_CONFIG_ROOT + '/etc/connectserver/' + INSTANCE_ID | string }}
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ INSTALL_USER }}"
+        group: "{{ INSTALL_GROUP }}"
+        mode: "{{ item.mode }}"
+      with_items:
+        - { src: "autoexec_deployment.sas.j2", dest: "{{ SAS_CONFIG_ROOT + '/etc/connectserver/' + INSTANCE_ID | string + '/autoexec_deployment.sas' }}", mode: "0644" }
+        - { src: "sasenv_deployment.j2", dest: "{{ SAS_CONFIG_ROOT + '/etc/connectserver/' + INSTANCE_ID | string + '/sasenv_deployment' }}", mode: "0755" }
+        - { src: "sasv9_deployment.cfg.j2", dest: "{{ SAS_CONFIG_ROOT + '/etc/connectserver/' + INSTANCE_ID | string + '/sasv9_deployment.cfg' }}", mode: "0644" }
+    ###### END - connectserver configuration #########
+
+  when: is_sas_connectcfg_installed and ansible_env.ANSIBLE_CONTAINER is defined
+...
