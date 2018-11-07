@@ -3,6 +3,7 @@ Using containers to build, customize, and deploy a SAS environment based on your
 
 ## Getting Started
 The `sas-programming-local` directory is tailored for most independent data scientists, with a quickstart for running a SAS Studio + CAS (Cloud Analytic Software) locally on your own machine.
+
 The `sas-viya-deployment` directory is tailored for most organizations, offering details for cluster deployments using Kubernetes.
 
 ## Documentation
