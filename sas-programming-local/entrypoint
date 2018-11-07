@@ -18,7 +18,6 @@
 #
 # Define some common variables
 #
-
 [[ -z ${SASROOT+x} ]]           && export SASROOT=/opt/sas
 [[ -z ${SASDEPLOYID+x} ]]       && export SASDEPLOYID=viya
 [[ -z ${SASINSTANCE+x} ]]       && export SASINSTANCE=default

@@ -46,7 +46,7 @@ Check out our [Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) 
 Have a quick question? Open a ticket in the "issues" tab to get a response from the maintainers and other community members. If you're unsure about something just submit an issue anyways. We're glad to help!
 If you have a specific license question head over to the [support portal](https://support.sas.com/en/support-home.html).
 
-# Copyright
+# License
 Copyright 2018 SAS Institute Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
