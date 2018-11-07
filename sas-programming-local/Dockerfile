@@ -343,6 +343,7 @@ RUN set -e; \
     rm --verbose --recursive --force SAS_Viya_deployment_data.zip SAS_Viya_playbook.tgz sas_viya_playbook;
 
 COPY entrypoint /opt/sas/viya/home/bin/entrypoint
+RUN chmod +x /opt/sas/viya/home/bin/entrypoint
 
 EXPOSE 80 \
        443 \
