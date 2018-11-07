@@ -15,6 +15,8 @@ set -e
 [[ -z ${SAS_CURRENT_HOST+x} ]] && export SAS_CURRENT_HOST=$(hostname -f)
 [[ -z ${PG_VOLUME+x} ]]        && export PG_VOLUME="${SASCONFIG}/data/sasdatasvrc/${SASSERVICENAME}"
 
+source ${SASHOME}/lib/envesntl/docker-functions
+
 # In the case of Docker, we need to load up what the instance value is.
 # The instance was saved by the docker_entrypoint.sh so it can be used 
 # by multiple scripts
@@ -51,6 +53,12 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -z ${SASPOSTGRESGROUP+x} ]]       && export SASPOSTGRESGROUP="postgres"
 
 _LOGFILENAME=${SASLOGDIR}/${SASSERVICENAME}_${SASINSTANCE}_start.log
+
+save_env sas SASLOGROOT
+save_env postgres SASLOGDIR
+save_env postgres PG_DATADIR
+save_env postgres SASPOSTGRESOWNER
+save_env postgres SASPOSTGRESREPLUSER
 
 ###############################################################################
 # Functions
@@ -153,20 +161,6 @@ if [ $? = 0 ]; then
     --tcp "${SAS_CURRENT_HOST}:${SASPOSTGRESPORT}"
 #    --script "${SASHOME}/libexec/sasdatasvrc/script/sasdatasvrc_isready.sh"
 
-  set +e
-  echo_line "[postgresql] Seeing if haproxy is available..."
-  haproxy_url=$(${BOOTSTRAP_CONFIG} catalog serviceurl --wait --timeout-seconds 60 --tick-seconds 10 haproxy)
-  set -e
-  if [ ! -z "${haproxy_url}" ]; then
-    # parse url to get host and port info
-    haproxy_host=$(echo $haproxy_url | cut -d "/" -f3 | cut -d ":" -f1)
-    haproxy_port=$(echo $haproxy_url | cut -d "/" -f3 | cut -d ":" -f2)
-    ${BOOTSTRAP_CONFIG} kv write "config/application/spring/datasource/url" "jdbc:postgresql://${haproxy_host}:${haproxy_port}/${SAS_DBNAME}",
-    ${BOOTSTRAP_CONFIG} kv write "config/application/sas.datasource.initializer.enabled": "false",
-    ${BOOTSTRAP_CONFIG} kv write "config/application/sas.verify.resource.database": "false",
-    ${BOOTSTRAP_CONFIG} kv write "config/application/spring/datasource/username" ${SAS_DEFAULT_PGUSER}
-    ${BOOTSTRAP_CONFIG} kv write "config/application/spring/datasource/password" ${SAS_DEFAULT_PGPWD}
-  fi
   ${BOOTSTRAP_CONFIG} kv write "config/application/sas/database/databaseServerName" ${SASSERVICENAME}
   ${BOOTSTRAP_CONFIG} kv write "config/application/sas/database/database" ${SAS_DBNAME}
   ${BOOTSTRAP_CONFIG} kv write "config/application/sas/database/schema" "\${application.schema}"
@@ -182,10 +176,20 @@ if [ $? = 0 ]; then
   echo_line "[postgresql] For this host, record the ip value and that it is now up."
   ${BOOTSTRAP_CONFIG} kv write --force config/${SASSERVICENAME}/sas.dataserver.pool/backend/${SASINSTANCE}/host ${SAS_CURRENT_HOST}
   ${BOOTSTRAP_CONFIG} kv write --force config/${SASSERVICENAME}/sas.dataserver.pool/backend/${SASINSTANCE}/status up
+    # See if we are a Kubernetes environment
+  set +e
+  _k8senvcount=$(env | grep -c KUBERNETES)
+  set -e
+  if [ ${_k8senvcount} -ne 0 ]; then
+    hostname_index=$(hostname|sed -E 's/^.*-([0-9]+)$/\1/g')
+    ${BOOTSTRAP_CONFIG} kv write --force config/${SASSERVICENAME}/sas.dataserver.pool/backend/${SASINSTANCE}/hostindex ${hostname_index}
+  fi
 else
   echo_line "[postgresql] The PostgreSQL server start seems to have some problems, please see logs for details."
   exit 1
 fi
+
+${SASHOME}/libexec/sasdatasvrc/script/handle_failover.sh &
 
 echo_line "[postgresql] Unset variables so they cannot be seen from inside the host"
 [[ ! -z ${SAS_DEFAULT_PGPWD+x} ]] && unset SAS_DEFAULT_PGPWD

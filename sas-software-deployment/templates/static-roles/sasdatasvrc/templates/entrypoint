@@ -2,7 +2,7 @@
 
 # Exit out if any process returns a non zero return code
 #set -e
-set -x
+#set -x
 
 # Enable debugging if SAS_DEBUG is set
 [[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
@@ -46,6 +46,14 @@ servicecontext=${SASSERVICECONTEXT}
 source ${SASHOME}/lib/envesntl/docker-functions
 
 ###############################################################################
+# Save environment variables
+###############################################################################
+save_env sas SASHOME
+save_env sas SASCONFIG
+save_env sas SASTOKENDIR
+save_env sas SASSERVICENAME
+
+###############################################################################
 # Setup Consul
 ###############################################################################
 
@@ -63,7 +71,7 @@ docker_wait_for_consul_leader
 ###############################################################################
 function gracefulshutdown {
     echo
-    echo_line "Shutting down CAS pid $(cat ${DOCKERPIDFILE})!"
+    echo_line "Shutting down sasdatasvrc pid $(cat ${DOCKERPIDFILE})!"
     echo
 
     # new SAS init stuff
@@ -72,9 +80,9 @@ function gracefulshutdown {
     # sleep 10
     echo
     if [ $result -eq 0 ]; then
-        echo_line "SUCCESS: CAS is stopped"
+        echo_line "SUCCESS: sasdatasvrc is stopped"
     else
-        echo_line "ERROR: CAS could not be stopped"
+        echo_line "ERROR: sasdatasvrc could not be stopped"
     fi
 
     if [ -e "/tmp/host_auth_stop.sh" ]; then

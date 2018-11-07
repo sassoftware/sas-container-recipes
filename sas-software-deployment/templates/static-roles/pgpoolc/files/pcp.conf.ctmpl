@@ -26,7 +26,7 @@
 # # be ignored. Again, no spaces or tabs allowed before '#'.
 #
 # # USERID:MD5PASSWD
-# {{ range $key,$entries := tree "config/SASSERVICENAME/sas.dataserver.pcp/common" }}
-#   {{- $entries.Value}}
-#   {{ end -}}
+{{ range $key,$entries := tree "config/SASSERVICENAME/sas.dataserver.pcp/common" }}
+{{- $entries.Value}}
+{{ end -}}
 #
