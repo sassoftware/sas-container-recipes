@@ -52,7 +52,7 @@
       when: item.key not in 'consul, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
       with_dict: '{{ services }}'
 
-  when: manifest_type == 'kubernetes'
+  when: manifest_type == 'kubernetes' or manifest_type == 'all'
 
 - block:
 
@@ -61,4 +61,5 @@
         src: "docker-compose.j2"
         dest: "{{ playbook_dir }}/deploy/docker-compose.yml"
 
-  when: manifest_type == 'compose'
+  when: manifest_type == 'kubernetes' or manifest_type == 'all'
+

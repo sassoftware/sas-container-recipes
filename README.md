@@ -14,7 +14,7 @@ If you have a specific license question head over to the [support portal](https:
 Have something cool to share? SAS gladly accepts pull requests on GitHub! We appreciate your best efforts and value the transparent collaboration that GitHub has.
 You (or your employer) retain the copyright to your contribution and we retain permission to use and redistribute your contributions as part of the project. See the Apache 2.0 License included in the top level of this project.
 
-# Copyright
+## License
 Copyright 2018 SAS Institute Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
