@@ -1,5 +1,4 @@
 # Overview
-
 A structure for adding LDAP configuration that uses sssd and PAM.
 
 # Files
@@ -68,8 +67,7 @@ CONTAINER ID        NAMES               IMAGE               STATUS              
 
 Log on at http://_host-name-where-docker-is-running_ as the user that is defined in the configured LDAP environment.
 
-# Copyright
-
+# License
 Copyright 2018 SAS Institute Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
