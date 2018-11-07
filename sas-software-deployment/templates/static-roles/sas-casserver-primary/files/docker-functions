@@ -1,0 +1,177 @@
+#!/bin/bash
+
+set -e
+
+[[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
+if [ ${SAS_DEBUG} -gt 0 ]; then
+    set -x
+fi
+
+function echo_line()
+{
+    line_out="$(date) - $1"
+    printf "%s\n" "$line_out"
+}
+
+function docker_define_consul_environment()
+{
+    echo_line "Defining the Consul Environment"
+
+    if [ ! -d ${SASTOKENDIR} ]; then
+      echo ""
+      mkdir -vp ${SASTOKENDIR}
+      chown -v sas:sas ${SASTOKENDIR}
+      chmod -v 0755 ${SASTOKENDIR}
+      echo ""
+    fi
+
+    # If CONSUL_TOKENS_MANAGEMENT is passed in, make it so that the client file is not used if the file exists
+    if [ ! -z ${CONSUL_TOKENS_MANAGEMENT} ]; then
+      if [ -e ${SASTOKENDIR}/management.token ]; then
+        mv ${SASTOKENDIR}/management.token ${SASTOKENDIR}/old_management.token
+      fi
+
+      echo > ${SASTOKENDIR}/management.token $(echo ${CONSUL_TOKENS_MANAGEMENT})
+      
+      echo ""
+      chown -v sas:sas ${SASTOKENDIR}/management.token
+      chmod -v 0640 ${SASTOKENDIR}/management.token
+      echo ""
+    fi
+
+    # If CONSUL_TOKENS_CLIENT is passed in, make it so that the client file is not used if the file exists
+    if [ ! -z ${CONSUL_TOKENS_CLIENT} ]; then
+      if [ -e ${SASTOKENDIR}/client.token ]; then
+        mv ${SASTOKENDIR}/client.token ${SASTOKENDIR}/old_client.token
+      fi
+
+      echo > ${SASTOKENDIR}/client.token $(echo ${CONSUL_TOKENS_CLIENT})
+
+      echo ""
+      chown -v sas:sas ${SASTOKENDIR}/client.token
+      chmod -v 0640 ${SASTOKENDIR}/client.token
+      echo ""
+    fi
+
+    # If CONSUL_TOKENS_ENCRYPTION is passed in, make it so that the encryption file is not used if the file exists
+    if [ ! -z ${CONSUL_TOKENS_ENCRYPTION} ]; then
+      if [ -e ${SASTOKENDIR}/encryption.token ]; then
+        mv ${SASTOKENDIR}/encryption.token ${SASTOKENDIR}/old_encryption.token
+      fi
+
+      echo > ${SASTOKENDIR}/encryption.token $(echo ${CONSUL_TOKENS_ENCRYPTION})
+      echo ""
+      chown -v sas:sas ${SASTOKENDIR}/encryption.token
+      chmod -v 0600 ${SASTOKENDIR}/encryption.token
+      echo ""
+    fi
+
+    # Tell the environment where Consul is
+    [[ -e ${SASCONFIG}/consul.conf ]] && rm ${SASCONFIG}/consul.conf
+    if [[ -z ${CONSUL_HTTP_ADDR+x} ]]; then
+        echo_line "CONSUL_HTTP_ADDR is not defined, setting this to http://localhost:8500"
+        echo > ${SASCONFIG}/consul.conf "export CONSUL_HTTP_ADDR=http://localhost:8500"
+    else
+        echo_line "Writing ${CONSUL_HTTP_ADDR} to ${SASCONFIG}/consul.conf"
+        echo > ${SASCONFIG}/consul.conf "export CONSUL_HTTP_ADDR=${CONSUL_HTTP_ADDR}"
+    fi
+    
+    # Store the instance
+    _tmpinstance=${SASINSTANCE}
+
+    # Need to export "default" as the instance value to be picked up by the sas-start-functions
+    export SASINSTANCE=default
+
+    # Source the file which contains the Consul functions
+    source ${SASHOME}/lib/envesntl/sas-start-functions
+
+    echo_line "Setup service execution environment"
+    sas_set_service_env
+
+    echo_line "Setup access to Consul and Vault"
+    set +e
+    sas_set_consul_vault
+    set -e
+
+    echo_line "Setup command options for consul-template"
+    sas_setup_consul_template
+    
+    # Reset the instance to what was set for the container
+    export SASINSTANCE=${_tmpinstance}
+}
+
+function docker_wait_for_consul_leader()
+{
+    # echo_line "Wait for the Consul Leader"
+
+    # [[ -z ${CONSUL_SERVER_FLAG+x} ]] && export CONSUL_SERVER_FLAG=false
+    # [[ -z ${USE_CONSUL_AGENT+x} ]]   && export USE_CONSUL_AGENT=1
+
+    # if [ $CONSUL_SERVER_FLAG == "false" ]; then
+        # if [ ${USE_CONSUL_AGENT} -eq 1 ]; then
+            # until echo "" | nc 0.0.0.0 8500 2>/dev/null; do
+                # echo_line "Waiting for local Consul Agent.."
+                # sleep 2
+            # done
+
+            # echo_line "Local Consul Agent running.."
+        # fi
+    # fi
+
+    echo_line "Check to see if the Consul leader is ready"
+    consul_leader=$(${SASHOME}/bin/sas-bootstrap-config status leader --wait 2>/dev/null)
+    
+    if [ $? -ne 0 ]; then
+        echo_line "Consul leader not found so exiting"
+        exit 1
+    else
+        echo_line "Consul leader is ${consul_leader}"
+    fi
+}
+
+function docker_create_pid_file()
+{
+    echo_line "Create the PID directory and file"
+
+    [[ -z ${SASPIDROOT+x} ]]  && export SASPIDROOT="/var/run/sas"
+    [[ -z ${SASPIDFILE+x} ]]  && export SASPIDFILE="${SASPIDROOT}/sas-${SASDEPLOYID}-${SASSERVICECONTEXT}-${SASINSTANCE}.pid"
+
+    if [ ! -d ${SASPIDROOT} ]; then
+      echo ""
+      mkdir -vp ${SASPIDROOT}
+      echo ""
+    fi
+    
+    if [ ! -e ${SASPIDFILE} ]; then
+      touch ${SASPIDFILE}
+    fi
+
+    echo ""
+    chmod -v 0777 ${SASPIDROOT}
+    chmod -v 0755 ${SASPIDFILE}
+    echo ""
+
+    export DOCKERPIDFILE=${SASPIDFILE}
+}
+
+###############################################################################
+# Keep the container alive until it is killed
+###############################################################################
+function docker_check_process()
+{
+    while :; do
+      if [ -f ${DOCKERPIDFILE} ]; then
+         SERVICE_PID=$(cat ${DOCKERPIDFILE})
+         ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
+         process_check_rc=$?
+         if (( ${process_check_rc} != 0 )); then
+            echo_line "Process is not running... PID = ${SERVICE_PID}"
+            exit 1
+         fi
+      else
+        echo_line PID file not found
+        exit 1
+      fi
+      sleep 3
+    done
+}

@@ -1,0 +1,64 @@
+---
+- name: Create temporary directory on remote machine
+  file:
+    path: "{{ playbook_dir + '/deploy/' + item }}"
+    state: directory
+  with_items:
+  - "kubernetes"
+  - "kubernetes/deployments"
+  - "kubernetes/configmap"
+  - "kubernetes/secrets"
+
+- block:
+    - name: Create k8s configmaps
+      template:
+        src: "kubernetes-configmap.j2"
+        dest: "{{ playbook_dir }}/deploy/kubernetes/configmap/{{ item.key }}.yml"
+      when: item.value.deployment_overrides.environment is defined and item.value.deployment_overrides.environment
+      with_dict: '{{ services }}'
+
+    - name: Create k8s secrets
+      template:
+        src: "kubernetes-secrets.j2"
+        dest: "{{ playbook_dir }}/deploy/kubernetes/secrets/{{ item.key }}.yml"
+      when: item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets
+      with_dict: '{{ services }}'
+
+    - name: Create Consul k8s manifest
+      template:
+        src: "kubernetes-consul.j2"
+        dest: "{{ playbook_dir }}/deploy/kubernetes/deployments/{{ item.key }}.yml"
+      when: item.key == 'consul'
+      with_dict: '{{ services }}'
+
+    - name: Create pets k8s manifest
+      template:
+        src: "kubernetes-pets.j2"
+        dest: "{{ playbook_dir }}/deploy/kubernetes/deployments/{{ item.key }}.yml"
+      when: item.key in 'httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
+      with_dict: '{{ services }}'
+
+    - name: Create CAS worker manifest
+      template:
+        src: "kubernetes-casworker.j2"
+        dest: "{{ playbook_dir }}/deploy/kubernetes/deployments/sas-casserver-worker.yml"
+      when: item.key in 'sas-casserver-primary'
+      with_dict: '{{ services }}'
+
+    - name: Create micro-services k8s manifest
+      template:
+        src: "kubernetes-microservice.j2"
+        dest: "{{ playbook_dir }}/deploy/kubernetes/deployments/{{ item.key }}.yml"
+      when: item.key not in 'consul, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
+      with_dict: '{{ services }}'
+
+  when: manifest_type == 'kubernetes'
+
+- block:
+
+    - name: Create docker-compose file
+      template:
+        src: "docker-compose.j2"
+        dest: "{{ playbook_dir }}/deploy/docker-compose.yml"
+
+  when: manifest_type == 'compose'

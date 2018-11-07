@@ -1,0 +1,23 @@
+  programming:
+    from: "centos:7"
+    roles:
+    - tini
+    - sas-java
+    - programming
+    - spawner-config
+    - batchserver
+    - connect-config
+    - sas-studio-config
+    ports:
+    - "7080:7080"
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/programming-entrypoint.sh"]
+    deployment_overrides:
+      resources:
+        limits: 
+        - "memory=12000Mi"
+        requests:
+        - "memory=512Mi"
+      secrets:
+        - "SETINIT_TEXT_ENC="
+      volumes:
+        - "log=/opt/sas/viya/config/var/log"

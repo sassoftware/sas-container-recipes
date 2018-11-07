@@ -1,0 +1,20 @@
+  espstudio:
+    from: "centos:7"
+    roles:
+    - sas-java
+    - espStudio
+    ports: 
+    - "31415:31415"
+    entrypoint: ["/opt/sas/viya/home/bin/espstudio-entrypoint.sh"]
+    dev_overrides:
+      environment:
+        - "SAS_DEBUG=1"
+    deployment_overrides:
+      volumes:
+        - "log=/opt/sas/viya/config/var/log"
+      resources:
+        limits:
+        - "memory=10Gi"
+        requests:
+        - "memory=2Gi"
+

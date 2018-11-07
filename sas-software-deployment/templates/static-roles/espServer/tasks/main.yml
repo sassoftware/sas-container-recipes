@@ -1,0 +1,41 @@
+---
+# tasks file for SAS Viya service
+
+- name: Set license directory
+  set_fact:
+    SASLICENSEDIR: "/opt/sas/viya/home/SASEventStreamProcessingEngine/current/etc/license/"
+
+- name: Set license file
+  set_fact:
+    SASLICENSEFILE: "license.txt"
+
+- name: Load the {{ role_name }} variables
+  include_vars:
+    file: "{{ role_name }}"
+    name: sas_host_group_variables
+
+- name: Install SAS packages
+  include_role:
+    name: sas-install
+
+- name: Add cloud configuration files
+  include_role:
+    name: cloud-config
+
+- name: Copy over entrypoint script
+  template:
+    src: entrypoint
+    dest: "{{ SASHOME }}/bin/{{ role_name|lower }}-entrypoint.sh"
+    mode: "0755"
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+
+- name: Copy files to remote host
+  copy:
+    src: "{{ item.name }}"
+    dest: "{{ SASHOME }}/{{ item.path }}/{{ item.name }}"
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+    mode: "{{ item.mode }}"
+  with_items:
+  - { name: docker_esp.sh, path: "bin", mode: "0755" }

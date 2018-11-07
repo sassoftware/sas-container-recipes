@@ -1,0 +1,82 @@
+---
+# tasks file for batchserver
+
+###### START - Manage cas host and port change in autoexec_deployment #########
+  ###### START - host #########
+- name: Set CAS host to user-supplied value
+  set_fact:
+    controller_host: "{{ sasenv_cas_host }}"
+  when: sasenv_cas_host is defined and sasenv_cas_host
+
+- name: Set CAS host
+  set_fact:
+    controller_host: "{% set cas_host_set = [False] %}{% if CLUSTER_DEFINITIONS is defined and CLUSTER_DEFINITIONS.cas is defined %}{% for key, value in CLUSTER_DEFINITIONS.cas.items() %}{% if not cas_host_set[0] and value.primary_host is defined %}{{ hostvars[value.primary_host].sas_vars.hostname_fqdn }}{% set _ = cas_host_set.append(not cas_host_set.pop()) %}{% endif %}{% endfor %}{% endif %}{% if not cas_host_set[0] %}&SYSTCPIPHOSTNAME{% endif %}"
+  when: sasenv_cas_host is not defined or (sasenv_cas_host is defined and not sasenv_cas_host)
+  ###### END - host #########
+
+  ###### START - port #########
+- name: Set CAS port to user-supplied value
+  set_fact:
+    controller_port: "{{ sasenv_cas_port }}"
+  when: sasenv_cas_port is defined and sasenv_cas_port
+
+- name: Set CAS port to controller port when user has not defined the CAS port to use
+  set_fact:
+    controller_port: "{% set cas_port_set = [False] %}{% if CLUSTER_DEFINITIONS is defined and CLUSTER_DEFINITIONS.cas is defined %}{% for key, value in CLUSTER_DEFINITIONS.cas.items() %}{% if not cas_port_set[0] and value.primary_host is defined %}{% if value.cas is defined and value.cas.port is defined %}{{ value.cas.port }}{% else %}5570{% endif %}{% set _ = cas_port_set.append(not cas_port_set.pop()) %}{% endif %}{% endfor %}{% endif %}{% if not cas_port_set[0] %}5570{% endif %}"
+  when: sasenv_cas_port is not defined or (sasenv_cas_port is defined and not sasenv_cas_port)
+  ###### END - port #########
+
+  ###### START - backup host #########
+- name: Set CAS backup host
+  set_fact:
+    controller_backup_host: "{% set cas_host_backup_set = [False] %}{% if CLUSTER_DEFINITIONS is defined and CLUSTER_DEFINITIONS.cas is defined %}{% for key, value in CLUSTER_DEFINITIONS.cas.items() %}{% if not cas_host_backup_set[0] and value.secondary_host is defined and value.secondary_host %}{{ hostvars[value.secondary_host].sas_vars.hostname_fqdn }}{% set _ = cas_host_backup_set.append(not cas_host_backup_set.pop()) %}{% endif %}{% endfor %}{% endif %}"
+  when: sasenv_cas_backup_host is not defined or (sasenv_cas_backup_host is defined and not sasenv_cas_backup_host)
+  ###### END - backup host #########
+
+###### END - Manage cas host and port change in autoexec_usermods #########
+
+###### START - batchserver configuration #########
+# Check that batchserver config dir is present
+- name: Verify that SAS Batch Server config directory exists
+  stat:
+    path: "{{ SAS_CONFIG_ROOT + '/etc/batchserver/' + INSTANCE_ID | string }}"
+  register: batchserver_config_dir
+
+# Call template to create *_deployment files
+- block:
+
+  - name: Create deployment files for batchserver in {{ SAS_CONFIG_ROOT + '/etc/batchserver/' + INSTANCE_ID | string }}
+    template:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      owner: "{{ INSTALL_USER }}"
+      group: "{{ INSTALL_GROUP }}"
+      mode: "{{ item.mode }}"
+    become: yes
+    become_user: root
+    with_items:
+      - { src: "autoexec_deployment.sas.j2", dest: "{{ SAS_CONFIG_ROOT + '/etc/batchserver/' + INSTANCE_ID | string + '/autoexec_deployment.sas' }}", mode: "0644" }
+      - { src: "sasenv_deployment.j2", dest: "{{ SAS_CONFIG_ROOT + '/etc/batchserver/' + INSTANCE_ID | string + '/sasenv_deployment' }}", mode: "0755" }
+      - { src: "sasv9_deployment.cfg.j2", dest: "{{ SAS_CONFIG_ROOT + '/etc/batchserver/' + INSTANCE_ID | string + '/sasv9_deployment.cfg' }}", mode: "0644" }
+    when: batchserver_config_dir.stat.exists
+
+  when: ansible_env.ANSIBLE_CONTAINER is not defined
+
+- block:
+
+  - name: Create deployment files for batchserver in {{ SAS_CONFIG_ROOT + '/etc/batchserver/' + INSTANCE_ID | string }}
+    template:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      owner: "{{ INSTALL_USER }}"
+      group: "{{ INSTALL_GROUP }}"
+      mode: "{{ item.mode }}"
+    with_items:
+      - { src: "autoexec_deployment.sas.j2", dest: "{{ SAS_CONFIG_ROOT + '/etc/batchserver/' + INSTANCE_ID | string + '/autoexec_deployment.sas' }}", mode: "0644" }
+      - { src: "sasenv_deployment.j2", dest: "{{ SAS_CONFIG_ROOT + '/etc/batchserver/' + INSTANCE_ID | string + '/sasenv_deployment' }}", mode: "0755" }
+      - { src: "sasv9_deployment.cfg.j2", dest: "{{ SAS_CONFIG_ROOT + '/etc/batchserver/' + INSTANCE_ID | string + '/sasv9_deployment.cfg' }}", mode: "0644" }
+    when: batchserver_config_dir.stat.exists
+
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+###### END - batchserver configuration #########
+...

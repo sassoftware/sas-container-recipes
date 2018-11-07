@@ -1,0 +1,34 @@
+---
+# tasks file for sas-casserver-primary
+
+- name: Load the {{ role_name }} variables
+  include_vars:
+    file: "{{ role_name }}"
+    name: sas_host_group_variables
+
+- name: Install SAS packages
+  include_role:
+    name: sas-install
+
+# docker-functions is unique for this role at the moment.
+- name: Copy files to remote host
+  copy:
+    src: "{{ item.name }}"
+    dest: "/opt/sas/viya/home/{{ item.path }}/{{ item.name }}"
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+    mode: "{{ item.mode }}"
+  with_items:
+  - { name: docker-functions, path: "lib/envesntl", mode: "0755" }
+  - { name: createudfformats_startup.lua, path: "share/cas", mode: "0755" }
+  - { name: register_cas.sh, path: "SASFoundation/utilities/bin", mode: "0755" }
+  - { name: tenant_setup_docker.sh, path: "bin", mode: "0755" }
+  
+- name: Copy over entrypoint script
+  template:
+    src: entrypoint
+    dest: "{{ SASHOME }}/bin/{{ role_name }}-entrypoint.sh"
+    mode: "0755"
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+
