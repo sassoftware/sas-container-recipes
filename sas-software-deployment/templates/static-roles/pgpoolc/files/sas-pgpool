@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -e
-#set -x
+# set -x
 
 ###############################################################################
 # Variables
@@ -32,19 +32,29 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -e ${_sysconfig} ]] && source ${_sysconfig}
 
 # set standard environment if not already set
-[[ -z ${SASLOGROOT+x} ]]         && export SASLOGROOT="${SASCONFIG}/var/log"
-[[ -z ${SASLOGDIR+x} ]]          && export SASLOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICENAME}"
-[[ -z ${SASCONSULDIR+x} ]]       && export SASCONSULDIR="${SASHOME}"
-[[ -z ${SASPGPOOLCONFIGDIR+x} ]] && export SASPGPOOLCONFIGDIR="${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}"
-[[ -z ${SAS_DEFAULT_PGUSER+x} ]] && export SAS_DEFAULT_PGUSER="dbmsowner"
-[[ -z ${SAS_DEFAULT_PGPWD+x} ]]  && exit 1
-[[ -z ${SAS_PCPUSER+x} ]]        && export SAS_PCPUSER="dbmsowner"
-[[ -z ${SAS_PCPPWD+x} ]]         && export SAS_PCPPWD="${SAS_DEFAULT_PGPWD}"
-[[ -z ${SASPGPOOLOWNER+x} ]]     && export SASPGPOOLOWNER="saspgpool"
-[[ -z ${SASPGPOOLGROUP+x} ]]     && export SASPGPOOLGROUP="sas"
-[[ -z ${SASPGPOOLOIDDIR+x} ]]    && export SASPGPOOLOIDDIR="${SASLOGDIR}/oiddir"
-[[ -z ${SASPGPOOLRUNDIR+x} ]]    && export SASPGPOOLRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
-[[ -z ${SASPGPOOLPIDFILE+x} ]]   && export SASPGPOOLPIDFILE="sas-${SASDEPLOYID}-${SASSERVICENAME}-${SASINSTANCE}.pid"
+[[ -z ${SASLOGROOT+x} ]]          && export SASLOGROOT="${SASCONFIG}/var/log"
+[[ -z ${SASLOGDIR+x} ]]           && export SASLOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICENAME}"
+[[ -z ${SASCONSULDIR+x} ]]        && export SASCONSULDIR="${SASHOME}"
+[[ -z ${SASPGPOOLCONFIGDIR+x} ]]  && export SASPGPOOLCONFIGDIR="${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}"
+[[ -z ${SAS_DEFAULT_PGUSER+x} ]]  && export SAS_DEFAULT_PGUSER="dbmsowner"
+[[ -z ${SAS_DEFAULT_PGPWD+x} ]]   && exit 1
+[[ -z ${SASPOSTGRESREPLICATION+x} ]] && export SASPOSTGRESREPLICATION=false
+[[ -z ${SASPOSTGRESREPLUSER+x} ]] && export SASPOSTGRESREPLUSER="replication"
+[[ -z ${SASPOSTGRESREPLPWD+x} ]]  && exit 1
+[[ -z ${SAS_PCPUSER+x} ]]         && export SAS_PCPUSER="dbmsowner"
+[[ -z ${SAS_PCPPWD+x} ]]          && export SAS_PCPPWD="${SAS_DEFAULT_PGPWD}"
+[[ -z ${SASPGPOOLOWNER+x} ]]      && export SASPGPOOLOWNER="saspgpool"
+[[ -z ${SASPGPOOLGROUP+x} ]]      && export SASPGPOOLGROUP="sas"
+[[ -z ${SASPGPOOLOIDDIR+x} ]]     && export SASPGPOOLOIDDIR="${SASLOGDIR}/oiddir"
+[[ -z ${SASPGPOOLRUNDIR+x} ]]     && export SASPGPOOLRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
+[[ -z ${SASPGPOOLPIDFILE+x} ]]    && export SASPGPOOLPIDFILE="sas-${SASDEPLOYID}-${SASSERVICENAME}-${SASINSTANCE}.pid"
+
+save_env sas SASLOGROOT
+save_env pgpool SASLOGDIR
+save_env pgpool SASPGPOOLCONFIGDIR
+save_env pgpool SAS_PCPUSER
+save_env pgpool SASPGPOOLOWNER
+save_env pgpool SASPGPOOLGROUP
 
 PGPOOL_CONFIG_DEFN="sas.dataserver.pool"
 PGPOOL_CONF_SECTIONS="CONNECTION,COMMUNICATIONMANAGER,BACKENDCONNECTION,SSLCONNECTION,POOLSIZE,LIFETIME,WHERETOLOG,WHATTOLOG,SYSLOG,DEBUG,FILELOCATIONS,CONNECTIONPOOLING,REPLICATION,LOADBALANCING,MASTERSLAVESETTINGS,MASTERSLAVESTREAMING,HEALTHCHECK,FAILOVER,RECOVERY,WATCHDOGENABLE,WATCHDOGCONNECTION,WATCHDOGCOMMUNICATION,WATCHDOGVIRTUALIP,WATCHDOGESCALATION,WATCHDOGLIFECHECK,WATCHDOGOTHER,OTHERS,INMEMORY"
@@ -199,24 +209,6 @@ function add_range_to_ctmpl {
             done
         done <<< "${sectionlist}"
     done
-}
-
-function update_config_from_consul {
-    ctmplfile=$1
-    targetfile=$2
-    fileuser=$3
-    filegroup=$4
-    fileperms=$5
-
-    ### This probably should move to the start process.
-    # generate the needed configuration files
-    echo_line "Generate config files using consul-template"
-    # TODO: export the environment options
-    ${SASHOME}/bin/consul-template ${CONSUL_TEMPLATE_OPTIONS} \
-       -template="${ctmplfile}:${targetfile}" -once
-
-    chmod -v ${fileperms} ${targetfile}
-    chown -v ${fileuser}:${filegroup} ${targetfile}
 }
 
 ###############################################################################
@@ -381,6 +373,7 @@ reset_file ${pgpool_ctmpl_file} ${SASPGPOOLOWNER} ${SASPGPOOLGROUP} 0755
 
 cp -v ${SASHOME}/share/pgpool-II/pgpool.conf.ctmpl ${pgpool_ctmpl_file}
 
+sed -i "s|SASHOME|${SASHOME}|" ${pgpool_ctmpl_file}
 sed -i "s|SASPGPOOLRUNDIR|${SASPGPOOLRUNDIR}|" ${pgpool_ctmpl_file}
 sed -i "s|SASPGPOOLPIDFILE|${SASPGPOOLPIDFILE}|" ${pgpool_ctmpl_file}
 sed -i "s|SASLOGDIR|${SASLOGDIR}|" ${pgpool_ctmpl_file}
@@ -388,6 +381,8 @@ sed -i "s|SASSERVICENAME|${SASSERVICENAME}|" ${pgpool_ctmpl_file}
 sed -i "s|SASINSTANCE|${SASINSTANCE}|" ${pgpool_ctmpl_file}
 sed -i "s|SAS_CURRENT_HOST|${SAS_CURRENT_HOST}|" ${pgpool_ctmpl_file}
 sed -i "s|SASPGPOOLOIDDIR|${SASPGPOOLOIDDIR}|" ${pgpool_ctmpl_file}
+sed -i "s|SASPGPOOLCONFIGDIR|${SASPGPOOLCONFIGDIR}|" ${pgpool_ctmpl_file}
+sed -i "s|SASPOSTGRESREPLUSER|${SASPOSTGRESREPLUSER}|" ${pgpool_ctmpl_file}
 
 cat >> ${pgpool_ctmpl_file} << CFTMPLLOOP
 {{define "ssloption" }}
@@ -468,20 +463,10 @@ export PCPPASSFILE=${pgpool_pcppass_conf_file}
 echo_line "[pgpool] Create the pool_password file"
 if [ ! -f ${SASPGPOOLCONFIGDIR}/pool_passwd ]; then
     ${SASHOME}/bin/pg_md5 -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -m -u ${SAS_DEFAULT_PGUSER} ${SAS_DEFAULT_PGPWD}
+    if [[ ${SASPOSTGRESREPLICATION} == 'true' ]]; then
+        ${SASHOME}/bin/pg_md5 -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -m -u ${SASPOSTGRESREPLUSER} ${SASPOSTGRESREPLPWD}
+    fi
     chown ${SASPGPOOLOWNER}:${SASPGPOOLGROUP} ${SASPGPOOLCONFIGDIR}/pool_passwd
-fi
-
-###############################################################################
-# Failover
-###############################################################################
-
-_failover_script=${SASPGPOOLCONFIGDIR}/failover.sh
-if [ ! -e ${_failover_script} ]; then
-    cp -va ${SASHOME}/share/pgpool-II/failover.sh ${_failover_script}
-    sed -i "s|SASHOME|${SASHOME}|" ${_failover_script}
-    sed -i "s|SASLOGDIR|${SASLOGDIR}|" ${_failover_script}
-    sed -i "s|SASSERVICENAME|${SASSERVICENAME}|" ${_failover_script}
-    # How to handle node id???
 fi
 
 ###############################################################################
@@ -491,6 +476,8 @@ fi
 echo_line "[pgpool] Run pgpool as ${SASPGPOOLOWNER}"
 su - -c "${SASHOME}/bin/pgpool -n -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -F ${SASPGPOOLCONFIGDIR}/pcp.conf -a ${SASPGPOOLCONFIGDIR}/pool_hba.conf &" ${SASPGPOOLOWNER}
 
+echo_line "[pgpool] Run pgpool node watcher as ${SASPGPOOLOWNER}"
+${SASHOME}/libexec/sasdatasvrc/script/node_watcher.sh &
 ###############################################################################
 # Consul registration
 ###############################################################################

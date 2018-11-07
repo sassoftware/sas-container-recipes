@@ -23,13 +23,14 @@
     mode: "{{ item.mode }}"
   with_items:
   - { name: sas-pgpool, path: "bin", mode: "0755" }
-  - { name: failover.sh, path: "share/pgpool-II", mode: "0755" }
+  - { name: failover.sh, path: "libexec/sasdatasvrc/script", mode: "0755" }
   - { name: pcppass.ctmpl, path: "share/pgpool-II", mode: "0755" }
   - { name: pcp.conf.ctmpl, path: "share/pgpool-II", mode: "0755" }
   - { name: pgpool.conf.ctmpl, path: "share/pgpool-II", mode: "0755" }
   - { name: pool_hba.conf.ctmpl, path: "share/pgpool-II", mode: "0755" }
   - { name: pgpool_stop.sh, path: "libexec/sasdatasvrc/script", mode: "0755" }
   - { name: sds_consul_health_check.sh, path: "libexec/sasdatasvrc/script", mode: "0755" }
+  - { name: node_watcher.sh, path: "libexec/sasdatasvrc/script", mode: "0755" }
   
 - name: Copy over entrypoint script
   template:

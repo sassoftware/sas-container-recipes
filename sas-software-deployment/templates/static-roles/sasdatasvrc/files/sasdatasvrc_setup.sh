@@ -199,26 +199,6 @@ function add_range_to_ctmpl {
     done
 }
 
-function update_config_from_consul {
-    ctmplfile=$1
-    targetfile=$2
-    fileuser=$3
-    filegroup=$4
-    fileperms=$5
-
-    ### This probably should move to the start process.
-    # generate the needed configuration files
-    echo_line "Generate config files using consul-template"
-    # TODO: export the environment options
-    set -x
-    ${SASHOME}/bin/consul-template ${CONSUL_TEMPLATE_OPTIONS} \
-       -template="${ctmplfile}:${targetfile}" -once
-    set +x
-
-    chmod -v ${fileperms} ${targetfile}
-    chown -v ${fileuser}:${filegroup} ${targetfile}
-}
-
 function elect_postgres_primary {
     registered_primary_uid=$(${BOOTSTRAP_CONFIG} kv read config/application/sas/database/${SASSERVICENAME}/primary_uid)
 
@@ -437,6 +417,12 @@ create_and_load_bulk_consul_file \
     "${POSTGRESQLHBA_CONF_SECTIONS}" \
     ${SASPOSTGRESCONFIGDIR}/sas_dataserver_hba.yml
 
+# if [ ! -e ${SASPOSTGRESCONFIGDIR}/handle_failover.sh ]; then
+#     cp -v ${SASHOME}/share/postgresql/handle_failover.sh ${SASPOSTGRESCONFIGDIR}/handle_failover.sh
+#     sed -i "s|SASHOME|${SASHOME}|" ${SASPOSTGRESCONFIGDIR}/handle_failover.sh
+#     sed -i "s|SASCONFIG|${SASCONFIG}|" ${SASPOSTGRESCONFIGDIR}/handle_failover.sh
+#     sed -i "s|PG_DATADIR|${PG_DATADIR}|" ${SASPOSTGRESCONFIGDIR}/handle_failover.sh
+# fi
 ##############################################################################
 # Create Consul template files
 ##############################################################################
@@ -550,8 +536,10 @@ su - -c "${SASHOME}/bin/pg_ctl -o '-c config_file=${SASPOSTGRESCONFIGDIR}/postgr
 if [ $? = 0 ]; then
   echo_line "[postgresql] PostgreSQL started successfully"
 
-  echo_line "[postgresql] Creating database"
-  create_database
+  if [ "${registered_primary_node}" = "${SAS_CURRENT_HOST}" ]; then
+    echo_line "[postgresql] Creating database"
+    create_database
+  fi
 
   if [ ${SASPOSTGRESREPLICATION} ] && [ "${registered_primary_node}" = "${SAS_CURRENT_HOST}" ]; then
     echo_line "[repl:primary] setting up replication"

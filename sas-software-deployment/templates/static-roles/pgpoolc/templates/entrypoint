@@ -2,7 +2,7 @@
 
 # Exit out if any process returns a non zero return code
 #set -e
-set -x
+#set -x
 
 # Enable debugging if SAS_DEBUG is set
 [[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
@@ -38,6 +38,14 @@ servicecontext=${SASSERVICECONTEXT}
 
 # Set of functions for supporting docker containers
 source ${SASHOME}/lib/envesntl/docker-functions
+
+###############################################################################
+# Save environment variables
+###############################################################################
+save_env sas SASHOME
+save_env sas SASCONFIG
+save_env sas SASTOKENDIR
+save_env sas SASSERVICENAME
 
 ###############################################################################
 # Setup Consul

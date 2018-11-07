@@ -306,7 +306,7 @@ master_slave_sub_mode = 'stream'
 sr_check_period = 10
                             # Streaming replication check period
                             # Disabled (0) by default
-sr_check_user = ''
+sr_check_user = 'SASPOSTGRESREPLUSER'
                             # Streaming replication check user
                             # This is neccessary even if you disable streaming
                             # replication delay check by sr_check_period = 0
@@ -363,7 +363,7 @@ connect_timeout = 10000
 # FAILOVER AND FAILBACK
 #------------------------------------------------------------------------------
 
-failover_command = '/var/vcap/jobs/pgpool/bin/failover.sh %d "%h" %m "%H" %M %P'
+failover_command = 'SASHOME/libexec/sasdatasvrc/script/failover.sh %d "%h" %m "%H" %M %P'
                             # Executes this command at failover
                             # Special values:
                             #   %d = node id
@@ -689,18 +689,19 @@ black_memqcache_table_list = ''
 #------------------------------------------------------------------------------
 
 # - Backend Connection Settings -
-{{- $inside_index := 0 }}
 {{ range $index, $node := service "SASSERVICENAME" "any" }}
     {{- if $node.Tags | contains "SASSERVICENAME" -}}
-backend_hostname{{ $inside_index }}       = '{{ $node.Address }}'
-backend_port{{ $inside_index }}           = {{ $node.Port }}
-backend_flag{{ $inside_index }}           = 'ALLOW_TO_FAILOVER'
-backend_weight{{ $inside_index }}         = 1
-        {{- $svcinstance := index ($node.ID | split "-") 1 }}
-        {{- $datadirkey := print "config/SASSERVICENAME/sas.dataserver.pool/backend/" $svcinstance "/data_directory" }}
-backend_data_directory{{ $inside_index }} = '{{ key $datadirkey }}'
-        {{- $inside_index := add $inside_index 1 }}
+    {{- $svcinstance := index ($node.ID | split "-") 1 -}}
+    {{ $hostindex := 0 }}
+    {{- $hostindexkey := print "config/SASSERVICENAME/sas.dataserver.pool/backend/" $svcinstance "/hostindex" -}}
+    {{- $hostindex := key $hostindexkey -}}
+    {{- $datadirkey := print "config/SASSERVICENAME/sas.dataserver.pool/backend/" $svcinstance "/data_directory" -}}
+backend_hostname{{ $hostindex }}       = '{{ $node.Address }}'
+backend_port{{ $hostindex }}           = {{ $node.Port }}
+backend_flag{{ $hostindex }}           = 'ALLOW_TO_FAILOVER'
+backend_weight{{ $hostindex }}         = 1
+backend_data_directory{{ $hostindex }} = '{{ key $datadirkey }}'
     {{- end }}
-{{- end }}
+{{ end }}
 
 

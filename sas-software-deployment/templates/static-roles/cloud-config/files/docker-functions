@@ -238,22 +238,32 @@ function docker_shutdown_sas_services()
 ###############################################################################
 function docker_check_process()
 {
+    max_failures=3
+    failures=0
     while :; do
       if [ -f ${DOCKERPIDFILE} ]; then
-         SERVICE_PID=$(cat ${DOCKERPIDFILE})
-         set +e
-         ps -p ${SERVICE_PID} |grep -q ${SERVICE_PID} 2>/dev/null
-         process_check_rc=$?
-         set -e
-         if (( ${process_check_rc} != 0 )); then
-            echo_line "Process is not running... PID = ${SERVICE_PID}"
+        SERVICE_PID=$(cat ${DOCKERPIDFILE})
+        set +e
+        ps -p ${SERVICE_PID} |grep -q ${SERVICE_PID} 2>/dev/null
+        process_check_rc=$?
+        set -e
+        if (( ${process_check_rc} != 0 )); then
+          echo_line "Process is not running... PID = ${SERVICE_PID}"
+          failures=$[failures+1]
+          if [ ${failures} -eq ${max_failures} ];then
             exit 1
-         fi  
+          fi
+        else
+          failures=0
+        fi
       else
-        echo_line PID file not found
-        exit 1
-      fi  
-      sleep 3
+        echo_line "PID file not found"
+        failures=$[failures+1]
+        if [ ${failures} -eq ${max_failures} ];then
+            exit 1
+        fi
+      fi
+      sleep 5
     done
 }
 
@@ -283,4 +293,46 @@ function docker_check_sas_services()
             fi
         done
     done
+}
+
+###############################################################################
+# Write environment variables to a config for use by scripts.
+# File needs to be written to an area that does not need to know some ENV
+# for its location.
+###############################################################################
+function save_env()
+{
+    # config file saved to /opt/sas/config/SVC-env.sh
+    # /opt/sas/config/pgpool-env.sh
+
+    _svc=$1
+    _key=$2
+
+    if [ ! -d /opt/sas/config ];then
+        mkdir /opt/sas/config
+    fi
+
+    _cfg_file=/opt/sas/config/${_svc}-env.sh
+    echo "export ${_key}=$(eval echo \$${_key})" >> ${_cfg_file}
+}
+
+###############################################################################
+# Use consul-template to update a configuration file, once.
+###############################################################################
+function update_config_from_consul {
+    ctmplfile=$1
+    targetfile=$2
+    fileuser=$3
+    filegroup=$4
+    fileperms=$5
+
+    ### This probably should move to the start process.
+    # generate the needed configuration files
+    echo_line "Generate config files using consul-template"
+    # TODO: export the environment options
+    ${SASHOME}/bin/consul-template ${CONSUL_TEMPLATE_OPTIONS} \
+       -template="${ctmplfile}:${targetfile}" -once -log-level=debug
+
+    chmod -v ${fileperms} ${targetfile}
+    chown -v ${fileuser}:${filegroup} ${targetfile}
 }
