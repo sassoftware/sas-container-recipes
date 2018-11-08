@@ -54,7 +54,7 @@ cp templates/generate-manifests.yml debug/
 cd debug/
 
 # Use the orchestration tool to convert the SOE zip into a playbook
-echo -e "[INFO]  : Generating programming playbook"
+echo -e "[INFO]  : Generating playbook"
 sas-orchestration build --input ${ORDER_LOCATION}
 tar xvf SAS_Viya_playbook.tgz
 rm SAS_Viya_playbook.tgz

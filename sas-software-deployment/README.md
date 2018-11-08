@@ -27,9 +27,9 @@ Download this repository to use the build script.
 Define some variables that point to your Software Order Email zip file and your Docker registry location.
 The `build.sh` tool creates Docker images from your software order, pushes them to your docker registry, and creates Kubernetes deployment files.
 ```
-ORDER_LOCATION=/my/path/to/SAS_Viya_deployment_data.zip \
 DOCKER_REGISTRY_URL=<my-docker-registry-url> \
 DOCKER_REGISTRY_NAMESPACE=$(echo $USER) \
+ORDER_LOCATION=/my/path/to/SAS_Viya_deployment_data.zip \
 ./build.sh
 ```
 
