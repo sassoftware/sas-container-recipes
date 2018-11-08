@@ -1,4 +1,4 @@
-# SAS Viya Deployment
+# SAS Viya Cluster Deployment
 Using containers to build, customize, and deploy a SAS environment in Kubernetes based on your software order.
 
 ## Getting Started
