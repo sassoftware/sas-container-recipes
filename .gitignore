@@ -8,3 +8,4 @@ venv/
 *test*/
 .DS_Store
 *.log
+debug/*
