@@ -27,7 +27,7 @@
     - name: Create Consul k8s manifest
       template:
         src: "kubernetes-consul.j2"
-        dest: "{{ playbook_dir }}/deploy/kubernetes/deployments/{{ item.key }}.yml"
+        dest: "{{ playbook_dir }}/deploy/kubernetes/{{ item.key }}.yml"
       when: item.key == 'consul'
       with_dict: '{{ services }}'
 
@@ -52,14 +52,7 @@
       when: item.key not in 'consul, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
       with_dict: '{{ services }}'
 
-  when: manifest_type == 'kubernetes' or manifest_type == 'all'
-
-- block:
-
     - name: Create docker-compose file
       template:
         src: "docker-compose.j2"
         dest: "{{ playbook_dir }}/deploy/docker-compose.yml"
-
-  when: manifest_type == 'kubernetes' or manifest_type == 'all'
-

@@ -1,0 +1,21 @@
+  httpproxy:
+    from: "centos:7"
+    roles:
+    - httpproxy
+    ports:
+    - "80:80"
+    - "443:443"
+    entrypoint: ["/opt/sas/viya/home/bin/httpproxy-entrypoint.sh"]
+    volumes:
+    - static-content:/httpproxy
+    dev_overrides:
+      environment:
+        - "SAS_DEBUG=1"
+    deployment_overrides:
+      resources:
+        limits:
+        - "memory=512Mi"
+        requests:
+        - "memory=10Mi"
+      volumes:
+        - "log=/opt/sas/viya/config/var/log"

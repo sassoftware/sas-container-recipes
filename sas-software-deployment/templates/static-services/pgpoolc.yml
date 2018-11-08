@@ -1,0 +1,24 @@
+  pgpoolc:
+    from: "centos:7"
+    roles:
+    - pgpoolc
+    ports:
+    - "5431:5431"
+    entrypoint: ["/opt/sas/viya/home/bin/pgpoolc-entrypoint.sh"]
+    dev_overrides:
+      environment:
+        - "SAS_DEBUG=1"
+    deployment_overrides:
+      environment:
+        - "SASPOSTGRESDBSIZE=large"
+        - "PG_VOLUME=/database/data"
+      resources:
+        limits:
+        - "memory=12000Mi"
+        requests:
+        - "memory=512Mi"
+      secrets:
+        - "SAS_DEFAULT_PGPWD=Go4thsas"
+        - "SASPOSTGRESREPLPWD=Go4thsas"
+      volumes:
+        - "log=/opt/sas/viya/config/var/log"

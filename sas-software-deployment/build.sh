@@ -60,7 +60,7 @@ tar xvf SAS_Viya_playbook.tgz
 rm SAS_Viya_playbook.tgz
 
 export SAS_VIYA_PLAYBOOK_DIR=${PWD}/sas_viya_playbook
-static_services=$(ls ../templates/static-services/)
+static_files=$(ls ../templates/static-services/)
 for file in $(ls -1 ${SAS_VIYA_PLAYBOOK_DIR}/group_vars); do
     echo -e "*** Create the roles directory for the host groups"
     if [ "${file}" != "all" ] && \
@@ -102,12 +102,13 @@ for file in $(ls -1 ${SAS_VIYA_PLAYBOOK_DIR}/group_vars); do
             # Each file in the static-service directory has the same file name as its service name
             # If the file name is the same as the service then the service exists in the order
             file_is_static='false'
-            for service in ${static_services}; do
-                if [ "${file,,}" == ${service} ]; then
+            for service in ${static_files}; do
+                if [ "${file,,}" = ${service} ]; then
                     # Append static service definition to the debug/container.yml
-                    cat ../templates/static-services/${service} >> container.yml 
+                    cat ../templates/static-services/${item} >> container.yml 
                     echo -e "" >> container.yml
                     $file_is_static = 'true'
+                    echo -e "FOUND STATIC FILE: -------------------------------------- ${service}"
                 fi
             done
             
@@ -259,7 +260,8 @@ echo
 
 set +e
 # Ansible requires access to the host's libselinux-python lib. Setting ansible_python_interpreter.
-ansible-playbook generate-manifests.yml -e 'manifest_type=kubernetes'
+ansible-playbook generate-manifests.yml -e 'manifest_type=all'
+rm -r ../deploy/
 mv deploy/ ../
 apgen_rc=$?
 set -e
