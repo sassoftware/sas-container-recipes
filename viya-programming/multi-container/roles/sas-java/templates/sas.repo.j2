@@ -1,0 +1,13 @@
+{% for key, value in SAS_REPO.items() %}
+[sas-{{ key }}]
+name = {{ value.name }}
+baseurl={{ value.baseurl }}
+enabled={{ value.enabled }}
+sslverify={{ value.sslverify }}
+sslcacert={{ value.sslcacert | default('', true) }}
+sslclientcert={{ value.sslclientcert | default('', true) }}
+gpgcheck={{ value.gpgcheck }}
+gpgkey={{ value.gpgkey | default('', true) }}
+
+{% endfor %}
+

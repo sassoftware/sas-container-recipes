@@ -1,0 +1,12 @@
+---
+- name: Verify the {{ SERVICE_NAME }} service is installed
+  register: register_var
+  stat:
+    path: /etc/init.d/{{ SERVICE_NAME }}
+
+- name: If {{ SERVICE_NAME }} is installed, stop it
+  become: 'yes'
+  become_user: root
+  service: name={{ SERVICE_NAME }} state=stopped
+  when: register_var.stat.exists is defined and register_var.stat.exists
+...

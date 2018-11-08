@@ -1,0 +1,100 @@
+version: "2"
+settings:
+
+  conductor:
+    # The Conductor container does the heavy lifting, and provides a portable
+    # Python runtime for building your target containers. It should be derived
+    # from the same distribution as you're building your target containers with.
+    base: centos:7
+
+  vars_files:
+  - everything.yml
+
+  # Set the name of the project. Defaults to basename of the project directory.
+  # For built services, concatenated with service name to form the built image name.
+  project_name: "{{ PROJECT_NAME }}"
+
+services:
+  httpproxy:
+    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
+    roles:
+    - httpproxy
+    ports:
+    - "80:80"
+    - "443:443"
+    entrypoint: ["/opt/sas/viya/home/bin/httpproxy-entrypoint.sh"]
+    volumes:
+    - static-content:/httpproxy
+    dev_overrides:
+      environment:
+        - "SAS_DEBUG=1"
+    deployment_overrides:
+      resources:
+        limits:
+        - "memory=512Mi"
+        requests:
+        - "memory=10Mi"
+      volumes:
+        - "log=/opt/sas/viya/config/var/log"
+
+  programming:
+    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
+    roles:
+    - tini
+    - sas-java
+    - programming
+    - spawner-config
+    - batchserver
+    - connect-config
+    - sas-studio-config
+    ports:
+    - "7080:7080"
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/programming-entrypoint.sh"]
+    deployment_overrides:
+      resources:
+        limits:
+        - "memory=12000Mi"
+        requests:
+        - "memory=512Mi"
+      secrets:
+        - "SETINIT_TEXT_ENC="
+      volumes:
+        - "log=/opt/sas/viya/config/var/log"
+
+  sas-casserver-primary:
+    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
+    roles:
+    - tini
+    - sas-java
+    - sas-casserver-primary
+    ports:
+    - "5570:5570"
+    - "5571:5571"
+    - "8777:8777"
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/sas-casserver-primary-entrypoint.sh"]
+    deployment_overrides:
+      environment:
+        - "SERVICE_NAME=cascontroller"
+        - "CASCFG_MODE=smp"
+      resources:
+        limits:
+        - "memory=12000Mi"
+        requests:
+        - "memory=1024Mi"
+      secrets:
+        - "SETINIT_TEXT_ENC="
+        - "CASKEY="
+      volumes:
+        - "data=/cas/data"
+        - "cache=/cas/cache"
+        - "permstore=/cas/permstore"
+        - "log=/opt/sas/viya/config/var/log"
+
+registries:
+  docker-registry:
+    url: "{{ DOCKER_REGISTRY_URL }}"
+    namespace: "{{ DOCKER_REGISTRY_NAMESPACE }}"
+
+volumes:
+  static-content:
+    docker: {}

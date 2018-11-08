@@ -1,0 +1,28 @@
+#!/bin/bash
+
+[[ -z ${DEPLOYMENT_NAME+x} ]] && DEPLOYMENT_NAME=sas-viya
+
+while [ "$#" -gt 0 ]
+do
+    if [ "$1" = "--name" ]; then
+        shift
+        export DEPLOYMENT_NAME="$1"
+        shift
+    else
+        shift
+    fi
+done
+
+echo "Deleting artifacts for deployment \"${DEPLOYMENT_NAME}\""
+echo ""
+
+_kubectl_cmd="kubectl"
+if [[ ! -z ${K8S_CONFIG+x} ]]; then
+    _kubectl_cmd="kubectl --kubeconfig ${K8S_CONFIG}"
+fi
+
+for _type in configmaps secrets services deployments statefulsets persistentvolumeclaims; do
+    for _item in $(${_kubectl_cmd} get ${_type} --no-headers -o name | cut -d/ -f2 | grep ${DEPLOYMENT_NAME}); do
+        ${_kubectl_cmd} delete ${_type} ${_item}
+    done
+done

@@ -1,0 +1,570 @@
+#! /bin/bash
+
+# Exit out if any process returns a non zero return code
+set -e
+
+
+###############################################################################
+# Variables
+###############################################################################
+
+[[ -z ${SASROOT+x} ]]           && export SASROOT=/opt/sas
+[[ -z ${SASDEPLOYID+x} ]]       && export SASDEPLOYID=viya
+[[ -z ${SASINSTANCE+x} ]]       && export SASINSTANCE=default
+[[ -z ${SASHOME+x} ]]           && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
+[[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
+[[ -z ${SASCASINSTANCE+x} ]]    && export SASCASINSTANCE="${SASINSTANCE}"
+[[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=localhost
+
+_deployid=${SASDEPLOYID}
+export CASCONFIG="${SASROOT}/${_deployid}/config"
+
+# Enable debugging if SAS_DEBUG is set
+[[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
+if [ ${SAS_DEBUG} -gt 0 ]; then
+    set -x
+fi
+
+# Set of functions for supporting docker containers
+source ${SASHOME}/lib/envesntl/docker-functions
+
+###############################################################################
+# Configuration by convention
+###############################################################################
+
+
+###############################################################################
+# Shutdown
+###############################################################################
+function gracefulshutdown {
+    echo
+    echo_line "Shutting down!"
+    echo
+    echo "    Stop CAS service"
+
+    pidfiles="/var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
+    for _pidf in ${pidfiles}; do
+        if [ -f ${_pidf} ]; then
+            SERVICE_PID=$(cat ${_pidf})
+            set +e
+            ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
+            process_check_rc=$?
+            set -e
+            if (( ${process_check_rc} == 0 )); then
+                echo "      Stopping process from ${_pidf}"
+                kill -TERM $(cat ${_pidf})
+            fi
+        fi
+    done
+
+    n_stop_count=$(find /tmp -type f -name "*stop.sh" | wc -c)
+    if (( ${n_stop_count} > 0 )); then
+        for str_stop_script in $(ls -1 /tmp/*stop.sh); do
+            echo "Running stop script \"${str_stop_script}\""
+            ${str_stop_script}
+        done
+    fi
+
+    exit 0
+}
+
+trap gracefulshutdown SIGTERM
+trap gracefulshutdown SIGINT
+
+###############################################################################
+# Pre Deploy
+###############################################################################
+
+if [ ! -z "${PRE_DEPLOY_SCRIPT}" ]; then
+    echo_line "Creating pre deploy script"
+    echo "${PRE_DEPLOY_SCRIPT}" > /tmp/pre_deploy.sh
+    chmod -v a+x /tmp/pre_deploy.sh
+fi
+
+n_pre_deploy_count=$(find /tmp -type f -name "*pre_deploy.sh" | wc -c)
+if (( ${n_pre_deploy_count} > 0 )); then
+    for str_pre_script in $(ls -1 /tmp/*pre_deploy.sh); do
+        echo "Running pre deploy script \"${str_pre_script}\""
+        ${str_pre_script}
+    done
+fi
+
+#
+# Take a collection of configurations and cat them into the usermod files.
+#
+
+# Process anything that might have come from a Docker build first
+if [ -d ${SASCONFIG}/etc/cas/${SASCASINSTANCE} ]; then
+    n_config_count=$(find /tmp -type f -name "*_casconfig.lua" | wc -c)
+    if (( ${n_config_count} > 0 )); then
+        for str_casconfig in $(ls -1 /tmp/*_casconfig.lua); do
+            echo "Dumping contents of \"${str_casconfig}\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua"
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua
+            cat ${str_casconfig} >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua
+        done
+    fi
+
+    n_settings_count=$(find /tmp -type f -name "*_cas.settings" | wc -c)
+    if (( ${n_settings_count} > 0 )); then
+        for str_cassettings in $(ls -1 /tmp/*_cas.settings); do
+            echo "Dumping contents of \"${str_cassettings}\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings"
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings
+            cat ${str_cassettings} >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings
+        done
+    fi
+
+    n_startup_count=$(find /tmp -type f -name "*_casstartup.lua" | wc -c)
+    if (( ${n_settings_count} > 0 )); then
+        for str_casstartup in $(ls -1 /tmp/*_casstartup.lua); do
+            echo "Dumping contents of \"${str_casstartup}\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua"
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua
+            cat ${str_casstartup} >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua
+            echo "" >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua
+        done
+    fi
+fi
+
+# Process any user provided content second so that it can override any baked in options.
+[[ -z ${SASINSIDE+x} ]]         && export SASINSIDE="/sasinside"
+[[ -z ${SASLICENSEDIR+x} ]]     && export SASLICENSEDIR="${SASCONFIG}"
+[[ -z ${SASLICENSEFILE+x} ]]    && export SASLICENSEFILE="sas_license.txt"
+
+if [ -d "${SASINSIDE}" ]; then
+    # If the license dir is the default, then change it.
+    # Don't change it if the user set the variable.
+    if [ "${SASLICENSEDIR}" = "${SASCONFIG}" ]; then
+        echo_line "Set the license directory to ${SASINSIDE}"
+        export SASLICENSEDIR="${SASINSIDE}"
+    fi
+    if [ -d ${SASCONFIG}/etc/cas/${SASCASINSTANCE} ]; then
+        if [ -f ${SASINSIDE}/casconfig_usermods.lua ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/casconfig_usermods.lua\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua"
+            cat ${SASINSIDE}/casconfig_usermods.lua >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_usermods.lua
+        fi
+
+        if [ -f ${SASINSIDE}/cas_usermods.settings ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/cas_usermods.settings\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings"
+            cat ${SASINSIDE}/cas_usermods.settings >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_usermods.settings
+        fi
+
+        if [ -f ${SASINSIDE}/casstartup_usermods.lua ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/casstartup_usermods.lua\" into ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua"
+            cat ${SASINSIDE}/casstartup_usermods.lua >> ${SASCONFIG}/etc/cas/${SASCASINSTANCE}/casstartup_usermods.lua
+        fi
+
+        if [ -f ${SASINSIDE}/sas-cas-usermods ]; then
+            echo "Dumping user overrides in \"${SASINSIDE}/sas-cas-usermods\" into ${SASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-usermods"
+            cat ${SASINSIDE}/sas-cas-usermods >> ${SASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-usermods
+        fi
+    fi
+fi
+
+###############################################################################
+# Configure CAS
+###############################################################################
+
+#
+# Clean up some other CAS configuration for a Docker image
+#
+
+[[ -z ${SERVICE_NAME+x} ]] && export SERVICE_NAME="cascontroller"
+is_controller=true
+
+if [ "${SERVICE_NAME}" = "cascontroller" ]; then
+    export CASCONTROLLERHOST="${SAS_CURRENT_HOST}"
+    export CASWORKERHOSTS=""
+elif [ "${SERVICE_NAME}" = "cassecondary" ]; then
+    export CASBACKUPHOST="${SAS_CURRENT_HOST}"
+    export CASCFG_MODE=mpp
+elif [ "${SERVICE_NAME}" = "casworker" ]; then
+    is_controller=false
+    export CASWORKERHOSTS="${SAS_CURRENT_HOST}"
+    export CASCFG_MODE=mpp
+else
+    echo "[ERROR] - Unknown service type passed in."
+    exit 11
+fi
+
+# Update the ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+# to have updated settings.
+
+if [ -n "${CASCONTROLLERHOST}" ]; then
+    sed -i "s|SASCONTROLLERHOST=.*|SASCONTROLLERHOST=${CASCONTROLLERHOST}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+fi
+if [ -n "${CASWORKERHOSTS}" ]; then
+    sed -i "s|SASWORKERHOSTS=.*|SASWORKERHOSTS=${CASWORKERHOSTS}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+fi
+if [ -n "${CASENV_CASDATADIR}" ]; then
+    sed -i "s|SASCASDATADIR=.*|SASCASDATADIR=${CASENV_CASDATADIR}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+fi
+# DOCKER-404: Make sure the USERLOC starts from the CASDATADIR value
+if [ -n "${CASUSERLOCDIR}" ]; then
+    sed -i "s|SASUSERLOCDIR=.*|SASUSERLOCDIR=${CASUSERLOCDIR}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+else
+    sed -i "s|SASUSERLOCDIR=.*|SASUSERLOCDIR=\${SASCASDATADIR}/casuserlibraries/%USER|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+fi
+if [ -n "${CASENV_CASPERMSTORE}" ]; then
+    sed -i "s|SASPERMSTORE=.*|SASPERMSTORE=${CASENV_CASPERMSTORE}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+fi
+
+# Define JAVA_HOME and update the LD_LIBRARY_PATH
+source ${SASCONFIG}/etc/sysconfig/sas-javaesntl/sas-java
+
+[[ -z ${CASSET_JAVA_HOME+x} ]] && export CASSET_JAVA_HOME=$JAVA_HOME
+[[ -z ${CASLLP_JAVA+x} ]]      && export CASLLP_JAVA=\$LD_LIBRARY_PATH:\$JAVA_HOME/lib/amd64/server
+
+# If the license is being passed in via an environment variable then echo it into a file.
+[[ ! -z ${SETINIT_TEXT+x} ]]     && echo "${SETINIT_TEXT}" > ${SASLICENSEDIR}/${SASLICENSEFILE}
+[[ ! -z ${SETINIT_TEXT_ENC+x} ]] && echo "${SETINIT_TEXT_ENC}" | base64 --decode --ignore-garbage > ${SASLICENSEDIR}/${SASLICENSEFILE}
+
+# Tell CAS where the license lives if the user has not already set it.
+[[ -z ${CASENV_CAS_LICENSE+x} ]] && export CASENV_CAS_LICENSE=${SASLICENSEDIR}/${SASLICENSEFILE}
+
+#
+# Take anything that was passed in as an environment variable and update the
+# configuration files.
+#
+
+echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua ""
+echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "-- Inserting section capturing variables set on container creation."
+
+set +e
+# Process configuration option settings
+while IFS='=' read -r name value ; do
+    key=$(cut -d'_' -f2- <<<"${name}")
+    if [[ ${name} == 'CASCFG_'* ]]; then
+        if [[ ${!name} =~ ^[0-9]+$ ]]; then
+            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "cas.$(echo $key | awk '{print tolower($0)}') = ${!name}"
+        else
+            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "cas.$(echo $key | awk '{print tolower($0)}') = '${!name}'"
+        fi
+    fi
+done < <(env | grep "CASCFG")
+
+# Process environment option settings
+while IFS='=' read -r name value ; do
+    key=$(cut -d'_' -f2- <<<"${name}")
+    if [[ ${name} == 'CASENV_'* ]]; then
+        if [[ ${!name} =~ ^[0-9]+$ ]]; then
+            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "env.$(echo $key | awk '{print toupper($0)}') = ${!name}"
+        else
+            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "env.$(echo $key | awk '{print toupper($0)}') = '${!name}'"
+        fi
+    fi
+done < <(env | grep "CASENV")
+
+echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings ""
+echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "# Inserting section capturing variables set on container creation."
+
+# Process settings option settings
+while IFS='=' read -r name value ; do
+    key=$(cut -d'_' -f2- <<<"${name}")
+    if [[ ${name} == 'CASSET_'* ]]; then
+        if [[ ${!name} =~ ^[0-9]+$ ]]; then
+            echo ${key} | grep -q ^[0-9]*_
+            if [ $? -eq 0 ]; then
+                echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key#*_} | awk '{print toupper($0)}')=${!name}"
+            else
+                echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key} | awk '{print toupper($0)}')=${!name}"
+            fi
+        else
+            echo ${key} | grep -q ^[0-9]*_
+            if [ $? -eq 0 ]; then
+                echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key#*_} | awk '{print toupper($0)}')='${!name}'"
+            else
+                echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key} | awk '{print toupper($0)}')='${!name}'"
+            fi
+        fi
+    fi
+done < <(env | grep "CASSET" | sort)
+set -e
+
+echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings ""
+echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "# LD_LIBRARY_PATH being pulled from passed in variables"
+
+# Process ld.library.path option settings
+while IFS='=' read -r name value ; do
+    key=$(cut -d'_' -f2- <<<"${name}")
+    if [[ ${name} == 'CASLLP_'* ]]; then
+        if [[ ${!name} == *'$LD_LIBRARY_PATH'* ]]; then
+            # If the value passed in already is adding the LD_LIBRARY_PATH, then do not add it
+            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export LD_LIBRARY_PATH=${!name}"
+        else
+            # If the value passed in does not have the LD_LIBRARY_PATH as part of the value, then add it
+            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:${!name}"
+        fi
+    fi
+done < <(env | grep "CASLLP" | sort)
+
+# Update the cas.settings file to process the Docker settings post what was done
+# setting up the image but before processing any settings in the usermods file
+
+sed -i '/cas_usermods.settings/i [ -f \$DIR/cas_docker.settings ]   && source \$DIR/cas_docker.settings' ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas.settings
+
+# echo some stuff back to the user for helpfulness
+
+if [ -n "${CASENV_CASDATADIR}" ]; then
+    echo "[INFO] : CASENV_CASDATADIR is '${CASENV_CASDATADIR}'"
+fi
+
+echo "[INFO] : CASENV_CAS_VIRTUAL_HOST is '${CASENV_CAS_VIRTUAL_HOST}'"
+echo "[INFO] : CASENV_CAS_VIRTUAL_PORT is '${CASENV_CAS_VIRTUAL_PORT}'"
+
+if [ -n "${CASENV_ADMIN_USER}" ]; then
+    echo "[INFO] : CASENV_ADMIN_USER is '${CASENV_ADMIN_USER}'"
+else
+    echo "[INFO] : CASENV_ADMIN_USER is 'cas'"
+fi
+
+# DOCKER-390: Make sure the location of the data directory is used for the referenceData path
+sed -i 's|casData = getDataPath()|casData = os.getenv("CASDATADIR")|' ${SASHOME}/share/cas/10caslibrefdat_startup.lua
+
+# When set to zero, will make sure that the system will not get the servicesbaseurl from Consul
+[[ -z ${CHECK_HTTP+x} ]] && export CHECK_HTTP=1
+sed -i "s|^CHECK_HTTP=.*|CHECK_HTTP=${CHECK_HTTP}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+
+# Make sure node.lua is pointing to the correct spot
+sed -i "s/config_loc \.\./current_dir \.\./g" ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/node.lua
+sed -i "s/^config_loc/-- config_loc/g" ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/node.lua
+
+# Remove startup.lua files
+rm -f ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/start.d/05updateperms_startup.lua
+
+# Disable waiting on the worker nodes. Cloud deployments are elastic in nature
+# and will not use this feature
+echo "export CAS_CONSUL_WAIT_DISABLED=true" >> ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+
+# DOCKER-392: Using a specific docker perms file that will create the public caslib
+cat > ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/perms.xml << PERMSXML
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- Customer permissions file/template -->
+
+<AccessControls version="1.0" readonly="TRUE">
+
+   <!-- CAS server initial launch identity -->
+   <Administrator name="\${ADMIN_USER}-User-SuperUser" user="\${ADMIN_USER}" type="SuperUser"/>
+
+   <!-- Manage Global Caslibs -->
+   <CASLib name='_GLOBAL'
+           desc='Permission for global caslib creation'
+           uuid='3a177916-96bf-2587-3170-9a735123413a'>
+
+      <!-- Global caslib creation is open to administrators -->
+      <Grant user='\${ADMIN_USER}' perm='ManageAccess'/>
+
+   </CASLib>
+
+   <!-- Manage Session Caslibs -->
+   <CASLib name='_SESSION'
+           desc='Permission for session caslib creation'
+           uuid='4b166916-169f-3557-2150-b8865123731b'>
+
+      <!-- Allow all users to create session caslibs -->
+      <Grant group='*' perm='ManageAccess'/>
+
+   </CASLib>
+
+   <CASLib name='Public'
+           desc='Shared and writeable caslib, accessible to all users.'
+           path='\${CASDATADIR}/public'
+           uuid='26ea7916-86af-4547-9180-9876512345cc'
+           subdirs='FALSE' type='PATH'>
+
+      <Grant user='\${ADMIN_USER}' perm='ManageAccess'/>
+      <Grant user='\${ADMIN_USER}' perm='AlterCaslib'/>
+
+      <Deny  group='*' perm='ManageAccess'/>
+      <Deny  group='*' perm='AlterCaslib'/>
+
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Select'/>
+      <Grant group='*' perm='LimitedPromote'/>
+      <Grant group='*' perm='Promote'/>
+      <Grant group='*' perm='CreateTable'/>
+      <Grant group='*' perm='DropTable'/>
+      <Grant group='*' perm='DeleteSource'/>
+      <Grant group='*' perm='Insert'/>
+      <Grant group='*' perm='Update'/>
+      <Grant group='*' perm='Delete'/>
+      <Grant group='*' perm='AlterTable'/>
+
+   </CASLib>
+
+   <!-- Manage Registered Action Sets -->
+   <ActionSet name='_REGISTERED'>
+
+      <!-- Grant access to create Action Set metadata -->
+
+   </ActionSet>
+
+   <!-- Manage Unregistered Action Sets -->
+   <ActionSet name='_UNREGISTERED'>
+
+      <!-- Nobody is allowed to use unregistered Action Sets by default -->
+      <Deny group='*' perm='ManageAccess'/>
+      <Deny group='*' perm='Load'/>
+
+   </ActionSet>
+
+   <ActionSet name='builtins' flags='system'>
+
+      <!-- Grant all users access to all actions -->
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Execute'/>
+      <Grant group='*' perm='Load'/>
+
+      <!-- Direct access controls required on shutdown -->
+      <Action name='shutdown'         flags='direct'>
+         <Grant group='*'             perm='ReadInfo'/>
+      </Action>
+
+      <!-- Direct access controls required on addNode -->
+      <Action name='addNode'          flags='direct'>
+         <Grant group='*'             perm='ReadInfo'/>
+      </Action>
+
+      <!-- Direct access controls required on removeNode -->
+      <Action name='removeNode'       flags='direct'>
+         <Grant group='*'             perm='ReadInfo'/>
+      </Action>
+
+      <!-- Direct access controls required on installActionSet -->
+      <Action name='installActionSet' flags='direct'>
+         <Grant group='*'             perm='ReadInfo'/>
+      </Action>
+
+      <!-- System actions -->
+      <Action name='help' flags='system'/>
+      <Action name='queryActionSet' flags='system'/>
+      <Action name='queryName' flags='system'/>
+      <Action name='reflect' flags='system'/>
+      <Action name='casCommon' flags='system'/>
+
+   </ActionSet>
+
+   <ActionSet name='configuration' flags='system'>
+
+      <!-- Grant all users read access to all actions -->
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Load'/>
+
+      <!-- Direct access controls required on setServOpt -->
+      <Action name='setServOpt' flags='direct'>
+         <Grant group='*'       perm='ReadInfo'/>
+      </Action>
+
+      <!-- Direct access controls required on getServOpt -->
+      <Action name='getServOpt' flags='direct'>
+         <Grant group='*'       perm='ReadInfo'/>
+      </Action>
+
+      <!-- Direct access controls required on listServOpts -->
+      <Action name='listServOpts' flags='direct'>
+         <Grant group='*'         perm='ReadInfo'/>
+      </Action>
+
+   </ActionSet>
+
+   <ActionSet name='accessControl' flags='system'>
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Execute'/>
+      <Grant group='*' perm='Load'/>
+   </ActionSet>
+
+   <ActionSet name='table' flags='system'>
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Execute'/>
+      <Grant group='*' perm='Load'/>
+      <Action name='queryCasLib' flags='system'/>
+   </ActionSet>
+
+   <ActionSet name='session' flags='system'>
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Execute'/>
+      <Grant group='*' perm='Load'/>
+   </ActionSet>
+
+   <ActionSet name='sessionProp' flags='system'>
+      <Grant group='*' perm='ReadInfo'/>
+      <Grant group='*' perm='Execute'/>
+      <Grant group='*' perm='Load'/>
+   </ActionSet>
+
+</AccessControls>
+PERMSXML
+
+###############################################################################
+# Run CAS
+###############################################################################
+
+echo "Starting Cloud Analytic Services..."
+mkdir -pv -m 2770 /var/log/sas/viya/cas/default_audit
+chown sas:sas /var/log/sas/viya/cas/default_audit
+docker_run_sas_services
+
+#
+# Run any post deploy scripts
+#
+if [ ! -z "${POST_DEPLOY_SCRIPT}" ]; then
+    echo "Creating post deploy script"
+    echo "${POST_DEPLOY_SCRIPT}" > /tmp/post_deploy.sh
+    chmod --verbose a+x /tmp/post_deploy.sh
+    echo
+fi
+n_post_deploy_count=$(find /tmp -type f -name "*post_deploy.sh" | wc -c)
+if (( ${n_post_deploy_count} > 0 )); then
+    for str_post_script in $(ls -1 /tmp/*post_deploy.sh); do
+        echo "Running post deploy script \"${str_post_script}\""
+        ${str_post_script}
+    done
+fi
+#
+# Output the file locations to make it a little easier to look at logs
+#
+# Pause to allow the processes to start and create log files
+sleep 10
+set +e
+env | grep -q KUBERNETES
+k8s_check=$?
+set -e
+for item in $(tree -fi --prune /opt/sas/viya/config/var/log/); do
+    if ((${k8s_check} == 0)); then
+        if [ -f ${item} ]; then echo kubectl exec -it ${HOSTNAME} -- tail -f ${item}; fi
+    elif [ -f /.dockerenv ]; then
+        if [ -f ${item} ]; then echo docker exec -it $(hostname) tail -f ${item}; fi
+    fi
+done
+
+###############################################################################
+# Keep the container alive until it is killed
+###############################################################################
+
+pidfiles="/var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
+while :; do
+    sleep 3
+    for _pidf in ${pidfiles}; do
+        if [ -f ${_pidf} ]; then
+            SERVICE_PID=$(cat ${_pidf})
+            set +e
+            ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
+            process_check_rc=$?
+            set -e
+            if (( ${process_check_rc} != 0 )); then
+                echo;
+                echo "Process is not running..."
+                echo "    File = ${_pidf}";
+                echo "    PID = ${SERVICE_PID}";
+                gracefulshutdown
+            fi
+        else
+            echo; echo "PID file not found: $_pidf"; echo
+            gracefulshutdown
+        fi
+    done
+done
+
+
+exit 0

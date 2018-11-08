@@ -2,14 +2,17 @@
 Using containers to build, customize, and deploy a SAS environment based on your software order.
 
 ## Getting Started
-The `sas-programming-local` directory is tailored for most independent data scientists, with a quickstart for running a SAS Studio + CAS (Cloud Analytic Software) locally on your own machine.
-
-The `sas-viya-deployment` directory is tailored for most organizations, offering details for cluster deployments using Kubernetes.
+The `viya-visuals` directory is tailored for most large organizations, offering details for cluster deployments using Kubernetes.
+The `viya-programming/single-container/` directory is tailored for most independent data scientists, with a quickstart for running a SAS Studio + CAS (Cloud Analytic Software) locally on your own machine.
+The `viya-programming/multi-container` shares the same process as viya-visuals.
 
 ## Documentation
 Check out our [Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for other details.
 Have a quick question? Open a ticket in the "issues" tab to get a response from the maintainers and other community members. If you're unsure about something just submit an issue anyways. We're glad to help!
 If you have a specific license question head over to the [support portal](https://support.sas.com/en/support-home.html).
+
+## Additional Features
+The `addons` directory provides details for utilizing data access tools, authentication, security, and third-party extras.
 
 ## Contributing
 Have something cool to share? SAS gladly accepts pull requests on GitHub! We appreciate your best efforts and value the transparent collaboration that GitHub has.
