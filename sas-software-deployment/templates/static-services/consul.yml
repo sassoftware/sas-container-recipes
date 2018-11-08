@@ -1,0 +1,39 @@
+  consul:
+    from: "centos:7"
+    roles:
+    - consul
+    ports:
+    - "8500:8500"
+    - "8501:8501"
+    - "8600:8600"
+    - "8400:8400"
+    - "8301:8301"
+    - "8302:8302"
+    - "8300:8300"
+    entrypoint: ["/opt/sas/viya/home/bin/consul-entrypoint.sh"]
+    volumes:
+    - static-content:/consul
+    dev_overrides:
+      environment:
+        - "SAS_DEBUG=1"
+    deployment_overrides:
+      environment:
+        - "CONSUL_BOOTSTRAP_EXPECT=1"
+        - "CONSUL_CLIENT_ADDRESS=0.0.0.0"
+        - "CONSUL_DATA_DIR=/consul/data"
+        - "CONSUL_DATACENTER_NAME={{ DEPLOYMENT_LABEL }}"
+        - "CONSUL_KEY_VALUE_DATA_ENC="
+        - "CONSUL_SERVER_FLAG=true"
+        - "CONSUL_UI_FLAG=false"
+      resources:
+        limits:
+          - "memory=4000Mi"
+        requests:
+          - "memory=512Mi"
+      secrets:
+        - "CONSUL_TOKENS_CLIENT=tobeusedfordemosonlyclnt"
+        - "CONSUL_TOKENS_ENCRYPTION=9eV9uJXG0r8o3xTDH6+ykg=="
+        - "CONSUL_TOKENS_MANAGEMENT=tobeusedfordemosonlymgmt"
+      volumes:
+        - "data=/consul"
+        - "log=/opt/sas/viya/config/var/log"

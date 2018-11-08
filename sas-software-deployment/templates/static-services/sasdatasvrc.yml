@@ -1,0 +1,28 @@
+  sasdatasvrc:
+    from: "centos:7"
+    roles:
+    - sasdatasvrc
+    ports:
+    - "5432:5432"
+    entrypoint: ["/opt/sas/viya/home/bin/sasdatasvrc-entrypoint.sh"]
+    volumes:
+    - static-content:/database/data
+    dev_overrides:
+      environment:
+        - "SAS_DEBUG=1"
+    deployment_overrides:
+      environment:
+        - "SASPOSTGRESDBSIZE=large"
+        - "PG_VOLUME=/database/data"
+      resources:
+        limits:
+        - "memory=12000Mi"
+        requests:
+        - "memory=1024Mi"
+      secrets:
+        - "SAS_DEFAULT_PGPWD=Go4thsas"
+        - "SASPOSTGRESREPLPWD=Go4thsas"
+      volumes:
+        - "data=/database/data"
+        - "log=/opt/sas/viya/config/var/log"
+

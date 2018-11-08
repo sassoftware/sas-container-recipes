@@ -1,0 +1,22 @@
+  rabbitmq:
+    from: "centos:7"
+    roles:
+    - rabbitmq
+    ports:
+    - "5672:5672"
+    - "15672:15672"
+    entrypoint: ["/opt/sas/viya/home/bin/rabbitmq-entrypoint.sh"]
+    volumes:
+    - static-content:/rabbitmq
+    dev_overrides:
+      environment:
+        - "SAS_DEBUG=1"
+    deployment_overrides:
+      resources:
+        limits:
+        - "memory=1024Mi"
+        requests:
+        - "memory=1024Mi"
+      volumes:
+        - "data=/rabbitmq/data"
+        - "log=/opt/sas/viya/config/var/log"
