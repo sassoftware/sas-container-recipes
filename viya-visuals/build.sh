@@ -514,6 +514,10 @@ EOL
 
 function make_deployments() {
     ansible-playbook generate_manifests.yml -e "manifest_type=all"
+    if [[ -d ../deploy ]]; then
+        rm -rf ../deploy
+    fi
+    mv deploy/ ../
 }
 
 
