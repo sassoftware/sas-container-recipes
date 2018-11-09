@@ -1,38 +1,18 @@
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ settings.project_name }}-{{ item.key }}
-spec:
-  selector:
-    app: {{ settings.project_name }}-{{ item.key }}
-{% if item.value.ports is defined and item.value.ports %}
-  ports:
-{%   for ports in item.value.ports %}
-    - name: "{{ ports.split(':')[0] }}"
-      protocol: TCP
-      port: {{ ports.split(':')[0] }}
-      targetPort: {{ ports.split(':')[0] }}
-{%   endfor %}
-{% endif %}
-  clusterIP: None
----
 apiVersion: apps/v1beta1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: {{ settings.project_name }}-{{ item.key }}
+  name: {{ settings.project_name }}-sas-casserver-worker
 spec:
-  serviceName: "{{ settings.project_name }}-{{ item.key }}"
   replicas: 1
   template:
     metadata:
       labels:
-        app: {{ settings.project_name }}-{{ item.key }}
+        app: {{ settings.project_name }}-sas-casserver-worker
     spec:
-      hostname: {{ settings.project_name }}-{{ item.key }}
+      hostname: {{ settings.project_name }}-sas-casserver-worker
       containers:
-      - name: {{ settings.project_name }}-{{ item.key }}
-{% for regkey,regvalue in registries.iteritems() %}
+      - name: {{ settings.project_name }}-sas-casserver-worker
+{% for regkey,regvalue in registries.items() %}
         image: {{ regvalue.url.split('/')[2] }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
 {% endfor %}
         imagePullPolicy: Always
@@ -45,31 +25,50 @@ spec:
         env:
         - name: DEPLOYMENT_NAME
           value: "{{ settings.project_name }}"
+{% if services.consul is defined %}
+        - name: CONSUL_HTTP_ADDR
+          value: "http://{{ settings.project_name }}-consul:8500"
+{% endif %}
+        - name: SERVICE_NAME
+          value: "casworker"
+        - name: CASCONTROLLERHOST
+          value: "{{ settings.project_name }}-sas-casserver-primary" 
 {% if item.value.deployment_overrides.environment is defined and item.value.deployment_overrides.environment %}
 {%   for environment in item.value.deployment_overrides.environment %}
+{%     if "SERVICE_NAME" not in environment %}
         - name: {{ environment.split('=')[0] }}
           valueFrom:
             configMapKeyRef:
               name: {{ settings.project_name }}-{{ item.key }}
               key: {{ environment.split('=')[0] | lower }}
+{%     endif %}
 {%   endfor %}
 {% endif %}
-
-{% if services.consul.deployment_overrides.secrets is defined %}
-{%      for secrets in services.consul.deployment_overrides.secrets %}
-{%         if 'CONSUL_HTTP_TOKEN' not in secrets %}
-            - name: {{ secrets.split('=')[0] }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ settings.project_name }}-{{ item.key }}
+{% if item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets %}
+{%   for secrets in item.value.deployment_overrides.secrets %}
+{%     if secrets.split('=')[0] != 'SETINIT_TEXT_ENC' %}
+        - name: {{ secrets.split('=')[0] }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ settings.project_name }}-{{ item.key | lower }}
               key: {{ secrets.split('=')[0] | lower }}
-{%       endif %}
-{%     endfor %}
+{%     endif %}
+{%   endfor %}
 {% endif %}
-
+{% if services.consul is defined %}
+{%   for secrets in services.consul.deployment_overrides.secrets %}
+{%     if secrets.split('=')[0] != 'CONSUL_TOKENS_MANAGEMENT' %}
+        - name: {{ secrets.split('=')[0] }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: {{ secrets.split('=')[0] | lower }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
 {% if item.value.deployment_overrides.resources is defined and item.value.deployment_overrides.resources %}
         resources:
-{%   for key,value in item.value.deployment_overrides.resources.iteritems() %}
+{%   for key,value in item.value.deployment_overrides.resources.items() %}
           {{ key }}:
 {%     for items in value %}
             {{ items.split('=')[0] }}: {{ items.split('=')[1] }}
@@ -79,7 +78,7 @@ spec:
 {% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
         volumeMounts:
 {%   for volumes in item.value.deployment_overrides.volumes %}
-        - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
+        - name: {{ settings.project_name }}-sas-casserver-worker-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
 {%   endfor %}
 {% endif %}
@@ -87,7 +86,7 @@ spec:
 {% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
       volumes:
 {%   for volumes in item.value.deployment_overrides.volumes %}
-      - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
+      - name: {{ settings.project_name }}-sas-casserver-worker-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
 {%   endfor %}
 {% endif %}

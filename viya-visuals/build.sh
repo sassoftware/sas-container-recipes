@@ -141,11 +141,6 @@ function ansible_build() {
     set -e
 }
 
-
-function make_deployments() {
-    ansible-playbook generate-manifests.yml
-}
-
 # Set some defaults
 sas_version=$(cat templates/VERSION)
 sas_datetime=$(date +"%Y%m%d%H%M%S")
@@ -349,7 +344,7 @@ setup_environment() {
     fi
     mkdir debug/
     cp templates/container.yml debug/
-    cp templates/generate-manifests.yml debug/
+    cp templates/generate_manifests.yml debug/
     cd debug
 }
 
@@ -397,13 +392,17 @@ function make_ansible_yamls() {
                 # Each file in the static-service directory has the same file name as its service name
                 # If the file name is the same as the service then the service exists in the order
                 is_static=false
+                echo "STATIC SERVICES------------------------------"
                 static_services=$(ls ../templates/static-services/)
+                echo "FILE: " 
+                echo ${file}
+                echo $static_services
                 for service in ${static_services}; do
-                    if [ "${file,,}" == ${service} ]; then
+                    if [ "${file,,}.yml" == ${service} ]; then
                         # Append static service definition to the debug/container.yml
-                        cat ../templates/static-services/${service}.yml >> container.yml
+                        cat ../templates/static-services/${service} >> container.yml
                         echo -e "" >> container.yml
-                        $is_static=true
+                        is_static=true
                     fi
                 done
 
@@ -513,12 +512,25 @@ EOL
     sed -i 's|^SECURE_CONSUL:.*|SECURE_CONSUL: false|' everything.yml
 }
 
+function make_deployments() {
+    ansible-playbook generate_manifests.yml -e "manifest_type=all"
+}
+
+
+echo -e "Step One"
 setup_environment 
+echo -e "Step Two"
 validate_input   # Check provided arguments
+echo -e "Step Three"
 setup_logging    # Show build variables and enable logging if debug is on
+echo -e "Step Four"
 get_playbook     # From an SOE zip or previous playbook
+echo -e "Step Five"
 make_ansible_yamls
+echo -e "Step Six"
 add_layers       # Addons and docker push to registry
+echo -e "Step Seven"
 ansible_build    # Build services from continer.yml 
+echo -e "Step Eight"
 make_deployments # Generate Kubernetes configs and docker-compose
 exit 0

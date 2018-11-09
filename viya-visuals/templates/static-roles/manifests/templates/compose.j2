@@ -1,0 +1,52 @@
+version: "3"
+networks:
+  default:
+services:
+
+{% for key,value in services.items() %}
+  {{ key }}:
+{% for regkey,regvalue in registries.items() %}
+    image: {{ regvalue.url.split('/')[2] }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ key }}:{{ docker_tag | default('latest') }}
+{% endfor %}
+    hostname: {{ settings.project_name }}-{{ key | lower }}
+    container_name: {{ settings.project_name }}-{{ key | lower }}
+{%   if value.ports is defined and value.ports %}
+    ports:
+{%     for ports in value.ports %}
+    - "{{ ports }}"
+{%     endfor %}
+{%   endif %}
+    entrypoint: ["/opt/sas/viya/home/bin/{{ key }}-entrypoint.sh"]
+{%   if key == 'httpproxy' %}
+    environment: []
+{%   else %}
+    environment:
+{%   endif %}
+{%   if value.deployment_overrides.environment is defined and value.deployment_overrides.environment %}
+{%     for environment in value.deployment_overrides.environment %}
+    - {{ environment }}
+{%     endfor %}
+{%   endif %}
+{%   if value.deployment_overrides.secrets is defined and value.deployment_overrides.secrets %}
+{%     for secrets in value.deployment_overrides.secrets %}
+    - {{ secrets }}
+{%     endfor %}
+{%   endif %}
+{%   if value.deployment_overrides.volumes is defined and value.deployment_overrides.volumes %}
+    volumes:
+{%     for volumes in value.deployment_overrides.volumes %}
+    - {{ settings.project_name }}-{{ key }}-{{ volumes.split('=')[0] }}:{{ volumes.split('=')[1] }}
+{%     endfor -%}
+{%   endif -%}
+
+{% endfor %}
+
+volumes:
+
+{% for key,value in services.items() -%}
+{%   if value.deployment_overrides.volumes is defined and value.deployment_overrides.volumes -%}
+{%     for volumes in value.deployment_overrides.volumes %}
+  {{ settings.project_name }}-{{ key }}-{{ volumes.split('=')[0] }}:
+{%     endfor %}
+{%   endif %}
+{% endfor %}
