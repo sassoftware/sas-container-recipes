@@ -149,7 +149,7 @@ sas_sha1=$(git rev-parse --short HEAD)
 [[ -z ${SAS_RECIPE_TYPE+x} ]]    && SAS_RECIPE_TYPE=single
 [[ -z ${SAS_VIYA_CONTAINER+x} ]] && SAS_VIYA_CONTAINER="viya-single-container"
 [[ -z ${CHECK_MIRROR_URL+x} ]]   && CHECK_MIRROR_URL=true
-[[ -z ${CHECK_DOCKER_URL+x} ]]   && CHECK_DOCKER_URL=true
+[[ -z ${CHECK_DOCKER_URL+x} ]]   && CHECK_DOCKER_URL=false
 [[ -z ${SAS_DOCKER_TAG+x} ]]     && SAS_DOCKER_TAG=${sas_version}-${sas_datetime}-${sas_sha1}
 [[ -n "${BASEIMAGE}" ]]          && BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=${BASEIMAGE}"
 [[ -n "${BASETAG}" ]]            && BUILD_ARG_BASETAG="--build-arg BASETAG=${BASETAG}"

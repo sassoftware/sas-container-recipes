@@ -11,3 +11,6 @@ venv/
 debug/*
 viya-visuals/debug
 viya-visuals/deploy
+*~
+*.swo
+*.swp
