@@ -6,7 +6,7 @@ services:
 {% for key,value in services.items() %}
   {{ key }}:
 {% for regkey,regvalue in registries.items() %}
-    image: {{ regvalue.url.split('/')[2] }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ key }}:{{ docker_tag | default('latest') }}
+    image: {{ regvalue.url }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ key }}:{{ docker_tag | default('latest') }}
 {% endfor %}
     hostname: {{ settings.project_name }}-{{ key | lower }}
     container_name: {{ settings.project_name }}-{{ key | lower }}
@@ -17,7 +17,7 @@ services:
 {%     endfor %}
 {%   endif %}
     entrypoint: ["/opt/sas/viya/home/bin/{{ key }}-entrypoint.sh"]
-{%   if key == 'httpproxy' %}
+{%   if key == 'httpproxy' or key == 'rabbitmq' %}
     environment: []
 {%   else %}
     environment:
@@ -50,3 +50,4 @@ volumes:
 {%     endfor %}
 {%   endif %}
 {% endfor %}
+
