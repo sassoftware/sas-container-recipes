@@ -8,9 +8,8 @@ venv/
 *test*/
 .DS_Store
 *.log
-debug/*
-viya-visuals/debug
-viya-visuals/deploy
+**/debug/
+**/deploy/
 *~
 *.swo
 *.swp
