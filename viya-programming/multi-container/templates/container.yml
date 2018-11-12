@@ -6,95 +6,50 @@ settings:
     # Python runtime for building your target containers. It should be derived
     # from the same distribution as you're building your target containers with.
     base: centos:7
+    # roles_path:   # Specify a local path containing Ansible roles
+    # volumes:      # Provide a list of volumes to mount
+    # environment:  # List or mapping of environment variables
 
   vars_files:
   - everything.yml
-
+  #
+  #
   # Set the name of the project. Defaults to basename of the project directory.
   # For built services, concatenated with service name to form the built image name.
-  project_name: "{{ PROJECT_NAME }}"
+  project_name: "sas-viya"
 
-services:
-  httpproxy:
-    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
-    roles:
-    - httpproxy
-    ports:
-    - "80:80"
-    - "443:443"
-    entrypoint: ["/opt/sas/viya/home/bin/httpproxy-entrypoint.sh"]
-    volumes:
-    - static-content:/httpproxy
-    dev_overrides:
-      environment:
-        - "SAS_DEBUG=1"
-    deployment_overrides:
-      resources:
-        limits:
-        - "memory=512Mi"
-        requests:
-        - "memory=10Mi"
-      volumes:
-        - "log=/opt/sas/viya/config/var/log"
+  # The deployment_output_path is mounted to the Conductor container, and the 
+  # `run` and `deployment` commands then write generated Ansible playbooks to it.
+  # deployment_output_path: ./ansible-deployment
 
-  programming:
-    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
-    roles:
-    - tini
-    - sas-java
-    - programming
-    - spawner-config
-    - batchserver
-    - connect-config
-    - sas-studio-config
-    ports:
-    - "7080:7080"
-    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/programming-entrypoint.sh"]
-    deployment_overrides:
-      resources:
-        limits:
-        - "memory=12000Mi"
-        requests:
-        - "memory=512Mi"
-      secrets:
-        - "SETINIT_TEXT_ENC="
-      volumes:
-        - "log=/opt/sas/viya/config/var/log"
+  # When using the k8s or openshift engines, use the following to authorize with the API.
+  # Values set here will be passed to the Ansible modules. Any file paths will be mounted
+  # to the conductor container, allowing the `run` command to access the API.
+  #k8s_auth:
+    # path to a K8s config file
+    #config_file:
+    # name of a context found within the config file
+    #context:
+    # URL for accessing the K8s API
+    #host:
+    # An API authentication token
+    #api_key:
+    # Path to a ca cert file
+    #ssl_ca_cert:
+    # Path to a cert file
+    #cert_file:
+    # Path to a key file
+    #key_file:
+    # boolean, indicating if SSL certs should be validated
+    #verify_ssl:
 
-  sas-casserver-primary:
-    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
-    roles:
-    - tini
-    - sas-java
-    - sas-casserver-primary
-    ports:
-    - "5570:5570"
-    - "5571:5571"
-    - "8777:8777"
-    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/sas-casserver-primary-entrypoint.sh"]
-    deployment_overrides:
-      environment:
-        - "SERVICE_NAME=cascontroller"
-        - "CASCFG_MODE=smp"
-      resources:
-        limits:
-        - "memory=12000Mi"
-        requests:
-        - "memory=1024Mi"
-      secrets:
-        - "SETINIT_TEXT_ENC="
-        - "CASKEY="
-      volumes:
-        - "data=/cas/data"
-        - "cache=/cas/cache"
-        - "permstore=/cas/permstore"
-        - "log=/opt/sas/viya/config/var/log"
+  # When using the k8s or openshift engines, use the following to set the namespace.
+  # If not set, the project name will be used. For openshift, the namespace maps to a project,
+  # and description and display_name are supported.
+  #k8s_namespace:
+  #  name:
+  #  description:
+  #  display_name:
 
-registries:
-  docker-registry:
-    url: "{{ DOCKER_REGISTRY_URL }}"
-    namespace: "{{ DOCKER_REGISTRY_NAMESPACE }}"
+services: 
 
-volumes:
-  static-content:
-    docker: {}
