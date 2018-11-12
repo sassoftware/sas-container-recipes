@@ -1,11 +1,10 @@
 #!/bin/bash -e
 #
-# A simple utility to help build Docker images based on your SAS order.
+# Utility that uses containers to build, customize, and deploy a SAS environment based on your software order.
 #
-# Usage: build.sh addons/auth-demo addons/ide-jupyter-python3
 #
 # Copyright 2018 SAS Institute Inc.
-
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,10 +18,9 @@
 # limitations under the License.
 
 
-function usage()
-{
+function usage() {
     echo -e ""
-    echo -e "This is a simple utility to help build Docker images based on your SAS order."
+    echo -e " Utility that uses containers to build, customize, and deploy a SAS environment based on your software order."
     echo -e ""
     echo -e "  -a|--addons \"<value> [<value>]\"  "
     echo -e "                           A space separated list of layers to add on to the main SAS image"
@@ -49,8 +47,7 @@ function usage()
     echo -e "                               Format: /path/to/SAS_Viya_deployment_data.zip"
 }
 
-function add_layers()
-{
+function add_layers() {
     # Now run through the addons
     # access and auth get put on programming, CAS and compute
     # ide are added to programming
@@ -106,26 +103,8 @@ function add_layers()
                     popd
                 else
                     echo -e "[INFO]  : Skipping putting '${str_image}' into '${sas_image}'"
-                fi
+                  fi
             done
-    
-            # push updated images to docker registry
-
-            # if manifests exist, update the tags for programming, CAS and compute
-            if ${new_image}; then
-                echo -e "[INFO]  : Base images were adjusted so we need to retag the image..."
-                set -x
-                docker tag "${str_previous_image}":latest "${docker_reg_location}"/"${sas_image}:${SAS_DOCKER_TAG}"
-                set +x
-                echo -e "[INFO]  : ...and now push the image."
-                set -x
-                docker push ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG}
-                set +x
-            else
-                echo -e "[INFO]  : No base images were adjusted so there are no new images to tag and push."
-            fi
-        else
-            echo -e "[INFO]  : The image '${sas_image}' does not exist"
         fi
     done
 }
@@ -141,22 +120,21 @@ function ansible_build() {
     set -e
 }
 
-# Set some defaults
+# Set some defaults sas_version=$(cat templates/VERSION) sas_datetime=$(date +"%Y%m%d%H%M%S")
 sas_version=$(cat templates/VERSION)
-sas_datetime=$(date +"%Y%m%d%H%M%S")
+sas_datetime=$(date "+%Y%m%d%H%M%S")
 sas_sha1=$(git rev-parse --short HEAD)
 
-[[ -z ${SAS_RECIPE_TYPE+x} ]]    && SAS_RECIPE_TYPE=single
-[[ -z ${SAS_VIYA_CONTAINER+x} ]] && SAS_VIYA_CONTAINER="viya-single-container"
-[[ -z ${CHECK_MIRROR_URL+x} ]]   && CHECK_MIRROR_URL=true
-[[ -z ${CHECK_DOCKER_URL+x} ]]   && CHECK_DOCKER_URL=false
-[[ -z ${SAS_DOCKER_TAG+x} ]]     && SAS_DOCKER_TAG=${sas_version}-${sas_datetime}-${sas_sha1}
-[[ -n "${BASEIMAGE}" ]]          && BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=${BASEIMAGE}"
-[[ -n "${BASETAG}" ]]            && BUILD_ARG_BASETAG="--build-arg BASETAG=${BASETAG}"
-[[ -n "${SAS_RPM_REPO_URL}" ]]   && BUILD_ARG_SAS_RPM_REPO_URL="--build-arg SAS_RPM_REPO_URL=${SAS_RPM_REPO_URL}"
-[[ -n "${PLATFORM}" ]]           && BUILD_ARG_PLATFORM="--build-arg PLATFORM=${PLATFORM}"
-str_previous_image=${SAS_VIYA_CONTAINER}
-
+[[ -z ${SAS_RECIPE_TYPE+x} ]]         && SAS_RECIPE_TYPE=single
+[[ -z ${CHECK_MIRROR_URL+x} ]]        && CHECK_MIRROR_URL=true
+[[ -z ${CHECK_DOCKER_URL+x} ]]        && CHECK_DOCKER_URL=false
+[[ -z ${SAS_DOCKER_TAG+x} ]]          && SAS_DOCKER_TAG=${sas_version}-${sas_datetime}-${sas_sha1}
+[[ -z ${DOCKER_REGISTRY_URL+x} ]]     && DOCKER_REGISTRY_URL=http://localhost
+[[ -z ${DOCKER_REGISTRY_NAMESPACE} ]] && DOCKER_REGISTRY_NAMESPACE=$USER
+[[ -n "${BASEIMAGE}" ]]               && BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=${BASEIMAGE}"
+[[ -n "${BASETAG}" ]]                 && BUILD_ARG_BASETAG="--build-arg BASETAG=${BASETAG}"
+[[ -n "${SAS_RPM_REPO_URL}" ]]        && BUILD_ARG_SAS_RPM_REPO_URL="--build-arg SAS_RPM_REPO_URL=${SAS_RPM_REPO_URL}"
+[[ -n "${PLATFORM}" ]]                && BUILD_ARG_PLATFORM="--build-arg PLATFORM=${PLATFORM}"
 
 # Use command line options if they have been provided. 
 # This overrides environment settings.
@@ -337,7 +315,7 @@ function get_playbook() {
     cp sas_viya_playbook/*.pem .
 }
 
-# Move everything into a working directory
+# Move everything into a working directory to isolate the debugging space
 setup_environment() {
     if [[ -d debug/ ]]; then 
        rm -rf debug/
@@ -433,10 +411,8 @@ EOL
                 fi
             else
                 echo -e "*** There are no packages or yum groups in '${file}'"
-                echo -e "*** Skipping adding service '${file}' to Docker list"
-            fi
-        else
-            echo -e "*** Skipping creating the roles directory for service '${file}'"
+                echo -e "*** Skipping adding service '${file}' to Docker list" fi
+            fi 
         fi
     done
 
@@ -445,8 +421,8 @@ EOL
 
 registries: 
   internal-sas:
-    url: https://docker.sas.com
-    namespace: atc
+    url: ${DOCKER_REGISTRY_URL}
+    namespace: ${DOCKER_REGISTRY_NAMESPACE}
 
 volumes:
   static-content:
@@ -520,21 +496,27 @@ function make_deployments() {
     mv deploy/ ../
 }
 
+function push_images() {
+    # push updated images to docker registry
+    #set -x
+    #set +x
+    set -x
+    for role in $(ls roles/); do
+        docker tag sas-viya-${role,,} localhost:5000/${DOCKER_REGISTRY_NAMESPACE}/sas-viya-${role,,} && \
+        docker push localhost:5000/${USER}/sas-viya-${role,,}:latest || true
+    done
+    set +x
 
-echo -e "Step One"
-setup_environment 
-echo -e "Step Two"
-validate_input   # Check provided arguments
-echo -e "Step Three"
-setup_logging    # Show build variables and enable logging if debug is on
-echo -e "Step Four"
-get_playbook     # From an SOE zip or previous playbook
-echo -e "Step Five"
-make_ansible_yamls
-echo -e "Step Six"
-add_layers       # Addons and docker push to registry
-echo -e "Step Seven"
-ansible_build    # Build services from continer.yml 
-echo -e "Step Eight"
-make_deployments # Generate Kubernetes configs and docker-compose
+}
+
+setup_environment  # Make the working directory "debug/" and copy in templates
+validate_input     # Check provided arguments
+setup_logging      # Show build variables and enable logging if debug is on
+get_playbook       # From an SOE zip or previous playbook
+make_ansible_yamls # Create the container.yml and everything.yml
+add_layers         # Addons and docker push to registry
+ansible_build      # Build services from continer.yml 
+#push_images        # Transfer images to defined registry
+make_deployments   # Generate Kubernetes configs and docker-compose
 exit 0
+
