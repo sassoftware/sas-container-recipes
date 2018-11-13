@@ -1,7 +1,6 @@
 # SAS Viya Programming Quickstart
 ### For SAS Viya 3.4 Linux orders
-Made for most independent data scientists, these files are for using SAS Studio + CAS (Cloud Analytic Services).
-This creates a single Docker image that you can run locally on your own machine.
+Made for independent data scientists who want to run small projects in a quick SAS Studio + CAS (Cloud Analytic Services) environment. This creates a single Docker image that you can run locally on your own machine. If you require Massive Parallel Processing (MPP) then see the top level `viya-visuals` directory for details on deploying with Kubernetes.
 
 # Getting Started
 ```
