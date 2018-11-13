@@ -65,13 +65,17 @@ function gracefulshutdown {
     echo "Shutting down!"
     echo
 
-    echo "    Stop httpd"
-    $APACHE_BIN -k stop
+    if ${is_controller}; then
+        echo "    Stop httpd"
+        $APACHE_BIN -k stop
+
+        pidfiles="/var/run/sas/sas-viya-sasstudio-default.pid /var/run/sas/sas-viya-spawner-default.pid /var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
+    else
+        pidfiles="/var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
+    fi
 
     echo "    Stop SAS services"
-    #/etc/init.d/sas-viya-all-services stop
 
-    pidfiles="/var/run/sas/sas-viya-sasstudio-default.pid /var/run/sas/sas-viya-spawner-default.pid /var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
     for _pidf in ${pidfiles}; do
         if [ -f ${_pidf} ]; then
             SERVICE_PID=$(cat ${_pidf})
@@ -99,6 +103,10 @@ function gracefulshutdown {
 
 trap gracefulshutdown SIGTERM
 trap gracefulshutdown SIGINT
+
+###############################################################################
+# Start CAS
+###############################################################################
 
 function start_cas() {
     echo "Starting Cloud Analytic Services..."
@@ -407,9 +415,36 @@ elif [ "${SERVICE_NAME}" = "casworker" ]; then
     is_controller=false
     export CASWORKERHOSTS="${SAS_CURRENT_HOST}"
     export CASCFG_MODE=mpp
+    sed -i "s|^SAS_CURRENT_HOST=.*$|SAS_CURRENT_HOST=${SAS_CURRENT_HOST}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
 else
     echo "[ERROR] - Unknown service type passed in."
     exit 11
+fi
+
+if [ "${CASCFG_MODE}" = "mpp" ]; then
+    if [[ -z ${CASKEY+x} ]]; then
+        echo "[INFO]  - Running in MPP mode but CASKEY was *not* provided as an environment variable."
+        echo "[INFO]  - Checking if CASKEY is defined in ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment"
+        set +e
+        grep "CASKEY=" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+        grep_rc=$?
+        set -e
+        if (( ${grep_rc} != 0 )); then
+            echo "[ERROR] - Unknown service type passed in."
+            exit 11
+        else
+            echo "[INFO]  - CASKEY found in ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment"
+        fi
+    else
+        echo "[INFO]  - Running in MPP mode and CASKEY *was* provided as an environment variable."
+        echo "CASKEY=\"${CASKEY}\"" >> ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+    fi
+
+    [[ -z ${CASCFG_GCPORT+x} ]]         && export CASCFG_GCPORT=5571
+    [[ -z ${CASCFG_INITIALBACKUPS+x} ]] && export CASCFG_INITIALBACKUPS=0
+    [[ -z ${CASCFG_INITIALWORKERS+x} ]] && export CASCFG_INITIALWORKERS=1
+    [[ -z ${CASCFG_KEYFILE+x} ]]        && export CASCFG_KEYFILE=${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_key
+    [[ -z ${CASCFG_ELASTIC+x} ]]        && export CASCFG_ELASTIC=true
 fi
 
 # Update the ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
@@ -830,37 +865,60 @@ EOF
 
 # if given a command, run that
 if [[ -n "$1" ]]; then
-    echo "Running \"$@\""
+    while [[ $# -gt 0 ]]; do
+        key="$1"
+        case ${key} in
+            --user)
+                shift # past argument
+                batch_user="$1"
+                shift # past value
+                ;;
+            --batch)
+                shift # past argument
+                batch_program="$1"
+                shift # past value
+                ;;
+            *)    # Assuming this is an addon for backward compatibility.
+                unknown_args="${unknown_args} $1"
+                shift # past argument
+        ;;
+        esac
+    done
 
-    batch_user=''
-    if [ "--user" == "$1" ]; then
-        shift
-        batch_user=$1
-        shift
-    fi
+    echo "[INFO]    : Running \"${batch_program}\""
 
-    if [ "--batch" == "$1" ]; then
+    if [[ -n ${batch_program} ]]; then
 
-        # Start up CAS in case the SAS code that is run will connect to CAS
+        echo;echo;echo "===== Start up CAS in case the SAS code that is run will connect to CAS =====";echo;echo
         start_cas
 
-        # Pause to give time for CAS to come up
-        # TODO: find a better way to validate that CAS is up and ready
-        sleep 10
+        echo;echo;echo "===== Pause to give time for CAS to come up =====";echo;echo
+        return_code=0
+        START=`date +%s`
+        while (( ${return_code} != 200 )) && [ $(( $(date +%s) - 60 )) -lt $START ]; do
+            set +e
+            return_code=$(curl -sL -o /dev/null -w "%{http_code}" http://localhost:8777)
+            set -e
+            echo;echo;echo "===== [INFO] : CAS http port gave a response of '${return_code}' =====";echo;echo
+            sleep 2
+        done
+        
+        if (( ${return_code} != 200 )); then
+            echo;echo;echo "===== [WARNING] : CAS http port is not giving a 200 response after a minute =====";echo;echo
+        fi
 
-        shift
-        pushd $(dirname $1)
-        str_file_name_no_extension=$(basename $(echo $1 | cut -d "." -f 1))
+        pushd $(dirname $(echo ${batch_program} | cut -d ' ' -f 1))
+        str_file_name_no_extension=$(basename $(echo ${batch_program} | cut -d "." -f 1))
         str_now=$(date +"%Y%m%d%H%M%S")
 
         set +e
         if [ -n "${batch_user}" ]; then
-            runuser --shell "/bin/sh" --login ${batch_user} --command "${SASCONFIG}/etc/batchserver/default/batchserver.sh $@"
+            runuser --shell "/bin/sh" --login ${batch_user} --command "${SASCONFIG}/etc/batchserver/default/batchserver.sh ${batch_program}"
             batch_user_home=$(getent passwd ${batch_user} | cut -f6 -d:)
             cp --verbose ${batch_user_home}/${str_file_name_no_extension}.log ./${str_file_name_no_extension}_${str_now}.log
             cat ${str_file_name_no_extension}_${str_now}.log
         else
-            ${SASCONFIG}/etc/batchserver/default/batchserver.sh $@
+            ${SASCONFIG}/etc/batchserver/default/batchserver.sh ${batch_program}
             mv --verbose ${str_file_name_no_extension}.log ${str_file_name_no_extension}_${str_now}.log
             cat ${str_file_name_no_extension}_${str_now}.log
         fi
@@ -959,7 +1017,12 @@ else
     # Loop to keep the container alive
     #
 
-    pidfiles="$APACHE_PID /var/run/sas/sas-viya-sasstudio-default.pid /var/run/sas/sas-viya-spawner-default.pid /var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
+    if ${is_controller}; then
+        pidfiles="$APACHE_PID /var/run/sas/sas-viya-sasstudio-default.pid /var/run/sas/sas-viya-spawner-default.pid /var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
+    else
+        pidfiles="/var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
+    fi
+    
     while :; do
         sleep 3
         for _pidf in ${pidfiles}; do

@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) 2016, SAS Institute Inc., Cary, NC, USA, All Rights Reserved
+ *
+ * autoexec_deployment.sas
+ *
+ *    This autoexec file extends autoexec.sas and is managed by the deployment.
+ *    Do NOT modify this file.  Any additions or changes should be made in
+ *    autoexec_usermods.sas.
+ *
+ *    Do NOT modify the autoexec.sas file.
+ *
+ */
+
+{% if controller_backup_host %}
+options cashost="( {{ controller_host }} {{ controller_backup_host }} )" casport={{ controller_port | string }};
+{% elif controller_host != '&SYSHOSTNAME' and controller_port != 5570 %}
+options cashost="{{ controller_host }}" casport={{ controller_port | string }};
+{% endif %}
+
+/* Sourced from WORKSPACESERVER_CONFIGURATION in vars.yml */
+
+{% if WORKSPACESERVER_CONFIGURATION is defined and WORKSPACESERVER_CONFIGURATION | length > 0 %}
+{%   for key, value in WORKSPACESERVER_CONFIGURATION.items() %}
+{%      if value[0:1] == '/' %}
+{{ value | trim }}
+{%      else %}
+options {{ value | trim }}
+{%      endif %}
+{%   endfor %}
+{% endif %}

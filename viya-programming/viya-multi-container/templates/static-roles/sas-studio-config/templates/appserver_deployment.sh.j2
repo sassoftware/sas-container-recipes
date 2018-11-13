@@ -1,0 +1,25 @@
+#!/bin/sh -p
+#
+# appserver_deployment.sh
+#
+# This script extends appserver.sh  Add deployment environment variables
+# to this file so they will be preserved.
+# This is managed by SAS deployment technologies
+#
+
+# Set JAVA_HOME if the user has provided it
+{% if sasenv_java_home is defined and sasenv_java_home %}
+export JAVA_HOME={{ sasenv_java_home }}
+{% endif %}
+
+# Created from STUDIO_CONFIGURATION:appserver in vars.yml 
+
+{% if STUDIO_CONFIGURATION.appserver is defined and STUDIO_CONFIGURATION.appserver %}
+{%   for key, value in STUDIO_CONFIGURATION.appserver.items() %}
+{%      if value[0:1] == '#' %}
+{{ value | trim }}
+{%      else %}
+export {{ value | trim }}
+{%      endif %}
+{%   endfor %}
+{% endif %}

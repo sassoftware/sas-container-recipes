@@ -33,9 +33,9 @@ Here is an example of a log with no errors:
 # Here is the log for acodbc.sas
  1          OPTIONS NONOTES NOSTIMER NOSOURCE NOSYNTAXCHECK;
  72         
- 73         %let dbuser=FIXME;
- 74         %let dbpass=FIXME;
- 75         %let dbds=FIXME;
+ 73         %let dbuser=dbuser;
+ 74         %let dbpass=P@ssword;
+ 75         %let dbds=sasdb;
  76         
  77         options nodate;
  78         
@@ -199,9 +199,9 @@ NOTE: DATA statement used (Total process time):
 
 NOTE: AUTOEXEC processing completed.
 
-1          %let dbuser=FIXME;
-2          %let dbpass=FIXME;
-3          %let dbds=FIXME;
+1          %let dbuser=dbuser;
+2          %let dbpass=P@ssword;
+3          %let dbds=sasdb;
 4          
 5          options nodate;
 6          

@@ -1,0 +1,17 @@
+---
+# defaults file for sas-studio-config
+
+SERVICE_NAME: '{{ SERVICE_NAME_DEFAULT }}'
+SERVICE_PRODUCT_NAME: sasstudio
+SERVICE_SYSCONFIG_PATH: /etc/sysconfig/sas/{{ SERVICE_NAME }}
+sas_task_file: start.yml
+
+sas_deploy_debug: false
+
+sas_root_dir: "{{ SASROOT }}"
+sas_deployment_id: "{{ DEPLOYMENT_ID }}"
+sas_instance: "{{ INSTANCE_ID }}"
+
+sas_config_dir: "{{ sas_root_dir + '/' + sas_deployment_id + '/config/etc' }}"
+sas_studio_dir: "{{ sas_config_dir + '/sasstudio' }}"
+...

@@ -1,0 +1,11 @@
+---
+# defaults file for connect-config
+
+SERVICE_NAME: '{{ SERVICE_NAME_DEFAULT }}'
+SERVICE_PRODUCT_NAME: connect
+SERVICE_SYSCONFIG_PATH: /etc/sysconfig/sas/{{ SERVICE_NAME }}
+sas_task_file: start.yml
+
+sas_connect_port: "{{ sasenv_connect_port | default(17551) }}"
+sas_connect_mgmt_port: "{{ sasenv_connect_mgmt_port | default(17541) }}"
+...

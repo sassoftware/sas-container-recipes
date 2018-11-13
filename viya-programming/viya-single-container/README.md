@@ -56,6 +56,13 @@ docker build --file Dockerfile --build-arg BASEIMAGE=<name of image> --build-arg
 docker build --file Dockerfile--build-arg BASEIMAGE=docker.company.com/rh/rhvariance --build-arg BASETAG=7.2 . --tag viya-single-container
 
 #
+# **** OR ****
+#
+# To build against the opensuse/leap base image
+
+docker build --file Dockerfile --build-arg BASEIMAGE=opensuse/leap --build-arg BASETAG=42  -build-arg PLATFORM=suse . --tag viya-single-container
+
+#
 # **** END OPTIONS ****
 #
 ```

@@ -15,8 +15,8 @@
 #
 #
 # BUILD:
-#   docker build --file Dockerfile --build-arg BASEIMAGE=viya-single-container build-arg BASETAG=latest . --tag svc-auth-sssd
-#   NOT SUPPORTED: docker build --file Dockerfile --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest --build-arg PLATFORM=suse . --tag svc-auth-sssd
+#   docker build --file Dockerfile --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest --build-arg PLATFORM=redhat . --tag svc-auth-sssd
+#   docker build --file Dockerfile --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest --build-arg PLATFORM=suse . --tag svc-auth-sssd
 #
 # RUN:
 #   docker run --detach --rm --publish-all --name svc-auth-sssd --hostname svc-auth-sssd svc-auth-sssd
@@ -59,10 +59,19 @@ RUN set -e; \
         yum clean all; \
         rm --verbose --recursive --force /root/.cache /var/cache/yum; \
     elif [ "$PLATFORM" = "suse" ]; then \
-        echo; echo "####### [NOT IMPLEMENTED] Add sssd and supporting cast"; echo; \
+        rpm --rebuilddb; \
+        zypper install --no-confirm sssd openldap2-client; \
+        cp --verbose ${SSSD_CONF} /etc/sssd/sssd.conf; \
+        chmod --verbose 600 /etc/sssd/sssd.conf; \
+        if [ -f sssd.cert ]; then cp --verbose sssd.cert /etc/ssl/certs/sssd; fi; \
+        pam-config --add --sss && pam-config --add --mkhomedir --mkhomedir-umask=0077; \
+        sed -i 's|compat$|compat sss|g' /etc/nsswitch.conf; \
+        zypper clean ; \
+        rm --verbose --recursive --force /var/cache/zypp; \
     else \
-        echo; echo "####### [ERROR] : Unknown platform of \"$PLATFROM\" passed in"; echo; \
+        echo; echo "####### [ERROR] : Unknown platform of \"$PLATFORM\" passed in"; echo; \
         exit 1; \
     fi
+
 
 COPY sssd_pre_deploy.sh /tmp/000_sssd_pre_deploy.sh
