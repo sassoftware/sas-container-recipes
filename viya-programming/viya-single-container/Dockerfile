@@ -16,7 +16,7 @@
 #
 # BUILD:
 #   docker build --file Dockerfile --build-arg BASEIMAGE=centos --build-arg BASETAG=7 --build-arg PLATFORM=redhat . --tag viya-single-container
-#   docker build --file Dockerfile --build-arg BASEIMAGE=opensuse --build-arg BASETAG=leap --build-arg PLATFORM=suse . --tag viya-single-container
+#   docker build --file Dockerfile --build-arg BASEIMAGE=opensuse/leap --build-arg BASETAG=42 --build-arg PLATFORM=suse . --tag viya-single-container
 # 
 # RUN:
 #   docker run --detach --rm --publish-all --name viya-single-container --hostname viya-single-container viya-single-container
@@ -45,7 +45,7 @@ WORKDIR /tmp/sas
 # generated, that could be used in the Docker build process.
 #
 
-COPY SAS_Viya_deployment_data.zip vars* ./
+COPY SAS_Viya_deployment_data.zip ./
 #COPY sas_viya_playbook/ sas_viya_playbook/
 
 #
@@ -98,7 +98,7 @@ RUN set -e; \
         zypper clean ; \
         rm --verbose --recursive --force /var/cache/zypp; \
     else \
-        echo; echo "####### [ERROR] : Unknown platform of \"$PLATFROM\" passed in"; echo; \
+        echo; echo "####### [ERROR] : Unknown platform of \"$PLATFORM\" passed in"; echo; \
         exit 1; \
     fi
 
@@ -180,6 +180,9 @@ RUN set -e; \
         chmod 755 /usr/local/sbin/service; \
         sed -i "/Start the spawner service/,+6d" roles/spawner-config/tasks/start.yml; \
         sed -i "/started {{ SERVICE_NAME }} Service/,+6d" roles/sas-studio-config/tasks/start.yml; \
+        if [ -d roles/connect-config ]; then \
+            sed -i "/started {{ SERVICE_NAME }} Service/,+5d" roles/connect-config/tasks/start.yml; \
+        fi; \
     fi; \
     popd
 
@@ -187,10 +190,13 @@ RUN set -e; \
 # Run the playbook and adjust the result
 #
 
+# Make sure to get the vars_usermods file over.
+COPY vars_usermods.yml ./sas_viya_playbook/vars_usermods.yml
+
 RUN set -e; \
     pushd sas_viya_playbook ; \
     echo; echo "####### Run the playbook"; echo; \
-    ansible-playbook -i inventory_local.ini site.yml -vvv ; \
+    ansible-playbook -i inventory_local.ini site.yml -e '@vars_usermods.yml' -vvv ; \
     echo; echo "####### Stop the running services"; echo; \
     /etc/init.d/sas-viya-all-services stop; \
     popd; \

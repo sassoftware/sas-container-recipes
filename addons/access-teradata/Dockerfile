@@ -42,7 +42,7 @@ RUN set -e; \
         zypper clean ; \
         rm --verbose --recursive --force /var/cache/zypp; \
     else \
-        echo; echo "####### [ERROR] : Unknown platform of \"$PLATFROM\" passed in"; echo; \
+        echo; echo "####### [ERROR] : Unknown platform of \"$PLATFORM\" passed in"; echo; \
         exit 1; \
     fi
 
