@@ -15,10 +15,11 @@
 #
 #
 # BUILD:
-#   docker build --file Dockerfile  --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest . --tag svc-access-teradata
+#   docker build --file Dockerfile_jpy3 --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest --build-arg PLATFORM=redhat . --tag svc-ide-jupyter-python3
+#   docker build --file Dockerfile_jpy3 --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest --build-arg PLATFORM=suse . --tag svc-ide-jupyter-python3
 # 
 # RUN:
-#   docker run --detach --rm --publish-all --name svc-access-teradata --hostname svc-access-teradata svc-access-teradata
+#   docker run --detach --rm --publish-all --name svc-ide-jupyter-python3 --hostname svc-ide-jupyter-python3 svc-ide-jupyter-python3
 #
 
 ARG BASEIMAGE=viya-single-container
@@ -29,25 +30,14 @@ FROM $BASEIMAGE:$BASETAG
 ARG PLATFORM=redhat
 
 USER root
+COPY proxy.conf ./jpy3_proxy.conf
+
 RUN set -e; \
-    mkdir /tmp/teradata_tools; \
     if [ "$PLATFORM" = "redhat" ]; then \
-        rpm --rebuilddb; \
-        yum install --assumeyes ksh; \
-        yum clean all; \
-        rm --verbose --recursive --force /root/.cache /var/cache/yum; \
+        cp ./jpy3_proxy.conf /etc/httpd/conf.d/jpy3_proxy.conf; \
     elif [ "$PLATFORM" = "suse" ]; then \
-        rpm --rebuilddb; \
-        zypper install --no-confirm ksh; \
-        zypper clean ; \
-        rm --verbose --recursive --force /var/cache/zypp; \
+        cp ./jpy3_proxy.conf /etc/apache2/conf.d/jpy3_proxy.conf; \
     else \
         echo; echo "####### [ERROR] : Unknown platform of \"$PLATFORM\" passed in"; echo; \
         exit 1; \
-    fi
-
-ADD teradata.tgz /tmp/teradata_tools/
-RUN cd /tmp/teradata_tools/TeradataToolsAndUtilitiesBase && echo a|./setup.bat
-
-ADD teradata_cas.settings /tmp/
-ADD teradata_sasserver.sh /tmp/
+    fi;

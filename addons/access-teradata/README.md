@@ -16,8 +16,9 @@ To build the Teradata layer, the Dockerfile expects that the teradata.tgz file i
 | |____ThirdPartyLicensesTTU.txt
 ```
 
-The Dockerfile looks for the teradata.tgz file and runs the setup.bat script to install all 
-the Teradata libraries.
+The Dockerfile looks for the Teradata gzip file and runs the setup.bat script to install the Teradata libraries.
+
+***Note***: *Error messages about missing i386 dependencies can safely be ignored unless your installation requires them. If you require the i386 dependencies, please install them by adding the necessary commands to the Dockerfile.*
 
 # File List
 
@@ -46,10 +47,10 @@ Here is an example of a log with no errors:
 # Here is the log for acteradata.sas
 1          OPTIONS NONOTES NOSTIMER NOSOURCE NOSYNTAXCHECK;
  72         
- 73         %let server=FIXME;
- 74         %let username=FIXME;
- 75         %let password=FIXME;
- 76         %let database=FIXME;
+ 73         %let server=10.0.0.1;
+ 74         %let username=dbuser;
+ 75         %let password=P@ssword;
+ 76         %let database=sasdb;
  77         %let engine=teradata;
  78         
  79         options yearcutoff=1900;
@@ -235,10 +236,10 @@ NOTE: DATA statement used (Total process time):
 
 NOTE: AUTOEXEC processing completed.
 
-1          %let server=FIXME;
-2          %let username=FIXME;
-3          %let password=FIXME;
-4          %let database=FIXME;
+1          %let server=10.0.0.1;
+2          %let username=dbuser;
+3          %let password=P@ssword;
+4          %let database=sasdb;
 5          %let engine=teradata;
 6          
 7          options yearcutoff=1900;

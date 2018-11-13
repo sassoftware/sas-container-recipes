@@ -43,10 +43,12 @@ RUN set -e; \
         yum clean all; \
         rm --verbose --recursive --force /root/.cache /var/cache/yum; \
     elif [ "$PLATFORM" = "suse" ]; then \
-        echo; echo "####### [ERROR] SuSE is not a currently supported platform"; echo; \
-        exit 5; \
+        rpm --rebuilddb; \
+        zypper --no-gpg-checks install --no-confirm /tmp/oracle/*.rpm; \
+        zypper clean ; \
+        rm --verbose --recursive --force /var/cache/zypp; \
     else \
-        echo; echo "####### [ERROR] : Unknown platform of \"$PLATFROM\" passed in"; echo; \
+        echo; echo "####### [ERROR] : Unknown platform of \"$PLATFORM\" passed in"; echo; \
         exit 1; \
     fi
 

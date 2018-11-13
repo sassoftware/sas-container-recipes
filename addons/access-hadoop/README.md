@@ -55,8 +55,8 @@ Here is an example of a log with no errors:
 ```
  1          OPTIONS NONOTES NOSTIMER NOSOURCE NOSYNTAXCHECK;
  72
- 73         %let server="FIXME";
- 74         %let user=FIXME;
+ 73         %let server=10.0.0.1;
+ 74         %let user=dbuser;
  75
  76         option set = SAS_HADOOP_JAR_PATH =
  77           "/hadoop/jars";
@@ -68,7 +68,7 @@ Here is an example of a log with no errors:
        option overrides configuration properties.
  NOTE: Libref HADOOP was successfully assigned as follows:
        Engine:        HADOOP
-       Physical Name: jdbc:hive2://FIXME:10000/default
+       Physical Name: jdbc:hive2://10.0.0.1:10000/default
  82
  83         proc datasets lib=hadoop;
  84           run;
@@ -139,8 +139,8 @@ NOTE: DATA statement used (Total process time):
 
 NOTE: AUTOEXEC processing completed.
 
-1          %let server="FIXME";
-2          %let user=FIXME;
+1          %let server=10.0.0.1;
+2          %let user=dbuser;
 3
 4          option set = SAS_HADOOP_JAR_PATH =
 5            "/hadoop/jars";
@@ -152,14 +152,14 @@ NOTE: HiveServer2 High Availability via ZooKeeper will not be used for this conn
       option overrides configuration properties.
 NOTE: Libref HADOOP was successfully assigned as follows:
       Engine:        HADOOP
-      Physical Name: jdbc:hive2://FIXME:10000/default
+      Physical Name: jdbc:hive2://10.0.0.1:10000/default
 10
 11         proc datasets lib=hadoop;
                                                              Directory
 
                                Libref              HADOOP
                                Engine              HADOOP
-                               Physical Name       jdbc:hive2://FIXME:10000/default
+                               Physical Name       jdbc:hive2://10.0.0.1:10000/default
                                Schema              default
                                Comment             Default Hive database
 
