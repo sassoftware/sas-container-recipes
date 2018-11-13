@@ -21,16 +21,12 @@ If you're using a virtual environment then see the instructions [on our wiki](ht
 See the official Kubernetes site: https://kubernetes.io/docs/tasks/tools/install-kubectl/
 
 ### Build
-Download this repository to use the build script.
-`git clone https://github.com/sassoftware/sas-container-recipes.git`
+Download this repository to use the build script. `git clone https://github.com/sassoftware/sas-container-recipes.git`
 
-Define some variables that point to your Software Order Email zip file and your Docker registry location.
-The `build.sh` tool creates Docker images from your software order, pushes them to your docker registry, and creates Kubernetes deployment files.
+The `build.sh` tool creates Docker images from your software order, pushes them to your docker registry, and creates Kubernetes deployment files. Define some variables that point to your Software Order Email zip file, your Docker registry location, and your Docker registry namespace:
+
 ```
-DOCKER_REGISTRY_URL=<my-docker-registry-url> \
-DOCKER_REGISTRY_NAMESPACE=$USER \
-ORDER_LOCATION=/my/path/to/SAS_Viya_deployment_data.zip \
-./build.sh
+./build.sh --zip /my/path/to/SAS_Viya_deployment_data.zip --docker-url <my-registry-url> --docker-namespace <my-namespace>
 ```
 
 ### Deploy
