@@ -2,7 +2,7 @@
 Using containers to build, customize, and deploy a SAS environment based on your software order.
 
 ### Viya for Individuals
-A quick, short-term, hackable environment within a single Dockerfile.
+A quick short-term environment within a single Dockerfile.
 The `viya-programming` section is tailored for most independent data scientists, with a quickstart for running a SAS Studio + CAS (Cloud Analytic Software) locally on your own machine.
 
 ### Viya for Teams:
