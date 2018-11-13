@@ -34,7 +34,7 @@ spec:
       containers:
       - name: {{ settings.project_name }}-{{ item.key }}
 {% for regkey,regvalue in registries.items() %}
-        image: {{ regvalue.url.split('/')[2] }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
+        image: {{ regvalue.url }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
 {% endfor %}
         imagePullPolicy: Always
 {% if item.value.ports is defined and item.value.ports %}

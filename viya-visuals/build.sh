@@ -35,7 +35,7 @@ function usage() {
     echo -e "                               example: mynamespace"
 
     echo -e "  -u|--docker-url <value>  URL of the Docker registry where Docker images will be pushed to."
-    echo -e "                               example: 10.12.13.14 or my-registry.docker.com"
+    echo -e "                               example: 10.12.13.14 or my-registry.docker.com, do not add 'http://' "
     echo -e ""
 
     echo -e "  -z|--zip <value>         Path to the SAS_Viya_deployment_data.zip file"
@@ -46,8 +46,8 @@ function usage() {
     echo -e " Optional Arguments: "
     echo -e ""
 
-    echo -e "  -a|--addons \"<value> [<value>]\"  "
-    echo -e "                           A space separated list of layers to add on to the main SAS image"
+    #echo -e "  -a|--addons \"<value> [<value>]\"  "
+    #echo -e "                           A space separated list of layers to add on to the main SAS image"
 
     echo -e "  -i|--baseimage <value>   The Docker image from which the SAS images will build on top of"
     echo -e "                               Default: centos"
@@ -70,13 +70,12 @@ function usage() {
     echo -e "                           Skips validating the mirror URL"
 
     echo -e "  -h|--help                Prints out this message"
+    echo -e ""
 }
 
+# TODO :NOT IMPLEMENTED:
+# Addons are available for sas-viya-programming, sas-viya-computeserver, and sas-viya-sas-casserver-primary
 function add_layers() {
-    # Now run through the addons
-    # access and auth get put on programming, CAS and compute
-    # ide are added to programming
-    # using sas-viya, but this is probably something else that could be made a variable
     docker_reg_location=$(echo -e "${DOCKER_REGISTRY_URL}" | cut -d'/' -f3 )/"${DOCKER_REGISTRY_NAMESPACE}"
     for sas_image in sas-viya-programming sas-viya-computeserver sas-viya-sas-casserver-primary; do
         # Make sure the image exists
@@ -134,6 +133,10 @@ function add_layers() {
     done
 }
 
+# Run the ansible-container build in the clean workspace and build all services.
+# Or define the environment variable "REBUILDS" to only build a few services.
+# example: export REBUILDS="myservice myotherservice anotherone" 
+# https://www.ansible.com/integrations/containers/ansible-container
 function ansible_build() {
     if [[ ! -z ${REBUILDS} ]]; then
         echo -e "Rebuilding services ${REBUILDS}"
@@ -144,22 +147,6 @@ function ansible_build() {
     build_rc=$?
     set -e
 }
-
-# Set some defaults sas_version=$(cat templates/VERSION) sas_datetime=$(date +"%Y%m%d%H%M%S")
-sas_version=$(cat templates/VERSION)
-sas_datetime=$(date "+%Y%m%d%H%M%S")
-sas_sha1=$(git rev-parse --short HEAD)
-
-[[ -z ${SAS_RECIPE_TYPE+x} ]]         && SAS_RECIPE_TYPE=single
-[[ -z ${CHECK_MIRROR_URL+x} ]]        && CHECK_MIRROR_URL=true
-[[ -z ${CHECK_DOCKER_URL+x} ]]        && CHECK_DOCKER_URL=false
-[[ -z ${SAS_DOCKER_TAG+x} ]]          && SAS_DOCKER_TAG=${sas_version}-${sas_datetime}-${sas_sha1}
-[[ -z ${DOCKER_REGISTRY_URL+x} ]]     && DOCKER_REGISTRY_URL=localhost
-[[ -z ${DOCKER_REGISTRY_NAMESPACE} ]] && DOCKER_REGISTRY_NAMESPACE=$USER
-[[ -n "${BASEIMAGE}" ]]               && BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=${BASEIMAGE}"
-[[ -n "${BASETAG}" ]]                 && BUILD_ARG_BASETAG="--build-arg BASETAG=${BASETAG}"
-[[ -n "${SAS_RPM_REPO_URL}" ]]        && BUILD_ARG_SAS_RPM_REPO_URL="--build-arg SAS_RPM_REPO_URL=${SAS_RPM_REPO_URL}"
-[[ -n "${PLATFORM}" ]]                && BUILD_ARG_PLATFORM="--build-arg PLATFORM=${PLATFORM}"
 
 # Use command line options if they have been provided. 
 # This overrides environment settings.
@@ -212,16 +199,12 @@ while [[ $# -gt 0 ]]; do
             shift # past argument
             CHECK_DOCKER_URL=false
             ;;
-        -a|--addons)
-            shift # past argument
-            ADDONS="${ADDONS} $1"
-            shift # past value
-            ;;
-        -y|--type)
-            shift # past argument
-            SAS_RECIPE_TYPE="$1"
-            shift # past value
-            ;;
+        # TODO
+        #-a|--addons)
+        #    shift # past argument
+        #    ADDONS="${ADDONS} $1"
+        #    shift # past value
+        #    ;;
         -u|--docker-url)
             shift # past argument
             export DOCKER_REGISTRY_URL="$1"
@@ -239,36 +222,41 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-
+# At the start of the process output details on the environment and build flags
 function setup_logging() {
     echo "" > result-${sas_datetime}.log
     exec > >(tee -a "${PWD}"/build_sas_container.log) 2>&1
     echo
-    echo -e "  Deployment Type                 = ${SAS_RECIPE_TYPE}"
     # shellcheck disable=SC2086
     echo -e "  BASEIMAGE                       = $(echo ${BUILD_ARG_BASEIMAGE:=centos} | cut -d'=' -f2)"
     # shellcheck disable=SC2086
     echo -e "  BASETAG                         = $(echo ${BUILD_ARG_BASETAG:=latest} | cut -d'=' -f2)"
     # shellcheck disable=SC2086
     echo -e "  Mirror URL                      = $(echo ${BUILD_ARG_SAS_RPM_REPO_URL} | cut -d'=' -f2)"
-    echo -e "  Validate Mirror URL             = ${CHECK_MIRROR_URL}"
     # shellcheck disable=SC2086
     echo -e "  Platform                        = $(echo ${BUILD_ARG_PLATFORM:=redhat} | cut -d'=' -f2)"
     echo -e "  Deployment Data Zip             = ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
-    echo -e "  Addons                          = ${ADDONS}"
+    #TODO echo -e "  Addons                          = ${ADDONS}"
     echo -e "  Docker registry URL             = ${DOCKER_REGISTRY_URL}"
     echo -e "  Docker registry namespace       = ${DOCKER_REGISTRY_NAMESPACE}"
     echo -e "  Validate Docker registry URL    = ${CHECK_DOCKER_URL}"
+    echo -e "  Validate Mirror URL             = ${CHECK_MIRROR_URL}"
     echo
 }
 
+# Checks arguments and flags for input that is supported
 function validate_input() {
 
     # Validate that required arguments were provided
-    #if [ -z ${DOCKER_REGISTRY_URL} ||  -z ${DOCKER_REGISTRY_NAMESPACE} ||  -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]; then
-    #    usage  
-    #    exit 1
-    #fi 
+    # TODO: proper if/else
+    if [[ -z "${DOCKER_REGISTRY_URL}" ]]; then
+        usage  
+        exit 1
+    fi
+    if [[ -z "${DOCKER_REGISTRY_NAMESPACE}" ]]; then
+        usage  
+        exit 1
+    fi 
 
     # Validate that the provided platform is accepted
     accepted_platforms=(suse redhat)
@@ -338,6 +326,9 @@ function validate_input() {
     fi
 }
 
+# Given the '--zip' option, unzip the contents and use the sas-orchestration
+# tool to create the playbook. Any changes made to this playbook will get
+# overridden in the next build.
 function get_playbook() {
     echo -e "[INFO]  : Generating  playbook"
     sas-orchestration build --input ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}
@@ -347,17 +338,40 @@ function get_playbook() {
 }
 
 # Move everything into a working directory to isolate the debugging space
-setup_environment() {
+function setup_environment() {
+
+    # Set some defaults sas_version=$(cat templates/VERSION) sas_datetime=$(date +"%Y%m%d%H%M%S")
+    sas_version=$(cat templates/VERSION)
+    sas_datetime=$(date "+%Y%m%d%H%M%S")
+    sas_sha1=$(git rev-parse --short HEAD)
+
+    [[ -z ${SAS_RECIPE_TYPE+x} ]]         && SAS_RECIPE_TYPE=single
+    [[ -z ${CHECK_MIRROR_URL+x} ]]        && CHECK_MIRROR_URL=false
+    [[ -z ${CHECK_DOCKER_URL+x} ]]        && CHECK_DOCKER_URL=false
+    [[ -z ${SAS_DOCKER_TAG+x} ]]          && SAS_DOCKER_TAG=${sas_version}-${sas_datetime}-${sas_sha1}
+    [[ -n "${BASEIMAGE}" ]]               && BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=${BASEIMAGE}"
+    [[ -n "${BASETAG}" ]]                 && BUILD_ARG_BASETAG="--build-arg BASETAG=${BASETAG}"
+    [[ -n "${SAS_RPM_REPO_URL}" ]]        && BUILD_ARG_SAS_RPM_REPO_URL="--build-arg SAS_RPM_REPO_URL=${SAS_RPM_REPO_URL}"
+    [[ -n "${PLATFORM}" ]]                && BUILD_ARG_PLATFORM="--build-arg PLATFORM=${PLATFORM}"
+
+    # Start with a clean working space by moving everything into the debug directory
     if [[ -d debug/ ]]; then 
        rm -rf debug/
     fi
-    mkdir debug/
+    mkdir debug
     cp templates/container.yml debug/
     cp templates/generate_manifests.yml debug/
     cd debug
 }
 
 
+# Setup the ansible-container directory structure.
+#
+# ansible-container requires a "roles" directory, a yaml containing all key/value pairs,
+# and a container.yml file containing a list of services to build.
+#
+# https://www.ansible.com/integrations/containers/ansible-container
+#
 function make_ansible_yamls() {
     for file in $(ls -1 sas_viya_playbook/group_vars); do
         echo -e "*** Create the roles directory for the host groups"
@@ -514,7 +528,7 @@ EOL
     sed -i 's|^SECURE_CONSUL:.*|SECURE_CONSUL: false|' everything.yml
 }
 
-# Generate the Kubernetes configs
+# Generate the Kubernetes resources
 function make_deployments() {
     ansible-playbook generate_manifests.yml -e "docker_tag=${SAS_DOCKER_TAG}" -e 'ansible_python_interpreter=/usr/bin/python'
     if [[ -d ../deploy ]]; then
@@ -531,7 +545,17 @@ function push_images() {
         docker push ${DOCKER_REGISTRY_URL}:5000/${DOCKER_REGISTRY_NAMESPACE}/sas-viya-${role,,}:latest
     done
     set +x
+}
 
+# Steps mirrored in documentation - show the user what comes next
+function show_next_steps() {
+    echo -e ""
+    echo -e "Success. The deploy directory contains all the Kubernetes manifests."
+    echo -e "Import the resources for deployment:"
+    echo -e "    kubectl create --recursive --filename deploy/kubernetes/secrets "
+    echo -e "    kubectl create --recursive --filename deploy/kubernetes/configmaps "
+    echo -e "    kubectl create --recursive --filename deploy/kubernetes/ [smp] OR [mpp]"
+    echo -e ""
 }
 
 setup_environment  # Make the working directory "debug/" and copy in templates
@@ -539,9 +563,10 @@ validate_input     # Check provided arguments
 setup_logging      # Show build variables and enable logging if debug is on
 get_playbook       # From an SOE zip or previous playbook
 make_ansible_yamls # Create the container.yml and everything.yml
-add_layers         # Addons and docker push to registry
+#add_layers         # Addons
 ansible_build      # Build services from continer.yml 
-push_images        # Transfer images to defined registry
 make_deployments   # Generate Kubernetes configs
+push_images        # Transfer images to defined registry
+show_next_steps    # Instructions on how to deploy to kubernetes
 exit 0
 

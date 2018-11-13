@@ -1,12 +1,19 @@
 ---
+- name: Create the deployment directory to place kubernetes manifests in
+  file:
+    path: "{{ playbook_dir + '/' + item }}"
+    state: directory
+  with_items:
+  - "deploy"
+
 - name: Create temporary directory on remote machine
   file:
-    path: "{{ playbook_dir + '/manifests/' + item }}"
+    path: "{{ playbook_dir + '/deploy/' + item }}"
     state: directory
   with_items:
   - "kubernetes"
-  - "kubernetes/deployments-smp"
-  - "kubernetes/deployments-mpp"
+  - "kubernetes/smp"
+  - "kubernetes/mpp"
   - "kubernetes/configmaps"
   - "kubernetes/secrets"
 
@@ -31,7 +38,7 @@
 - name: Create pets k8s manifest for SMP deployments
   template:
     src: "pets_k8s.j2"
-    dest: "{{ playbook_dir }}/deploy/kubernetes/deployments-smp/{{ item.key }}.yml"
+    dest: "{{ playbook_dir }}/deploy/kubernetes/smp/{{ item.key }}.yml"
   when: item.key in 'httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 
@@ -42,14 +49,14 @@
 - name: Create pets k8s manifest for MPP deployments
   template:
     src: "pets_k8s.j2"
-    dest: "{{ playbook_dir }}/deploy/kubernetes/deployments-mpp/{{ item.key }}.yml"
+    dest: "{{ playbook_dir }}/deploy/kubernetes/mpp/{{ item.key }}.yml"
   when: item.key in 'httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 
 - name: Create CAS worker manifest
   template:
     src: "casworker_k8s.j2"
-    dest: "{{ playbook_dir }}/deploy/kubernetes/deployments-mpp/sas-casserver-worker.yml"
+    dest: "{{ playbook_dir }}/deploy/kubernetes/mpp/sas-casserver-worker.yml"
   when: item.key in 'sas-casserver-primary'
   with_dict: '{{ services }}'
 
