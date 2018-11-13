@@ -20,31 +20,56 @@
 
 function usage() {
     echo -e ""
-    echo -e " Utility that uses containers to build, customize, and deploy a SAS environment based on your software order."
+    echo -e " Framework to deploy SAS Viya environments using containers."
     echo -e ""
+
+
+    # Required Arguments
+    # ------------------------ 
+    echo -e " Required Arguments: "
+    echo -e ""
+
+    echo -e "  -n|--docker-namespace <value>"
+    echo -e "                           The namespace in the Docker registry where Docker 
+                                        images will be pushed to. Used to prevent collisions."
+    echo -e "                               example: mynamespace"
+
+    echo -e "  -u|--docker-url <value>  URL of the Docker registry where Docker images will be pushed to."
+    echo -e "                               example: 10.12.13.14 or my-registry.docker.com"
+    echo -e ""
+
+    echo -e "  -z|--zip <value>         Path to the SAS_Viya_deployment_data.zip file"
+    echo -e "                               example: /path/to/SAS_Viya_deployment_data.zip"
+
+
+    # ------------------------ 
+    echo -e " Optional Arguments: "
+    echo -e ""
+
     echo -e "  -a|--addons \"<value> [<value>]\"  "
     echo -e "                           A space separated list of layers to add on to the main SAS image"
+
     echo -e "  -i|--baseimage <value>   The Docker image from which the SAS images will build on top of"
     echo -e "                               Default: centos"
+
     echo -e "  -t|--basetag <value>     The Docker tag for the base image that is being used"
     echo -e "                               Default: latest"
-    echo -e "  -n|--docker-namespace <value>"
-    echo -e "                           The namespace in the Docker registry where Docker images will be pushed to."
-    echo -e "  -u|--docker-url <value>  The URL of the Docker registry where Docker images will be pushed to."
-    echo -e "  -h|--help                Prints out this message"
-    echo -e "  -m|--mirror-url <value>  (OPTIONAL) The location of the mirror URL."
+
+    echo -e "  -m|--mirror-url <value>  The location of the mirror URL."
     echo -e "                               See https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html"
     echo -e "                               for more information on setting up a mirror."
+
     echo -e "  -p|--platform <value>    The type of operating system we are installing on top of"
     echo -e "                               Options: [ redhat | suse ]"
     echo -e "                               Default: redhat"
-    echo -e "  -s|--skip-docker-url-validation"
+
+    echo -e "  -s|--skip-docker-url-validation" 
     echo -e "                           Skips validating the Docker registry URL"
+
     echo -e "  -k|--skip-mirror-url-validation"
     echo -e "                           Skips validating the mirror URL"
-    echo -e "  -z|--zip <value>         The path to the SAS_Viya_deployment_data.zip file"
-    echo -e "                               If both --repo-url and this option are provided, this will be ignored."
-    echo -e "                               Format: /path/to/SAS_Viya_deployment_data.zip"
+
+    echo -e "  -h|--help                Prints out this message"
 }
 
 function add_layers() {
@@ -129,7 +154,7 @@ sas_sha1=$(git rev-parse --short HEAD)
 [[ -z ${CHECK_MIRROR_URL+x} ]]        && CHECK_MIRROR_URL=true
 [[ -z ${CHECK_DOCKER_URL+x} ]]        && CHECK_DOCKER_URL=false
 [[ -z ${SAS_DOCKER_TAG+x} ]]          && SAS_DOCKER_TAG=${sas_version}-${sas_datetime}-${sas_sha1}
-[[ -z ${DOCKER_REGISTRY_URL+x} ]]     && DOCKER_REGISTRY_URL=http://localhost
+[[ -z ${DOCKER_REGISTRY_URL+x} ]]     && DOCKER_REGISTRY_URL=localhost
 [[ -z ${DOCKER_REGISTRY_NAMESPACE} ]] && DOCKER_REGISTRY_NAMESPACE=$USER
 [[ -n "${BASEIMAGE}" ]]               && BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=${BASEIMAGE}"
 [[ -n "${BASETAG}" ]]                 && BUILD_ARG_BASETAG="--build-arg BASETAG=${BASETAG}"
@@ -207,8 +232,8 @@ while [[ $# -gt 0 ]]; do
             export DOCKER_REGISTRY_NAMESPACE="$1"
             shift # past value
             ;;
-        *)    # Assuming this is an addon for backward compatibility.
-            ADDONS="${ADDONS} $1"
+        *)  echo -e "Invalid argument: $1"
+            exit 1;
             shift # past argument
     ;;
     esac
@@ -238,6 +263,12 @@ function setup_logging() {
 }
 
 function validate_input() {
+
+    # Validate that required arguments were provided
+    #if [ -z ${DOCKER_REGISTRY_URL} ||  -z ${DOCKER_REGISTRY_NAMESPACE} ||  -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]; then
+    #    usage  
+    #    exit 1
+    #fi 
 
     # Validate that the provided platform is accepted
     accepted_platforms=(suse redhat)
@@ -366,15 +397,10 @@ function make_ansible_yamls() {
                     echo; echo "***     entrypoint file for service '${file}' already exists"; echo
                 fi
 
-                # TODO: read all templates/static-services into container.yml
                 # Each file in the static-service directory has the same file name as its service name
                 # If the file name is the same as the service then the service exists in the order
                 is_static=false
-                echo "STATIC SERVICES------------------------------"
                 static_services=$(ls ../templates/static-services/)
-                echo "FILE: " 
-                echo ${file}
-                echo $static_services
                 for service in ${static_services}; do
                     if [ "${file,,}.yml" == ${service} ]; then
                         # Append static service definition to the debug/container.yml
@@ -488,22 +514,21 @@ EOL
     sed -i 's|^SECURE_CONSUL:.*|SECURE_CONSUL: false|' everything.yml
 }
 
+# Generate the Kubernetes configs
 function make_deployments() {
-    ansible-playbook generate_manifests.yml -e "manifest_type=all"
+    ansible-playbook generate_manifests.yml -e "docker_tag=${SAS_DOCKER_TAG}" -e 'ansible_python_interpreter=/usr/bin/python'
     if [[ -d ../deploy ]]; then
         rm -rf ../deploy
     fi
     mv deploy/ ../
 }
 
+# Push built images to the specified private docker registry
 function push_images() {
-    # push updated images to docker registry
-    #set -x
-    #set +x
     set -x
     for role in $(ls roles/); do
-        docker tag sas-viya-${role,,} localhost:5000/${DOCKER_REGISTRY_NAMESPACE}/sas-viya-${role,,} && \
-        docker push localhost:5000/${USER}/sas-viya-${role,,}:latest || true
+        docker tag sas-viya-${role,,} ${DOCKER_REGISTRY_URL}:5000/${DOCKER_REGISTRY_NAMESPACE}/sas-viya-${role,,} && \
+        docker push ${DOCKER_REGISTRY_URL}:5000/${DOCKER_REGISTRY_NAMESPACE}/sas-viya-${role,,}:latest
     done
     set +x
 
@@ -516,7 +541,7 @@ get_playbook       # From an SOE zip or previous playbook
 make_ansible_yamls # Create the container.yml and everything.yml
 add_layers         # Addons and docker push to registry
 ansible_build      # Build services from continer.yml 
-#push_images        # Transfer images to defined registry
+push_images        # Transfer images to defined registry
 make_deployments   # Generate Kubernetes configs
 exit 0
 
