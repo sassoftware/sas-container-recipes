@@ -1,10 +1,11 @@
 # Overview
+
 A structure for adding LDAP configuration that uses sssd and PAM.
 
 # Files
 
-* sssd.conf
-  * A required file that contains a template sssd configuration, which should reflect an organization's configuration.
+* example_sssd.conf
+  * A file that contains a template sssd configuration, which should reflect an organization's configuration.
 * sssd_pre_deploy.sh
   * A required file that starts sssd and is called by the main entrypoint script.
 * sssd.cert
@@ -12,8 +13,9 @@ A structure for adding LDAP configuration that uses sssd and PAM.
 
 # How to Build
 
-Edit the sssd.conf file and fill in the desired configuration. If a SSL cert is needed, 
-provide it as a file named sssd.cert.
+Copy the example_sssd.conf file to a file named _sssd.conf_. Then edit the sssd.conf 
+file and fill in the desired configuration. If a SSL cert is needed, 
+provide it as a file named _sssd.cert_.
 
 ```
 # This is using the default name of the SAS Viya programming image and the default sssd.conf file
@@ -67,7 +69,8 @@ CONTAINER ID        NAMES               IMAGE               STATUS              
 
 Log on at http://_host-name-where-docker-is-running_ as the user that is defined in the configured LDAP environment.
 
-# License
+# Copyright
+
 Copyright 2018 SAS Institute Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");

@@ -36,10 +36,10 @@ Here is an example of a log with no errors:
  
  1          OPTIONS NONOTES NOSTIMER NOSOURCE NOSYNTAXCHECK;
  72         
- 73         %let password=FIXME;
- 74         %let username=FIXME;
- 75         %let schema=FIXME;
- 76         %let path=FIXME;
+ 73         %let password=P@ssword;
+ 74         %let username=dbuser;
+ 75         %let schema=sastest;
+ 76         %let path=dbpath;
  77         
  78         %macro randomnum(input);
  79         %let mygen=%sysfunc(getoption(notes));
@@ -205,10 +205,10 @@ NOTE: DATA statement used (Total process time):
 
 NOTE: AUTOEXEC processing completed.
 
-1          %let password=FIXME;
-2          %let username=FIXME;
-3          %let schema=FIXME;
-4          %let path=FIXME;
+1          %let password=P@ssword;
+2          %let username=dbuser;
+3          %let schema=sastest;
+4          %let path=dbpath;
 5          
 6          %macro randomnum(input);
 7          %let mygen=%sysfunc(getoption(notes));

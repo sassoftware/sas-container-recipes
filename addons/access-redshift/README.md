@@ -31,10 +31,10 @@ Here is an example of a log with no errors:
  
  1          OPTIONS NONOTES NOSTIMER NOSOURCE NOSYNTAXCHECK;
  72         
- 73         %let server=FIXME;
- 74         %let username=FIXME;
- 75         %let password=FIXME;
- 76         %let database=FIXME;
+ 73         %let server=10.0.0.1;
+ 74         %let username=dbuser;
+ 75         %let password=P@ssword;
+ 76         %let database=sasdb;
  77         %let port=5439;
  78         
  79         options yearcutoff=1900;
@@ -208,10 +208,10 @@ NOTE: DATA statement used (Total process time):
 
 NOTE: AUTOEXEC processing completed.
 
-1          %let server=FIXME;
-2          %let username=FIXME;
-3          %let password=FIXME;
-4          %let database=FIXME;
+1          %let server=10.0.0.1;
+2          %let username=dbuser;
+3          %let password=P@ssword;
+4          %let database=sasdb;
 5          %let port=5439;
 6          
 7          options yearcutoff=1900;
