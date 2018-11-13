@@ -5,14 +5,9 @@ Using containers to build, customize, and deploy a SAS environment based on your
 A quick, short-term, hackable environment within a single Dockerfile.
 The `viya-programming` section is tailored for most independent data scientists, with a quickstart for running a SAS Studio + CAS (Cloud Analytic Software) locally on your own machine.
 
-### Viya for Teams: 
-The `viya-visuals` section is for large organizations deploying scalable clusters using Kubernetes.
+### Viya for Teams:
+The `viya-visuals` section is for large organizations deploying scalable clusters, including Massive Parallel Processing (MPP) with CAS and SAS Studio, using Kubernetes,
 
-    - SAS Studio + CAS (Cloud Analytic Software) = Massive Parallel Processing (MPP)
-    - Visual Analytics
-    - Visual Forecasting
-    - Visual Data Mining & Machine Learning
-    ... and all other visual (non-programming) applications.
 
 ## Additional Features
 The `addons` directory provides details for utilizing data access tools, authentication, security, and third-party extras.
