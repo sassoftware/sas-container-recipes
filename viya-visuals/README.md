@@ -7,7 +7,8 @@ Using containers to build, customize, and deploy a SAS environment in Kubernetes
 See the official Docker Community Edition install steps: https://docs.docker.com/install/linux/docker-ce/centos/
 
 ### Start a private Docker Registry
-This will be the location that your Kubernetes pulls images from.
+This will be the location that your Kubernetes pulls images from. 
+You must first authenticate with your docker registry using `docker login <my-registry>.mydomain.com`. This will prompt you for a username and password (with LDAP if configured) and a file at ~/.docker/config.json is created to store that credential.
 For details steps see the official Docker site: https://docs.docker.com/registry/deploying/
 
 #### Raise the timeout period for Docker
