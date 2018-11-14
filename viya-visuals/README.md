@@ -3,26 +3,22 @@ Using containers to build, customize, and deploy a SAS environment in Kubernetes
 
 ## Getting Started
 
-#### Install a maintained version of docker-ce
-See the official Docker Community Edition install steps: https://docs.docker.com/install/linux/docker-ce/centos/
+#### Install Ansible
+RHEL/CentOS: `sudo yum install ansible`
+Fedora: `sudo dnf install ansible`
+Ubuntu: `sudo apt-get install ansible`
+
+#### Setup the Environment
+Clone this repository using `git clone https://github.com/sassoftware/sas-container-recipes.git` then run `sudo ansible-playbook setup` inside this project directory.
+
+This will install kubernetes, docker-ce, start a python virtual environment, and install all ansible-container dependencies inside.
 
 ### Start a private Docker Registry
 This will be the location that your Kubernetes pulls images from.
+
 For details steps see the official Docker site: https://docs.docker.com/registry/deploying/
 
-#### Raise the timeout period for Docker
-`echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> /usr/lib/python2.7/site-packages/ansible_container-0.9.2-py2.7.egg/container/docker/templates/conductor-local-dockerfile.j2`
-
-#### Install Ansible Container for running the build steps
-`pip install ansible-container` 
-If you're using a virtual environment then see the instructions [on our wiki](https://github.com/sassoftware/sas-container-recipes/wiki).
-
-#### Install Kubernetes
-See the official Kubernetes site: https://kubernetes.io/docs/tasks/tools/install-kubectl/
-
 ### Build
-Download this repository to use the build script. `git clone https://github.com/sassoftware/sas-container-recipes.git`
-
 The `build.sh` tool creates Docker images from your software order, pushes them to your docker registry, and creates Kubernetes deployment files. Define some variables that point to your Software Order Email zip file, your Docker registry location, and your Docker registry namespace:
 
 ```
@@ -30,11 +26,11 @@ The `build.sh` tool creates Docker images from your software order, pushes them 
 ```
 
 ### Deploy
-Kubernetes files are automatically placed into the `deploy/` directory. 
+Kubernetes files are automatically placed into the `deploy/` directory. To import the resources for deployment:
 ```
-kubectl create -f deploy/configmap/
-kubectl create -f deploy/secrets/
-kubectl create -f deploy/deployments/
+kubectl create --recursive --filename deploy/kubernetes/secrets
+kubectl create --recursive --filename deploy/kubernetes/configmaps
+kubectl create --recursive --filename deploy/kubernetes/ [smp] OR [mpp]
 ```
 
 ## Documentation
