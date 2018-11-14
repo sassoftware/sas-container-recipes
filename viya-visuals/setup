@@ -1,0 +1,92 @@
+---
+
+- name: Run this locally to set up ansible-container, docker, and kubernetes
+  hosts: 127.0.0.1
+  connection: local
+  become: yes
+  tasks:
+
+      - name: Install the epel repository
+        yum:
+          name: epel-release
+          state: present
+
+      - name: Downgrade pip to work with ansible-container
+        shell: pip install --upgrade pip==9.0.3 
+        
+      - name: Install yum packages for ansible-container
+        yum:
+          name: "{{ item }}"
+          state: present
+        with_items:
+            #- kubernetes # TODO: Having dependency issues with this
+            - git
+            - python-setuptools
+            - python-devel
+            - openssl-devel
+            - python-pip
+            - gcc
+            - wget
+            - tree
+            - automake
+            - python-six
+            - yum-utils 
+            - device-mapper-persistent-data 
+            - lvm2
+
+      - name: Install ansible-container python dependencies
+        pip:
+          name: virtualenv
+          state: present
+
+      - name: Create a virtual environment for python
+        shell: virtualenv venv
+
+      - name: Source the new virtual environment
+        shell: source venv/bin/activate
+
+      - name: Install ansible-container python dependencies in the virtual environment
+        pip:
+          name: virtualenv
+          state: present
+        with_items:
+            - ansible==2.4.1
+            - backports.ssl-match-hostname==3.5.0.1
+            - certifi==2018.8.13
+            - chardet==3.0.4
+            - colorama==0.3.9
+            - dictdiffer==0.7.1
+            - docker==2.7.0
+            - docker-pycreds==0.3.0
+            - httplib2==0.11.3
+            - idna==2.7
+            - ipaddress==1.0.22
+            - Jinja2==2.10
+            - kubernetes==1.0.2
+            - MarkupSafe==1.0
+            - oauth2client==4.1.2
+            - openshift==0.0.1
+            - pyasn1==0.4.4
+            - pyasn1-modules==0.2.2
+            - python-dateutil==2.7.3
+            - python-string-utils==0.6.0
+            - PyYAML==3.13
+            - requests==2.19.1
+            - rsa==3.4.2
+            - ruamel.ordereddict==0.4.13
+            - ruamel.yaml==0.15.51
+            - six==1.11.0
+            - structlog==18.1.0
+            - urllib3==1.23
+            - websocket-client==0.51.0
+            - ansible-container
+
+      - name: Start the docker daemon if not started
+        service:
+          name: docker
+          state: started
+
+      # Workaround for timeout errors when building large images in ansible-container
+      - name: Make the ansible-container conductor use a longer docker client timeout
+        shell: echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> /usr/lib/python2.7/site-packages/ansible_container-0.9.2-py2.7.egg/container/docker/templates/conductor-local-dockerfile.j2
+

@@ -373,8 +373,10 @@ function setup_environment() {
 # https://www.ansible.com/integrations/containers/ansible-container
 #
 function make_ansible_yamls() {
+    # Each directory in the group_vars is a new host
     for file in $(ls -1 sas_viya_playbook/group_vars); do
-        echo -e "*** Create the roles directory for the host groups"
+
+        # Ignore some default hosts
         if [ "${file}" != "all" ] && \
            [ "${file}" != "CommandLine" ] && \
            [ "${file}" != "sas-all" ] && \
@@ -392,28 +394,25 @@ function make_ansible_yamls() {
             
             if (( ${pkg_grep_rc} == 0 )) || (( ${grp_grep_rc} == 0 )); then
             
-                echo "***   Create the roles directory for service '${file}'"; echo
-                mkdir --parents --verbose roles/${file}/tasks
-                mkdir --parents --verbose roles/${file}/templates
-                mkdir --parents --verbose roles/${file}/vars
+                # Creates the roles/{tasks, templates, vars} directories
+                mkdir --parents roles/${file}/tasks
+                mkdir --parents roles/${file}/templates
+                mkdir --parents roles/${file}/vars
                
+                # Copy the tasks file for the service
                 if [ ! -f "roles/${file}/tasks/main.yml" ]; then
-                    echo; echo "***     Copy the tasks file for service '${file}'"; echo
-                    cp --verbose ../templates/task.yml roles/${file}/tasks/main.yml
-                else
-                    echo; echo "***     Tasks file for service '${file}' already exists"; echo
+                    cp ../templates/task.yml roles/${file}/tasks/main.yml
                 fi
 
+                # Copy the entrypoint file for the service
                 if [ ! -f "roles/${file}/templates/entrypoint" ]; then
-                    echo; echo "***     Copy the entrypoint file for service '${file}'"; echo
-                    cp --verbose ../templates/entrypoint roles/${file}/templates/entrypoint
-                else
-                    echo; echo "***     entrypoint file for service '${file}' already exists"; echo
+                    cp ../templates/entrypoint roles/${file}/templates/entrypoint
                 fi
 
                 # Each file in the static-service directory has the same file name as its service name
                 # If the file name is the same as the service then the service exists in the order
                 is_static=false
+                all_services=() # Keep a list of the built services so they can be pushed a registry
                 static_services=$(ls ../templates/static-services/)
                 for service in ${static_services}; do
                     if [ "${file,,}.yml" == ${service} ]; then
@@ -421,11 +420,13 @@ function make_ansible_yamls() {
                         cat ../templates/static-services/${service} >> container.yml
                         echo -e "" >> container.yml
                         is_static=true
+                        static_services+=(${service})
                     fi
                 done
 
                 # Service is not static, meaning it needs to be dynamically created
                 if [ ! $is_static ]; then
+                    static_services+=(${service})
                     cat >> container.yml <<EOL
 
       ${file,,}:
@@ -479,12 +480,12 @@ EOL
             
             # Remove previous roles files if they exist
             if [ -f roles/${role}/vars/${role} ]; then
-                sudo rm -v roles/${role}/vars/${role}
+                rm -f roles/${role}/vars/${role}
             fi
             
             # Copy the role's vars directory if it exists
             if [ -d roles/${role}/vars ]; then
-                cp -v sas_viya_playbook/group_vars/${role} roles/${role}/vars/
+                cp sas_viya_playbook/group_vars/${role} roles/${role}/vars/
             fi
         fi
     done
@@ -512,7 +513,7 @@ EOL
     sed -i 's|^DEPLOYMENT_ID:.*||' temp_all
     sed -i 's|^SPRE_DEPLOYMENT_ID:.*||' temp_all
     cat temp_all >> everything.yml
-    sudo rm -v temp_all
+    rm -f temp_all
 
     cat sas_viya_playbook/vars.yml >> everything.yml
     cat sas_viya_playbook/internal/soe_defaults.yml >> everything.yml
@@ -539,12 +540,13 @@ function make_deployments() {
 
 # Push built images to the specified private docker registry
 function push_images() {
-    set -x
-    for role in $(ls roles/); do
+    # Note: all_services is a list of services inside the container.yml
+    for role in ${all_services}; do 
+        set -x
         docker tag sas-viya-${role,,} ${DOCKER_REGISTRY_URL}:5000/${DOCKER_REGISTRY_NAMESPACE}/sas-viya-${role,,} && \
         docker push ${DOCKER_REGISTRY_URL}:5000/${DOCKER_REGISTRY_NAMESPACE}/sas-viya-${role,,}:latest
+        set +x
     done
-    set +x
 }
 
 # Steps mirrored in documentation - show the user what comes next
