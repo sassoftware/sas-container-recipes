@@ -8,8 +8,10 @@ spec:
     metadata:
       labels:
         app: {{ settings.project_name }}-sas-casserver-worker
+        domain: {{ settings.project_name }}
     spec:
       hostname: {{ settings.project_name }}-sas-casserver-worker
+      subdomain: {{ settings.project_name }}-subdomain
       containers:
       - name: {{ settings.project_name }}-sas-casserver-worker
 {% for regkey,regvalue in registries.items() %}
