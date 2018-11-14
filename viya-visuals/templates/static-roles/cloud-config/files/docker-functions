@@ -185,6 +185,11 @@ function docker_run_sas_services()
         fi
     done
 
+    # Pausing long enough to allow the services to get far enough in the start
+    # process to generate a pid file as well as a log file.
+    [[ -z ${SAS_PID_PAUSE+x} ]] && SAS_PID_PAUSE=5
+    sleep ${SAS_PID_PAUSE}
+
     if ${SAS_LOGS_TO_STDOUT}; then
         for logdir in $(ls -1 "/var/log/sas/${SASDEPLOYID}"); do
             if [ "${logdir}" != "all-services" ]; then
