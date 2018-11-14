@@ -5,8 +5,12 @@ Using containers to build, customize, and deploy a SAS environment in Kubernetes
 
 #### Install Ansible
 RHEL/CentOS: `sudo yum install ansible`
+
 Fedora: `sudo dnf install ansible`
+
 Ubuntu: `sudo apt-get install ansible`
+
+SUSE: `sudo zypper install ansible`
 
 #### Setup the Environment
 Clone this repository using `git clone https://github.com/sassoftware/sas-container-recipes.git` then run `sudo ansible-playbook setup` inside this project directory.
