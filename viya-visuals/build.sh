@@ -425,28 +425,28 @@ function make_ansible_yamls() {
                 done
 
                 # Service is not static, meaning it needs to be dynamically created
-                if [ ! $is_static ]; then
+                if [ $is_static != true ]; then
                     static_services+=(${service})
                     cat >> container.yml <<EOL
 
-      ${file,,}:
-        from: "centos:7"
-        roles:
-        - sas-java
-        - ${file}
-        ports: {}
-        entrypoint: ["/opt/sas/viya/home/bin/${file,,}-entrypoint.sh"]
-        dev_overrides:
-          environment:
-            - "SAS_DEBUG=1"
-        deployment_overrides:
-          volumes:
-            - "log=/opt/sas/viya/config/var/log"
-          resources:
-            limits:
-            - "memory=10Gi"
-            requests:
-            - "memory=2Gi"
+  ${file,,}:
+    from: "centos:7"
+    roles:
+    - sas-java
+    - ${file}
+    ports: {}
+    entrypoint: ["/opt/sas/viya/home/bin/${file,,}-entrypoint.sh"]
+    dev_overrides:
+      environment:
+        - "SAS_DEBUG=1"
+    deployment_overrides:
+      volumes:
+        - "log=/opt/sas/viya/config/var/log"
+      resources:
+        limits:
+        - "memory=10Gi"
+        requests:
+        - "memory=2Gi"
 
 EOL
                 fi
