@@ -1,0 +1,78 @@
+---
+- block:
+    - name: "Create directory {{ SAS_CONFIG_ROOT }}/etc/sysconfig/cas/<cas-instance>"
+      become: 'yes'
+      become_user: root
+      file:
+        path: "{{ SAS_CONFIG_ROOT }}/etc/sysconfig/cas/{{ item.key }}"
+        state: directory
+        owner: "{{ INSTALL_USER }}"
+        group: "{{ INSTALL_GROUP }}"
+        mode: 0755
+      when: (item.value.primary_host is defined and inventory_hostname == item.value.primary_host) or (item.value.secondary_host is defined and inventory_hostname == item.value.secondary_host) or (item.value.worker_hosts is defined and item.value.worker_hosts and inventory_hostname in item.value.worker_hosts.split(','))
+      with_dict: '{{ CLUSTER_DEFINITIONS_cas }}'
+
+    - name: Create cas grids vars file
+      become: 'yes'
+      become_user: root
+      template:
+        src: "cas_grid_vars.j2"
+        dest: "{{ SAS_CONFIG_ROOT }}/etc/sysconfig/cas/{{ item.key }}/cas_grid_vars"
+        owner: "{{ INSTALL_USER }}"
+        group: "{{ INSTALL_GROUP }}"
+        mode: 0644
+      when: (item.value.primary_host is defined and inventory_hostname == item.value.primary_host) or (item.value.secondary_host is defined and inventory_hostname == item.value.secondary_host) or (item.value.worker_hosts is defined and item.value.worker_hosts and inventory_hostname in item.value.worker_hosts.split(','))
+      with_dict: '{{ CLUSTER_DEFINITIONS_cas }}'
+
+    - name: Execute Node Initialization
+      become: 'yes'
+      become_user: root
+      command: '{{ SASHOME }}/bin/cas_init.sh -r {{ SASROOT }} -d {{ DEPLOYMENT_ID }} -i {{ item.key }}'
+      when: (item.value.primary_host is defined and inventory_hostname == item.value.primary_host) or (item.value.secondary_host is defined and inventory_hostname == item.value.secondary_host) or (item.value.worker_hosts is defined and item.value.worker_hosts and inventory_hostname in item.value.worker_hosts.split(','))
+      with_dict: '{{ CLUSTER_DEFINITIONS_cas }}'
+
+    - name: started CAS Service
+      become: 'yes'
+      become_user: root
+      command: '{{ SASHOME }}/libexec/cas/cas_start_service.sh -r {{ SASROOT }} -d {{ DEPLOYMENT_ID }} -i {{ item.key }}'
+      when: (item.value.primary_host is defined and inventory_hostname == item.value.primary_host) or (item.value.secondary_host is defined and inventory_hostname == item.value.secondary_host) or (item.value.worker_hosts is defined and item.value.worker_hosts and inventory_hostname in item.value.worker_hosts.split(','))
+      with_dict: '{{ CLUSTER_DEFINITIONS_cas }}'
+  when: ansible_env.ANSIBLE_CONTAINER is not defined
+
+- block:
+    - block:
+      - name: Create CAS cluster definition file
+        template:
+          src: "cluster_defn_vars.yml.j2"
+          dest: "/tmp/cluster_defn_vars.yml"
+          mode: 0644
+      - name: include /tmp/cluster_defn_vars.yml
+        include_vars: "/tmp/cluster_defn_vars.yml"
+      delegate_to: 127.0.0.1
+      when: CLUSTER_DEFINITIONS is not defined
+
+    - name: If CLUSTER_DEFINITIONS.cas is not empty, copy contents
+      set_fact:
+        CLUSTER_DEFINITIONS_cas: "{{ CLUSTER_DEFINITIONS.cas }}"
+      when: CLUSTER_DEFINITIONS.cas is defined and CLUSTER_DEFINITIONS.cas | string != 'None'
+
+    - name: Make sure CLUSTER_DEFINITIONS_cas is defined
+      set_fact:
+        CLUSTER_DEFINITIONS_cas: {}
+      when: CLUSTER_DEFINITIONS_cas is not defined
+    - name: Create cas grids vars file
+      template:
+        src: "cas_grid_vars.j2"
+        dest: "{{ SAS_CONFIG_ROOT }}/etc/sysconfig/cas/{{ INSTANCE_ID }}/cas_grid_vars"
+        owner: "{{ INSTALL_USER }}"
+        group: "{{ INSTALL_GROUP }}"
+        mode: 0644
+      with_dict: '{{ CLUSTER_DEFINITIONS_cas }}'
+
+    - name: Execute Node Initialization
+      command: '{{ SASHOME }}/bin/cas_init.sh -r {{ SASROOT }} -d {{ DEPLOYMENT_ID }} -i {{ INSTANCE_ID }}'
+      with_dict: '{{ CLUSTER_DEFINITIONS_cas }}'
+
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+
+...

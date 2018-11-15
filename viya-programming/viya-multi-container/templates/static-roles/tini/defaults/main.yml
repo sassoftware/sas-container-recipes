@@ -1,0 +1,5 @@
+---
+# defaults file for tini
+
+tini_rpm_name: "tini_0.18.0.rpm"
+tini_rpm_url: "https://github.com/krallin/tini/releases/download/v0.18.0/{{ tini_rpm_name }}"

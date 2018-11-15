@@ -1,0 +1,4 @@
+---
+# defaults file for sas-install
+
+platform: "{% if ansible_os_family == 'RedHat' %}redhat{% else %}suse{% endif %}"

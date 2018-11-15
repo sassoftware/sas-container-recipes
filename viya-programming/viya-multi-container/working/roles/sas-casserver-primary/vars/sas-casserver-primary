@@ -1,0 +1,40 @@
+---
+sas_host_group_variables_sas-casserver-primary:
+  installables-x64_redhat_linux_6-yum:
+    ASTORE for EMBSCOREENG:
+      SERVICE_APP_NAME: ygeseastore
+      SERVICE_PRODUCT_NAME: ASTORE for EMBSCOREENG
+      SERVICE_YUM_GROUP: ASTORE for EMBSCOREENG
+    CAS for SAS Visual Analytics:
+      SERVICE_APP_NAME: ygvacas
+      SERVICE_PRODUCT_NAME: CAS for SAS Visual Analytics
+      SERVICE_YUM_GROUP: CAS for SAS Visual Analytics
+    CUDA Library Support for SAS:
+      SERVICE_APP_NAME: yggpulib
+      SERVICE_PRODUCT_NAME: CUDA Library Support for SAS
+      SERVICE_YUM_GROUP: CUDA Library Support for SAS
+    cleanutils:
+      SERVICE_APP_NAME: cleanutils
+      SERVICE_MEMORY_NEEDED: 32
+      SERVICE_PRODUCT_NAME: cleanutils
+      SERVICE_YUM_PACKAGE: sas-cleanutils
+    espbase:
+      SERVICE_APP_NAME: espbase
+      SERVICE_MEMORY_NEEDED: 12000
+      SERVICE_PRODUCT_NAME: espbase
+      SERVICE_YUM_PACKAGE: sas-espbase
+    sasgpudcfg:
+      SERVICE_APP_NAME: sasgpudcfg
+      SERVICE_MEMORY_NEEDED: 12000
+      SERVICE_PRODUCT_NAME: sasgpudcfg
+      SERVICE_YUM_PACKAGE: sas-sasgpudcfg
+    tkcas:
+      SERVICE_APP_NAME: tkcas
+      SERVICE_MEMORY_NEEDED: 12000
+      SERVICE_PRODUCT_NAME: tkcas
+      SERVICE_YUM_PACKAGE: sas-tkcas
+    txtmineng:
+      SERVICE_APP_NAME: txtmineng
+      SERVICE_MEMORY_NEEDED: 12000
+      SERVICE_PRODUCT_NAME: txtmineng
+      SERVICE_YUM_PACKAGE: sas-txtmineng

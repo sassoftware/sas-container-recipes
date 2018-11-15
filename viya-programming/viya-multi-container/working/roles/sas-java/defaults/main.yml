@@ -1,0 +1,11 @@
+---
+# defaults file for sas-java
+
+platform: "{% if ansible_os_family == 'RedHat' %}redhat{% else %}suse{% endif %}"
+
+sas_default_java: "{% if ansible_os_family == 'RedHat' %}java-1.8.0-openjdk{% else %}java-1_8_0-openjdk{% endif %}"
+sas_default_jre_path: "{% if ansible_os_family == 'RedHat' %}/usr/lib/jvm/jre-1.8.0{% else %}/usr/lib64/jvm/jre-1.8.0{% endif %}"
+  # - '/usr/lib/jvm/jre-1.8.0-openjdk'
+  # - '/usr/lib/jvm/jre-1.8.0-openjdk.x86_64'
+sas_install_java_action: present
+

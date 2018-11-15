@@ -1,0 +1,14 @@
+---
+# defaults file for spawner-config
+
+SERVICE_NAME: '{{ SERVICE_NAME_DEFAULT }}'
+SERVICE_PRODUCT_NAME: spawner
+SERVICE_SYSCONFIG_PATH: /etc/sysconfig/sas/{{ SERVICE_NAME }}
+sas_task_file: start.yml
+
+sas_config_dir: "{{ SASROOT + '/' + DEPLOYMENT_ID + '/config/etc' }}"
+
+sas_spawner_port: "{{ SPAWNER_CONFIGURATION.sasPort | default(8591) }}"
+
+multi_tenancy_deployment: false
+...
