@@ -560,6 +560,46 @@ function show_next_steps() {
     echo -e ""
 }
 
+# Python virtualenv configuration
+function prebuild_steps() {
+    if [[ "${SAS_CREATE_AC_VIRTUAL_ENV}" == "true" ]]; then
+        # Detect virtualenv with $VIRTUAL_ENV
+        if [[ -n $VIRTUAL_ENV ]]; then
+            echo "Existing virtualenv detected..."
+        # Create default env if none
+        elif [[ -z $VIRTUAL_ENV ]] && [[ ! -d env/ ]]; then
+            echo "Creating virtualenv env..."
+            virtualenv --system-site-packages env
+            . env/bin/activate
+        # Activate existing env if available
+        elif [[ -d env/ ]]; then
+            echo "Activating virtualenv env..."
+            . env/bin/activate
+        fi
+        # Ensure env active or die
+        if [[ -z $VIRTUAL_ENV ]]; then
+            echo "Failed to activate virtualenv....exiting."
+            exit 1
+        fi
+        # Detect python 2+ or 3+
+        PYTHON_MAJOR_VER="$(python -c 'import platform; print(platform.python_version()[0])')"
+        if [[ $PYTHON_MAJOR_VER -eq "2" ]]; then
+            # Install ansible-container
+            pip install --upgrade pip==9.0.3
+            pip install ansible-container[docker]
+        elif [[ $PYTHON_MAJOR_VER -eq "3" ]]; then
+            echo "WARN: Python3 support is experimental in ansible-container."
+            echo "Updating requirements file for python3 compatibility..."
+            sed -i.bak '/ruamel.ordereddict==0.4.13/d' ./requirements.txt
+            pip install --upgrade pip==9.0.3
+            pip install -e git+https://github.com/ansible/ansible-container.git@develop#egg=ansible-container[docker]
+        fi
+        # Restore latest pip version
+        pip install --upgrade pip setuptools
+        pip install -r requirements.txt
+    fi
+}
+
 setup_environment  # Make the working directory "debug/" and copy in templates
 validate_input     # Check provided arguments
 setup_logging      # Show build variables and enable logging if debug is on
