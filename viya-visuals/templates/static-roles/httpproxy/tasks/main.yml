@@ -10,9 +10,10 @@
   include_role:
     name: sas-install
 
-- name: Add cloud configuration files
-  include_role:
-    name: cloud-config
+- name: Check dir presence for entrypoint
+  file:
+    path: "{{ SASHOME }}/bin"
+    state: directory
 
 - name: Copy over entrypoint script
   template:
@@ -21,4 +22,3 @@
     mode: "0755"
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
-

@@ -592,12 +592,11 @@ function make_deployments() {
 # Push built images to the specified private docker registry
 function push_images() {
     # Note: all_services is a list of services inside the container.yml
+    set -x
     for role in ${all_services}; do 
-        set -x
-        docker tag sas-viya-${role,,} ${DOCKER_REGISTRY_URL}:5000/${DOCKER_REGISTRY_NAMESPACE}/sas-viya-${role,,} && \
-        docker push ${DOCKER_REGISTRY_URL}:5000/${DOCKER_REGISTRY_NAMESPACE}/sas-viya-${role,,}:latest
-        set +x
+        ansible-container push --push-to docker-registry --tag ${SAS_DOCKER_TAG}
     done
+    set +x
 }
 
 # Steps mirrored in documentation - show the user what comes next

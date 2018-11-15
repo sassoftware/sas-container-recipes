@@ -8,10 +8,17 @@
     controller_host: "{{ sasenv_cas_host }}"
   when: sasenv_cas_host is defined and sasenv_cas_host
 
-- name: Set CAS host
+- name: Set CAS host to default for containers
   set_fact:
-    controller_host: "{% set cas_host_set = [False] %}{% if CLUSTER_DEFINITIONS is defined and CLUSTER_DEFINITIONS.cas is defined %}{% for key, value in CLUSTER_DEFINITIONS.cas.items() %}{% if not cas_host_set[0] and value.primary_host is defined %}{{ hostvars[value.primary_host].sas_vars.hostname_fqdn }}{% set _ = cas_host_set.append(not cas_host_set.pop()) %}{% endif %}{% endfor %}{% endif %}{% if not cas_host_set[0] %}&SYSTCPIPHOSTNAME{% endif %}"
-  when: sasenv_cas_host is not defined or (sasenv_cas_host is defined and not sasenv_cas_host)
+    controller_host: "{{ PROJECT_NAME }}-sas-casserver-primary"
+  when: sasenv_cas_host is not defined and ansible_env.ANSIBLE_CONTAINER is defined
+
+- block:
+  - name: Set CAS host
+    set_fact:
+      controller_host: "{% set cas_host_set = [False] %}{% if CLUSTER_DEFINITIONS is defined and CLUSTER_DEFINITIONS.cas is defined %}{% for key, value in CLUSTER_DEFINITIONS.cas.items() %}{% if not cas_host_set[0] and value.primary_host is defined %}{{ hostvars[value.primary_host].sas_vars.hostname_fqdn }}{% set _ = cas_host_set.append(not cas_host_set.pop()) %}{% endif %}{% endfor %}{% endif %}{% if not cas_host_set[0] %}&SYSTCPIPHOSTNAME{% endif %}"
+    when: sasenv_cas_host is not defined or (sasenv_cas_host is defined and not sasenv_cas_host)
+  when: ansible_env.ANSIBLE_CONTAINER is not defined
   ###### END - host #########
 
   ###### START - port #########
