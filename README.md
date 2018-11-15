@@ -57,8 +57,11 @@ The following example assumes that you are in the
 /$HOME/sas-container-recipes directory, a mirror repository is set up at `http://host.company.com/sas_repo`, and an addon layer, [auth-demo](addons/auth-demo/README.md), is included in the build.
 
 ```
-export SAS_RPM_REPO_URL=http://host.company.com/sas_repo
-build.sh --type single --zip /path/to/SAS_Viya_deployment_data.zip -m http://host.company.com/sas_repo -addons "addons/auth-demo"
+build.sh \
+--type single \
+--zip /path/to/SAS_Viya_deployment_data.zip \
+--mirror-url http://host.company.com/sas_repo \
+--addons "addons/auth-demo"
 ```
 
 ### List Images
@@ -160,6 +163,11 @@ kubectl create -f sas-viya.ing
 
 ### Use build.sh to Build the Images
 
+A script named `build.sh` is at the repository root level. After the sassoftware/sas-container-recipes project is cloned, run `build.sh` to build a set of Docker images for SAS Viya 3.4.
+
+The following example assumes that you are in the 
+/$HOME/sas-container-recipes directory, a mirror repository is set up at `http://host.company.com/sas_repo`, and an addon layer, [auth-demo](addons/auth-demo/README.md), is included in the build.
+
 ```
 build.sh \
 --type multiple \
@@ -168,7 +176,7 @@ build.sh \
 --docker-url docker.registry.company.com \
 --docker-namespace sas \
 --virtual-host sas-viya-http.company.com \
--addons "addons/auth-demo"
+--addons "addons/auth-demo"
 ```
 
 ### Start the Containers
