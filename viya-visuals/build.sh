@@ -355,7 +355,7 @@ function setup_environment() {
     [[ -z ${SAS_RECIPE_TYPE+x} ]]           && SAS_RECIPE_TYPE=single
     [[ -z ${CHECK_MIRROR_URL+x} ]]          && CHECK_MIRROR_URL=false
     [[ -z ${CHECK_DOCKER_URL+x} ]]          && CHECK_DOCKER_URL=false
-    [[ -z ${SETUP_VIRTUAL_ENVIRONMENT+x} ]] && SETUP_VIRUTAL_ENVIRONMENT=false
+    [[ -z ${SETUP_VIRTUAL_ENVIRONMENT+x} ]] && SETUP_VIRTUAL_ENVIRONMENT=false
     [[ -z ${SAS_DOCKER_TAG+x} ]]            && SAS_DOCKER_TAG=${sas_version}-${sas_datetime}-${sas_sha1}
     [[ -n "${BASEIMAGE}" ]]                 && BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=${BASEIMAGE}"
     [[ -n "${BASETAG}" ]]                   && BUILD_ARG_BASETAG="--build-arg BASETAG=${BASETAG}"
