@@ -10,7 +10,10 @@
   include_role:
     name: sas-install
 
-# docker-functions is unique for this role at the moment.
+- name: Add cloud configuration files
+  include_role:
+    name: cloud-config
+
 - name: Copy files to remote host
   copy:
     src: "{{ item.name }}"
@@ -19,11 +22,15 @@
     group: "{{ INSTALL_GROUP }}"
     mode: "{{ item.mode }}"
   with_items:
-  - { name: docker-functions, path: "lib/envesntl", mode: "0755" }
   - { name: createudfformats_startup.lua, path: "share/cas", mode: "0755" }
   - { name: register_cas.sh, path: "SASFoundation/utilities/bin", mode: "0755" }
   - { name: tenant_setup_docker.sh, path: "bin", mode: "0755" }
-  
+
+- name: configure cas server
+  include_role:
+    name: casserver-config
+    tasks_from: start
+
 - name: Copy over entrypoint script
   template:
     src: entrypoint
@@ -31,4 +38,3 @@
     mode: "0755"
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
-
