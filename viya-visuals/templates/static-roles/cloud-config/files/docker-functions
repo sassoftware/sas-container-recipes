@@ -156,8 +156,10 @@ function docker_run_local_consul()
 
         # Wait for Consul to be up
         docker_wait_for_consul_leader
-    fi
 
+        [[ -z ${SAS_LOCAL_CONSUL_PAUSE+x} ]] && SAS_LOCAL_CONSUL_PAUSE=5
+        sleep ${SAS_LOCAL_CONSUL_PAUSE}
+    fi
 }
 
 function docker_run_sas_services()
@@ -180,7 +182,9 @@ function docker_run_sas_services()
     for viya_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-*); do
         echo ${viya_process}
         if [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
-           [[ "${viya_process}" != *"sasgpud"* ]]; then
+           [[ "${viya_process}" != *"sasgpud"* ]] &&
+           [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-default" ]]; then
+            echo "[INFO]  : Starting ${viya_process}"
             ${viya_process} start
         fi
     done
@@ -277,7 +281,12 @@ function docker_check_sas_services()
     while :; do
         sleep 3
         for _pidf in $(ls -1 /var/run/sas/sas-${SASDEPLOYID}-*); do
-            if [[ "${_pidf}" != *"sas-${SASDEPLOYID}-all-services"* ]]; then
+            # Skip checking all-services and ops-agent. Trying to not use all-services 
+            # in the docker image. Not sure if it will be Docker compliant for SuSE
+            # based images. Skipping ops-agent, because we will manage that in 
+            # a different way.
+            if [[ "${_pidf}" != *"sas-${SASDEPLOYID}-all-services"* ]] &&
+               [[ "${_pidf}" != *"sas-${SASDEPLOYID}-ops-agent-default" ]]; then
                 if [ -f ${_pidf} ]; then
                     SERVICE_PID=$(cat ${_pidf})
                     set +e

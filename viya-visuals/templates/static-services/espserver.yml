@@ -1,5 +1,5 @@
   espserver:
-    from: "centos:7"
+    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - sas-java
     - espServer
@@ -8,6 +8,9 @@
     - "8082:8082"
     - "5000:5000"
     entrypoint: ["/opt/sas/viya/home/bin/espserver-entrypoint.sh"]
+    labels:
+      sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
+      sas.layer.espserver: "true"
     dev_overrides:
       environment:
         - "SAS_DEBUG=1"

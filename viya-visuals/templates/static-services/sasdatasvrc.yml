@@ -1,10 +1,13 @@
   sasdatasvrc:
-    from: "centos:7"
+    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - sasdatasvrc
     ports:
     - "5432:5432"
     entrypoint: ["/opt/sas/viya/home/bin/sasdatasvrc-entrypoint.sh"]
+    labels:
+      sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
+      sas.layer.sasdatasvrc: "true"
     volumes:
     - static-content:/database/data
     dev_overrides:

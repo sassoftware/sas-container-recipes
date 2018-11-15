@@ -17,6 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -x
 
 function usage() {
     echo -e ""
@@ -330,8 +331,8 @@ function validate_input() {
 # tool to create the playbook. Any changes made to this playbook will get
 # overridden in the next build.
 function get_playbook() {
-    echo -e "[INFO]  : Generating  playbook"
-    sas-orchestration build --input ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}
+    echo -e "[INFO]  : Generating  playbook $PWD"
+    ./sas-orchestration build --input ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}
     tar xvf SAS_Viya_playbook.tgz
     rm SAS_Viya_playbook.tgz
     cp sas_viya_playbook/*.pem .
@@ -355,13 +356,13 @@ function setup_environment() {
     [[ -n "${PLATFORM}" ]]                && BUILD_ARG_PLATFORM="--build-arg PLATFORM=${PLATFORM}"
 
     # Start with a clean working space by moving everything into the debug directory
-    if [[ -d debug/ ]]; then 
-       rm -rf debug/
-    fi
-    mkdir debug
+    #if [[ -d debug/ ]]; then 
+    #   rm -rf debug/
+    #fi
+    #mkdir debug
     cp templates/container.yml debug/
     cp templates/generate_manifests.yml debug/
-    cd debug
+    pushd debug
 }
 
 
@@ -430,12 +431,15 @@ function make_ansible_yamls() {
                     cat >> container.yml <<EOL
 
   ${file,,}:
-    from: "centos:7"
+    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - sas-java
     - ${file}
     ports: {}
     entrypoint: ["/opt/sas/viya/home/bin/${file,,}-entrypoint.sh"]
+    labels:
+      sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
+      sas.layer.${file,,}: "true"
     dev_overrides:
       environment:
         - "SAS_DEBUG=1"
@@ -527,6 +531,25 @@ EOL
     sed -i 's|^ENTITLEMENT_PATH|#ENTITLEMENT_PATH|' everything.yml
     sed -i 's|^SAS_CERT_PATH|#SAS_CERT_PATH|' everything.yml
     sed -i 's|^SECURE_CONSUL:.*|SECURE_CONSUL: false|' everything.yml
+    sed -i "s|#CAS_VIRTUAL_HOST:.*|CAS_VIRTUAL_HOST: '${CAS_VIRTUAL_HOST}'|" everything.yml
+
+    #
+    # Update Container yaml
+    #
+
+    if [ -f ${PWD}/consul.data ]; then
+        consul_data_enc=$(cat ${PWD}/consul.data | base64 --wrap=0 )
+        sed -i "s|CONSUL_KEY_VALUE_DATA_ENC=|CONSUL_KEY_VALUE_DATA_ENC=${consul_data_enc}|g" container.yml
+    fi
+
+    setinit_enc=$(cat ${SAS_VIYA_PLAYBOOK_DIR}/SASViyaV0300*.txt | base64 --wrap=0 )
+    sed -i "s|SETINIT_TEXT_ENC=|SETINIT_TEXT_ENC=${setinit_enc}|g" container.yml
+    sed -i "s|SAS_LICENSE=|SAS_LICENSE=$(cat ${SAS_VIYA_PLAYBOOK_DIR}/SASViyaV0300*.jwt)|g" container.yml
+    sed -i "s|SAS_CLIENT_CERT=|SAS_CLIENT_CERT=$(cat entitlement_certificate.pem  | base64 --wrap=0 )|g" container.yml
+    sed -i "s|SAS_CA_CERT=|SAS_CA_CERT=$(cat SAS_CA_Certificate.pem | base64 --wrap=0 )|g" container.yml
+    sed -i "s|{{ DOCKER_REGISTRY_URL }}|${DOCKER_REGISTRY_URL}|" container.yml
+    sed -i "s|{{ DOCKER_REGISTRY_NAMESPACE }}|${DOCKER_REGISTRY_NAMESPACE}|" container.yml
+    sed -i "s|{{ PROJECT_NAME }}|${PROJECT_NAME}|" container.yml
 }
 
 # Generate the Kubernetes resources
