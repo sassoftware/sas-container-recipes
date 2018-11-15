@@ -30,6 +30,10 @@ if [[ -z ${RUN_USER+x} ]]; then
 fi
 
 echo "[INFO] : RUN_USER set to ${RUN_USER}"
+if [[ "${RUN_USER}" == "cas" ]]; then 
+    echo "[INFO] : Created ${RUN_USER}"
+    useradd cas -s /sbin/nologin
+fi
 
 if [[ -z ${JUPYTER_TOKEN+x} ]]; then
     echo "[WARNING] : JUPYTER_TOKEN is not provided so blank will be used."
@@ -59,10 +63,21 @@ export JPY_COOKIE_SECRET=`openssl rand -hex 32`
 export AUTHINFO="${RUN_USER_HOME}/authinfo.txt"
 export SSLCALISTLOC="${SASHOME}/SASSecurityCertificateFramework/cacerts/trustedcerts.pem"
 export CAS_CLIENT_SSL_CA_LIST="/data/casconfig/sascas.pem"
+[[ -z ${PLATFORM+x} ]] && PLATFORM=@PLATFORM@
 
-cp /usr/local/lib/python3.6/site-packages/saspy/sascfg.py /usr/local/lib/python3.6/site-packages/saspy/sascfg_personal.py
-sed -i -e "s#/opt/sasinside/SASHome/SASFoundation/9.4/bin/sas_u8#/opt/sas/spre/home/SASFoundation/sas#g" \
-    /usr/local/lib/python3.6/site-packages/saspy/sascfg_personal.py
+
+if [[ "${PLATFORM}" == "redhat" ]]; then
+    cp /usr/local/lib/python3.6/site-packages/saspy/sascfg.py /usr/local/lib/python3.6/site-packages/saspy/sascfg_personal.py
+    sed -i -e "s#/opt/sasinside/SASHome/SASFoundation/9.4/bin/sas_u8#/opt/sas/spre/home/SASFoundation/sas#g" \
+        /usr/local/lib/python3.6/site-packages/saspy/sascfg_personal.py
+elif [[ "${PLATFORM}" == "suse" ]]; then
+    cp /usr/lib/python3.4/site-packages/saspy/sascfg.py /usr/lib/python3.4/site-packages/saspy/sascfg_personal.py
+    sed -i -e "s#/opt/sasinside/SASHome/SASFoundation/9.4/bin/sas_u8#/opt/sas/spre/home/SASFoundation/sas#g" \
+        /usr/lib/python3.4/site-packages/saspy/sascfg_personal.py
+else
+    echo "[ERROR] : Unknown platform of '${PLATFORM}'...exiting"
+    exit 3
+fi
 
 _jupyterpid="/var/run/jupyter.pid"
 touch ${_jupyterpid}

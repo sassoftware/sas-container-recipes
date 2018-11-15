@@ -1,0 +1,4 @@
+---
+- include: '{{ sas_task_file }}'
+  when: sas_task_file is defined
+...

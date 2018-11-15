@@ -1,0 +1,179 @@
+#!/bin/bash
+
+#
+# Copyright 2018 SAS Institute Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+set -x
+
+# Download, Configure and Install SAS/Viya
+
+#
+# Viya3.3 used direct yum based install
+# Viya3.4+ now require an ansible based install
+#
+
+# Ansible checks for known_hosts.
+# TODO: Better way to set this up?
+mkdir ~/.ssh
+touch ~/.ssh/known_hosts
+
+
+#
+# decide if this is a Viya 3.3 order, or a 3.4 one
+#
+cd /opt/sas/install
+unzip SAS_Viya_deployment_data.zip order.oom
+grep "sas-va-101" order.oom
+
+if [ $? -eq 0 ]
+then
+  viya_rel="3.3"
+else
+  viya_rel="3.4"
+fi
+
+rm order.oom
+
+#
+# Write out a help page to be displayed when browsing port 80
+#
+cat <<EOF  >/var/www/html/index.html
+<html>
+ <h1> SAS Viya $viya_rel Docker Container </h1>
+ <p> Access the software by browsing to:
+ <ul>
+  <li> <b><a href="/SASStudio">/SASStudio</a></b>
+  <li> <b><a href="/RStudio/auth-sign-in">/RStudio</a></b> (Not installed by default)
+  <li> <b><a href="/Jupyter">/Jupyter</a></b>
+ </ul> using HTTP on port 80.
+
+ <p> If port 80 is forwarded to a different port on the host machine, use the host port instead.
+
+ <p> Use the <b>sasdemo</b> / <b>sasDEMO</b> login to access SAS Studio, CAS, and Jupyter.
+</html>
+EOF
+
+
+
+#
+# for Viya3.3, we could use a simpler yum install
+#
+if [ "$viya_rel" == "3.3" ]
+then
+    mkdir -p /etc/pki/sas/private
+
+    #
+    #fetch the orchestration tool, and build the sas_viya_playbook
+    #
+    # viya3.3 :: https://support.sas.com/installation/viya/33/sas-orchestration-cli/lax/sas-orchestration.tgz
+    #
+    wget -q -O sasorch.tgz https://support.sas.com/installation/viya/33/sas-orchestration-cli/lax/sas-orchestration.tgz
+    tar xvfz sasorch.tgz
+    ./sas-orchestration build --input SAS_Viya_deployment_data.zip
+    tar xvfz SAS_Viya_playbook.tgz
+
+    cd sas_viya_playbook
+    sed -i "s/yum /yum -y /g" customized_deployment_script.sh
+    ./customized_deployment_script.sh
+
+
+    #
+    # postinstall steps
+    #
+    sed -i "s/\${ADMIN_USER}/cas/g" /opt/sas/viya/config/etc/cas/default/perms.xml
+
+    cp /opt/sas/viya/home/SASFoundation/utilities/bin/sas-cascontroller.init /etc/rc.d/init.d/sas-viya-cascontroller-default
+    chown sas:sas /etc/rc.d/init.d/sas-viya-cascontroller-default
+    /sbin/chkconfig --add /etc/rc.d/init.d/sas-viya-cascontroller-default
+
+
+    #
+    # clean up
+    #
+    cd /opt/sas
+    rm -rf /opt/sas/install
+    yum clean all
+    rm -rf /var/cache/yum
+    exit
+fi
+
+
+
+
+#
+# if you get this far, it wasnt a more simple viya3.3 install.
+# prepare the install, and use ansible to install it
+#
+
+
+#
+#fetch the orchestration tool, and build the sas_viya_playbook
+#
+# viya3.4 :: https://support.sas.com/installation/viya/34/sas-orchestration-cli/lax/sas-orchestration-linux.tgz
+#
+orch1=https://support.sas.com/installation/viya/34
+orch2=sas-orchestration-cli/lax
+orch3=sas-orchestration-linux.tgz
+
+curl -kO $orch1/$orch2/$orch3
+tar xfz sas-orchestration-linux.tgz
+chmod +x sas-orchestration
+
+
+#
+# run the orchestration tool using the deployment_data
+#
+./sas-orchestration build --input SAS_Viya_deployment_data.zip --deployment-type=programming
+tar xf SAS_Viya_playbook.tgz
+
+
+#
+# construct a useful install-local inventory file
+#
+cd sas_viya_playbook
+cp samples/inventory_local.ini dockerinv
+
+
+# dont restart httpd, skip the validate, bump the ansible version, install sas
+sed -i "/ notify/,+9d" roles/httpd-x64_redhat_linux_6-yum/tasks/configure-and-start.yml
+sed -i 's/- include: validate.yml/#- include: validate.yml/' internal/deploy-preinstall.yml
+sed -i 's/MAXIMUM_RECOMMENDED_ANSIBLE_VERSION: 2.[0-9]/MAXIMUM_RECOMMENDED_ANSIBLE_VERSION: 2.7/' vars.yml
+
+ansible-playbook -i dockerinv site.yml 2>&1 | tee dockerinv.log
+
+# Uninstall ~10 GB worth of QKB and Sample Maps Data
+rpm -e sas-mapsgfka1
+rpm -e sas-mapsgfkb1
+rpm -e sas-nvidiacuda1
+rpm -e sas-nvidiacuda
+rpm -e sas-mapsvahdat
+rpm -e sas-reportvahdat
+rpm -e sas-orchestration-cli
+
+
+# Replace docker container name as hostname to localhost
+sed -i "s/$(hostname)/localhost/g" /opt/sas/viya/config/etc/cas/default/cas.hosts
+sed -i "s/$(hostname)/localhost/g" /opt/sas/viya/config/etc/cas/default/casconfig_deployment.lua
+sed -i "s/$(hostname)/localhost/g" /opt/sas/viya/config/etc/workspaceserver/default/autoexec_deployment.sas
+
+
+# clean up
+cd /opt/sas
+rm -rf /opt/sas/install
+yum clean all 
+rm -rf /var/cache/yum
+
+

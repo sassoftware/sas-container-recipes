@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) 2016, SAS Institute Inc., Cary, NC, USA, All Rights Reserved
+ *
+ *   sasv9_deployment.cfg
+ *
+ *   This config file contains the specific options needed for the SAS Batch Server.
+ *
+ *   It will include the standard config file for this application server and then
+ *   add on the additional options needed by the Batch Server.
+ *
+ */
+
+/*
+ * This file is created by using data from the SASV9_CONFIGURATION
+ * structure in vars.yml
+ */
+
+-JREOPTIONS=( -Djavax.net.ssl.trustStore={{ SAS_CONFIG_ROOT }}/etc/SASSecurityCertificateFramework/cacerts/trustedcerts.jks )
+
+-SSLCALISTLOC {{ SAS_CONFIG_ROOT }}/etc/SASSecurityCertificateFramework/cacerts/trustedcerts.pem
+
+{% if SASV9_CONFIGURATION is defined and SASV9_CONFIGURATION | length > 0 %}
+{%   for key, value in SASV9_CONFIGURATION.items() %}
+{%      if value[0:1] == '/' %}
+{{ value | trim }}
+{%      else %}
+-{{ value | trim }}
+{%      endif %}
+{%   endfor %}
+{% endif %}

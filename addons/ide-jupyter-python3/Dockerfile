@@ -43,6 +43,8 @@ USER root
 # Setup Jupyter Notebook
 #
 
+COPY post_deploy.sh /tmp/jpy3_post_deploy.sh
+
 RUN set -e; \
     if [ "$PLATFORM" = "redhat" ]; then \
         rpm --rebuilddb; \
@@ -68,6 +70,7 @@ RUN set -e; \
         echo; echo "####### [ERROR] : Unknown platform of \"$PLATFORM\" passed in"; echo; \
         exit 1; \
     fi; \
+    sed -i "s/@PLATFORM@/$PLATFORM/" /tmp/jpy3_post_deploy.sh; \
     pip3 --no-cache-dir install \
       jupyter \
       saspy \
@@ -88,5 +91,3 @@ RUN set -e; \
     if [ "${ENABLE_NATIVE_KERNEL}" = "False" ]; then \
         jupyter kernelspec remove python3 -f; \
     fi
-
-COPY post_deploy.sh /tmp/jpy3_post_deploy.sh

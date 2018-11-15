@@ -1,0 +1,34 @@
+#!/bin/bash -p
+############################################################################
+#
+# This file is created and updated by the SAS Installer and should NOT be modified.
+# Local environmental variable settings should be placed into the
+# sasenv_local file also found in the
+# /opt/sas/spre/home/SASFoundation/bin directory.
+#
+#
+# This file is used to define environment variables that are used
+# with SAS.  Some environment variables may be pre-defined,
+# while some may be commented placeholders.
+#
+############################################################################
+#
+# This file is passed to SASHOME/SASFoundation/bin/sas_u8 by the
+#   batchserver.sh script using the -sasenv option.
+#
+# This file is created by using data from the FOUNDATION_CONFIGURATION
+#   structure in vars.yml.
+#
+############################################################################
+# Copyright (c) 2002-2016, SAS Institute Inc., Cary, NC, USA.  All Rights Reserved.
+############################################################################
+
+{% if FOUNDATION_CONFIGURATION is defined and FOUNDATION_CONFIGURATION | length > 0 %}
+{%   for key, value in FOUNDATION_CONFIGURATION.items() %}
+{%      if value[0:1] == '#' %}
+{{ value | trim }}
+{%      else %}
+export {{ value | trim }}
+{%      endif %}
+{%   endfor %}
+{% endif %}

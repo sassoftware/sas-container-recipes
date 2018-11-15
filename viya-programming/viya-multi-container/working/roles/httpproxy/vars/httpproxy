@@ -1,0 +1,18 @@
+---
+sas_host_group_variables_httpproxy:
+  installables-x64_redhat_linux_6-yum:
+    cleanutils:
+      SERVICE_APP_NAME: cleanutils
+      SERVICE_MEMORY_NEEDED: 32
+      SERVICE_PRODUCT_NAME: cleanutils
+      SERVICE_YUM_PACKAGE: sas-cleanutils
+    httpd:
+      SERVICE_APP_NAME: httpd
+      SERVICE_MEMORY_NEEDED: 0
+      SERVICE_PRODUCT_NAME: httpd
+      SERVICE_YUM_PACKAGE: httpd
+    mod_ssl:
+      SERVICE_APP_NAME: mod_ssl
+      SERVICE_MEMORY_NEEDED: 0
+      SERVICE_PRODUCT_NAME: mod_ssl
+      SERVICE_YUM_PACKAGE: mod_ssl

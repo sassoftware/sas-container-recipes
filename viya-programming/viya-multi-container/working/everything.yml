@@ -1,0 +1,399 @@
+PROJECT_NAME: sas-viya
+BASEIMAGE: centos
+BASETAG: latest
+PLATFORM: redhat
+DOCKER_REGISTRY_URL: localhost
+DOCKER_REGISTRY_NAMESPACE: coguar
+SAS_RECIPE_VERSION: 18.11.0
+
+DEPLOYMENT_ID: viya
+SPRE_DEPLOYMENT_ID: spre
+
+# The values for the variables in this file have been optimized to produce a working deployment.
+# Do not alter the values in this file without the guidance of SAS Technical Support, a SAS consultant, or any other SAS representative.
+
+# The root location where all things sas are placed.
+SASROOT: /opt/sas
+
+# The root of the Viya deployment.
+SAS_DEPLOYMENT_ROOT: "{{ SASROOT }}/{{ DEPLOYMENT_ID }}"
+
+# The root of the SPRE deployment.
+SPRE_DEPLOYMENT_ROOT: "{{ SASROOT }}/{{ SPRE_DEPLOYMENT_ID }}"
+
+# The location where Viya applications are installed.
+SASHOME: "{{ SAS_DEPLOYMENT_ROOT }}/home"
+
+# The location where SPRE applications are installed.
+SPREHOME: "{{ SPRE_DEPLOYMENT_ROOT }}/home"
+
+# The location where Viya configuration(s) are installed.
+SAS_CONFIG_ROOT: "{{ SAS_DEPLOYMENT_ROOT }}/config"
+
+# The location where SPRE configuration(s) are installed.
+SPRE_CONFIG_ROOT: "{{ SPRE_DEPLOYMENT_ROOT }}/config"
+
+# SAS user and group used by the playbook for creating directories and writing files on the target host.
+INSTALL_USER: sas
+INSTALL_GROUP: sas
+
+# The DEPLOYMENT_ID value below aligns with the default Viya product directory.
+
+
+# The DEPLOYMENT_ID value below aligns with the default SPRE product directory.
+
+
+# The INSTANCE_ID value below aligns with the default configuration.
+INSTANCE_ID: default
+
+# The SERVICE_NAME defines the format of the service's name to be started.
+#SERVICE_NAME_DEFAULT: sas-{{ DEPLOYMENT_ID }}-{{ SERVICE_PRODUCT_NAME }}-{{ INSTANCE_ID }}
+
+# The SAS Security Certificate Framework path under the configuration root.
+CERTFRAME_REL_CONFIG_PATH: etc/SASSecurityCertificateFramework
+
+# Location on target machines to put cacerts for TLS-enabled repositories.
+SSL_CAPATH: /etc/pki/sas/certs/
+
+# The following variables contain address information for the remote hosts.
+# In the case you're doing a remote deployment, the templates below resolve
+# the host addresses defined in the 'hosts' file.  In the case you're doing
+# a local deployment, the templates resolve the host addresses to 'localhost'
+#CONSUL_EXTERNAL_ADDRESS: "{{ '' if (groups['consul'] is not defined or not groups['consul']) else 'localhost' if hostvars[groups['consul'][0]]['ansible_connection'] | default('') == 'local' else hostvars[groups['consul'][0]].sas_vars.hostname_fqdn }}"
+#CONSUL_EXTERNAL_ADDRESS_PORT: 8500
+
+# For systemd hosts, the minimum version required.
+SYSTEMD_MAJOR_MIN: 219
+SYSTEMD_MINOR_MIN: 30
+
+# Hadoop info
+hdp_home: "{% if CAS_SETTINGS is defined and CAS_SETTINGS %}{% for key, value in CAS_SETTINGS.items() %}{% if value | search('^\\s*HADOOP_HOME\\s*=') %}{{ value }}{% endif %}{% endfor %}{% else %}{% endif %}"
+hdp_namenode: "{% if CAS_SETTINGS is defined and CAS_SETTINGS %}{% for key, value in CAS_SETTINGS.items() %}{% if value | search('^\\s*HADOOP_NAMENODE\\s*=') %}{{ value }}{% endif %}{% endfor %}{% else %}{% endif %}"
+
+# Hadoop Configuration info
+# The parent directory of the two folders where Hadoop JAR and configuration files will be copied to.
+hadoop_conf_home: /opt/sas/viya/config/data/hadoop
+# The name of the folder for the Hadoop JAR files (lib is the default).
+lib_folder_name: lib
+# The name of the folder for the Hadoop configuration files (conf is the default).
+conf_folder_name: conf
+
+# The maximum number of items to ask yum to install at a single time.
+# For RedHat family OSes at 6.x, too many items on a single Ansible
+# yum call will fail, reporting:
+# ValueError: filedescriptor out of range in select()
+#YUM_INSTALL_BATCH_SIZE: "{% if ansible_os_family == 'RedHat' and ansible_distribution_major_version == '6' %} 100 {% else %} 9999 {% endif %}"
+
+# This will drive if the Consul product is installed on the CAS hosts.
+# A value of true will install the Consul agent on all CAS hosts.
+# Set this value to true if you plan to support all configurations of CAS
+# going to the same Consul instance.
+# If you deploy multiple configurations of CAS on the same set of hosts and
+# configure them to connect to different Viya deployments, set this value
+# to false. The Consul agent cannot be deployed with CAS in this configuration.
+# When the value is false, the software that is included in the Viya
+# visual interface cannot be deployed on any of the CAS hosts, either, because
+# the Consul agent is deployed with each of these software components.
+# Valid values: true | false
+
+sas_consul_on_cas_hosts: true
+
+# Playbook supported OS families, with support details
+support_map:
+  RedHat:
+    '6':
+      default_repository_format: yum
+      repository_build_types:
+        yum: x64_redhat_linux_6-yum
+    '7':
+      default_repository_format: yum
+      repository_build_types:
+        yum: x64_redhat_linux_6-yum
+  Suse:
+    '12':
+      default_repository_format: yum
+      repository_build_types:
+        yum: x64_suse_linux_12-yum
+    '42':
+      default_repository_format: yum
+      repository_build_types:
+        yum: x64_suse_linux_12-yum
+
+# Recommended Ansible version
+MAXIMUM_RECOMMENDED_ANSIBLE_VERSION: 2.6
+
+#  DEPLOYMENT_LABEL sets the datacenter for the Consul server. In addition, any
+#  local Consul agents will use DEPLOYMENT_LABEL to become members of a
+#  multi-machine deployment. A valid label can contain only lowercase characters,
+#  numeric characters, and hyphens.
+
+DEPLOYMENT_LABEL: "{{ DEPLOYMENT_ID }}"
+
+# run deployment assessment during playbook execution
+VERIFY_DEPLOYMENT: true
+
+# Determine how Consul's ports are configured. Setting this variable to false
+# will only open the HTTP port (8500). Setting this variable to true will enable
+# the combination of the HTTP port (8500) and the HTTPS port (8501).
+SECURE_CONSUL: false
+
+# Toggles the status of the Consul port operating over HTTP.
+#
+# If this variable is set to true when SECURE_CONSUL is true,
+# then Consul will only be able to communicate over HTTPS (port 8501).
+#
+# If this variable is set to false when SECURE_CONSUL is true,
+# then Consul will be able to communicate over both HTTP (port 8500),
+# and HTTPS (port 8501).
+#
+# This setting is only honored when SECURE_CONSUL is true.
+DISABLE_CONSUL_HTTP_PORT: true
+
+# Path to the HTTPD certificate to distribute into SAS truststores
+HTTPD_CERT_PATH: "/etc/pki/tls/certs/localhost.crt"
+
+# The name of the license file on the Ansible machine.
+LICENSE_FILENAME: "SASViyaV0300_09N41Z_Linux_x86-64.txt"
+
+# The name of the composite license file on the Ansible machine.
+# If both files are present, the playbook will use the
+# composite license file.
+LICENSE_COMPOSITE_FILENAME: "SASViyaV0300_09N41Z_70180938_Linux_x86-64.jwt"
+
+# The default value of this variable is the base URL of the repository warehouse used when
+# the playbook was generated. After playbook generation, this variable can be used to manage
+# changes to the repository warehouse location. For example, if a mirrored repository is used
+# and that mirror location changes, that change can be managed with this variable.
+#
+# If the SAS packages are already available to the server (e.g. through a RHN satellite channel),
+# set this variable to "none" to indicate no additional repository is needed for deployment.
+REPOSITORY_WAREHOUSE: "https://ses.sas.download/ses/"
+
+# Multiple invocation definitions
+# The machine reference (with deployTarget as the default) must be enclosed
+# in quotes if it is set to a value that starts with a number.
+INVOCATION_VARIABLES:
+  deployTarget: {}
+
+
+############################################################################
+
+# When sas_install_java is set to true, the deployment will install the SAS 
+# default Java and use this Java during processing. If Java is
+# already available on the system, set sas_install_java to false and define 
+# the path in sasenv_java_home below. When sas_install_java
+# is set to false and a custom path is not provided in sasenv_java_home, 
+# the deployment will look for Java via the JAVA_HOME environment 
+# variable first and if Java is not found, the deployment will look 
+# at "which java". In the case that no Java is found and sas_install_java
+# is set to false, this will stop the deployment.
+#
+# If sas_install_java is set to true and Java is already on the system,
+# for Linux hosts the Java alternatives may change once the SAS deployment 
+# is complete. Once the deployment completes, validate that the Java alternatives 
+# are correct for your environment. If this action is not desired, set 
+# sas_install_java to false and install Java prior to running the SAS 
+# deployment and set the path to Java in sasenv_java_home.
+sas_install_java: true
+
+# User specific location of where Java resides on the host. 
+# If not set, the deployment will use the Java defined on the host.
+# This is an optional setting.
+# Example:
+#   sasenv_java_home: /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.101-3.b13.el6_8.x86_64/jre
+sasenv_java_home: 
+
+# When set to true will try and create any user in the sas_users group below.
+# This will also create and setup ssh keys for that user across all hosts
+# default is true
+setup_sas_users: true
+
+# Define the users so they can be created. The block includes user ID cas which should remain
+# so that SSH keys can be assigned to it. If you did not create a cas user named "cas", replace
+# "cas" below with the user you did create. Recreate the same block for any other users you
+# want to add. See the deployment guide for more information.
+# To assign a password, here is a way to create the password. 
+# This will require the passlib library to be installed: sudo yum install python-passlib
+#   At a command line prompt run:
+#     python -c "from passlib.hash import sha512_crypt; import getpass; print sha512_crypt.encrypt(getpass.getpass(), rounds=10000)"
+#   Take the value that is returned and paste it inbetween the single quotes below. Example:
+#     password: 'secret'
+# If setup_home is set to true, will use the values of shell and home when creating the user
+sas_users:
+  cas:
+    group: sas
+    password: ''
+    setup_home: false
+    shell:
+    home:
+
+#############################################################################################
+#
+# DEPRECATION WARNING!!
+#
+# The two variables, setup_sas_packages and extra_packages, are deprecated and will be
+# removed in a future version of SAS Viya.
+#############################################################################################
+# When set to true, will install any additional packages defined in the extra_packages group
+setup_sas_packages: false
+
+# Define the extra packages that need to be installed on all machines
+extra_packages:
+    libselinux-python: support copying files
+#############################################################################################
+
+# When set to true, enables extra logging during the deployment
+sas_deploy_debug: false
+
+
+############################################################################
+## CAS Configuration
+############################################################################
+
+# The user that the CAS process will run under
+
+casenv_user: cas
+
+# The group that the CAS user belongs to
+
+casenv_group: sas
+
+# The following is the initial Admin user for use with CAS Server Monitor. 
+# This is the user you will log into CAS Server Monitor with
+# in order to create global CAS libs and set access rights.
+# If not set, the casenv_user will be used by default.
+# If all defaults are taken, the "cas" user will not have a password
+# defined for it. To have one created by the deployment process,
+# review how to define a password as documented with the sas_users
+# collection above.
+
+#casenv_admin_user: 
+
+
+#### CAS Specific ####
+# Anything in this list will end up in the cas.settings file
+#CAS_SETTINGS:
+   #1: ODBCHOME=ODBC home directory
+   #2: ODBCINI=$ODBCHOME/odbc.ini
+   #3: ORACLE_HOME=Oracle home directory
+   #4: JAVA_HOME=/usr/lib/jvm/jre-1.8.0
+   #5: LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ORACLE_HOME/lib:$JAVA_HOME/lib/amd64/server:$ODBCHOME/lib
+
+# Anything in this list will end up in the casconfig.lua file
+#   The env section will create a env.VARIABLE in the file
+#     Example: env.CAS_DISK_CACHE = '/tmp'
+#   The cfg section will create a cas.variable in the file
+#     Example: cas.port = 5570
+#
+# If you have defined hosts for the sas-casserver-worker then the MODE will
+# automatically be set to 'mpp'. If the environment variables HADOOP_HOME and 
+# HADOOP_NAMENODE are set, the COLOCATION option will automatically equal 'hdfs'.
+# If HADOOP_HOME and HADOOP_NAMENODE are not set, then the COLOCATION option 
+# will automatically equal 'none'.
+
+CAS_CONFIGURATION:
+   env:
+     CAS_START_MONITOR_UI: 'true'
+     #CAS_DISK_CACHE: /tmp
+     CAS_VIRTUAL_HOST: ''
+     #CAS_VIRTUAL_PROTO: 'https'
+     #CAS_VIRTUAL_PORT: 443
+   cfg:
+     #gcport: 0
+     #httpport: 8777
+     #port: 5570
+     #colocation: 'none'
+     #SERVICESBASEURL: 'https://loadbalancer.company.com'
+
+############################################################################
+## Foundation Configuration
+############################################################################
+
+# Optional: Will use the CAS controller host as defined in the inventory
+#           file. If one is not defined it will default to localhost.
+#           If you know the host of the controller you want to connect to,
+#           provide that here
+#sasenv_cas_host:
+
+# Optional: If a value is not provided, the system will use the CAS port
+#           as defined for the CAS controller.
+#           If you know the port of the grid you want to connect to,
+#           provide that here.
+#sasenv_cas_port:
+
+# Set the ports that SAS/CONNECT will listen on
+#sasenv_connect_port: 17551
+#sasenv_connect_mgmt_port: 17541
+
+# Updates the init_deployment.properties and appserver_deployment.sh
+STUDIO_CONFIGURATION:
+  init:
+    #sasstudio.appserver.port_comment: '# Port that Studio is listening on'
+    #sasstudio.appserver.port: 7080
+    #sasstudio.appserver.https.port: 7443
+    #webdms.workspaceServer.hostName: localhost
+    #webdms.workspaceServer.port: 8591
+  appserver:
+    #1: '# Comment about KEY'
+    #2: KEY="value with spaces"
+
+# Updates spawner.cfg
+SPAWNER_CONFIGURATION:
+  #sasPort: 8591
+
+# Updates the workspaceserver autoexec_deployment.sas
+#WORKSPACESERVER_CONFIGURATION:
+  #1: '/* Comment about key */'
+  #2: key=value;
+
+# Creates a workspaceserver sasenv_deployment file
+#FOUNDATION_CONFIGURATION:
+  #1: '# Comment about KEY'
+  #2: KEY=value
+
+# Creates a workspaceserver sasv9_deployment.cfg file
+#SASV9_CONFIGURATION:
+  #1: '/* Comment about OPTION */'
+  #2: 'OPTION value'
+
+############################################################################
+## User Input Required
+############################################################################
+# The path and name of the sid file on the Ansible machine.
+# This will be copied out to all nodes
+#sasenv_license: "{% if LICENSE_FILENAME | default ('') %}{{ orchestration_root|default(playbook_dir) }}/{{ LICENSE_FILENAME }}{% else %}Undefined{% endif %}"
+
+# The path and name of the composite license file on the Ansible machine.
+#sasenv_composite_license: "{% if LICENSE_COMPOSITE_FILENAME | default ('') %}{{ orchestration_root|default(playbook_dir) }}/{{ LICENSE_COMPOSITE_FILENAME }}{% else %}Undefined{% endif %}"
+
+############################################################################
+
+# SAS METAREPO certificate details #
+#METAREPO_CERT_SOURCE: "{{ playbook_dir }}"
+METAREPO_CERT_HOME: "/etc/pki/sas/private"
+METAREPO_CERT_CA: SAS_CA_Certificate.pem
+METAREPO_CERT_CLIENT: entitlement_certificate.pem
+#ENTITLEMENT_PATH: "{{ orchestration_root|default(playbook_dir) }}/{{ METAREPO_CERT_CLIENT }}"
+#SAS_CERT_PATH: "{{ orchestration_root|default(playbook_dir) }}/{{ METAREPO_CERT_CA }}"
+
+# SAS METAREPO Install details #
+METAREPO_INSTALL: "{{ REPOSITORY_WAREHOUSE == 'https://ses.sas.download/ses/' }}"
+METAREPO_URL: "https://ses.sas.download/ses/repos/meta-repo/"
+METAREPO_RPM: "sas-meta-repo.rpm"
+METAREPO_SOE_ORDERABLE: '"sas-va-104-x64_redhat_linux_6-yum"'
+METAREPO_FORCE_CERTS: "{{ REPOSITORY_WAREHOUSE == 'https://ses.sas.download/ses/' }}"
+
+# Ordered software from the Software Order Email
+sasenv_soe_groupinstall: '"SAS Foundation for SAS Econometrics" "ASTORE for EMBSCOREENG" "SAS Foundation for SAS Visual Forecasting" "Gold Layer YUM Group for SPRE" "CUDA Library Support for SAS" "SAS Machine Learning" "SAS Program Runtime Environment" "SAS Statistics" "CAS for SAS Visual Analytics" "SAS Visual Text Analytics" "SAS Configuration for Spawner"'
+
+
+SAS_REPO:
+  va-104-x64_redhat_linux_6-yum:
+    name: va-104-x64_redhat_linux_6-yum
+    baseurl: '{{ REPOSITORY_WAREHOUSE }}repos/shipped/va/104/va-104-x64_redhat_linux_6-yum'
+    enabled: 1
+    gpgcheck: 0
+    gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-SAS-9.x
+    sslcacert: 0
+    sslclientcert: 0
+    sslverify: 0
