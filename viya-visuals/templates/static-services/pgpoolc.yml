@@ -1,10 +1,13 @@
   pgpoolc:
-    from: "centos:7"
+    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - pgpoolc
     ports:
     - "5431:5431"
     entrypoint: ["/opt/sas/viya/home/bin/pgpoolc-entrypoint.sh"]
+    labels:
+      sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
+      sas.layer.pgpoolc: "true"
     dev_overrides:
       environment:
         - "SAS_DEBUG=1"
