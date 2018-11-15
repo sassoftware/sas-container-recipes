@@ -156,8 +156,40 @@ function docker_run_local_consul()
 
         # Wait for Consul to be up
         docker_wait_for_consul_leader
-    fi
 
+        [[ -z ${SAS_LOCAL_CONSUL_PAUSE+x} ]] && SAS_LOCAL_CONSUL_PAUSE=5
+        sleep ${SAS_LOCAL_CONSUL_PAUSE}
+    fi
+}
+
+function docker_run_ops_agent()
+{
+    if [[ -f /etc/init.d/sas-${SASDEPLOYID}-ops-agent-default ]]; then
+        # Making sure the system can start ops-agent
+        if [[ -f ${SASHOME}/bin/sas-ops-agent ]]; then
+            opsagent_rc=1
+            while (( ${opsagent_rc} != 0 )); do
+                echo;echo "[INFO]  : Checking if environment is ready for sas-ops-agent";echo
+                set +e
+                ${SASHOME}/bin/sas-ops-agent query
+                opsagent_rc=$?
+                set -e
+                if (( ${opsagent_rc} == 0 )); then
+                    echo "[INFO]  : sas-ops-agent query returned success";
+                    break
+                else
+                    echo "[INFO]  : sas-ops-agent not ready. Pausing before checking again";
+                    sleep 2
+                fi
+            done
+            echo "[INFO]  : Environment is ready for sas-ops-agent"
+        else
+            echo "[ERROR} : Looks like ops-agent is installed but files are missing. Exiting"
+            exit 80
+        fi
+
+        /etc/init.d/sas-${SASDEPLOYID}-ops-agent-default start
+    fi
 }
 
 function docker_run_sas_services()
@@ -180,7 +212,9 @@ function docker_run_sas_services()
     for viya_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-*); do
         echo ${viya_process}
         if [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
-           [[ "${viya_process}" != *"sasgpud"* ]]; then
+           [[ "${viya_process}" != *"sasgpud"* ]] &&
+           [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-default" ]]; then
+            echo "[INFO]  : Starting ${viya_process}"
             ${viya_process} start
         fi
     done
