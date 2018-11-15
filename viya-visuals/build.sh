@@ -69,6 +69,9 @@ function usage() {
     echo -e "  -k|--skip-mirror-url-validation"
     echo -e "                           Skips validating the mirror URL"
 
+    echo -e "  -e|--environment-setup"
+    echo -e "                           Setup python virtual environment"
+
     echo -e "  -h|--help                Prints out this message"
     echo -e ""
 }
@@ -215,6 +218,10 @@ while [[ $# -gt 0 ]]; do
             export DOCKER_REGISTRY_NAMESPACE="$1"
             shift # past value
             ;;
+        -e|--environment-setup)
+            shift # past argument
+            SETUP_VIRTUAL_ENVIRONMENT=true
+            ;;
         *)  echo -e "Invalid argument: $1"
             exit 1;
             shift # past argument
@@ -345,14 +352,55 @@ function setup_environment() {
     sas_datetime=$(date "+%Y%m%d%H%M%S")
     sas_sha1=$(git rev-parse --short HEAD)
 
-    [[ -z ${SAS_RECIPE_TYPE+x} ]]         && SAS_RECIPE_TYPE=single
-    [[ -z ${CHECK_MIRROR_URL+x} ]]        && CHECK_MIRROR_URL=false
-    [[ -z ${CHECK_DOCKER_URL+x} ]]        && CHECK_DOCKER_URL=false
-    [[ -z ${SAS_DOCKER_TAG+x} ]]          && SAS_DOCKER_TAG=${sas_version}-${sas_datetime}-${sas_sha1}
-    [[ -n "${BASEIMAGE}" ]]               && BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=${BASEIMAGE}"
-    [[ -n "${BASETAG}" ]]                 && BUILD_ARG_BASETAG="--build-arg BASETAG=${BASETAG}"
-    [[ -n "${SAS_RPM_REPO_URL}" ]]        && BUILD_ARG_SAS_RPM_REPO_URL="--build-arg SAS_RPM_REPO_URL=${SAS_RPM_REPO_URL}"
-    [[ -n "${PLATFORM}" ]]                && BUILD_ARG_PLATFORM="--build-arg PLATFORM=${PLATFORM}"
+    [[ -z ${SAS_RECIPE_TYPE+x} ]]           && SAS_RECIPE_TYPE=single
+    [[ -z ${CHECK_MIRROR_URL+x} ]]          && CHECK_MIRROR_URL=false
+    [[ -z ${CHECK_DOCKER_URL+x} ]]          && CHECK_DOCKER_URL=false
+    [[ -z ${SETUP_VIRTUAL_ENVIRONMENT+x} ]] && SETUP_VIRUTAL_ENVIRONMENT=false
+    [[ -z ${SAS_DOCKER_TAG+x} ]]            && SAS_DOCKER_TAG=${sas_version}-${sas_datetime}-${sas_sha1}
+    [[ -n "${BASEIMAGE}" ]]                 && BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=${BASEIMAGE}"
+    [[ -n "${BASETAG}" ]]                   && BUILD_ARG_BASETAG="--build-arg BASETAG=${BASETAG}"
+    [[ -n "${SAS_RPM_REPO_URL}" ]]          && BUILD_ARG_SAS_RPM_REPO_URL="--build-arg SAS_RPM_REPO_URL=${SAS_RPM_REPO_URL}"
+    [[ -n "${PLATFORM}" ]]                  && BUILD_ARG_PLATFORM="--build-arg PLATFORM=${PLATFORM}"
+
+    # Setup the python virtual environment and install the requirements inside
+    echo ${SETUP_VIRTUAL_ENVIRONMENT}
+    echo above
+    if [ ${SETUP_VIRTUAL_ENVIRONMENT} ]; then
+        # Detect virtualenv with $VIRTUAL_ENV
+        if [[ -n $VIRTUAL_ENV ]]; then
+            echo "Existing virtualenv detected..."
+        # Create default env if none
+        elif [[ -z $VIRTUAL_ENV ]] && [[ ! -d env/ ]]; then
+            echo "Creating virtualenv env..."
+            virtualenv --system-site-packages env
+            . env/bin/activate
+        # Activate existing env if available
+        elif [[ -d env/ ]]; then
+            echo "Activating virtualenv env..."
+            . env/bin/activate
+        fi
+        # Ensure env active or die
+        if [[ -z $VIRTUAL_ENV ]]; then
+            echo "Failed to activate virtualenv....exiting."
+            exit 1
+        fi
+        # Detect python 2+ or 3+
+        PYTHON_MAJOR_VER="$(python -c 'import platform; print(platform.python_version()[0])')"
+        if [[ $PYTHON_MAJOR_VER -eq "2" ]]; then
+            # Install ansible-container
+            pip install --upgrade pip==9.0.3
+            pip install ansible-container[docker]
+        elif [[ $PYTHON_MAJOR_VER -eq "3" ]]; then
+            echo "WARN: Python3 support is experimental in ansible-container."
+            echo "Updating requirements file for python3 compatibility..."
+            sed -i.bak '/ruamel.ordereddict==0.4.13/d' ./templates/requirements.txt 
+            pip install --upgrade pip==9.0.3
+            pip install -e git+https://github.com/ansible/ansible-container.git@develop#egg=ansible-container[docker]
+        fi
+        # Restore latest pip version
+        pip install --upgrade pip setuptools
+        pip install -r templates/requirements.txt
+    fi
 
     # Start with a clean working space by moving everything into the debug directory
     if [[ -d debug/ ]]; then 
@@ -362,6 +410,7 @@ function setup_environment() {
     cp templates/container.yml debug/
     cp templates/generate_manifests.yml debug/
     cd debug
+
 }
 
 
@@ -558,46 +607,6 @@ function show_next_steps() {
     echo -e "    kubectl create --recursive --filename deploy/kubernetes/configmaps "
     echo -e "    kubectl create --recursive --filename deploy/kubernetes/ [smp] OR [mpp]"
     echo -e ""
-}
-
-# Python virtualenv configuration
-function prebuild_steps() {
-    if [[ "${SAS_CREATE_AC_VIRTUAL_ENV}" == "true" ]]; then
-        # Detect virtualenv with $VIRTUAL_ENV
-        if [[ -n $VIRTUAL_ENV ]]; then
-            echo "Existing virtualenv detected..."
-        # Create default env if none
-        elif [[ -z $VIRTUAL_ENV ]] && [[ ! -d env/ ]]; then
-            echo "Creating virtualenv env..."
-            virtualenv --system-site-packages env
-            . env/bin/activate
-        # Activate existing env if available
-        elif [[ -d env/ ]]; then
-            echo "Activating virtualenv env..."
-            . env/bin/activate
-        fi
-        # Ensure env active or die
-        if [[ -z $VIRTUAL_ENV ]]; then
-            echo "Failed to activate virtualenv....exiting."
-            exit 1
-        fi
-        # Detect python 2+ or 3+
-        PYTHON_MAJOR_VER="$(python -c 'import platform; print(platform.python_version()[0])')"
-        if [[ $PYTHON_MAJOR_VER -eq "2" ]]; then
-            # Install ansible-container
-            pip install --upgrade pip==9.0.3
-            pip install ansible-container[docker]
-        elif [[ $PYTHON_MAJOR_VER -eq "3" ]]; then
-            echo "WARN: Python3 support is experimental in ansible-container."
-            echo "Updating requirements file for python3 compatibility..."
-            sed -i.bak '/ruamel.ordereddict==0.4.13/d' ./requirements.txt
-            pip install --upgrade pip==9.0.3
-            pip install -e git+https://github.com/ansible/ansible-container.git@develop#egg=ansible-container[docker]
-        fi
-        # Restore latest pip version
-        pip install --upgrade pip setuptools
-        pip install -r requirements.txt
-    fi
 }
 
 setup_environment  # Make the working directory "debug/" and copy in templates
