@@ -84,6 +84,10 @@ services:
     deployment_overrides:
       environment:
         - "SERVICE_NAME=cascontroller"
+        - "CASENV_ADMIN_USER=sasdemo"
+        - "CASENV_CAS_VIRTUAL_PROTO=http"
+        - "CASENV_CASDATADIR=/cas/data"
+        - "CASENV_CASPERMSTORE=/cas/permstore"
       resources:
         limits:
         - "memory=12000Mi"
