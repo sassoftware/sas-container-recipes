@@ -43,7 +43,7 @@ git clone https://github.com/sassoftware/sas-container-recipes.git
 ### At a Glance
 
 * The SAS Viya programming run-time in a single container on the Docker platform.
-* Includes SAS Studio, SAS Workspace Server, and the CAS server, which provides access to in-memory analytics. The CAS server allows for symmetric multi-processing (SMP) by users.
+* Includes SAS Studio, SAS Workspace Server, and the CAS server, which provides in-memory analytics. The CAS server allows for symmetric multi-processing (SMP) by users.
 * Ideal for data scientists and programmers who want on-demand access.
 * Ideal for ephemeral computing. By that, users should save code and store data in a permanent location outside the container.
 * Run the container in interactive mode so that users can access the SAS Viya programming run-time.
@@ -115,13 +115,12 @@ After the container has started, log on to SAS Studio with the user name `sasdem
 
 ## SAS Viya Programming - Multiple Containers
 
-### Capabilities
+### At a Glance
 
-* Build multiple Docker images of a SAS Viya programming-only environment
-* Leverage Kubernetes to: 
-    * Create the deployments
-    * Create SMP or MPP CAS 
-    * Run these environments in interactive mode
+* The SAS Viya programming run-time deployed to multiple Docker containers with Kubernetes.
+* A typical deployment includes a container for the SAS Viya programming run-time, a container for the CAS server, and a container for an HTTP proxy server.
+* Ideal for the [users described above](#at-a-glance), but who want to step up the analytics and data processing to CAS massively parallel processing (MPP).
+* Leverage Kubernetes to create the deployments, create the CAS server (SMP or MPP), and to run the containers in interactive mode so that users can access the SAS Viya programming run-time.
 
 ### Docker Registry
 
@@ -129,9 +128,9 @@ The build process will push built Docker images automatically to the Docker regi
 
 ### Kubernetes Ingress Configuration
 
-The instructions here assume that you will be configuring an Ingress Controller to point to the `sas-via-httpproxy` service. 
+The instructions here assume that you will configure an Ingress Controller to point to the `sas-via-httpproxy` service. 
 
-Here is an example of the Ingress configuration that needs to be loaded into Kubernetes. This is defining the Ingress path, not the Ingress Controller. Create a file called sas-viya.ing and put the following contents in it:
+Here is an example of the Ingress configuration that needs to be loaded into Kubernetes. This is defining the Ingress path, not the Ingress Controller. Create a file called sas-viya.ing and add the following to it:
 
 ```
 apiVersion: extensions/v1beta1
