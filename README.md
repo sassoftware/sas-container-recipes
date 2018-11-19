@@ -200,7 +200,7 @@ sas-viya-sas-casserver-primary-0                1/1     Running   0          21h
 
 After the container has started, log on to SAS Studio with the user name `sasdemo` and the password `sasdemo` at:
  
- http://sas-viya-http.company.com
+ http://_sas-viya-http.company_.com
 
 **Note:** The user name `sasdemo` and the password `sasdemo` are the credentials for the demo user that is set up by the auth-demo addon. 
 
