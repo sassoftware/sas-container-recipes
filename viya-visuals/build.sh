@@ -498,6 +498,7 @@ EOL
 
 # Generate the Kubernetes resources
 function make_deployments() {
+    mkdir deploy
     ansible-playbook generate_manifests.yml -e "docker_tag=${SAS_DOCKER_TAG}" -e 'ansible_python_interpreter=/usr/bin/python'
     if [[ -d ../deploy ]]; then
         rm -rf ../deploy

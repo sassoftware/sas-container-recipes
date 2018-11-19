@@ -11,7 +11,7 @@ env/
 *.log
 **/working/
 **/working_*
-**/manifests/
+**/deploy/
 *~
 *.swo
 *.swp
