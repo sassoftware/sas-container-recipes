@@ -9,8 +9,9 @@ env/
 *test*/
 .DS_Store
 *.log
-**/debug/
-**/deploy/
+**/working/
+**/working_*
+**/manifests/
 *~
 *.swo
 *.swp

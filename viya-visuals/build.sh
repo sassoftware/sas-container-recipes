@@ -19,14 +19,29 @@
 
 
 function usage() {
+    set +x
     echo -e ""
     echo -e " Framework to deploy SAS Viya environments using containers."
     echo -e ""
-
-
-    # Required Arguments
-    # ------------------------ 
-    echo -e " Required Arguments: "
+    echo -e "Single Container Arguments: "
+    echo -e "------------------------ "
+    echo -e ""
+    echo -e " Required: "
+    echo -e ""
+    echo -e "  -s|--single-container"
+    echo -e ""
+    echo -e "  -z|--zip <value>         Path to the SAS_Viya_deployment_data.zip file"
+    echo -e "                               example: /path/to/SAS_Viya_deployment_data.zip"
+    echo -e ""
+    echo -e " Optional:"
+    echo -e "  -a|--addons \"<value> [<value>]\"  "
+    echo -e "                           A space separated list of layers to add on to the main SAS image"
+    echo -e ""
+    echo -e ""
+    echo -e "Multi-Container Arguments "
+    echo -e "------------------------ "
+    echo -e ""
+    echo -e "  Required: "
     echo -e ""
 
     echo -e "  -n|--docker-namespace <value>"
@@ -35,20 +50,25 @@ function usage() {
     echo -e "                               example: mynamespace"
 
     echo -e "  -u|--docker-url <value>  URL of the Docker registry where Docker images will be pushed to."
-    echo -e "                               example: 10.12.13.14 or my-registry.docker.com, do not add 'http://' "
+    echo -e "                               example: 10.12.13.14:5000 or my-registry.docker.com, do not add 'http://' "
     echo -e ""
 
     echo -e "  -z|--zip <value>         Path to the SAS_Viya_deployment_data.zip file"
     echo -e "                               example: /path/to/SAS_Viya_deployment_data.zip"
 
+    echo -e "      [EITHER/OR]          "
+    echo -e "                           "
+
+    echo -e "  -l|--playbook <value>    Path to the sas_viya_playbook directory. If this is passed in along with the "
+    echo -e "                               SAS_Viya_deployment_data.zip then this will take precedence."
+
+    echo -e "  -v|--virtual-host        The Kubernetes ingress path that defines the location of the HTTP endpoint"
+    echo -e "                               example: ? (TODO)"
 
     # ------------------------ 
-    echo -e " Optional Arguments: "
     echo -e ""
-
-    #echo -e "  -a|--addons \"<value> [<value>]\"  "
-    #echo -e "                           A space separated list of layers to add on to the main SAS image"
-
+    echo -e "  Optional: "
+    echo -e ""
     echo -e "  -i|--baseimage <value>   The Docker image from which the SAS images will build on top of"
     echo -e "                               Default: centos"
 
@@ -63,82 +83,25 @@ function usage() {
     echo -e "                               Options: [ redhat | suse ]"
     echo -e "                               Default: redhat"
 
-    echo -e "  -s|--skip-docker-url-validation" 
+    echo -e "  -w|--skip-docker-url-validation" 
     echo -e "                           Skips validating the Docker registry URL"
 
-    echo -e "  -k|--skip-mirror-url-validation"
+    echo -e "  -x|--skip-mirror-url-validation"
     echo -e "                           Skips validating the mirror URL"
 
     echo -e "  -e|--environment-setup"
     echo -e "                           Setup python virtual environment"
 
+    echo -e "  -d|--debug               Calls 'set -x' for verbose debugging"
+    echo -e ""
+
     echo -e "  -h|--help                Prints out this message"
     echo -e ""
 }
 
-# TODO :NOT IMPLEMENTED:
-# Addons are available for sas-viya-programming, sas-viya-computeserver, and sas-viya-sas-casserver-primary
-function add_layers() {
-    docker_reg_location=$(echo -e "${DOCKER_REGISTRY_URL}" | cut -d'/' -f3 )/"${DOCKER_REGISTRY_NAMESPACE}"
-    for sas_image in sas-viya-programming sas-viya-computeserver sas-viya-sas-casserver-primary; do
-        # Make sure the image exists
-        # shellcheck disable=SC2086
-        if [[ "$(docker images -q ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG} 2> /dev/null)" != "" ]]; then
-            str_previous_image=${sas_image}
-            new_image=false
-            for str_image in ${ADDONS}; do
-                if ([[ "${str_image}" == *"ide"* ]] && [ "${sas_image}" = "sas-viya-programming" ]) || \
-                   [[ "${str_image}" == *"access"* ]] || \
-                   [[ "${str_image}" == *"auth"* ]]; then
-
-                    echo -e "[INFO]  : Adding '${str_image}' to '${sas_image}'"
-                    pushd "${str_image}"
-                    if [ -f "Dockerfile" ]; then
-                        new_image=true
-                        addon_name=$(basename "${str_image}")
-                        str_image_tag=svc-"${addon_name}"
-                        echo
-                        echo -e "[INFO]  : Building image '${str_image_tag}'"
-                        echo
-                        set +e
-                        set -x
-                        docker build \
-                            --file Dockerfile \
-                            --label sas.layer."${addon_name}"=true \
-                            --build-arg BASEIMAGE="${str_previous_image}" \
-                            ${BUILD_ARG_PLATFORM} \
-                            . \
-                            --tag "${str_image_tag}"
-                        n_docker_build_rc=$?
-                        set +x
-                        set -e
-                        if (( n_docker_build_rc != 0 )); then
-                            echo
-                            echo -e "[ERROR] : Could not add layer '${str_image_tag}'"
-                            echo
-                            popd
-                            exit 2
-                        fi
-
-                        echo
-                        echo -e "[INFO]  : Image created with image name '${str_image_tag}'"
-                        echo
-                        str_previous_image="${str_image_tag}"
-                    else
-                        echo -e "[WARN]  : No Dockerfile exists in '${PWD}' so skipping building of image"
-                    fi
-                    popd
-                else
-                    echo -e "[INFO]  : Skipping putting '${str_image}' into '${sas_image}'"
-                  fi
-            done
-        fi
-    done
-}
-
 # Run the ansible-container build in the clean workspace and build all services.
 # Or define the environment variable "REBUILDS" to only build a few services.
-# example: export REBUILDS="myservice myotherservice anotherone" 
+# example: export REBUILDS="myservice myotherservice anotherone" ./build.sh ...
 # https://www.ansible.com/integrations/containers/ansible-container
 function ansible_build() {
     if [[ ! -z ${REBUILDS} ]]; then
@@ -151,103 +114,24 @@ function ansible_build() {
     set -e
 }
 
-# Use command line options if they have been provided. 
-# This overrides environment settings.
-while [[ $# -gt 0 ]]; do
-    key="$1"
-    case ${key} in
-        -h|--help)
-            shift
-            usage
-            echo
-            exit 0
-            ;;
-        -d|--debug)
-            shift # past argument
-            export DEBUG=true
-            shift # past value
-            ;;
-        -i|--baseimage)
-            shift # past argument
-            BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=$1"
-            shift # past value
-            ;;
-        -t|--basetag)
-            shift # past argument
-            BUILD_ARG_BASETAG="--build-arg BASETAG=$1"
-            shift # past value
-            ;;
-        -m|--mirror-url)
-            shift # past argument
-            export SAS_RPM_REPO_URL=$1
-            BUILD_ARG_SAS_RPM_REPO_URL="--build-arg SAS_RPM_REPO_URL=${SAS_RPM_REPO_URL}"
-            shift # past value
-            ;;
-        -p|--platform)
-            shift # past argument
-            export PLATFORM=$1
-            BUILD_ARG_PLATFORM="--build-arg PLATFORM=${PLATFORM}"
-            shift # past value
-            ;;
-        -z|--zip)
-            shift # past argument
-            SAS_VIYA_DEPLOYMENT_DATA_ZIP="$1"
-            shift # past value
-            ;;
-        -k|--skip-mirror-url-validation)
-            shift # past argument
-            CHECK_MIRROR_URL=false
-            ;;
-        -s|--skip-docker-url-validation)
-            shift # past argument
-            CHECK_DOCKER_URL=false
-            ;;
-        # TODO
-        #-a|--addons)
-        #    shift # past argument
-        #    ADDONS="${ADDONS} $1"
-        #    shift # past value
-        #    ;;
-        -u|--docker-url)
-            shift # past argument
-            export DOCKER_REGISTRY_URL="$1"
-            shift # past value
-            ;;
-        -n|--docker-namespace)
-            shift # past argument
-            export DOCKER_REGISTRY_NAMESPACE="$1"
-            shift # past value
-            ;;
-        -e|--environment-setup)
-            shift # past argument
-            SETUP_VIRTUAL_ENVIRONMENT=true
-            ;;
-        *)  echo -e "Invalid argument: $1"
-            exit 1;
-            shift # past argument
-    ;;
-    esac
-done
-
 # At the start of the process output details on the environment and build flags
 function setup_logging() {
     echo "" > result-${sas_datetime}.log
     exec > >(tee -a "${PWD}"/build_sas_container.log) 2>&1
-    echo
-    # shellcheck disable=SC2086
+    echo -e ""
     echo -e "  BASEIMAGE                       = $(echo ${BUILD_ARG_BASEIMAGE:=centos} | cut -d'=' -f2)"
-    # shellcheck disable=SC2086
     echo -e "  BASETAG                         = $(echo ${BUILD_ARG_BASETAG:=latest} | cut -d'=' -f2)"
-    # shellcheck disable=SC2086
     echo -e "  Mirror URL                      = $(echo ${BUILD_ARG_SAS_RPM_REPO_URL} | cut -d'=' -f2)"
-    # shellcheck disable=SC2086
     echo -e "  Platform                        = $(echo ${BUILD_ARG_PLATFORM:=redhat} | cut -d'=' -f2)"
+    echo -e "  HTTP Ingress endpoint           = ${CAS_VIRTUAL_HOST}"
     echo -e "  Deployment Data Zip             = ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
-    #TODO echo -e "  Addons                          = ${ADDONS}"
+    echo -e "  Playbook Location               = ${SAS_VIYA_PLAYBOOK_DIR}"
+    echo -e "  Addons                          = ${ADDONS}"
     echo -e "  Docker registry URL             = ${DOCKER_REGISTRY_URL}"
     echo -e "  Docker registry namespace       = ${DOCKER_REGISTRY_NAMESPACE}"
     echo -e "  Validate Docker registry URL    = ${CHECK_DOCKER_URL}"
     echo -e "  Validate Mirror URL             = ${CHECK_MIRROR_URL}"
+    echo -e "  Tag SAS will apply              = ${SAS_DOCKER_TAG}"
     echo
 }
 
@@ -256,12 +140,14 @@ function validate_input() {
 
     # Validate that required arguments were provided
     # TODO: proper if/else
-    if [[ -z "${DOCKER_REGISTRY_URL}" ]]; then
+    if [[ -z ${DOCKER_REGISTRY_URL} ]]; then
         usage  
+        echo -e "A docker registry URL is required."
         exit 1
     fi
-    if [[ -z "${DOCKER_REGISTRY_NAMESPACE}" ]]; then
+    if [[ -z ${DOCKER_REGISTRY_NAMESPACE} ]]; then
         usage  
+        echo -e "A docker registry namespace is required."
         exit 1
     fi 
 
@@ -303,11 +189,7 @@ function validate_input() {
             echo -e "[ERROR] : Not able to ping mirror URL: ${mirror_url}"
             echo
             exit 5
-        else
-            echo -e "[INFO]  : Successful ping of mirror URL: ${mirror_url}"
         fi
-    else
-        echo -e "[INFO]  : Bypassing validation of mirror URL: ${mirror_url}"
     fi
 
     # Validates that the provided docker registry exists
@@ -319,11 +201,7 @@ function validate_input() {
             echo -e "[ERROR] : Not able to ping Docker registry URL: ${DOCKER_REGISTRY_URL}"
             echo
             exit 5
-        else
-        echo -e "[INFO]  : Successful ping of Docker registry URL: ${DOCKER_REGISTRY_URL}"
-    fi
-    else
-        echo -e "[INFO]  : Bypassing validation of Docker registry URL: ${DOCKER_REGISTRY_URL}"
+        fi
     fi
 
     if [[ ( -z ${DOCKER_REGISTRY_URL+x} || -z ${DOCKER_REGISTRY_URL+x} ) && "${SAS_RECIPE_TYPE}" != "single" ]]; then
@@ -333,21 +211,51 @@ function validate_input() {
     fi
 }
 
+
+# Handles both the '--zip' and '--playbook' options.
+#
+# Given the '--playbook' does not use the sas-orchestration tool to create a new playbook.
+#
 # Given the '--zip' option, unzip the contents and use the sas-orchestration
 # tool to create the playbook. Any changes made to this playbook will get
 # overridden in the next build.
+#
 function get_playbook() {
-    echo -e "[INFO]  : Generating  playbook"
-    sas-orchestration build --input ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}
-    tar xvf SAS_Viya_playbook.tgz
-    rm SAS_Viya_playbook.tgz
-    cp sas_viya_playbook/*.pem .
+    if [[ -d ${SAS_VIYA_PLAYBOOK_DIR} ]]; then
+        # Playbook path given and it's valid
+        cp --verbose ${SAS_VIYA_PLAYBOOK_DIR} .
+
+    elif [[ ! -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
+        # SAS_Viya_deployment_data.zip given and it's valid
+        SAS_ORCHESTRATION_LOCATION=/usr/bin/sas-orchestration
+        if [[ ! -f /usr/bin/sas-orchestration && ! -f ../sas-orchestration ]]; then
+            # Fetch the binary and move it above the working directory
+            echo -e "[INFO] : fetching sas-orchestration tool"
+            curl --silent --remote-name https://support.sas.com/installation/viya/34/sas-orchestration-cli/lax/sas-orc
+            tar xvf sas-orchestration-linux.tgz
+            rm --verbose sas-orchestration-linux.tgz
+            mv sas-orchestration ../
+            SAS_ORCHESTRATION_LOCATION=${PWD}/../
+        fi
+
+        echo -e "[INFO] : Building the playbook from the SOE zip."
+        ${SAS_ORCHESTRATION_LOCATION} build \
+            --input ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} \
+            --platform ${PLATFORM}
+            #--repository-warehouse ${SAS_RPM_REPO_URL}
+            #--deployment-type programming 
+
+        tar xvf SAS_Viya_playbook.tgz
+        rm --verbose SAS_Viya_playbook.tgz
+        cp --verbose sas_viya_playbook/*.pem .
+    else
+        echo -e "[ERROR] : Could not find a zip file or playbook to use"
+        echo -e ""
+        exit 1
+    fi
 }
 
-# Move everything into a working directory to isolate the debugging space
-function setup_environment() {
-
-    # Set some defaults sas_version=$(cat templates/VERSION) sas_datetime=$(date +"%Y%m%d%H%M%S")
+function setup_defaults() {
     sas_version=$(cat templates/VERSION)
     sas_datetime=$(date "+%Y%m%d%H%M%S")
     sas_sha1=$(git rev-parse --short HEAD)
@@ -356,30 +264,36 @@ function setup_environment() {
     [[ -z ${CHECK_MIRROR_URL+x} ]]          && CHECK_MIRROR_URL=false
     [[ -z ${CHECK_DOCKER_URL+x} ]]          && CHECK_DOCKER_URL=false
     [[ -z ${SETUP_VIRTUAL_ENVIRONMENT+x} ]] && SETUP_VIRTUAL_ENVIRONMENT=false
+    [[ -z ${VIYA_SINGLE_CONTAINER+x} ]]     && VIYA_SINGLE_CONTAINER=false
     [[ -z ${SAS_DOCKER_TAG+x} ]]            && SAS_DOCKER_TAG=${sas_version}-${sas_datetime}-${sas_sha1}
-    [[ -n "${BASEIMAGE}" ]]                 && BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=${BASEIMAGE}"
-    [[ -n "${BASETAG}" ]]                   && BUILD_ARG_BASETAG="--build-arg BASETAG=${BASETAG}"
-    [[ -n "${SAS_RPM_REPO_URL}" ]]          && BUILD_ARG_SAS_RPM_REPO_URL="--build-arg SAS_RPM_REPO_URL=${SAS_RPM_REPO_URL}"
-    [[ -n "${PLATFORM}" ]]                  && BUILD_ARG_PLATFORM="--build-arg PLATFORM=${PLATFORM}"
+    [[ -z ${BASEIMAGE+x} ]]                 && BASEIMAGE=centos BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=${BASEIMAGE}"
+    [[ -z ${BASETAG+x} ]]                   && BUILD_ARG_BASETAG="--build-arg BASETAG=${BASETAG}"
+    [[ -z ${SAS_RPM_REPO_URL+x} ]]          && SAS_RPM_REPO_URL=https://ses.sas.com/download/ses BUILD_ARG_SAS_RPM_REPO_URL="--build-arg SAS_RPM_REPO_URL=${SAS_RPM_REPO_URL}"
+    [[ -z ${PLATFORM+x} ]]                  && PLATFORM=redhat BUILD_ARG_PLATFORM="--build-arg PLATFORM=${PLATFORM}"
+}
+
+# Move everything into a working directory and set up the python virtual environment
+function setup_environment() {
 
     # Setup the python virtual environment and install the requirements inside
-    if [ ${SETUP_VIRTUAL_ENVIRONMENT} ]; then
+    if [ ${SETUP_VIRTUAL_ENVIRONMENT} = "true" ]; then
         # Detect virtualenv with $VIRTUAL_ENV
         if [[ -n $VIRTUAL_ENV ]]; then
-            echo "Existing virtualenv detected..."
+            echo -e "Existing virtualenv detected..."
         # Create default env if none
         elif [[ -z $VIRTUAL_ENV ]] && [[ ! -d env/ ]]; then
-            echo "Creating virtualenv env..."
+            echo -e "Creating virtualenv env..."
             virtualenv --system-site-packages env
             . env/bin/activate
         # Activate existing env if available
         elif [[ -d env/ ]]; then
-            echo "Activating virtualenv env..."
+            echo -e "Activating virtualenv env..."
             . env/bin/activate
         fi
         # Ensure env active or die
         if [[ -z $VIRTUAL_ENV ]]; then
-            echo "Failed to activate virtualenv....exiting."
+            echo -e "Failed to activate virtualenv....exiting."
+            echo -e ""
             exit 1
         fi
         # Detect python 2+ or 3+
@@ -404,14 +318,14 @@ function setup_environment() {
         pip install -r templates/requirements.txt
     fi
 
-    # Start with a clean working space by moving everything into the debug directory
-    if [[ -d debug/ ]]; then 
-       rm -rf debug/
+    # Start with a clean working space by moving everything into the working directory
+    if [[ -d working/ ]]; then 
+       rm --verbose -rf working/
     fi
-    mkdir debug
-    cp templates/container.yml debug/
-    cp templates/generate_manifests.yml debug/
-    cd debug
+    mkdir working
+    cp --verbose templates/container.yml working/
+    cp --verbose templates/generate_manifests.yml working/
+    cd working
 
 }
 
@@ -452,12 +366,12 @@ function make_ansible_yamls() {
                
                 # Copy the tasks file for the service
                 if [ ! -f "roles/${file}/tasks/main.yml" ]; then
-                    cp ../templates/task.yml roles/${file}/tasks/main.yml
+                    cp --verbose ../templates/task.yml roles/${file}/tasks/main.yml
                 fi
 
                 # Copy the entrypoint file for the service
-                if [ ! -f "roles/${file}/templates/entrypoint" ]; then
-                    cp ../templates/entrypoint roles/${file}/templates/entrypoint
+                if [ ! -f "roles/${file}/templates/entrypoint" ]; then 
+                    cp --verbose ../templates/entrypoint roles/${file}/templates/entrypoint 
                 fi
 
                 # Each file in the static-service directory has the same file name as its service name
@@ -467,10 +381,11 @@ function make_ansible_yamls() {
                 static_services=$(ls ../templates/static-services/)
                 for service in ${static_services}; do
                     if [ "${file,,}.yml" == ${service} ]; then
-                        # Append static service definition to the debug/container.yml
+                        # Append static service definition to the working/container.yml
                         cat ../templates/static-services/${service} >> container.yml
                         echo -e "" >> container.yml
                         is_static=true
+                        echo -e "Added service ${service} to container.yml"
                         static_services+=(${service})
                     fi
                 done
@@ -500,12 +415,12 @@ function make_ansible_yamls() {
         - "memory=2Gi"
 
 EOL
-                fi
+                 fi
             else
                 echo -e "*** There are no packages or yum groups in '${file}'"
-                echo -e "*** Skipping adding service '${file}' to Docker list" fi
-            fi 
-        fi
+                echo -e "*** Skipping adding service '${file}' to Docker list" 
+              fi 
+            fi
     done
 
     # Configure ansible-container to pull from an internal registry
@@ -531,12 +446,12 @@ EOL
             
             # Remove previous roles files if they exist
             if [ -f roles/${role}/vars/${role} ]; then
-                rm -f roles/${role}/vars/${role}
+                rm --verbose -f roles/${role}/vars/${role}
             fi
             
             # Copy the role's vars directory if it exists
             if [ -d roles/${role}/vars ]; then
-                cp sas_viya_playbook/group_vars/${role} roles/${role}/vars/
+                cp --verbose sas_viya_playbook/group_vars/${role} roles/${role}/vars/
             fi
         fi
     done
@@ -560,11 +475,11 @@ EOL
         exit 0
     fi
 
-    cp sas_viya_playbook/group_vars/all temp_all
+    cp --verbose sas_viya_playbook/group_vars/all temp_all
     sed -i 's|^DEPLOYMENT_ID:.*||' temp_all
     sed -i 's|^SPRE_DEPLOYMENT_ID:.*||' temp_all
     cat temp_all >> everything.yml
-    rm -f temp_all
+    rm --verbose -f temp_all
 
     cat sas_viya_playbook/vars.yml >> everything.yml
     cat sas_viya_playbook/internal/soe_defaults.yml >> everything.yml
@@ -578,6 +493,7 @@ EOL
     sed -i 's|^ENTITLEMENT_PATH|#ENTITLEMENT_PATH|' everything.yml
     sed -i 's|^SAS_CERT_PATH|#SAS_CERT_PATH|' everything.yml
     sed -i 's|^SECURE_CONSUL:.*|SECURE_CONSUL: false|' everything.yml
+    sed -i "s|#CAS_VIRTUAL_HOST:.*|CAS_VIRTUAL_HOST: '${CAS_VIRTUAL_HOST}'|" everything.yml
 }
 
 # Generate the Kubernetes resources
@@ -591,34 +507,129 @@ function make_deployments() {
 
 # Push built images to the specified private docker registry
 function push_images() {
+    
     # Note: all_services is a list of services inside the container.yml
-    set -x
     for role in ${all_services}; do 
         ansible-container push --push-to docker-registry --tag ${SAS_DOCKER_TAG}
     done
-    set +x
 }
 
 # Steps mirrored in documentation - show the user what comes next
 function show_next_steps() {
     echo -e ""
-    echo -e "Success. The deploy directory contains all the Kubernetes manifests."
-    echo -e "Import the resources for deployment:"
-    echo -e "    kubectl create --recursive --filename deploy/kubernetes/secrets "
-    echo -e "    kubectl create --recursive --filename deploy/kubernetes/configmaps "
-    echo -e "    kubectl create --recursive --filename deploy/kubernetes/ [smp] OR [mpp]"
+    echo -e "Success. The manifests directory contains all Kubernetes deployment resources."
+    echo -e "To import your resources use \`kubectl (create|replace) --filename deploy/kubernetes --recursive\`"
     echo -e ""
 }
 
-setup_environment  # Make the working directory "debug/" and copy in templates
-validate_input     # Check provided arguments
-setup_logging      # Show build variables and enable logging if debug is on
-get_playbook       # From an SOE zip or previous playbook
-make_ansible_yamls # Create the container.yml and everything.yml
-#add_layers         # Addons
-ansible_build      # Build services from continer.yml 
-make_deployments   # Generate Kubernetes configs
-push_images        # Transfer images to defined registry
-show_next_steps    # Instructions on how to deploy to kubernetes
-exit 0
 
+# Use command line options if they have been provided and overrides environment settings
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case ${key} in
+        -h|--help)
+            shift
+            usage
+            echo
+            exit 0
+            ;;
+        -d|--debug)
+            shift # past argument
+            export DEBUG=true
+            shift # past value
+            ;;
+        -i|--baseimage)
+            shift # past argument
+            BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=$1"
+            shift # past value
+            ;;
+        -t|--basetag)
+            shift # past argument
+            BUILD_ARG_BASETAG="--build-arg BASETAG=$1"
+            shift # past value
+            ;;
+        -m|--mirror-url)
+            shift # past argument
+            export SAS_RPM_REPO_URL=$1
+            BUILD_ARG_SAS_RPM_REPO_URL="--build-arg SAS_RPM_REPO_URL=${SAS_RPM_REPO_URL}"
+            shift # past value
+            ;;
+        -p|--platform)
+            shift # past argument
+            export PLATFORM=$1
+            BUILD_ARG_PLATFORM="--build-arg PLATFORM=${PLATFORM}"
+            shift # past value
+            ;;
+        -z|--zip)
+            shift # past argument
+            echo "-z provided--------------------------------"
+            export SAS_VIYA_DEPLOYMENT_DATA_ZIP=$1
+            shift # past value
+            ;;
+        -w|--skip-mirror-url-validation)
+            shift # past argument
+            CHECK_MIRROR_URL=false
+            ;;
+        -x|--skip-docker-url-validation)
+            shift # past argument
+            CHECK_DOCKER_URL=false
+            ;;
+        -u|--docker-url)
+            shift # past argument
+            export DOCKER_REGISTRY_URL="$1"
+            shift # past value
+            ;;
+        -n|--docker-namespace)
+            shift # past argument
+            export DOCKER_REGISTRY_NAMESPACE="$1"
+            shift # past value
+            ;;
+        -e|--environment-setup)
+            shift # past argument
+            SETUP_VIRTUAL_ENVIRONMENT=true
+            ;;
+        -v|--virtual-host)
+            shift # past argument
+            CAS_VIRTUAL_HOST="$1"
+            shift # past value
+             ;;
+        -l|--playbook)
+            shift # past argument
+            SAS_VIYA_PLAYBOOK_DIR="$1"
+            shift # past value
+             ;;
+        -s|--single-container) shift # past argument
+            VIYA_SINGLE_CONTAINER=true
+            shift # past value
+             ;;
+        *)  echo -e "Invalid argument: $1"
+            exit 1;
+            shift # past argument
+    ;;
+    esac
+done
+
+# Multi-Container Procedure
+function main() {
+    echo -e "Setting up defaults"
+    setup_defaults     
+    echo -e "Setting up environment"
+    setup_environment  
+    echo -e "Validating input"
+    validate_input     
+    echo -e "Setting up logging"
+    setup_logging      
+    echo -e "Fetching playbook"
+    get_playbook       
+    echo -e "Creating ansible-container yamls"
+    make_ansible_yamls 
+    echo -e "Building ansible-container services"
+    ansible_build      
+    echo -e "Generating deployments"
+    make_deployments   
+    push_images        
+
+    show_next_steps    
+    exit 0
+}
+main
