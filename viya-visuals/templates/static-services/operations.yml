@@ -1,0 +1,26 @@
+  operations:
+    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
+    roles:
+    - sas-java
+    - Operations
+    - deployment-data
+    ports: {}
+    entrypoint: ["/opt/sas/viya/home/bin/operations-entrypoint.sh"]
+    labels:
+      sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
+      sas.layer.operations: "true"
+    dev_overrides:
+      environment:
+        - "SAS_DEBUG=1"
+    deployment_overrides:
+      environment:
+        - "SAS_LICENSE="
+        - "SAS_CLIENT_CERT="
+        - "SAS_CA_CERT="
+      volumes:
+        - "log=/opt/sas/viya/config/var/log"
+      resources:
+        limits:
+        - "memory=10Gi"
+        requests:
+        - "memory=2Gi"
