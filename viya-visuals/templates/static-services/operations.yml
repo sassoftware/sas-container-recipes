@@ -3,7 +3,6 @@
     roles:
     - sas-java
     - Operations
-    - deployment-data
     ports: {}
     entrypoint: ["/opt/sas/viya/home/bin/operations-entrypoint.sh"]
     labels:
