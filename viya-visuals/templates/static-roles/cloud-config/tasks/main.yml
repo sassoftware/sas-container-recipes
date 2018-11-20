@@ -10,4 +10,5 @@
     mode: "{{ item.mode }}"
   with_items:
   - { name: docker-functions, path: "lib/envesntl", mode: "0755" }
+  - { name: docker-ops-agent, path: "lib/envesntl", mode: "0755" }
 
