@@ -23,7 +23,7 @@
         - "memory=1024Mi"
       secrets:
         - "SETINIT_TEXT_ENC="
-        - "CASKEY="
+        - "CASKEY=REPLACE ME with unique text. This is used to allow CAS workers to talk to the CAS controller"
       volumes:
         - "data=/cas/data"
         - "cache=/cas/cache"
