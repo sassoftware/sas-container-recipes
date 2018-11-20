@@ -377,7 +377,6 @@ function make_ansible_yamls() {
                 # Each file in the static-service directory has the same file name as its service name
                 # If the file name is the same as the service then the service exists in the order
                 is_static=false
-                all_services=() # Keep a list of the built services so they can be pushed a registry
                 static_services=$(ls ../templates/static-services/)
                 for service in ${static_services}; do
                     if [ "${file,,}.yml" == ${service} ]; then
@@ -385,13 +384,11 @@ function make_ansible_yamls() {
                         cat ../templates/static-services/${service} >> container.yml
                         echo -e "" >> container.yml
                         is_static=true
-                        all_services+=${file,,}
                     fi
                 done
 
                 # Service is not static, meaning it needs to be dynamically created
                 if [ $is_static != true ]; then
-                    all_services+=${file,,}
                     cat >> container.yml <<EOL
 
   ${file,,}:
