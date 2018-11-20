@@ -21,28 +21,49 @@ if [ ${SAS_DEBUG} -gt 0 ]; then
     set -x
 fi
 
-[[ -z ${CASENV_ADMIN_USER+x} ]] && CASENV_ADMIN_USER=sasdemo
-[[ -z ${ADMIN_USER_PWD+x} ]]    && ADMIN_USER_PWD=sasdemo
-[[ -z ${ADMIN_USER_HOME+x} ]]   && ADMIN_USER_HOME="/home/${CASENV_ADMIN_USER}"
+[[ -z ${DEMO_USER+x} ]]        && DEMO_USER=sasdemo
+[[ -z ${DEMO_USER_PASSWD+x} ]] && DEMO_USER_PASSWD=sasdemo
+[[ -z ${DEMO_USER_UID+x} ]]    && DEMO_USER_UID=1004
+[[ -z ${DEMO_USER_HOME+x} ]]   && DEMO_USER_HOME="/home/${DEMO_USER}"
+[[ -z ${DEMO_USER_GROUP+x} ]]  && DEMO_USER_GROUP=sas
+[[ -z ${DEMO_USER_GID+x} ]]    && DEMO_USER_GID=1001
+
+[[ -z ${CASENV_ADMIN_USER+x} ]] && CASENV_ADMIN_USER=${DEMO_USER}
+[[ -z ${ADMIN_USER_PASSWD+x} ]] && ADMIN_USER_PASSWD=sasdemo
 [[ -z ${ADMIN_USER_UID+x} ]]    && ADMIN_USER_UID=1003
+[[ -z ${ADMIN_USER_HOME+x} ]]   && ADMIN_USER_HOME="/home/${CASENV_ADMIN_USER}"
 [[ -z ${ADMIN_USER_GROUP+x} ]]  && ADMIN_USER_GROUP=sas
 [[ -z ${ADMIN_USER_GID+x} ]]    && ADMIN_USER_GID=1001
 
-if [ $(/usr/bin/getent group ${ADMIN_USER_GROUP}) ]; then
-    echo; echo "####### Group '${ADMIN_USER_GROUP}' already exists"; echo;
-else
-    echo; echo "####### Create the '${ADMIN_USER_GROUP}' group"; echo;
-    groupadd --gid ${ADMIN_USER_GID} ${ADMIN_USER_GROUP};
-fi;
-if [[ $(/usr/bin/getent passwd ${CASENV_ADMIN_USER} 2>&1) ]]; then
-    echo; echo "####### [WARN] : User '${CASENV_ADMIN_USER}' already exists"; echo;
-else
-    echo; echo "####### Create the '${CASENV_ADMIN_USER}' user"; echo;
-    /usr/sbin/useradd --uid ${ADMIN_USER_UID} --gid ${ADMIN_USER_GID} --home-dir ${ADMIN_USER_HOME} --create-home ${CASENV_ADMIN_USER};
-    echo "${CASENV_ADMIN_USER}:${ADMIN_USER_PWD}" | chpasswd &&
-    echo "default user ${CASENV_ADMIN_USER} password ${ADMIN_USER_PWD}" > ${ADMIN_USER_HOME}/authinfo.txt;
-    chown --verbose ${ADMIN_USER_UID}:${ADMIN_USER_GID} ${ADMIN_USER_HOME}/authinfo.txt;
-    chmod --verbose 0600 ${ADMIN_USER_HOME}/authinfo.txt;
-    cp --verbose ${ADMIN_USER_HOME}/authinfo.txt ${ADMIN_USER_HOME}/.authinfo;
-    chown --verbose ${ADMIN_USER_UID}:${ADMIN_USER_GID} ${ADMIN_USER_HOME}/.authinfo;
-fi
+function create_user()
+{
+    local user_name=$1
+    local user_passwd=$2
+    local user_id=$3
+    local user_home=$4
+    local user_group=$5
+    local user_gid=$6
+    
+    if [ $(/usr/bin/getent group ${user_group}) ]; then
+        echo; echo "####### Group '${user_group}' already exists"; echo;
+    else
+        echo; echo "####### Create the '${user_group}' group"; echo;
+        groupadd --gid ${user_gid} ${user_group};
+    fi;
+    if [[ $(/usr/bin/getent passwd ${user_name} 2>&1) ]]; then
+        echo; echo "####### [WARN] : User '${user_name}' already exists"; echo;
+    else
+        echo; echo "####### Create the '${user_name}' user"; echo;
+        /usr/sbin/useradd --uid ${user_id} --gid ${user_gid} --home-dir ${user_home} --create-home ${user_name};
+        echo "${user_name}:${user_passwd}" | chpasswd &&
+        echo "default user ${user_name} password ${user_passwd}" > ${user_home}/authinfo.txt;
+        chown --verbose ${user_id}:${user_gid} ${user_home}/authinfo.txt;
+        chmod --verbose 0600 ${user_home}/authinfo.txt;
+        cp --verbose ${user_home}/authinfo.txt ${user_home}/.authinfo;
+        chown --verbose ${user_id}:${user_gid} ${user_home}/.authinfo;
+    fi
+}
+
+create_user ${DEMO_USER} ${DEMO_USER_PASSWD} ${DEMO_USER_UID} ${DEMO_USER_HOME} ${DEMO_USER_GROUP} ${DEMO_USER_GID}
+create_user ${CASENV_ADMIN_USER} ${ADMIN_USER_PASSWD} ${ADMIN_USER_UID} ${ADMIN_USER_HOME} ${ADMIN_USER_GROUP} ${ADMIN_USER_GID}
+
