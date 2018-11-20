@@ -1,10 +1,10 @@
 # SAS for Containers: Recipes
-This repository contains a collection of recipes and other resources for building containers that include the SAS Viya software and other tools.
+A collection of recipes and other resources for building containers that include the SAS Viya software and other tools.
 
-- [/viya-programming](viya-programming/README.md) is a folder that includes recipes and resources for creating single or multiple containers of the SAS Viya 3.4 programming-only deployment.
-- [/addons](addons/README.md) contains recipes and resources that enhance the base SAS Viya software, such as configuration of SAS/ACCESS software and integration with LDAP.
-- A build script named `build.sh` is located at the repository root level. Use it to build Docker images for SAS Viya 3.4.
-- [/all-in-one](all-in-one/README.md) creates a SAS Viya programming-only analytic container from one Dockerfile for convenience and simplicity. This recipe, which was presented at SAS Global Forum 2018, includes SAS Studio, R Studio, and Jupyter Lab.
+- `/viya-programming` is a folder that includes recipes and resources for creating single or multiple containers of the SAS Viya 3.4 programming-only deployment.
+- `/addons` contains recipes and resources that enhance the base SAS Viya software, such as configuration of SAS/ACCESS software and integration with LDAP. [README](addons/README.md)
+- `build.sh` is a build script located at the repository root level. Use it to build Docker images for SAS Viya 3.4.
+- `/all-in-one` is a recipe for a SAS Viya programming-only analytic container from one Dockerfile. Presented at SAS Global Forum 2018, this recipe includes SAS Studio, R Studio, and Jupyter Lab. [README](all-in-one/README.md)
 
 ## Prerequisites
 ### SAS Software
