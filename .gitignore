@@ -13,3 +13,5 @@ venv/
 *~
 *.swo
 *.swp
+working*/
+env/
