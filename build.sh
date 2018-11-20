@@ -239,7 +239,7 @@ sas_sha1=$(git rev-parse --short HEAD)
 [[ -z ${SAS_VIYA_CONTAINER+x} ]] && SAS_VIYA_CONTAINER="viya-single-container"
 [[ -z ${CHECK_MIRROR_URL+x} ]]   && CHECK_MIRROR_URL=true
 [[ -z ${CHECK_DOCKER_URL+x} ]]   && CHECK_DOCKER_URL=true
-#[[ -z ${SAS_RPM_REPO_URL+x} ]]   && export SAS_RPM_REPO_URL=https://ses.sas.download/ses/
+[[ -z ${SAS_RPM_REPO_URL+x} ]]   && export SAS_RPM_REPO_URL=https://ses.sas.download/ses/
 [[ -z ${SAS_DOCKER_TAG+x} ]]     && export SAS_DOCKER_TAG=${sas_version}-${sas_datetime}-${sas_sha1}
 [[ -z ${PROJECT_NAME+x} ]]       && export PROJECT_NAME=sas-viya
 #

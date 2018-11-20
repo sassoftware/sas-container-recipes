@@ -1,0 +1,100 @@
+# This file is used by the cas_init.sh script to inject properties into:
+#
+#   $ROOT/$SASDEPLOYID/config/etc/sysconfig/cas/$INSTANCE/sas-cas-deployment
+#   $ROOT/$SASDEPLOYID/config/etc/cas/$INSTANCE/casconfig-deployment.lua
+#   $ROOT/$SASDEPLOYID/config/etc/cas/$INSTANCE/cas.settings
+#
+
+export SASUSER={{ INSTALL_USER | string | quote }}
+export SASGROUP={{ INSTALL_GROUP | string | quote }}
+{% if item.value.casenv_user is defined %}
+export CASUSER={{ item.value.casenv_user | default('cas') | string | quote }}
+{% else %}
+export CASUSER=cas
+{% endif %}
+{% if item.value.casenv_group is defined %}
+export CASGROUP={{ item.value.casenv_group | default('sas') | string | quote }}
+{% else %}
+export CASGROUP=sas
+{% endif %}
+export SASCASINSTANCE={{ item.key | string | quote }}
+{% if item.value.tenant is defined and item.value.tenant %}
+export SASTENANT={{ item.value.tenant | default('shared') | string | quote }}
+{% else %}
+export SASTENANT=shared
+{% endif %}
+{% if ansible_env.ANSIBLE_CONTAINER is defined %}
+export CASCONTROLLERHOST="{{ item.value.primary_host | string | quote }}"
+export SAS_CURRENT_HOST="{{ item.value.primary_host | string | quote }}"
+{% elif item.value.primary_host is defined and item.value.primary_host %}
+export CASCONTROLLERHOST="{{ hostvars[item.value.primary_host | string | quote].sas_vars.hostname_fqdn }}"
+{% else %}
+export CASCONTROLLERHOST="{% if groups['sas-casserver-primary'] | length > 0 %}{{ hostvars[groups['sas-casserver-primary'][0]].sas_vars.hostname_fqdn }}{% endif %}"
+{% endif %}
+{% if item.value.secondary_host is defined and item.value.secondary_host %}
+export CASBACKUPHOST="{{ hostvars[item.value.secondary_host | string | quote].sas_vars.hostname_fqdn }}"
+{% elif item.value.secondary_host is defined and not item.value.secondary_host %}
+export CASBACKUPHOST=""
+{% else %}
+export CASBACKUPHOST="{% if groups['sas-casserver-secondary'] is defined and groups['sas-casserver-secondary'] | length > 0 %}{{ groups['sas-casserver-secondary'][0] }}{% endif %}"
+{% endif %}
+{% if item.value.worker_hosts is defined and item.value.worker_hosts %}
+{%   set workers_list = item.value.worker_hosts.split(',') %}
+export CASWORKERHOSTS="{% for worker_alias in workers_list %}{% if worker_alias != "" %}{{ hostvars[worker_alias | string | quote].sas_vars.hostname_fqdn }},{% endif %}{% endfor %}"
+{% elif item.value.worker_hosts is defined and not item.value.worker_hosts %}
+export CASWORKERHOSTS=""
+{% else %}
+{%   if groups['sas-casserver-worker'] | length > 0 %}
+export CASWORKERHOSTS="{% for host in groups['sas-casserver-worker'] %}{{ hostvars[host].sas_vars.hostname_fqdn }},{% endfor %}"
+{%   else %}
+export CASWORKERHOSTS=
+{%   endif %}
+{% endif %}
+{% if groups['consul'] is defined and groups['consul'] | length > 0 %}
+export SASCONSULHOST={{ hostvars[groups['consul'][0]].sas_vars.hostname_fqdn | string | quote }}
+{% endif %}
+
+{% if item.value.worker_hosts is defined and item.value.worker_hosts %}
+export CASCFG_mode=mpp
+{% else %}
+export CASCFG_mode=smp
+{% endif %}
+{% if item.value.cas is defined and item.value.cas %}
+{%   for key,value in item.value.cas.items() %}
+export CASCFG_{{ key }}={{ value | string | quote }}
+{%   endfor %}
+{% endif %}
+
+export CASENV_CAS_LICENSE={{ SAS_CONFIG_ROOT }}/etc/cas/{{ item.key | string | quote }}/sas_license.txt
+
+
+{% if item.value.tenant is defined and item.value.tenant %}
+export CASENV_CAS_VIRTUAL_PATH="cas-{{ item.value.tenant | default('shared') }}-{{ item.key | string | quote }}-http"
+{% else %}
+export CASENV_CAS_VIRTUAL_PATH="cas-shared-{{ item.key | string | quote }}-http"
+{% endif %}
+{% if groups['httpproxy'] | default([]) | length > 0 %}
+export CASENV_CAS_VIRTUAL_PROTO="https"
+export CASENV_CAS_VIRTUAL_HOST={{ hostvars[groups['httpproxy'][0]].sas_vars.hostname_fqdn | string | quote }}
+export CASENV_CAS_VIRTUAL_PORT=443
+{% endif %}
+
+{% if item.value.env is defined and item.value.env %}
+{%   for key,value in item.value.env.items() %}
+export CASENV_{{ key }}={{ value | string | quote }}
+{%   endfor %}
+{% endif %}
+
+{% if item.value.settings is defined and item.value.settings %}
+{%   for key,value in item.value.settings.items() %}
+{%     if 'LD_LIBRARY_PATH' in  key %}
+export CASLLP_{{ key }}={{ value | string | quote }}
+{%     else %}
+export CASSET_{{ key }}={{ value | string | quote }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+
+{% if item.value.caskey is defined and item.value.caskey %}
+export CASKEY={{ item.value.caskey | string | quote }}
+{% endif %}
