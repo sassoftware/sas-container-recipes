@@ -385,14 +385,13 @@ function make_ansible_yamls() {
                         cat ../templates/static-services/${service} >> container.yml
                         echo -e "" >> container.yml
                         is_static=true
-                        echo -e "Added service ${service} to container.yml"
-                        static_services+=(${service})
+                        all_services+=${file,,}
                     fi
                 done
 
                 # Service is not static, meaning it needs to be dynamically created
                 if [ $is_static != true ]; then
-                    static_services+=(${service})
+                    all_services+=${file,,}
                     cat >> container.yml <<EOL
 
   ${file,,}:
@@ -427,7 +426,7 @@ EOL
     cat >> container.yml <<EOL
 
 registries: 
-  internal-sas:
+  docker-registry:
     url: ${DOCKER_REGISTRY_URL}
     namespace: ${DOCKER_REGISTRY_NAMESPACE}
 
@@ -515,18 +514,26 @@ function make_deployments() {
 
 # Push built images to the specified private docker registry
 function push_images() {
-    
-    # Note: all_services is a list of services inside the container.yml
-    for role in ${all_services}; do 
-        ansible-container push --push-to docker-registry --tag ${SAS_DOCKER_TAG}
-    done
+    # Example line: `ansible-container push --push-to my-company-repo --tag 18.10.0-20181120130951-4887f72`
+    # This pushes all images defined in the container.yml file to the registry defined in the container.yml
+    # 
+    # Within the container.yml there is something similar to:
+    #
+    # registries:
+    #   docker-registry: <--- This is the name used in the "--push-to". The url is NOT used in --push-to.
+    #     url: docker.mycompany.com
+    #     namespace: mynamespace
+    set +x
+    echo -e "ansible-container push --push-to ${DOCKER_REGISTRY_URL} --tag ${SAS_DOCKER_TAG}"
+    ansible-container push --push-to docker-registry --tag ${SAS_DOCKER_TAG}
+    set -x
 }
 
 # Steps mirrored in documentation - show the user what comes next
 function show_next_steps() {
     echo -e ""
     echo -e "Success. The manifests directory contains all Kubernetes deployment resources."
-    echo -e "To import your resources use \`kubectl (create|replace) --filename deploy/kubernetes --recursive\`"
+    echo -e "To import your resources use \`kubectl (create|replace) --filename deploy/kubernetes/ ... \`"
     echo -e ""
 }
 
@@ -548,8 +555,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -i|--baseimage)
             shift # past argument
-            BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=$1"
-            shift # past value
+            BUILD_ARG_BASEIMAGE="--build-arg BASEIMAGE=$1" shift # past value
             ;;
         -t|--basetag)
             shift # past argument
@@ -634,6 +640,7 @@ function main() {
     ansible_build      
     echo -e "Generating deployments"
     make_deployments   
+    echo -e "Pushing images to registry"
     push_images        
 
     show_next_steps    
