@@ -1,16 +1,16 @@
 # SAS for Containers: Recipes
 This repository contains a collection of recipes and other resources for building containers that include the SAS Viya software and other tools.
 
-- [/all-in-one](all-in-one/README.md) creates a SAS Viya programming-only analytic container from one Dockerfile for convenience and simplicity. This recipe, which was presented at SAS Global Forum 2018, includes SAS Studio, R Studio, and Jupyter Lab.
-- [/viya-programming](viya-programming/README.md) is a folder that includes a recipe and resources for creating SAS Viya 3.4 programming-only Docker images.
+- [/viya-programming](viya-programming/README.md) is a folder that includes recipes and resources for creating single or multiple containers of the SAS Viya 3.4 programming-only deployment.
 - [/addons](addons/README.md) contains recipes and resources that enhance the base SAS Viya software, such as configuration of SAS/ACCESS software and integration with LDAP.
-- A [build script](#use-buildsh-to-build-the-images) that you can use to create a container image that includes the SAS Viya software and addon layers.
+- A build script named `build.sh` is located at the repository root level. Use it to build Docker images for SAS Viya 3.4.
+- [/all-in-one](all-in-one/README.md) creates a SAS Viya programming-only analytic container from one Dockerfile for convenience and simplicity. This recipe, which was presented at SAS Global Forum 2018, includes SAS Studio, R Studio, and Jupyter Lab.
 
 ## Prerequisites
 ### SAS Software
 
 - SAS Viya 3.4 software: a SAS Viya 3.4 on Linux order and the SAS_Viya_deployment_data.zip from the Software Order Email (SOE) are required.
-- Creating a local mirror of the SAS software is strongly recommended. [Here's why](../wikis/Tips#create-a-local-mirror-repository). 
+- Creating a local mirror of the SAS software is strongly recommended. [Here's why](../wikis/The-Basics#why-do-i-need-a-local-mirror-repository). 
 
 ### Other Software
 
@@ -51,7 +51,7 @@ git clone https://github.com/sassoftware/sas-container-recipes.git
 
 ### Use build.sh to Build the Images
 
-A script named `build.sh` is at the repository root level. After the sassoftware/sas-container-recipes project is cloned, run `build.sh` to build a set of Docker images for SAS Viya 3.4.
+Look for `build.sh` at the repository root level. After the sassoftware/sas-container-recipes project is cloned, run `build.sh` to build a set of Docker images for SAS Viya 3.4.
 
 The following example assumes that you are in the 
 /$HOME/sas-container-recipes directory, a mirror repository is set up at `http://host.company.com/sas_repo`, and an addon layer, [auth-demo](addons/auth-demo/README.md), is included in the build.
@@ -162,7 +162,7 @@ kubectl create -f sas-viya.ing
 
 ### Use build.sh to Build the Images
 
-A script named `build.sh` is at the repository root level. After the sassoftware/sas-container-recipes project is cloned, run `build.sh` to build a set of Docker images for SAS Viya 3.4.
+Look for `build.sh` at the repository root level. After the sassoftware/sas-container-recipes project is cloned, run `build.sh` to build a set of Docker images for SAS Viya 3.4.
 
 The following example assumes that you are in the 
 /$HOME/sas-container-recipes directory, a mirror repository is set up at `http://host.company.com/sas_repo`, and an addon layer, [auth-demo](addons/auth-demo/README.md), is included in the build.
