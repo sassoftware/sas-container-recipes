@@ -542,9 +542,9 @@ EOL
         sed -i "s|CONSUL_KEY_VALUE_DATA_ENC=|CONSUL_KEY_VALUE_DATA_ENC=${consul_data_enc}|g" container.yml
     fi
 
-    setinit_enc=$(cat ${SAS_VIYA_PLAYBOOK_DIR}/SASViyaV0300*.txt | base64 --wrap=0 )
+    setinit_enc=$(cat sas_viya_playbook/SASViyaV0300*.txt | base64 --wrap=0 )
     sed -i "s|SETINIT_TEXT_ENC=|SETINIT_TEXT_ENC=${setinit_enc}|g" container.yml
-    sed -i "s|SAS_LICENSE=|SAS_LICENSE=$(cat ${SAS_VIYA_PLAYBOOK_DIR}/SASViyaV0300*.jwt)|g" container.yml
+    sed -i "s|SAS_LICENSE=|SAS_LICENSE=$(cat sas_viya_playbook/SASViyaV0300*.jwt)|g" container.yml
     sed -i "s|SAS_CLIENT_CERT=|SAS_CLIENT_CERT=$(cat entitlement_certificate.pem  | base64 --wrap=0 )|g" container.yml
     sed -i "s|SAS_CA_CERT=|SAS_CA_CERT=$(cat SAS_CA_Certificate.pem | base64 --wrap=0 )|g" container.yml
     sed -i "s|{{ DOCKER_REGISTRY_URL }}|${DOCKER_REGISTRY_URL}|" container.yml
