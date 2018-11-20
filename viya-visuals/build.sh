@@ -303,7 +303,7 @@ function setup_environment() {
             pip install --upgrade pip==9.0.3
             pip install ansible-container[docker]
             echo "Updating the client timeout for the created virtual environment."
-            echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> ./env/lib/python2.7/site-packages/container/docker/templates/conductor-local-dockerfile.j2
+            echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> ${VIRTUAL_ENV}/lib/python2.7/site-packages/container/docker/templates/conductor-local-dockerfile.j2
         elif [[ $PYTHON_MAJOR_VER -eq "3" ]]; then
             echo "WARN: Python3 support is experimental in ansible-container."
             echo "Updating requirements file for python3 compatibility..."
@@ -311,7 +311,7 @@ function setup_environment() {
             pip install --upgrade pip==9.0.3
             pip install -e git+https://github.com/ansible/ansible-container.git@develop#egg=ansible-container[docker]
             echo "Updating the client timeout for the created virtual environment."
-            echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> ./env/src/ansible-container/container/docker/templates/conductor-local-dockerfile.j2
+            echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> ${VIRTUAL_ENV}/src/ansible-container/container/docker/templates/conductor-local-dockerfile.j2
         fi
         # Restore latest pip version
         pip install --upgrade pip setuptools
@@ -494,6 +494,13 @@ EOL
     sed -i 's|^SAS_CERT_PATH|#SAS_CERT_PATH|' everything.yml
     sed -i 's|^SECURE_CONSUL:.*|SECURE_CONSUL: false|' everything.yml
     sed -i "s|#CAS_VIRTUAL_HOST:.*|CAS_VIRTUAL_HOST: '${CAS_VIRTUAL_HOST}'|" everything.yml
+
+    # Load the license into the image secrets
+    setinit_enc=$(cat sas_viya_playbook/SASViyaV0300*.txt | base64 --wrap=0 )
+    sed -i "s|SETINIT_TEXT_ENC=|SETINIT_TEXT_ENC=${setinit_enc}|g" container.yml
+    sed -i "s|{{ DOCKER_REGISTRY_URL }}|${DOCKER_REGISTRY_URL}|" container.yml
+    sed -i "s|{{ DOCKER_REGISTRY_NAMESPACE }}|${DOCKER_REGISTRY_NAMESPACE}|" container.yml
+    sed -i "s|{{ PROJECT_NAME }}|${PROJECT_NAME}|" container.yml
 }
 
 # Generate the Kubernetes resources
@@ -563,7 +570,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         -z|--zip)
             shift # past argument
-            echo "-z provided--------------------------------"
             export SAS_VIYA_DEPLOYMENT_DATA_ZIP=$1
             shift # past value
             ;;
