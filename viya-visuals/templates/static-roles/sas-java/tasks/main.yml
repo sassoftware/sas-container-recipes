@@ -1,6 +1,15 @@
 ---
 # tasks file for sas-java
 
+- name: Add repository information
+  template:
+    src: "{{ item.file }}"
+    dest: "{{ item.loc }}"
+    mode: "u=rw,g=rw,o=r"
+  with_items:
+    - { file: sas.repo.j2, loc: "/etc/yum.repos.d/sas.repo" }
+  when: (METAREPO_INSTALL | bool == false)
+
 - name: Get epoch and use that as our id
   local_action: set_fact tmpcertloc="{{ '/tmp/tmp.' + ansible_date_time.epoch }}"
   run_once: yes
@@ -9,16 +18,19 @@
   file:
     path: "{{ tmpcertloc }}"
     state: directory
+  when: (METAREPO_INSTALL | bool == true)
 
 - name: Set the location of the temp directory
   set_fact:
     METAREPO_CERT_DIR: "{{ tmpcertloc }}"
+  when: (METAREPO_INSTALL | bool == true)
 
 # Configure yum so we can install the meta repo definition and the entitled repo definitions
 - name: Copy certificates to remote machine
   copy:
     src: "{{ item }}"
     dest: "{{ METAREPO_CERT_DIR + '/' + item }}"
+  when: (METAREPO_INSTALL | bool == true)
   with_items:
     - "{{ METAREPO_CERT_CLIENT }}"
     - "{{ METAREPO_CERT_CA }}"
@@ -53,6 +65,7 @@
       if [[ ! -z ${repo_rpm_list+x} ]]; then
         yum install -y ${repo_rpm_list}
       fi
+    when: (METAREPO_INSTALL | bool == true)
 
   - name: "Install {{ sas_default_java }}"
     yum:
@@ -84,6 +97,7 @@
       yum erase --assumeyes sas-meta-repo*
       yum clean all
       rm --recursive --force /root/.cache /var/cache/yum
+    when: (METAREPO_INSTALL | bool == true)
 
   when:
   - ansible_os_family == 'RedHat'
@@ -104,10 +118,17 @@
 
   when: ansible_os_family == 'Suse'
 
+- name: Remove sas.repo file
+  file:
+    path: /etc/yum.repos.d/sas.repo
+    state: absent
+  when: ( METAREPO_INSTALL | bool ) == false
+
 - name: Remove temporary directory {{ METAREPO_CERT_DIR }}
   file:
     path: "{{ METAREPO_CERT_DIR }}"
     state: absent
+  when: (METAREPO_INSTALL | bool == true)
 
 - name: Set Java to use Java 1.8 when it is not the default Java on the system
   set_fact:

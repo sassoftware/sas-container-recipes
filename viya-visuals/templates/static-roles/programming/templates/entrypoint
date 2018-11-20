@@ -18,37 +18,16 @@ fi
 # Variables
 ###############################################################################
 
-[[ -z ${DEPLOYMENT_NAME+x} ]]   && export DEPLOYMENT_NAME="viya"
-[[ -z ${SASSERVICENAME+x} ]]    && export SASSERVICENAME="spawner"
-[[ -z ${SASSERVICECONTEXT+x} ]] && export SASSERVICECONTEXT=${SASSERVICENAME#sas-}
 [[ -z ${SASROOT+x} ]]           && export SASROOT=/opt/sas
 [[ -z ${SASDEPLOYID+x} ]]       && export SASDEPLOYID=viya
 [[ -z ${SASINSTANCE+x} ]]       && export SASINSTANCE=default
 [[ -z ${SASHOME+x} ]]           && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
 [[ -z ${SASPREHOME+x} ]]        && export SASPREHOME=${SASROOT}/spre/home
 [[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
-[[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
 [[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
-[[ -z ${SAS_LOGS_TO_DISK+x} ]]  && export SAS_LOGS_TO_DISK=false
-
-# The following are used in sas-start-functions
-servicename=${SASSERVICENAME}
-servicecontext=${SASSERVICECONTEXT}
 
 # Set of functions for supporting docker containers
 source ${SASHOME}/lib/envesntl/docker-functions
-
-###############################################################################
-# Setup Consul
-###############################################################################
-
-docker_define_consul_environment
-
-# start local consul
-/etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE} start
-
-# Wait for Consul to be up
-docker_wait_for_consul_leader
 
 ###############################################################################
 # Configuration by convention
@@ -86,41 +65,9 @@ fi
 ###############################################################################
 # Shutdown
 ###############################################################################
-function gracefulshutdown {
-    echo
-    echo "Shutting down!"
-    echo
-    echo "    Stop SAS services"
 
-    # TODO: Handle CONNECT
-    pidfiles="/var/run/sas/sas-viya-sasstudio-default.pid /var/run/sas/sas-viya-spawner-default.pid"
-    for _pidf in ${pidfiles}; do
-        if [ -f ${_pidf} ]; then
-            SERVICE_PID=$(cat ${_pidf})
-            set +e
-            ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
-            process_check_rc=$?
-            set -e
-            if (( ${process_check_rc} == 0 )); then
-                echo "      Stopping process from ${_pidf}"
-                kill -TERM $(cat ${_pidf})
-            fi
-        fi
-    done
-
-    n_stop_count=$(find /tmp -type f -name "*stop.sh" | wc -c)
-    if (( ${n_stop_count} > 0 )); then
-        for str_stop_script in $(ls -1 /tmp/*stop.sh); do
-            echo "Running stop script \"${str_stop_script}\""
-            ${str_stop_script}
-        done
-    fi
-
-    exit 0
-}
-
-trap gracefulshutdown SIGTERM
-trap gracefulshutdown SIGINT
+trap docker_shutdown_sas_services SIGTERM
+trap docker_shutdown_sas_services SIGINT
 
 ###############################################################################
 # Host Auth
@@ -172,15 +119,21 @@ fi
 runuser --shell "/bin/sh" --login sas \
     --command "${SASPREHOME}/SASFoundation/utilities/bin/apply_license \
     ${SASLICENSEDIR}/${SASLICENSEFILE}"
-runuser --shell "/bin/sh" --login sas \
-    --command "${SASPREHOME}/SASFoundation/utilities/bin/post_install all"
+
+runuser --shell "/bin/sh" \
+    --login sas \
+    --command "${SASPREHOME}/SASFoundation/utilities/bin/post_install build_nickname"
+
+runuser --shell "/bin/sh" \
+    --login sas \
+    --command "${SASPREHOME}/SASFoundation/utilities/bin/post_install build_add_cmacros"
 
 #touch ${SASCONFIG}/etc/workspaceserver/default/autoexec_deployment.sas
 #chown -v sas:sas ${SASCONFIG}/etc/workspaceserver/default/autoexec_deployment.sas
 #chmod -v 0644 ${SASCONFIG}/etc/workspaceserver/default/autoexec_deployment.sas
 #echo "options cashost=\"${CAS_CONTROLLER_HOST}\" casport=${CAS_CONTROLLER_PORT};" > ${SASCONFIG}/etc/workspaceserver/default/autoexec_deployment.sas
-sed -i "s|options cashost=.*$|options cashost=\"${CAS_CONTROLLER_HOST}\" casport=${CAS_CONTROLLER_PORT};|" ${SASCONFIG}/etc/workspaceserver/default/autoexec_deployment.sas
-sed -i "s|options cashost=.*$|options cashost=\"${CAS_CONTROLLER_HOST}\" casport=${CAS_CONTROLLER_PORT};|" ${SASCONFIG}/etc/batchserver/default/autoexec_deployment.sas
+[[ ! -z ${CAS_CONTROLLER_HOST+x} ]] && sed -i "s|options cashost=.*$|options cashost=\"${CAS_CONTROLLER_HOST}\" casport=${CAS_CONTROLLER_PORT};|" ${SASCONFIG}/etc/workspaceserver/default/autoexec_deployment.sas
+[[ ! -z ${CAS_CONTROLLER_HOST+x} ]] && sed -i "s|options cashost=.*$|options cashost=\"${CAS_CONTROLLER_HOST}\" casport=${CAS_CONTROLLER_PORT};|" ${SASCONFIG}/etc/batchserver/default/autoexec_deployment.sas
 
 #
 # Take a collection of configurations and cat them into the usermod files.
@@ -377,100 +330,43 @@ fi
 # Configure logging
 ###############################################################################
 
-if ! ${SAS_LOGS_TO_DISK}; then
-    # Setup object spawner to log to stdout
-    sed -i 's|>\$spawner_logfile ||' ${SASCONFIG}/etc/spawner/${SASINSTANCE}/spawner.sh
-
-    # Setup workspace server to log to stdout
-    cp ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.stdout.xml ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.xml
-    sed -i 's|Debug|Info|' ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.xml
-
-    # Configure SAS Studio to log to stdout
-    sed -i 's|^\$command.*$|\$command 2>\&1 \&|' ${SASHOME}/SASStudio/bin/appserver.sh
-    cat > ${SASCONFIG}/etc/sasstudio/${SASINSTANCE}/SASStudio-log4j.xml << SASSTUDIO
-<?xml version="1.0" encoding="UTF-8"?>
-<Configuration>
-        <Appenders>
-                <Console name="Console" target="SYSTEM_OUT">
-                        <PatternLayout pattern="%d [%t] %-5p %c (%F:%L) - %m%n"/>
-                </Console>
-        </Appenders>
-
-        <Loggers>
-                <Logger name="com.sas" level="ERROR">
-                        <AppenderRef ref="SYSTEM_OUT" />
-                </Logger>
-                <Root level="ERROR">
-                        <AppenderRef ref="SYSTEM_OUT" />
-                </Root>
-        </Loggers>
-</Configuration>
-SASSTUDIO
-
-else
-    echo "Logging to disk"
-    # TODO: Create logging directories
-fi
+## # Setup object spawner to log to stdout
+## sed -i 's|>\$spawner_logfile ||' ${SASCONFIG}/etc/spawner/${SASINSTANCE}/spawner.sh
+##
+## # Setup workspace server to log to stdout
+## cp ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.stdout.xml ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.xml
+## sed -i 's|Debug|Info|' ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.xml
+##
+## # Configure SAS Studio to log to stdout
+## sed -i 's|^\$command.*$|\$command 2>\&1 \&|' ${SASHOME}/SASStudio/bin/appserver.sh
+## cat > ${SASCONFIG}/etc/sasstudio/${SASINSTANCE}/SASStudio-log4j.xml << SASSTUDIO
+## <?xml version="1.0" encoding="UTF-8"?>
+## <Configuration>
+##         <Appenders>
+##                 <Console name="Console" target="SYSTEM_OUT">
+##                         <PatternLayout pattern="%d [%t] %-5p %c (%F:%L) - %m%n"/>
+##                 </Console>
+##         </Appenders>
+##
+##         <Loggers>
+##                 <Logger name="com.sas" level="ERROR">
+##                         <AppenderRef ref="SYSTEM_OUT" />
+##                 </Logger>
+##                 <Root level="ERROR">
+##                         <AppenderRef ref="SYSTEM_OUT" />
+##                 </Root>
+##         </Loggers>
+## </Configuration>
+## SASSTUDIO
 
 ###############################################################################
 # Run SAS services
 ###############################################################################
 
-echo "Starting SAS Object Spawner..."
-# touch /var/run/sas/sas-viya-spawner-default.pid
-# chown sas /var/run/sas/sas-viya-spawner-default.pid
-# chmod 0644 /var/run/sas/sas-viya-spawner-default.pid
-# runuser --shell "/bin/sh" --login sas \
-    # --command "${SASCONFIG}/etc/spawner/${SASINSTANCE}/spawner.sh \
-    # -p /var/run/sas/sas-viya-spawner-default.pid \
-    # -d ${SASDEPLOYID} \
-    # -i ${SASINSTANCE}"
-/etc/init.d/sas-viya-spawner-default start
-
-echo "Starting SAS Studio..."
-# touch /var/run/sas/sas-viya-sasstudio-default.pid
-# chown sas /var/run/sas/sas-viya-sasstudio-default.pid
-# chmod 0644 /var/run/sas/sas-viya-sasstudio-default.pid
-# runuser --shell "/bin/sh" --login sas \
-    # --command "${SASHOME}/SASStudio/bin/appserver.sh \
-    # -p /var/run/sas/sas-viya-sasstudio-default.pid \
-    # -r ${SASROOT}/${SASDEPLOYID} \
-    # -l ${SASCONFIG}/var/log/sasstudio/${SASINSTANCE} \
-    # -d ${SASDEPLOYID} \
-    # -i ${SASINSTANCE}"
-/etc/init.d/sas-viya-sasstudio-default start
-
-# TODO: Run CONNECT Server if present
-if [ -f "/etc/init.d/sas-viya-connect-default" ]; then
-    /etc/init.d/sas-viya-connect-default start
-fi
+docker_run_sas_services
 
 ###############################################################################
 # Keep the container alive until it is killed
 ###############################################################################
 
-# TODO: Need to add CONNECT
-pidfiles="/var/run/sas/sas-viya-sasstudio-default.pid /var/run/sas/sas-viya-spawner-default.pid"
-while :; do
-    sleep 3
-    for _pidf in ${pidfiles}; do
-        if [ -f ${_pidf} ]; then
-            SERVICE_PID=$(cat ${_pidf})
-            set +e
-            ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
-            process_check_rc=$?
-            set -e
-            if (( ${process_check_rc} != 0 )); then
-                echo;
-                echo "Process is not running..."
-                echo "    File = ${_pidf}";
-                echo "    PID = ${SERVICE_PID}";
-                gracefulshutdown
-            fi
-        else
-            echo; echo "PID file not found: ${_pidf}"; echo
-            gracefulshutdown
-        fi
-    done
-done
-
+docker_check_sas_services
