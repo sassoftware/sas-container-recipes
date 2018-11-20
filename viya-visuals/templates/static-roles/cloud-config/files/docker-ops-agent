@@ -45,14 +45,12 @@ function docker_run_ops_agent()
 function docker_check_ops_agent()
 {
     if [[ -f /etc/init.d/sas-${SASDEPLOYID}-ops-agent-default ]]; then
-        # Making sure the system can start ops-agent
-        if [[ -f ${SASHOME}/bin/sas-ops-agent ]]; then
         set +e
         status_check_resp=$(/etc/init.d/sas-${SASDEPLOYID}-ops-agent-default status 2>/dev/null)
         status_check_rc=$?
         set -e
         echo "[INFO]  : ops-agent status = \"${status_check_resp}\""
-        if (( ${process_check_rc} != 0 )); then
+        if (( ${status_check_rc} != 0 )); then
             echo_line "[WARN]  : ops-agent is not running...restarting..."
             /etc/init.d/sas-${SASDEPLOYID}-ops-agent-default start
         fi
