@@ -46,13 +46,15 @@ spec:
 {% endif %}
 {% if item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets %}
 {%   for secrets in item.value.deployment_overrides.secrets %}
-{%     if secrets.split('=')[0] != 'SETINIT_TEXT_ENC' %}
+{%     if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
+        - name: SETINIT_TEXT
+{%     else      %}
         - name: {{ secrets.split('=')[0] }}
+{%     endif     %}
           valueFrom:
             secretKeyRef:
               name: {{ settings.project_name }}-{{ item.key | lower }}
               key: {{ secrets.split('=')[0] | lower }}
-{%     endif %}
 {%   endfor %}
 {% endif %}
 {% if services.consul is defined %}
