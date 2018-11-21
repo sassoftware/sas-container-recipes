@@ -51,17 +51,21 @@ function docker_check_ops_agent()
         set -e
         echo "[INFO]  : ops-agent status = \"${status_check_resp}\""
         if (( ${status_check_rc} != 0 )); then
-            echo_line "[WARN]  : ops-agent is not running...restarting..."
+            echo "[WARN]  : ops-agent is not running...starting it again..."
             /etc/init.d/sas-${SASDEPLOYID}-ops-agent-default start
+        else
+            echo "[INFO]  : ops-agent is running"
         fi
-
-        # Pause to give enough time between checks
-        sleep 30
     else
-        echo_line "[INFO]  : ops-agent is not on the host"
+        echo "[INFO]  : ops-agent is not on the host"
         exit 0
     fi
 }
 
 docker_run_ops_agent
-docker_check_ops_agent
+while :; do
+    docker_check_ops_agent
+
+    # Pause to give enough time between checks
+    sleep 30
+done
