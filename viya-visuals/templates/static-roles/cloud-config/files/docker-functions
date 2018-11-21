@@ -286,7 +286,7 @@ function docker_check_sas_services()
             # based images. Skipping ops-agent, because we will manage that in 
             # a different way.
             if [[ "${_pidf}" != *"sas-${SASDEPLOYID}-all-services"* ]] &&
-               [[ "${_pidf}" != *"sas-${SASDEPLOYID}-ops-agent-default" ]]; then
+               [[ "${_pidf}" != *"sas-${SASDEPLOYID}-ops-agent-default"* ]]; then
                 if [ -f ${_pidf} ]; then
                     SERVICE_PID=$(cat ${_pidf})
                     set +e
