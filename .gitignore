@@ -5,10 +5,12 @@
 *.retry
 ac/
 venv/
+env/
 *test*/
 .DS_Store
 *.log
-**/debug/
+**/working/
+**/working_*
 **/deploy/
 *~
 *.swo

@@ -14,145 +14,78 @@ if [[ -n "$1" ]]; then
   exec "$@"
 fi
 
-
-###############################################################################
-# Variables
-###############################################################################
-
-[[ -z ${DEPLOYMENT_NAME+x} ]]   && export DEPLOYMENT_NAME="viya"
-[[ -z ${SASSERVICENAME+x} ]]    && export SASSERVICENAME="sas-httpproxy"
-[[ -z ${SASSERVICECONTEXT+x} ]] && export SASSERVICECONTEXT=${SASSERVICENAME#sas-}
-[[ -z ${SASROOT+x} ]]           && export SASROOT=/opt/sas
-[[ -z ${SASDEPLOYID+x} ]]       && export SASDEPLOYID=viya
-[[ -z ${SASINSTANCE+x} ]]       && export SASINSTANCE=default
-[[ -z ${SASHOME+x} ]]           && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
-[[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
-[[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
-[[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
-
-# The following are used in sas-start-functions
-servicename=${SASSERVICENAME}
-servicecontext=${SASSERVICECONTEXT}
-
-# Set of functions for supporting docker containers
-source ${SASHOME}/lib/envesntl/docker-functions
-
-###############################################################################
-# Setup Consul
-###############################################################################
-
-# Write tokens to disk if needed and echo CONSUL_HTTP_ADDR to file
-docker_define_consul_environment
-
-# start local consul
-/etc/init.d/sas-viya-consul-default start
-
-# Wait for Consul to be up
-docker_wait_for_consul_leader
-
-###############################################################################
-# Shutdown
-###############################################################################
-function gracefulshutdown {
-    echo
-    echo_line "Shutting down ${SASSERVICECONTEXT} pid $(cat ${DOCKERPIDFILE})!"
-    echo
-
-    serviceNames=( httpd viya )
-    for serviceName in "${serviceNames[@]}"
-    do
-        ${SASHOME}/bin/sas-bootstrap-config agent service deregister ${serviceName}
-        deregisterResult=$?
-        if [ 0 -eq ${deregisterResult} ]; then
-            echo_line "Deregistered '${serviceName}' service from Consul."
-        else
-            result=${deregisterResult}
-            echo_line "Error when attempting to deregister '${serviceName}' service from Consul. Return code: ${deregisterResult}"
-        fi
-    done
-
-    # new SAS init stuff
-    kill -TERM $(cat ${DOCKERPIDFILE})
-    result=$?
-    # sleep 10
-    echo
-    if [ $result -eq 0 ]; then
-        echo_line "SUCCESS: ${SASSERVICECONTEXT} is stopped"
-    else
-        echo_line "ERROR: ${SASSERVICECONTEXT} could not be stopped"
-    fi
-
-    exit 0
-}
-
-trap gracefulshutdown SIGTERM
-trap gracefulshutdown SIGINT
-
 ###############################################################################
 # Configure httpd
 ###############################################################################
 
-echo_line ""
-echo_line "Setting the apcahe start command"
-[[ -z ${APACHE_CTL} ]] && APACHE_CTL="/usr/sbin/httpd"
+[[ -z $APACHE_ROOT ]] && APACHE_ROOT=
+[[ -z $APACHE_CTL ]] && APACHE_CTL=$APACHE_ROOT/usr/sbin/apachectl
 
-echo_line "Change httpd start command in ${SASHOME}/bin/replace_httpd_default_cert.sh"
-sed -i 's/$APACHE_CTL restart/$APACHE_CTL -k restart/' ${SASHOME}/bin/replace_httpd_default_cert.sh
-
-if [ -f ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem ]
-then
-    echo_line "Using SSL certificate in ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem."
-    sed -i 's,/etc/ssl/certs/ssl-cert-snakeoil.pem,${SASCONFIG}/srv/httpd/certs/ssl-cert.pem,' /etc/apache2/sites-enabled/default-ssl.conf
-else
-    echo_line "Turn off starting the httpd service in ${SASHOME}/bin/replace_httpd_default_cert.sh"
-    sed -i.bak 's/service httpd restart$/#service httpd restart/' ${SASHOME}/bin/replace_httpd_default_cert.sh
-
-    echo_line "No SSL certificate found in ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem. Using self-signed certificate."
-    ${SASHOME}/bin/replace_httpd_default_cert.sh
-
-    # Take the result of this and echo it out to Kubernetes
+if [ -z $APACHE_CONF_D ]; then
+  if [ -d $APACHE_ROOT/etc/httpd/conf.d ]; then
+    APACHE_CONF_D=$APACHE_ROOT/etc/httpd/conf.d
+    APACHE_CONF=$APACHE_ROOT/etc/httpd/conf/httpd.conf
+    APACHE_BIN=/usr/sbin/httpd
+    APACHE_DOCROOT=/var/www/html
+    APACHE_PID=/var/run/httpd/httpd.pid
+  else
+    APACHE_CONF_D=$APACHE_ROOT/etc/apache2/conf.d
+    APACHE_CONF=$APACHE_ROOT/etc/apache2/httpd.conf
+    APACHE_BIN=/usr/sbin/apachectl
+    APACHE_DOCROOT=/srv/www/htdocs
+    APACHE_PID=/var/run/httpd.pid
+  fi
 fi
 
-echo_line "Turn off logging to a file in ${SASHOME}/bin/${SASSERVICENAME}"
-sed -i.bak 's/sas_set_log/#sas_set_log/' ${SASHOME}/bin/${SASSERVICENAME}
 
-echo_line "Change httpd start command in ${SASHOME}/bin/${SASSERVICENAME}"
-sed -i 's/$APACHE_CTL start/$APACHE_CTL -k start/' ${SASHOME}/bin/${SASSERVICENAME}
+cat > $APACHE_CONF_D/proxy.conf << HTTPD
+RedirectMatch "^/$" /SASStudio
 
-echo_line "Change httpd re-start command in ${SASHOME}/bin/restart_httpd.sh"
-sed -i 's/$APACHE_CTL start/$APACHE_CTL -k start/' ${SASHOME}/bin/${SASSERVICENAME}
-sed -i.bak 's/$APACHE_CTL graceful/$APACHE_CTL -k graceful/' ${SASHOME}/bin/restart_httpd.sh
+<location /cas-shared-default-http>
+  ProxyPass         http://{{ PROJECT_NAME }}-sas-casserver-primary:8777/cas-shared-default-http
+  ProxyPassReverse  http://{{ PROJECT_NAME }}-sas-casserver-primary:8777/cas-shared-default-http
+  RequestHeader set Origin "http://{{ PROJECT_NAME }}-sas-casserver-primary:8777"
+</Location>
 
-if [[ ! -e "${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig" ]] && [[ -e "${SASCONFIG}/etc/sysconfig/httpproxy.conf" ]] ; then
-    echo
-    cp -v ${SASCONFIG}/etc/sysconfig/httpproxy.conf ${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig
-    echo
-elif [[ ! -e "${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig" ]] && [[ ! -e "${SASCONFIG}/etc/sysconfig/httpproxy.conf" ]] ; then
-    touch "${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig"
-fi
+<Location /SASStudio/mobile>
+  RedirectMatch "^/SASStudio/mobile.*$" /SASStudio/not_supported
+</Location>
 
-echo
-cp -v ${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig ${SASCONFIG}/etc/sysconfig/httpproxy.conf
-echo
-echo "export APACHE_CTL=\"${APACHE_CTL}\"" >> ${SASCONFIG}/etc/sysconfig/httpproxy.conf
-echo_line ""
+<Location /SASStudio>
+  ProxyPass        http://{{ PROJECT_NAME }}-programming:7080/SASStudio
+  ProxyPassReverse http://{{ PROJECT_NAME }}-programming:7080/SASStudio
+  RequestHeader set Origin "http://{{ PROJECT_NAME }}-programming:7080"
+</Location>
+HTTPD
 
-# Get logging to stdout
-sed -ri -e 's!^(\s*CustomLog)\s+\S+!\1 /proc/self/fd/1!g' /etc/httpd/conf/httpd.conf
-sed -ri -e 's!^(\s*ErrorLog)\s+\S+!\1 /proc/self/fd/2!g' /etc/httpd/conf/httpd.conf
+# removed shared memory segment files between restarts
+rm --verbose --force /run/httpd/authdigest_shm.*
+
+#
+# Write out a help page to be displayed when browsing port 80
+#
+
+cat > $APACHE_DOCROOT/index.html <<'EOF'
+<html>
+ <h1> SAS Viya Programming Docker Container </h1>
+ <p> Access the software by browsing to:
+ <ul>
+  <li> <b><a href="/SASStudio">/SASStudio</a></b>
+ </ul> using HTTP on port 80.
+ <p> If port 80 is forwarded to a different port on the host machine, use the host port instead.
+ <p> Use the <b>sasdemo</b> / <b>sasdemo</b> login to access SAS Studio and CAS.
+</html>
+EOF
+
+###############################################################################
+# Logging
+###############################################################################
+sed -ri -e 's!^(\s*CustomLog)\s+\S+!\1 /proc/self/fd/1!g' $APACHE_CONF
+sed -ri -e 's!^(\s*ErrorLog)\s+\S+!\1 /proc/self/fd/2!g' $APACHE_CONF
+
 
 ###############################################################################
 # Run httpd
 ###############################################################################
 
-docker_create_pid_file
-
-echo_line "Starting ${SASSERVICENAME}..."
-
-${SASHOME}/bin/${SASSERVICENAME} -p ${DOCKERPIDFILE}
-
-###############################################################################
-# Keep the container alive until it is killed
-###############################################################################
-
-docker_check_process
+$APACHE_BIN -DFOREGROUND
