@@ -22,3 +22,12 @@
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
 
+- name: Post install build registry
+  command: "runuser --shell \"/bin/sh\" --login sas --command \"{{ SPREHOME }}/SASFoundation/utilities/bin/post_install build_registry\" "
+
+- name: Post install build default locale
+  command: "runuser --shell \"/bin/sh\" --login sas --command \"{{ SPREHOME }}/SASFoundation/utilities/bin/post_install build_default_locale\" "
+
+- name: Post install build samples config
+  command: "runuser --shell \"/bin/sh\" --login sas --command \"{{ SPREHOME }}/SASFoundation/utilities/bin/post_install build_samples_config\" "
+

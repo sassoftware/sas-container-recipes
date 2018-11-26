@@ -97,4 +97,3 @@
     dest: "{{ playbook_dir }}/deploy/kubernetes/mpp/sas-casserver-worker.yml"
   when: item.key in 'sas-casserver-primary'
   with_dict: '{{ services }}'
-
