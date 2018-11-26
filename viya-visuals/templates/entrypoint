@@ -44,8 +44,8 @@ fi
 [[ -z ${SAS_LOGS_TO_STDOUT+x} ]] && export SAS_LOGS_TO_STDOUT=true
 
 # Some products expect the license to be in a non-standard location
-[[ -z ${ SASLICENSEDIR+x} ]]     && export SASLICENSEDIR={{ SASLICENSEDIR | default('${SASCONFIG}/etc/license') }}
-[[ -z ${ SASLICENSEFILE+x} ]]    && export SASLICENSEFILE={{ SASLICENSEFILE | default('setinit.txt') }}
+[[ -z ${SASLICENSEDIR+x} ]]     && export SASLICENSEDIR={{ SASLICENSEDIR | default('${SASCONFIG}/etc/license') }}
+[[ -z ${SASLICENSEFILE+x} ]]    && export SASLICENSEFILE={{ SASLICENSEFILE | default('setinit.txt') }}
 
 # Decode secrets into the license directory
 [[ ! -z ${SETINIT_TEXT+x} ]]     && echo $SETINIT_TEXT > $SASLICENSEDIR/$SASLICENSEFILE

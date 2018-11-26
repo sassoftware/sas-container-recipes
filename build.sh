@@ -46,7 +46,7 @@ function usage()
     echo "  -d|--skip-docker-url-validation Skips validating the Docker registry URL"
     echo "  -k|--skip-mirror-url-validation Skips validating the mirror URL"
     echo "  -y|--type <value>               The type of depoyment we are doing"
-    echo "                                      Options: [ single | multiple ]"
+    echo "                                      Options: [ single | multiple | full ]"
     echo "                                      Default: single"
     echo "  -v|--virtual-host               The Kubernetes ingress path that defines the location of the HTTP endpoint"
     echo "  -z|--zip <value>                The path to the SAS_Viya_deployment_data.zip file"
@@ -432,10 +432,10 @@ fi
 
 if [[ "${SAS_RECIPE_TYPE}" != "single" ]]; then
     if [[ ! -z ${DOCKER_REGISTRY_URL+x} ]] && ${CHECK_DOCKER_URL}; then
-        echo "[ERROR] : Running curl against Docker registry URL: http://${DOCKER_REGISTRY_URL}"
+        echo "[INFO]  : Running curl against Docker registry URL: http://${DOCKER_REGISTRY_URL}"
         set +e
         set -x
-        response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "http://${DOCKER_REGISTRY_URL}")
+        response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "https://${DOCKER_REGISTRY_URL}")
         set +x
         set -e
         if [ "${response}" != "200" ]; then
@@ -618,19 +618,28 @@ case ${SAS_RECIPE_TYPE} in
         # Provide some information to the end user on next steps
         echo_footer viya-programming/viya-multi-container
         ;;
-    # full)
-        # copy_deployment_data_zip viya-visuals
+    full)
+        # Copy the zip or the playbook to project
+        copy_deployment_data_zip viya-visuals
 
-        # pushd viya-visuals
+        pushd viya-visuals
 
-        # ./build.sh
+        ./build.sh \
+          --baseimage "${BASEIMAGE}" \
+          --basetag "${BASETAG}" \
+          --platform "${PLATFORM}" \
+          --docker-url "${DOCKER_REGISTRY_URL}" \
+          --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
+          --sas-docker-tag "${SAS_DOCKER_TAG}" \
+          --skip-mirror-url-validation \
+          --virtual-host "${CAS_VIRTUAL_HOST}"
 
-        # popd
+        popd
 
-        # add_layers
+        add_layers
 
         # echo_footer viya-visuals
-        # ;;
+        ;;
     *)
         echo "[ERROR] : Unknown type of '${SAS_RECIPE_TYPE}' passed in"
         echo "[INFO]  : Type must be a value of [ single | multiple | full ]"
