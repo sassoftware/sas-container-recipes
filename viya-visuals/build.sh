@@ -272,8 +272,16 @@ function setup_defaults() {
     [[ -z ${PLATFORM+x} ]]                  && PLATFORM=redhat BUILD_ARG_PLATFORM="--build-arg PLATFORM=${PLATFORM}"
 }
 
-# Move everything into a working directory and set up the python virtual environment
+# Move everything into a working directory, set up the python virtual environment, and check for a docker config
 function setup_environment() {
+    
+    # Check for docker config so images can be pushed
+    if [[ ! -f ~/.docker/config.json ]]; then
+        echo -e "File '~/.docker/config.json' not found."
+        echo -e "Authentication with a docker registry is required. Run \`docker login\` on your registry ${DOCKER_REGISTRY_URL}"
+        echo -e ""
+        exit 1 
+    fi
 
     # Setup the python virtual environment and install the requirements inside
     if [ ${SETUP_VIRTUAL_ENVIRONMENT} = "true" ]; then
