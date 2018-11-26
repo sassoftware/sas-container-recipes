@@ -428,7 +428,7 @@ if [[ ! -z ${SKIP_PUSH+x} ]]; then
     exit 0
 fi
 
-[[ -z ${SAS_DOCKER_TAG+x} ]] && export SAS_DOCKER_TAG=${sas_version}-${${sas_datetime}}-${sas_sha1}
+[[ -z ${SAS_DOCKER_TAG+x} ]] && export SAS_DOCKER_TAG=${sas_recipe_version}-${${sas_datetime}}-${sas_sha1}
 
 echo
 echo "==================================="
