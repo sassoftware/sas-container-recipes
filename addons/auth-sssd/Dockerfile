@@ -66,6 +66,7 @@ RUN set -e; \
         if [ -f sssd.cert ]; then cp --verbose sssd.cert /etc/ssl/certs/sssd; fi; \
         pam-config --add --sss && pam-config --add --mkhomedir --mkhomedir-umask=0077; \
         sed -i 's|compat$|compat sss|g' /etc/nsswitch.conf; \
+        sed -i '/^account.*required.*pam_sss.so.*use_first_pass.*$/a account required         pam_exec.so    \/usr\/local\/bin\/mkhomedir_helper.sh' /etc/pam.d/common-account; \        
         zypper clean ; \
         rm --verbose --recursive --force /var/cache/zypp; \
     else \
