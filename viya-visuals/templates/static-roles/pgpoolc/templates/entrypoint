@@ -1,0 +1,140 @@
+#! /bin/bash
+
+# Exit out if any process returns a non zero return code
+#set -e
+#set -x
+
+# Enable debugging if SAS_DEBUG is set
+[[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
+if [ ${SAS_DEBUG} -gt 0 ]; then
+    set -x
+fi
+
+# if given a command, run that
+if [[ -n "$1" ]]; then
+    exec "$@"
+fi
+
+###############################################################################
+# Variables
+###############################################################################
+
+[[ -z ${DEPLOYMENT_NAME+x} ]]   && export DEPLOYMENT_NAME="viya"
+[[ -z ${SASSERVICENAME+x} ]]    && export SASSERVICENAME="postgres"
+#[[ -z ${SASSERVICENAME+x} ]]    && export SASSERVICENAME="sas-pgpool"
+[[ -z ${SASSERVICECONTEXT+x} ]] && export SASSERVICECONTEXT=${SASSERVICENAME#sas-}
+[[ -z ${SASROOT+x} ]]           && export SASROOT=/opt/sas
+[[ -z ${SASDEPLOYID+x} ]]       && export SASDEPLOYID=viya
+# SASINSTANCE is figured out below, however we need to set it to empty for the Consul piece to work.
+[[ -z ${SASINSTANCE+x} ]]       && export SASINSTANCE=''
+[[ -z ${SASHOME+x} ]]           && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
+[[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
+[[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
+[[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
+
+# The following are used in sas-start-functions
+servicename=${SASSERVICENAME}
+servicecontext=${SASSERVICECONTEXT}
+
+# Set of functions for supporting docker containers
+source ${SASHOME}/lib/envesntl/docker-functions
+
+###############################################################################
+# Save environment variables
+###############################################################################
+save_env sas SASHOME
+save_env sas SASCONFIG
+save_env sas SASTOKENDIR
+save_env sas SASSERVICENAME
+
+###############################################################################
+# Setup Consul
+###############################################################################
+
+# Write tokens to disk if needed and echo CONSUL_HTTP_ADDR to file
+docker_define_consul_environment
+
+# start local consul
+/etc/init.d/sas-viya-consul-default start
+
+# Wait for Consul to be up
+docker_wait_for_consul_leader
+
+###############################################################################
+# Shutdown
+###############################################################################
+function gracefulshutdown {
+    echo
+    echo_line "Shutting down ${SASSERVICECONTEXT} pid $(cat ${DOCKERPIDFILE})!"
+    echo
+
+    # new SAS init stuff
+    kill -TERM $(cat ${DOCKERPIDFILE})
+    result=$?
+    # sleep 10
+    echo
+    if [ $result -eq 0 ]; then
+        echo_line "SUCCESS: ${SASSERVICECONTEXT} is stopped"
+    else
+        echo_line "ERROR: ${SASSERVICECONTEXT} could not be stopped"
+    fi
+
+    exit 0
+}
+
+trap gracefulshutdown SIGTERM
+trap gracefulshutdown SIGINT
+
+###############################################################################
+# Run pgpool
+###############################################################################
+
+# Setup logging so information goes to stdout
+[[ -z ${SASLOGDIR+x} ]] && export SASLOGDIR=""
+[[ -z ${SAS_DATASERVER_CONF_COMMON_WHERETOLOG_LOGGING_COLLECTOR+x} ]] && export SAS_DATASERVER_CONF_COMMON_WHERETOLOG_LOGGING_COLLECTOR="off"
+[[ -z ${SAS_DATASERVER_CONF_COMMON_WHERETOLOG_LOG_DIRECTORY+x} ]]     && export SAS_DATASERVER_CONF_COMMON_WHERETOLOG_LOG_DIRECTORY=""
+
+# See if we are a Kubernetes environment
+set +e
+_k8senvcount=$(env | grep -c KUBERNETES)
+set -e
+
+[[ -z ${DATABASE_CLUSTER_NAME+x} ]] && export DATABASE_CLUSTER_NAME="postgres"
+[[ -z ${PG_VOLUME+x} ]]             && export PG_VOLUME="${SASCONFIG}/data/sasdatasvrc/${SASSERVICECONTEXT}"
+#[[ -z ${PG_VOLUME+x} ]]             && export PG_VOLUME="${SASCONFIG}/data/${SASSERVICECONTEXT}/${DATABASE_CLUSTER_NAME}"
+
+if [ ${_k8senvcount} -ne 0 ]; then
+    _sasuuid=${PG_VOLUME}/${SAS_CURRENT_HOST}_sas_${SASDEPLOYID}_${SASSERVICECONTEXT}_uuid
+else
+    _sasuuid=${PG_VOLUME}/sas_${SASDEPLOYID}_${SASSERVICECONTEXT}_uuid
+fi
+
+if [ ! -d ${PG_VOLUME} ]; then
+    echo "Creating ${PG_VOLUME}"
+    mkdir -vp ${PG_VOLUME}
+fi
+
+if [ -e ${_sasuuid} ]; then
+    echo "Sourcing ${_sasuuid} for the instance value"
+    source ${_sasuuid}
+else
+    echo "Generating uuid to define instance value"
+    if [[ -z ${SASINSTANCE+x} ]] || [ "${SASINSTANCE}" = "" ]; then
+        export SASINSTANCE=$(uuidgen | sed 's/\-//g')
+    fi
+    
+    echo "Save the instance value (${SASINSTANCE}) off to be used on restart"
+    echo "export SASINSTANCE=${SASINSTANCE}" > ${_sasuuid}
+fi
+
+echo "Starting ${SASSERVICENAME}..."
+
+source ${SASHOME}/bin/sas-pgpool
+
+export DOCKERPIDFILE=${SASPGPOOLRUNDIR}/${SASPGPOOLPIDFILE}
+
+###############################################################################
+# Keep the container alive until it is killed
+###############################################################################
+
+docker_check_process

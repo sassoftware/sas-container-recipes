@@ -228,14 +228,18 @@ function get_playbook() {
     elif [[ ! -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
         # SAS_Viya_deployment_data.zip given and it's valid
         SAS_ORCHESTRATION_LOCATION=/usr/bin/sas-orchestration
+        if [[ -f ../sas-orchestration ]]; then
+            SAS_ORCHESTRATION_LOCATION=${PWD}/../sas-orchestration
+        fi
+
         if [[ ! -f /usr/bin/sas-orchestration && ! -f ../sas-orchestration ]]; then
             # Fetch the binary and move it above the working directory
             echo -e "[INFO] : fetching sas-orchestration tool"
-            curl --silent --remote-name https://support.sas.com/installation/viya/34/sas-orchestration-cli/lax/sas-orc
+            curl --silent --remote-name https://support.sas.com/installation/viya/34/sas-orchestration-cli/lax/sas-orchestration-linux.tgz
             tar xvf sas-orchestration-linux.tgz
             rm --verbose sas-orchestration-linux.tgz
             mv sas-orchestration ../
-            SAS_ORCHESTRATION_LOCATION=${PWD}/../
+            SAS_ORCHESTRATION_LOCATION=${PWD}/../sas-orchestration
         fi
 
         echo -e "[INFO] : Building the playbook from the SOE zip."

@@ -1,0 +1,198 @@
+#!/bin/bash
+
+set -e
+#set -x
+
+###############################################################################
+# Variables
+###############################################################################
+
+[[ -z ${SASDEPLOYID+x} ]]      && export SASDEPLOYID=viya
+[[ -z ${SASHOME+x} ]]          && export SASHOME=/opt/sas/viya/home
+[[ -z ${SASCONFIG+x} ]]        && export SASCONFIG=/opt/sas/${SASDEPLOYID}/config
+[[ -z ${SASSERVICENAME+x} ]]   && export SASSERVICENAME="postgres"
+[[ -z ${SASINSTANCE+x} ]]      && export SASINSTANCE=node0
+[[ -z ${SAS_CURRENT_HOST+x} ]] && export SAS_CURRENT_HOST=$(hostname -f)
+[[ -z ${PG_VOLUME+x} ]]        && export PG_VOLUME="${SASCONFIG}/data/sasdatasvrc/${SASSERVICENAME}"
+
+source ${SASHOME}/lib/envesntl/docker-functions
+
+# In the case of Docker, we need to load up what the instance value is.
+# The instance was saved by the docker_entrypoint.sh so it can be used 
+# by multiple scripts
+_sasuuidname=sas_${SASDEPLOYID}_${SASSERVICENAME}_uuid
+_k8ssasuuid=${PG_VOLUME}/${SAS_CURRENT_HOST}_${_sasuuidname}
+_sasuuid=${PG_VOLUME}/${_sasuuidname}
+
+[[ -e ${_k8ssasuuid} ]] && source ${_k8ssasuuid}
+[[ -e ${_sasuuid} ]] && source ${_sasuuid}
+
+# Process any overrides if they exist
+_sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${SASSERVICENAME}
+#_sysconfig=${SASCONFIG}/etc/${SASSERVICECONTEXT}/${DATABASE_CLUSTER_NAME}/${SASINSTANCE}/sas-${SASSERVICENAME}
+[[ -e ${_sysconfig} ]] && source ${_sysconfig}
+
+# set standard environment if not already set
+[[ -z ${SASLOGROOT+x} ]]             && export SASLOGROOT="${SASCONFIG}/var/log"
+[[ -z ${SASLOGDIR+x} ]]              && export SASLOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICENAME}"
+[[ -z ${SASCONSULDIR+x} ]]           && export SASCONSULDIR="${SASHOME}"
+[[ -z ${SASPOSTGRESPORT+x} ]]        && export SASPOSTGRESPORT=5432
+[[ -z ${SASPOSTGRESREPLICATION+x} ]] && export SASPOSTGRESREPLICATION=false
+[[ -z ${SASPOSTGRESPRIMARY+x} ]]     && exit 3
+[[ -z ${PG_DATADIR+x} ]]             && export PG_DATADIR="${SASCONFIG}/data/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}"
+[[ -z ${SASPOSTGRESCONFIGDIR+x} ]]   && export SASPOSTGRESCONFIGDIR="${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}"
+[[ -z ${SAS_DBNAME+x} ]]             && export SAS_DBNAME="SharedServices"
+[[ -z ${SAS_DEFAULT_PGUSER+x} ]]     && export SAS_DEFAULT_PGUSER="dbmsowner"
+[[ -z ${SAS_DEFAULT_PGPWD+x} ]]      && exit 1
+[[ -z ${SAS_INSTANCE_PGUSER+x} ]]    && export SAS_INSTANCE_PGUSER="${SAS_DEFAULT_PGUSER}"
+[[ -z ${SAS_INSTANCE_PGPWD+x} ]]     && export SAS_INSTANCE_PGPWD="${SAS_DEFAULT_PGPWD}"
+[[ -z ${SASPOSTGRESREPLUSER+x} ]]    && export SASPOSTGRESREPLUSER="replication"
+[[ -z ${SASPOSTGRESREPLPWD+x} ]]     && exit 1
+[[ -z ${SASPOSTGRESRUNDIR+x} ]]      && export SASPOSTGRESRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
+[[ -z ${SASPOSTGRESOWNER+x} ]]       && export SASPOSTGRESOWNER="postgres"
+[[ -z ${SASPOSTGRESGROUP+x} ]]       && export SASPOSTGRESGROUP="postgres"
+
+_LOGFILENAME=${SASLOGDIR}/${SASSERVICENAME}_${SASINSTANCE}_start.log
+
+save_env sas SASLOGROOT
+save_env postgres SASLOGDIR
+save_env postgres PG_DATADIR
+save_env postgres SASPOSTGRESOWNER
+save_env postgres SASPOSTGRESREPLUSER
+
+###############################################################################
+# Functions
+###############################################################################
+
+function init_log() {
+    if [ ! -z "${SASLOGDIR}" ]; then
+        if [ ! -d $(dirname ${_LOGFILENAME}) ]; then
+            mkdir -vp $(dirname ${_LOGFILENAME})
+            chmod -v 0777 $(dirname ${_LOGFILENAME})
+            chown -v ${SASPOSTGRESOWNER}:${SASPOSTGRESGROUP} $(dirname ${_LOGFILENAME})
+        else
+            if [ -e ${_LOGFILENAME} ]; then
+                mv -v ${_LOGFILENAME} ${_LOGFILENAME}_$(date +"%Y%m%d%H%M")
+            fi
+        fi
+    fi
+}
+
+function echo_line {
+    line_out="$(date) - $1"
+    if [ ! -z "${SASLOGDIR}" ]; then
+        printf "%s\n" "$line_out" >>${_LOGFILENAME}
+    else
+        printf "%s\n" "$line_out"
+    fi
+}
+
+###############################################################################
+# Create the log directory if needed and backup the previous log file
+###############################################################################
+
+init_log
+
+###############################################################################
+# Make sure Consul binaries are on the host and that we can connect to Consul
+###############################################################################
+
+if [ ! -d ${SASCONSULDIR} ]; then
+  echo_line "[postgresql] Consul is not available on host...exiting"
+  exit 1
+fi
+
+BOOTSTRAP_CONFIG=${SASCONSULDIR}/bin/sas-bootstrap-config
+
+# if token file exists, then set the environment variable for bootstrap config
+if [ -z "${CONSUL_TOKEN}" ]; then
+    CONSUL_TOKEN_FILE=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token
+    [ -f $CONSUL_TOKEN_FILE ] && export CONSUL_TOKEN=$(cat $CONSUL_TOKEN_FILE)
+fi
+
+# Make sure Consul is up
+consul_status=$(${BOOTSTRAP_CONFIG} status peers)
+echo_line "[postgresql] Consul status peers: $consul_status"
+
+if [ -z "$consul_status" ]; then
+  echo_line "[postgresql] No consul peers available...exiting"
+  exit 1;
+fi
+
+###############################################################################
+# Start Postgres
+###############################################################################
+
+# Start postgres via pg_ctl => This will create the PIDFILE
+echo_line "[postgresql] Starting postgres via pg_ctl..."
+su - -c "${SASHOME}/bin/pg_ctl -o '-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf' -D ${PG_DATADIR} -w -t 30 start" ${SASPOSTGRESOWNER}
+
+if [ $? = 0 ]; then
+  echo_line "[postgresql] PostgreSQL started successfully"
+
+  _network_databaseTraffic_enabled=$(${BOOTSTRAP_CONFIG} kv read config/${SASSERVICENAME}/sas.security/network.databaseTraffic.enabled)
+  if [ -z "${_network_databaseTraffic_enabled}" ]; then
+    _network_databaseTraffic_enabled=$(${BOOTSTRAP_CONFIG} kv read config/application/sas.security/network.databaseTraffic.enabled)
+  fi
+
+  # Consul service registration
+  
+  _consul_tags="--tags postgres"
+  if [ "${_network_databaseTraffic_enabled}" = "true" ] || [ "${_network_databaseTraffic_enabled}" = "TRUE" ] ; then
+    _consul_tags=$_consul_tags "--tags ssl"
+  fi
+
+
+  echo_line "[postgresql] Registering content in Consul"
+  echo_line "[postgresql]     Registering service..."
+  ${BOOTSTRAP_CONFIG} agent service register \
+    --name "${SASSERVICENAME}"  \
+    --address "${SAS_CURRENT_HOST}" \
+    --port ${SASPOSTGRESPORT} \
+    $_consul_tags \
+    "${SASSERVICENAME}-${SASINSTANCE}"
+
+  echo_line "[postgresql]     Registering check..."
+    ${BOOTSTRAP_CONFIG} agent check register \
+    --service-id "${SASSERVICENAME}-${SASINSTANCE}" \
+    --id "${SASSERVICENAME}-${SASINSTANCE}" \
+    --name "postgresport"  \
+    --interval 60s --timeout 5s \
+    --tcp "${SAS_CURRENT_HOST}:${SASPOSTGRESPORT}"
+#    --script "${SASHOME}/libexec/sasdatasvrc/script/sasdatasvrc_isready.sh"
+
+  ${BOOTSTRAP_CONFIG} kv write "config/application/sas/database/databaseServerName" ${SASSERVICENAME}
+  ${BOOTSTRAP_CONFIG} kv write "config/application/sas/database/database" ${SAS_DBNAME}
+  ${BOOTSTRAP_CONFIG} kv write "config/application/sas/database/schema" "\${application.schema}"
+  ${BOOTSTRAP_CONFIG} kv write "config/application/postgres/username" ${SAS_DEFAULT_PGUSER}
+  ${BOOTSTRAP_CONFIG} kv write "config/application/postgres/password" ${SAS_DEFAULT_PGPWD}
+  ${BOOTSTRAP_CONFIG} kv write "config/application/sas/database/${SASSERVICENAME}/username" ${SAS_INSTANCE_PGUSER}
+  ${BOOTSTRAP_CONFIG} kv write "config/application/sas/database/${SASSERVICENAME}/password" ${SAS_INSTANCE_PGPWD}
+
+  # In the postgresql-setup script the writing to the following locations was already done on the primary
+  # config/application/sas/database/${SASSERVICENAME}/primary ${SAS_CURRENT_HOST}
+  # config/application/sas/database/${SASSERVICENAME}/primary_uid ${SASINSTANCE}
+
+  echo_line "[postgresql] For this host, record the ip value and that it is now up."
+  ${BOOTSTRAP_CONFIG} kv write --force config/${SASSERVICENAME}/sas.dataserver.pool/backend/${SASINSTANCE}/host ${SAS_CURRENT_HOST}
+  ${BOOTSTRAP_CONFIG} kv write --force config/${SASSERVICENAME}/sas.dataserver.pool/backend/${SASINSTANCE}/status up
+    # See if we are a Kubernetes environment
+  set +e
+  _k8senvcount=$(env | grep -c KUBERNETES)
+  set -e
+  if [ ${_k8senvcount} -ne 0 ]; then
+    hostname_index=$(hostname|sed -E 's/^.*-([0-9]+)$/\1/g')
+    ${BOOTSTRAP_CONFIG} kv write --force config/${SASSERVICENAME}/sas.dataserver.pool/backend/${SASINSTANCE}/hostindex ${hostname_index}
+  fi
+else
+  echo_line "[postgresql] The PostgreSQL server start seems to have some problems, please see logs for details."
+  exit 1
+fi
+
+${SASHOME}/libexec/sasdatasvrc/script/handle_failover.sh &
+
+echo_line "[postgresql] Unset variables so they cannot be seen from inside the host"
+[[ ! -z ${SAS_DEFAULT_PGPWD+x} ]] && unset SAS_DEFAULT_PGPWD
+[[ ! -z ${SASPOSTGRESREPLPWD+x} ]] && unset SASPOSTGRESREPLPWD
+[[ ! -z ${SAS_INSTANCE_PGPWD+x} ]] && unset SAS_INSTANCE_PGPWD
+

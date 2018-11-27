@@ -1,0 +1,43 @@
+---
+# tasks file for sasdatasvrc
+- name: Load the {{ role_name }} variables
+  include_vars:
+    file: "{{ role_name }}"
+    name: sas_host_group_variables
+
+- name: Install SAS packages
+  include_role:
+    name: sas-install
+
+- name: Add cloud configuration files
+  include_role:
+    name: cloud-config
+
+- name: Copy files to remote host
+  copy:
+    src: "{{ item.name }}"
+    dest: "{{ SASHOME }}/{{ item.path }}/{{ item.name }}"
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+    mode: "{{ item.mode }}"
+  with_items:
+  - { name: sas-postgres, path: "bin", mode: "0755" }
+  - { name: large_postgresql.conf, path: "share/postgresql", mode: "0755" }
+  - { name: medium_postgresql.conf, path: "share/postgresql", mode: "0755" }
+  - { name: pg_hba.conf.ctmpl, path: "share/postgresql", mode: "0755" }
+  - { name: primary_watch.ctmpl, path: "share/postgresql", mode: "0755" }
+  - { name: small_postgresql.conf, path: "share/postgresql", mode: "0755" }
+  - { name: handle_failover.sh, path: "libexec/sasdatasvrc/script", mode: "0755" }
+  - { name: sasdatasvrc_datanodes, path: "libexec/sasdatasvrc/script", mode: "0755" }
+  - { name: sasdatasvrc_isready.sh, path: "libexec/sasdatasvrc/script", mode: "0755" }
+  - { name: sasdatasvrc_setup.sh, path: "libexec/sasdatasvrc/script", mode: "0755" }
+  - { name: sasdatasvrc_stop.sh, path: "libexec/sasdatasvrc/script", mode: "0755" }
+  
+- name: Copy over entrypoint script
+  template:
+    src: entrypoint
+    dest: "{{ SASHOME }}/bin/{{ role_name }}-entrypoint.sh"
+    mode: "0755"
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+
