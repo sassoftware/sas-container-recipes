@@ -53,7 +53,7 @@
   template:
     src: "microservice_k8s.j2"
     dest: "{{ playbook_dir }}/deploy/kubernetes/smp/{{ item.key }}.yml"
-  when: item.key not in 'consul, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
+  when: item.key not in 'httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 
 - name: Define variable to indicate what type of manifest we are creating
@@ -78,7 +78,7 @@
   template:
     src: "microservice_k8s.j2"
     dest: "{{ playbook_dir }}/deploy/kubernetes/mpp/{{ item.key }}.yml"
-  when: item.key not in 'consul, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
+  when: item.key not in 'httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 
 - name: Create CAS worker manifest
