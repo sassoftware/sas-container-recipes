@@ -74,13 +74,13 @@
     with_items:
     - initscripts
     - which
-    - tree
     - acl
     - libpng12
     - libXp
     - libXmu
     - net-tools
     - xterm
+    - numactl # ESM
 
   #
   # Parse the file and get all the things to install: rpms and groups
@@ -165,13 +165,13 @@
     with_items:
     - initscripts
     - which
-    - tree
     - acl
     - libpng12
     - libXp
     - libXmu
     - net-tools
     - xterm
+    - numactl # ESM
 
   - name: Collect rpms
     set_fact:

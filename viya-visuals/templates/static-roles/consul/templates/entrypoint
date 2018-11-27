@@ -1,0 +1,160 @@
+#!/bin/bash
+
+# Exit out if any process returns a non zero return code
+set -e
+
+# Enable debugging if SAS_DEBUG is set
+[[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
+if [ ${SAS_DEBUG} -gt 0 ]; then
+    set -x
+fi
+
+# if given a command, run that
+if [[ -n "$1" ]]; then
+  exec "$@"
+fi
+
+###############################################################################
+# Variables
+###############################################################################
+
+[[ -z ${DEPLOYMENT_NAME+x} ]]   && export DEPLOYMENT_NAME="viya"
+[[ -z ${SASSERVICENAME+x} ]]    && export SASSERVICENAME="sas-consul"
+[[ -z ${SASSERVICECONTEXT+x} ]] && export SASSERVICECONTEXT=${SASSERVICENAME#sas-}
+[[ -z ${SASROOT+x} ]]           && export SASROOT=/opt/sas
+[[ -z ${SASDEPLOYID+x} ]]       && export SASDEPLOYID=viya
+[[ -z ${SASINSTANCE+x} ]]       && export SASINSTANCE=default
+[[ -z ${SASHOME+x} ]]           && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
+[[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
+[[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
+[[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
+
+# The following are used in sas-start-functions
+servicename=${SASSERVICENAME}
+servicecontext=${SASSERVICECONTEXT}
+
+# Set of functions for supporting docker containers
+source ${SASHOME}/lib/envesntl/docker-functions
+
+###############################################################################
+# Functions
+###############################################################################
+
+# Call function to setup Consul server or agent
+docker_setup_consul()
+{
+    mkdir -p ${CONSUL_DATA_DIR}
+    [[ -z ${CONSUL_SERVER_FLAG+x} ]] && export CONSUL_SERVER_FLAG=false
+
+    if [ "${CONSUL_SERVER_FLAG}" = "false" ]; then
+
+        if [ -z "${CONSUL_SERVER_LIST}" ]; then
+          export CONSUL_SERVER_LIST=consul-${DEPLOYMENT_NAME}
+        fi
+
+        #export CONSUL_OPTIONS="${CONSUL_OPTIONS} -join ${CONSUL_SERVER_LIST}"
+
+        # Trying with removing these files...not sure that they are needed
+        if [ -e ${SASCONFIG}/etc/consul.d/config-consulwatches.json ]; then
+          rm -v ${SASCONFIG}/etc/consul.d/config-consulwatches.json
+        fi
+
+        # Drop existing peers because Docker reassigns new IP addresses for each container start
+        if [ -f ${CONSUL_DATA_DIR}/raft/peers.json ]
+        then
+          rm -v ${CONSUL_DATA_DIR}/raft/peers.json
+        fi
+    else
+        _sitedefault=${SASCONFIG}/etc/consul.d/default/sitedefault.yml
+        # Trying with removing these files...not sure that they are needed
+        if [ -e ${_sitedefault} ]; then
+            rm -v ${_sitedefault}
+        fi
+
+        [[ -z ${CONSUL_BOOTSTRAP_EXPECT+x} ]] && export CONSUL_BOOTSTRAP_EXPECT=1
+        [[ ! -z ${CONSUL_KEY_VALUE_DATA+x} ]] && echo "${CONSUL_KEY_VALUE_DATA}" > ${_sitedefault}
+        [[ ! -z ${CONSUL_KEY_VALUE_DATA_ENC+x} ]] && echo ${CONSUL_KEY_VALUE_DATA_ENC} | base64 -di > ${_sitedefault}
+
+        _consul_server_list=''
+
+        if [ ${CONSUL_BOOTSTRAP_EXPECT} -gt 1 ]; then
+            index=0
+            while [ ${index} -lt ${CONSUL_BOOTSTRAP_EXPECT} ]; do
+                if [ -z ${CONSUL_SERVER_LIST} ]; then
+                    _consul_server_list=$(hostname -f | sed "s/[0-9]/$index/")
+                else
+                    _consul_server_list=${_consul_server_list},$(hostname -f | sed "s/[0-9]/$index/")
+                fi
+
+                let index=index+1
+            done
+
+            export CONSUL_SERVER_LIST="${_consul_server_list}"
+        else
+            export CONSUL_SERVER_LIST="$(hostname -f)"
+        fi
+    fi
+}
+
+# Call function to start Consul server or agent
+docker_start_consul()
+{
+    [[ -z ${CONSUL_SERVER_FLAG+x} ]] && export CONSUL_SERVER_FLAG=false
+
+    if [ $CONSUL_SERVER_FLAG == "true" ]; then
+        echo_line "Starting ${SASSERVICENAME}..."
+    else
+        echo_line "Check to see if the Consul leader is ready"
+        consul_leader=$(${SASHOME}/bin/sas-bootstrap-config status leader --wait 2>/dev/null)
+
+        echo_line "Remote Consul Server running..."
+        echo_line "Starting local Consul Agent.."
+    fi
+
+    docker_create_pid_file
+
+    # Start Consul
+    exec ${SASHOME}/bin/${SASSERVICENAME} -p ${DOCKERPIDFILE}
+
+    docker_wait_for_consul_leader
+}
+
+###############################################################################
+# Setup Consul
+###############################################################################
+
+# [[ -z ${CONSUL_DATA_DIR+x} ]]  && export CONSUL_DATA_DIR="${SASCONFIG}/data/${SASSERVICECONTEXT}"
+[[ -z ${CONSUL_DATA_DIR+x} ]]  && export CONSUL_DATA_DIR="/consul/data"
+
+docker_define_consul_environment
+
+# Create default Consul setup for docker
+cat > ${SASCONFIG}/etc/consul.d/default/dockerfault.yml << DEFAULT
+config:
+  application:
+    jvm:
+      java_option_preferIpAddress: -Dspring.cloud.consul.discovery.preferIpAddress=true
+DEFAULT
+
+# create watch file to load up docker defaults
+cat > ${SASCONFIG}/etc/consul.d/config-docker-kv-bulkload-sitedefault.json << WATCH
+{
+  "watches": [
+    {
+      "type": "service",
+      "service": "consul",
+      "args": ["bash", "-c", "${SASHOME}/bin/sas-bootstrap-config --token-file ${SASTOKENDIR}/management.token kv bulkload  --site-default --yaml  ${SASCONFIG}/etc/consul.d/default/dockerfault.yml"]
+    }
+  ]
+}
+WATCH
+
+###############################################################################
+# Run Consul
+###############################################################################
+
+[[ -z ${CONSUL_DATACENTER_NAME+x} ]] && export CONSUL_DATACENTER_NAME="viya"
+[[ -z ${CONSUL_CONFIGURE_DNS+x} ]]   && export CONSUL_CONFIGURE_DNS="false"
+
+docker_setup_consul
+docker_start_consul
