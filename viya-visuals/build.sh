@@ -223,7 +223,7 @@ function validate_input() {
 function get_playbook() {
     if [[ -d ${SAS_VIYA_PLAYBOOK_DIR} ]]; then
         # Playbook path given and it's valid
-        cp --verbose ${SAS_VIYA_PLAYBOOK_DIR} .
+        cp -v ${SAS_VIYA_PLAYBOOK_DIR} .
 
     elif [[ ! -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
         # SAS_Viya_deployment_data.zip given and it's valid
@@ -233,7 +233,7 @@ function get_playbook() {
             echo -e "[INFO] : fetching sas-orchestration tool"
             curl --silent --remote-name https://support.sas.com/installation/viya/34/sas-orchestration-cli/lax/sas-orchestration-linux.tgz
             tar xvf sas-orchestration-linux.tgz
-            rm --verbose sas-orchestration-linux.tgz
+            rm -v sas-orchestration-linux.tgz
             mv sas-orchestration ../
         fi
 
@@ -241,12 +241,12 @@ function get_playbook() {
         ${SAS_ORCHESTRATION_LOCATION} build \
             --input ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} \
             --platform ${PLATFORM}
-            #--repository-warehouse ${SAS_RPM_REPO_URL}
-            #--deployment-type programming
+            --repository-warehouse ${SAS_RPM_REPO_URL}
+            --platform ${PLATFORM}
 
         tar xvf SAS_Viya_playbook.tgz
-        rm --verbose SAS_Viya_playbook.tgz
-        cp --verbose sas_viya_playbook/*.pem .
+        rm -v SAS_Viya_playbook.tgz
+        cp -v sas_viya_playbook/*.pem .
     else
         echo -e "[ERROR] : Could not find a zip file or playbook to use"
         echo -e ""
@@ -293,8 +293,16 @@ function setup_defaults() {
     fi
 }
 
-# Move everything into a working directory and set up the python virtual environment
+# Move everything into a working directory, set up the python virtual environment, and check for a docker config
 function setup_environment() {
+    
+    # Check for docker config so images can be pushed
+    if [[ ! -f ~/.docker/config.json ]]; then
+        echo -e "File '~/.docker/config.json' not found."
+        echo -e "Authentication with a docker registry is required. Run \`docker login\` on your registry ${DOCKER_REGISTRY_URL}"
+        echo -e ""
+        exit 1 
+    fi
 
     # Setup the python virtual environment and install the requirements inside
     if [ ${SETUP_VIRTUAL_ENVIRONMENT} = "true" ]; then
@@ -386,12 +394,12 @@ function make_ansible_yamls() {
 
                 # Copy the tasks file for the service
                 if [ ! -f "roles/${file}/tasks/main.yml" ]; then
-                    cp --verbose ../templates/task.yml roles/${file}/tasks/main.yml
+                    cp -v ../templates/task.yml roles/${file}/tasks/main.yml
                 fi
 
                 # Copy the entrypoint file for the service
                 if [ ! -f "roles/${file}/templates/entrypoint" ]; then
-                    cp --verbose ../templates/entrypoint roles/${file}/templates/entrypoint
+                    cp -v ../templates/entrypoint roles/${file}/templates/entrypoint
                 fi
 
                 # Each file in the static-service directory has the same file name as its service name
@@ -465,12 +473,12 @@ EOL
 
             # Remove previous roles files if they exist
             if [ -f roles/${role}/vars/${role} ]; then
-                rm --verbose -f roles/${role}/vars/${role}
+                rm -v -f roles/${role}/vars/${role}
             fi
 
             # Copy the role's vars directory if it exists
             if [ -d roles/${role}/vars ]; then
-                cp --verbose sas_viya_playbook/group_vars/${role} roles/${role}/vars/
+                cp -v sas_viya_playbook/group_vars/${role} roles/${role}/vars/
             fi
         fi
     done
@@ -495,11 +503,11 @@ EOL
         exit 0
     fi
 
-    cp --verbose sas_viya_playbook/group_vars/all temp_all
+    cp -v sas_viya_playbook/group_vars/all temp_all
     sed -i 's|^DEPLOYMENT_ID:.*||' temp_all
     sed -i 's|^SPRE_DEPLOYMENT_ID:.*||' temp_all
     cat temp_all >> everything.yml
-    rm --verbose -f temp_all
+    rm -v -f temp_all
 
     cat sas_viya_playbook/vars.yml >> everything.yml
     cat sas_viya_playbook/internal/soe_defaults.yml >> everything.yml
