@@ -1,0 +1,6 @@
+{{- if eq (keyOrDefault "config/SASSERVICENAME/sas.dataserver.pool/SASINSTANCE/communicationmanager/pcp_port" "not_found") "not_found" }}
+*:{{ keyOrDefault "config/SASSERVICENAME/sas.dataserver.pool/SASINSTANCE/communicationmanager/pcp_port" "9898" }}:SAS_DEFAULT_PGUSER:SAS_DEFAULT_PGPWD
+{{- else }}
+*:{{ keyOrDefault "config/SASSERVICENAME/sas.dataserver.pool/common/communicationmanager/pcp_port" "9898" }}:SAS_DEFAULT_PGUSER:SAS_DEFAULT_PGPWD
+{{- end }}
+
