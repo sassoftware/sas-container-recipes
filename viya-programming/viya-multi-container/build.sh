@@ -190,8 +190,8 @@ if [[ "${generate_playbook}" == "true" ]]; then
     ../sas-orchestration build \
       --input ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} \
       --repository-warehouse ${SAS_RPM_REPO_URL} \
-      --platform $PLATFORM
-      #--deployment-type programming \
+      --platform $PLATFORM \
+      --deployment-type programming
 
     tar xvf ${PWD}/SAS_Viya_playbook.tgz
 
