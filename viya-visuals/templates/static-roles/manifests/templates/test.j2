@@ -3,7 +3,7 @@ networks:
   default
 services:
 
-{% for key, value in services.iteritems() %}
+{% for key, value in services.items() %}
     {{ key }}
     {{ value }}
     
