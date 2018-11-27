@@ -13,7 +13,7 @@ spec:
       hostname: {{ settings.project_name }}-{{ item.key | lower }}
       containers:
       - name: {{ settings.project_name }}-{{ item.key | lower }}
-{% for regkey,regvalue in registries.iteritems() %}
+{% for regkey,regvalue in registries.items() %}
         image: {{ regvalue.url }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
 {% endfor %}
         imagePullPolicy: Always
@@ -70,7 +70,7 @@ spec:
 {% endif %}
 {% if item.value.deployment_overrides.resources is defined and item.value.deployment_overrides.resources %}
         resources:
-{%   for key,value in item.value.deployment_overrides.resources.iteritems() %}
+{%   for key,value in item.value.deployment_overrides.resources.items() %}
           {{ key }}:
 {%     for items in value %}
             {{ items.split('=')[0] }}: {{ items.split('=')[1] }}
