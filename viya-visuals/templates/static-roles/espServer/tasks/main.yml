@@ -18,10 +18,6 @@
   include_role:
     name: sas-install
 
-- name: Add cloud configuration files
-  include_role:
-    name: cloud-config
-
 - name: Copy over entrypoint script
   template:
     src: entrypoint

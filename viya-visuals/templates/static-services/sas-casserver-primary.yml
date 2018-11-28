@@ -4,6 +4,8 @@
     - tini
     - sas-java
     - sas-casserver-primary
+    - casserver-config
+    - cloud-config
     ports:
     - "5570:5570"
     - "5571:5571"

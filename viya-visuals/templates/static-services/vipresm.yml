@@ -1,11 +1,13 @@
   vipresm:
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
+    - tini
     - sas-java
     - viprESM
+    - cloud-config
     ports:
     - "8080:8080"
-    entrypoint: ["/opt/sas/viya/home/bin/vipresm-entrypoint.sh"]
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/vipresm-entrypoint.sh"]
     labels:
       sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
       sas.layer.vipresm: "true"

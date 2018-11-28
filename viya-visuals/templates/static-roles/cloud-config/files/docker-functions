@@ -16,6 +16,7 @@ function echo_line()
 function docker_define_consul_environment()
 {
     echo_line "Defining the Consul Environment"
+    [[ -z ${SASTOKENDIR+x} ]] && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
 
     if [ ! -d ${SASTOKENDIR} ]; then
       echo ""
@@ -183,7 +184,7 @@ function docker_run_sas_services()
         echo ${viya_process}
         if [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
            [[ "${viya_process}" != *"sasgpud"* ]] &&
-           [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-default" ]]; then
+           [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-"* ]]; then
             echo "[INFO]  : Starting ${viya_process}"
             ${viya_process} start
         fi
@@ -214,17 +215,12 @@ function docker_shutdown_sas_services()
     echo_line "Shutting down SAS services"
     echo
 
-    for _pidf in $(ls -1 /var/run/sas/sas-viya-*); do
-        if [[ "${_pidf}" != *"sas-${SASDEPLOYID}-consul-${SASINSTANCE}"* ]]; then
-            SERVICE_PID=$(cat ${_pidf})
-            set +e
-            ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
-            process_check_rc=$?
-            set -e
-            if (( ${process_check_rc} == 0 )); then
-                echo "      Stopping process from ${_pidf}"
-                kill -TERM $(cat ${_pidf})
-            fi
+    for viya_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-*); do
+        echo ${viya_process}
+        if [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
+           [[ "${viya_process}" != *"sas-${SASDEPLOYID}-consul-"* ]]; then
+            echo "[INFO]  : Stopping ${viya_process}"
+            ${viya_process} stop
         fi
     done
 
@@ -280,28 +276,18 @@ function docker_check_sas_services()
 {
     while :; do
         sleep 3
-        for _pidf in $(ls -1 /var/run/sas/sas-${SASDEPLOYID}-*); do
-            # Skip checking all-services and ops-agent. Trying to not use all-services 
-            # in the docker image. Not sure if it will be Docker compliant for SuSE
-            # based images. Skipping ops-agent, because we will manage that in 
-            # a different way.
-            if [[ "${_pidf}" != *"sas-${SASDEPLOYID}-all-services"* ]] &&
-               [[ "${_pidf}" != *"sas-${SASDEPLOYID}-ops-agent-default"* ]]; then
-                if [ -f ${_pidf} ]; then
-                    SERVICE_PID=$(cat ${_pidf})
-                    set +e
-                    ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
-                    process_check_rc=$?
-                    set -e
-                    if (( ${process_check_rc} != 0 )); then
-                        echo;
-                        echo "Process is not running..."
-                        echo "    File = ${_pidf}";
-                        echo "    PID = ${SERVICE_PID}";
-                        docker_shutdown_sas_services
-                    fi
-                else
-                    echo; echo "PID file not found: $_pidf"; echo
+        for viya_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-*); do
+            if [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
+               [[ "${viya_process}" != *"sas-${SASDEPLOYID}-httpproxy-"* ]] &&
+               [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-"* ]]; then
+                set +e
+                ${viya_process} status 2>/dev/null
+                viya_service_status_rc=$?
+                set -e
+                if (( ${viya_service_status_rc} != 0 )); then
+                    echo;
+                    echo "[ERROR] : ${viya_process} is not running..."
+                    echo "[ERROR] : Shutting down container";
                     docker_shutdown_sas_services
                 fi
             fi
