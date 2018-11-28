@@ -4,7 +4,7 @@
 - name: Copy cloud config files to remote host
   copy:
     src: "{{ item.name }}"
-    dest: "/opt/sas/viya/home/{{ item.path }}/{{ item.name }}"
+    dest: "{{ SASHOME }}/{{ item.path }}/{{ item.name }}"
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
     mode: "{{ item.mode }}"

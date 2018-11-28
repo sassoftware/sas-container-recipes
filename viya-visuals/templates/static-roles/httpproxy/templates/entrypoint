@@ -1,7 +1,4 @@
-#!/bin/bash
-
-# Exit out if any process returns a non zero return code
-set -e
+#!/bin/bash -e
 
 # Enable debugging if SAS_DEBUG is set
 [[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
@@ -14,12 +11,43 @@ if [[ -n "$1" ]]; then
   exec "$@"
 fi
 
+[[ -z ${DEPLOYMENT_NAME+x} ]]   && export DEPLOYMENT_NAME="viya"
+[[ -z ${SASSERVICENAME+x} ]]    && export SASSERVICENAME="sas-{{ role_name }}"
+[[ -z ${SASSERVICECONTEXT+x} ]] && export SASSERVICECONTEXT=${SASSERVICENAME#sas-}
+[[ -z ${SASROOT+x} ]]           && export SASROOT=/opt/sas
+[[ -z ${SASDEPLOYID+x} ]]       && export SASDEPLOYID=viya
+[[ -z ${SASINSTANCE+x} ]]       && export SASINSTANCE=default
+[[ -z ${SASHOME+x} ]]           && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
+[[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
+[[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
+[[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
+
+# The following are used in sas-start-functions
+servicename=${SASSERVICENAME}
+servicecontext=${SASSERVICECONTEXT}
+
+# Set of functions for supporting docker containers
+source ${SASHOME}/lib/envesntl/docker-functions
+
+###############################################################################
+# Setup Consul
+###############################################################################
+
+# Write tokens to disk if needed and echo CONSUL_HTTP_ADDR to file
+docker_define_consul_environment
+
+###############################################################################
+# Shutdown
+###############################################################################
+
+trap docker_shutdown_sas_services SIGTERM
+trap docker_shutdown_sas_services SIGINT
+
 ###############################################################################
 # Configure httpd
 ###############################################################################
 
 [[ -z $APACHE_ROOT ]] && APACHE_ROOT=
-[[ -z $APACHE_CTL ]] && APACHE_CTL=$APACHE_ROOT/usr/sbin/apachectl
 
 if [ -z $APACHE_CONF_D ]; then
   if [ -d $APACHE_ROOT/etc/httpd/conf.d ]; then
@@ -37,55 +65,71 @@ if [ -z $APACHE_CONF_D ]; then
   fi
 fi
 
+echo "[INFO]  : Change httpd start command in ${SASHOME}/bin/replace_httpd_default_cert.sh"
+sed -i 's/$APACHE_CTL restart/$APACHE_CTL -k restart/' ${SASHOME}/bin/replace_httpd_default_cert.sh
 
-cat > $APACHE_CONF_D/proxy.conf << HTTPD
-RedirectMatch "^/$" /SASStudio
+if [ -f ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem ]
+then
+    echo "Using SSL certificate in ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem."
+    sed -i 's,/etc/ssl/certs/ssl-cert-snakeoil.pem,${SASCONFIG}/srv/httpd/certs/ssl-cert.pem,' /etc/apache2/sites-enabled/default-ssl.conf
+else
+    echo "[INFO]  : Turn off starting the httpd service in ${SASHOME}/bin/replace_httpd_default_cert.sh"
+    sed -i.bak 's/service httpd restart$/#service httpd restart/' ${SASHOME}/bin/replace_httpd_default_cert.sh
 
-<location /cas-shared-default-http>
-  ProxyPass         http://{{ PROJECT_NAME }}-sas-casserver-primary:8777/cas-shared-default-http
-  ProxyPassReverse  http://{{ PROJECT_NAME }}-sas-casserver-primary:8777/cas-shared-default-http
-  RequestHeader set Origin "http://{{ PROJECT_NAME }}-sas-casserver-primary:8777"
-</Location>
+    echo "[INFO]  : No SSL certificate found in ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem. Using self-signed certificate."
+    ${SASHOME}/bin/replace_httpd_default_cert.sh
 
-<Location /SASStudio/mobile>
-  RedirectMatch "^/SASStudio/mobile.*$" /SASStudio/not_supported
-</Location>
+    # Take the result of this and echo it out to Kubernetes
+fi
 
-<Location /SASStudio>
-  ProxyPass        http://{{ PROJECT_NAME }}-programming:7080/SASStudio
-  ProxyPassReverse http://{{ PROJECT_NAME }}-programming:7080/SASStudio
-  RequestHeader set Origin "http://{{ PROJECT_NAME }}-programming:7080"
-</Location>
-HTTPD
+echo "[INFO]  : Change httpd start command in ${SASHOME}/bin/${SASSERVICENAME}"
+sed -i 's/$APACHE_CTL start/$APACHE_CTL -k start/' ${SASHOME}/bin/${SASSERVICENAME}
+
+echo "[INFO]  : Change httpd stop command in /etc/init.d/sas-${SASDEPLOYID}-${SASSERVICECONTEXT}-${SASINSTANCE}"
+sed -i 's/$APACHE_CTL stop/$APACHE_CTL -k stop/' /etc/init.d/sas-${SASDEPLOYID}-${SASSERVICECONTEXT}-${SASINSTANCE}
+
+echo "[INFO]  : Change httpd re-start command in ${SASHOME}/bin/restart_httpd.sh"
+sed -i 's/$APACHE_CTL start/$APACHE_CTL -k start/' ${SASHOME}/bin/${SASSERVICENAME}
+sed -i.bak 's/$APACHE_CTL graceful/$APACHE_CTL -k graceful/' ${SASHOME}/bin/restart_httpd.sh
+
+if [[ ! -e "${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig" ]] && [[ -e "${SASCONFIG}/etc/sysconfig/httpproxy.conf" ]] ; then
+    echo
+    cp -v ${SASCONFIG}/etc/sysconfig/httpproxy.conf ${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig
+    echo
+elif [[ ! -e "${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig" ]] && [[ ! -e "${SASCONFIG}/etc/sysconfig/httpproxy.conf" ]] ; then
+    touch "${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig"
+fi
+
+echo
+cp -v ${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig ${SASCONFIG}/etc/sysconfig/httpproxy.conf
+echo
+echo "[INFO]  : Setting APACHE_CTL to \"${APACHE_BIN}\" in ${SASCONFIG}/etc/sysconfig/httpproxy.conf"
+echo "export APACHE_CTL=\"${APACHE_BIN}\"" >> ${SASCONFIG}/etc/sysconfig/httpproxy.conf
+echo "export APACHE_CTL=\"${APACHE_BIN}\"" >> /etc/sysconfig/sas/sas-${SASDEPLOYID}-${SASSERVICECONTEXT}-${SASINSTANCE}
+echo ""
 
 # removed shared memory segment files between restarts
 rm --verbose --force /run/httpd/authdigest_shm.*
 
-#
-# Write out a help page to be displayed when browsing port 80
-#
-
-cat > $APACHE_DOCROOT/index.html <<'EOF'
-<html>
- <h1> SAS Viya Programming Docker Container </h1>
- <p> Access the software by browsing to:
- <ul>
-  <li> <b><a href="/SASStudio">/SASStudio</a></b>
- </ul> using HTTP on port 80.
- <p> If port 80 is forwarded to a different port on the host machine, use the host port instead.
- <p> Use the <b>sasdemo</b> / <b>sasdemo</b> login to access SAS Studio and CAS.
-</html>
-EOF
-
 ###############################################################################
 # Logging
 ###############################################################################
-sed -ri -e 's!^(\s*CustomLog)\s+\S+!\1 /proc/self/fd/1!g' $APACHE_CONF
-sed -ri -e 's!^(\s*ErrorLog)\s+\S+!\1 /proc/self/fd/2!g' $APACHE_CONF
-
+sed -ri -e 's!^(\s*CustomLog)\s+\S+!\1 /proc/self/fd/1!g' ${APACHE_CONF}
+sed -ri -e 's!^(\s*ErrorLog)\s+\S+!\1 /proc/self/fd/2!g' ${APACHE_CONF}
 
 ###############################################################################
 # Run httpd
 ###############################################################################
 
-$APACHE_BIN -DFOREGROUND
+docker_run_local_consul
+
+# Start and continually check the ops-agent process.
+${SASHOME}/lib/envesntl/docker-ops-agent &
+
+docker_run_sas_services
+
+###############################################################################
+# Keep the container alive until it is killed
+###############################################################################
+
+docker_check_sas_services

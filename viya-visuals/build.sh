@@ -240,8 +240,7 @@ function get_playbook() {
         echo -e "[INFO] : Building the playbook from the SOE zip."
         ${SAS_ORCHESTRATION_LOCATION} build \
             --input ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} \
-            --platform ${PLATFORM}
-            --repository-warehouse ${SAS_RPM_REPO_URL}
+            --repository-warehouse ${SAS_RPM_REPO_URL} \
             --platform ${PLATFORM}
 
         tar xvf SAS_Viya_playbook.tgz
@@ -422,10 +421,12 @@ function make_ansible_yamls() {
   ${file,,}:
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
+    - tini
     - sas-java
     - ${file}
+    - cloud-config
     ports: {}
-    entrypoint: ["/opt/sas/viya/home/bin/${file,,}-entrypoint.sh"]
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/${file,,}-entrypoint.sh"]
     labels:
       sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
       sas.layer.${file,,}: "true"

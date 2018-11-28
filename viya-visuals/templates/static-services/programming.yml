@@ -8,6 +8,7 @@
     - batchserver
     - connect-config
     - sas-studio-config
+    - cloud-config
     ports:
     - "7080:7080"
     entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/programming-entrypoint.sh"]

@@ -1,11 +1,13 @@
   rabbitmq:
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
+    - tini
     - rabbitmq
+    - cloud-config
     ports:
     - "5672:5672"
     - "15672:15672"
-    entrypoint: ["/opt/sas/viya/home/bin/rabbitmq-entrypoint.sh"]
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/rabbitmq-entrypoint.sh"]
     labels:
       sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
       sas.layer.rabbitmq: "true"

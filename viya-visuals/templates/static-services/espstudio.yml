@@ -1,11 +1,13 @@
   espstudio:
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
+    - tini
     - sas-java
     - espStudio
+    - cloud-config
     ports: 
     - "31415:31415"
-    entrypoint: ["/opt/sas/viya/home/bin/espstudio-entrypoint.sh"]
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/espstudio-entrypoint.sh"]
     labels:
       sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
       sas.layer.espstudio: "true"
