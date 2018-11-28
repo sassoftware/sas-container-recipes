@@ -274,22 +274,35 @@ function docker_check_process()
 
 function docker_check_sas_services()
 {
+    set +e
+    grep -q "^sas-${SASDEPLOYID}-sasgpud-${SASINSTANCE}" ${SASCONFIG}/etc/${SASDEPLOYID}-svc-mgr/svc-ignore
+    gpudisabled=$?
+    set -e
+
     while :; do
         sleep 3
         for viya_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-*); do
-            if [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
+            viya_service_status_rc=0
+            if [[ "${viya_process}" == *"sas-${SASDEPLOYID}-sasgpud-" ]] &&
+               (( ${gpudisabled} != 0 )); then
+                set +e
+                /etc/init.d/sas-${SASDEPLOYID}-sasgpud-${SASINSTANCE} status
+                viya_service_status_rc=$?
+                set -e
+            elif [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
                [[ "${viya_process}" != *"sas-${SASDEPLOYID}-httpproxy-"* ]] &&
+               [[ "${viya_process}" != *"sas-${SASDEPLOYID}-sasgpud-"* ]] &&
                [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-"* ]]; then
                 set +e
                 ${viya_process} status 2>/dev/null
                 viya_service_status_rc=$?
                 set -e
-                if (( ${viya_service_status_rc} != 0 )); then
-                    echo;
-                    echo "[ERROR] : ${viya_process} is not running..."
-                    echo "[ERROR] : Shutting down container";
-                    docker_shutdown_sas_services
-                fi
+            fi
+            if (( ${viya_service_status_rc} != 0 )); then
+                echo;
+                echo "[ERROR] : ${viya_process} is not running..."
+                echo "[ERROR] : Shutting down container";
+                docker_shutdown_sas_services
             fi
         done
     done
