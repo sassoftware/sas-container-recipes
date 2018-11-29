@@ -65,6 +65,9 @@ if [ -z $APACHE_CONF_D ]; then
   fi
 fi
 
+echo "[INFO]  : Change 80 to 64 as the deciding factor to use IP instead of hostname in ${SASCONFIG}/consul/proxy.conf.ctmpl"
+sed -i 's|gt 80|gt 64|g' ${SASCONFIG}/consul/proxy.conf.ctmpl
+
 echo "[INFO]  : Change httpd start command in ${SASHOME}/bin/replace_httpd_default_cert.sh"
 sed -i 's/$APACHE_CTL restart/$APACHE_CTL -k restart/' ${SASHOME}/bin/replace_httpd_default_cert.sh
 
