@@ -273,6 +273,7 @@ function setup_defaults() {
     [[ -z ${SAS_RPM_REPO_URL+x} ]]             && SAS_RPM_REPO_URL=https://ses.sas.com/download/ses
     [[ -z ${DOCKER_REGISTRY_URL+x} ]]          && DOCKER_REGISTRY_URL=http://docker.company.com
     [[ -z ${DOCKER_REGISTRY_NAMESPACE+x} ]]    && DOCKER_REGISTRY_NAMESPACE=sas
+    [[ -z ${PROJECT_DIRECTORY+x} ]]            && PROJECT_DIRECTORY=working
 
     # Set defaults if environment variables have not been set
     if [ -n "${BASEIMAGE}" ]; then
@@ -294,13 +295,13 @@ function setup_defaults() {
 
 # Move everything into a working directory, set up the python virtual environment, and check for a docker config
 function setup_environment() {
-    
+
     # Check for docker config so images can be pushed
     if [[ ! -f ~/.docker/config.json ]]; then
         echo -e "File '~/.docker/config.json' not found."
         echo -e "Authentication with a docker registry is required. Run \`docker login\` on your registry ${DOCKER_REGISTRY_URL}"
         echo -e ""
-        exit 1 
+        exit 1
     fi
 
     # Setup the python virtual environment and install the requirements inside
@@ -347,14 +348,13 @@ function setup_environment() {
     fi
 
     # Start with a clean working space by moving everything into the working directory
-    [[ -z ${PROJECT_DIRECTORY+x} ]] && PROJECT_DIRECTORY=working
     if [[ -d ${PROJECT_DIRECTORY}/ ]]; then
       mv "${PROJECT_DIRECTORY}" "${PROJECT_DIRECTORY}_${sas_datetime}"
     fi
     mkdir ${PROJECT_DIRECTORY}
     cp -v templates/container.yml ${PROJECT_DIRECTORY}/
     cp -v templates/generate_manifests.yml ${PROJECT_DIRECTORY}/
-    
+
     # The sitedefault file can be used to seed the Consul key/value store
     if [[ -f sitedefault.yml ]]; then
         cp -v sitedefault.yml ${PROJECT_DIRECTORY}/
@@ -553,6 +553,8 @@ EOL
 # Generate the Kubernetes resources
 function make_deployments() {
     pip install ansible==2.7
+    # Force Ansible to show the colored output
+    ANSIBLE_FORCE_COLOR=true
     ansible-playbook generate_manifests.yml -e "docker_tag=${SAS_DOCKER_TAG}" -e 'ansible_python_interpreter=/usr/bin/python'
 }
 
