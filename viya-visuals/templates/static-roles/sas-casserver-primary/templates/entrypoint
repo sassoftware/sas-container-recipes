@@ -50,8 +50,8 @@ docker_run_local_consul
 # Shutdown
 ###############################################################################
 
-trap gracefulshutdown SIGTERM
-trap gracefulshutdown SIGINT
+trap docker_shutdown_sas_services SIGTERM
+trap docker_shutdown_sas_services SIGINT
 
 ###############################################################################
 # Pre Deploy
