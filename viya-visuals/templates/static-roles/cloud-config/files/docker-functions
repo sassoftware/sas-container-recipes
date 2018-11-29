@@ -286,7 +286,7 @@ function docker_check_sas_services()
             if [[ "${viya_process}" == *"sas-${SASDEPLOYID}-sasgpud-" ]] &&
                (( ${gpudisabled} != 0 )); then
                 set +e
-                /etc/init.d/sas-${SASDEPLOYID}-sasgpud-${SASINSTANCE} status
+                /etc/init.d/sas-${SASDEPLOYID}-sasgpud-${SASINSTANCE} status >/dev/null
                 viya_service_status_rc=$?
                 set -e
             elif [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
@@ -294,7 +294,7 @@ function docker_check_sas_services()
                [[ "${viya_process}" != *"sas-${SASDEPLOYID}-sasgpud-"* ]] &&
                [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-"* ]]; then
                 set +e
-                ${viya_process} status 2>/dev/null
+                ${viya_process} status >/dev/null
                 viya_service_status_rc=$?
                 set -e
             fi
