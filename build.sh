@@ -443,7 +443,7 @@ fi
 
 if [[ "${SAS_RECIPE_TYPE}" != "single" ]]; then
     if [[ ! -z ${DOCKER_REGISTRY_URL+x} ]] && ${CHECK_DOCKER_URL}; then
-        echo "[INFO]  : Running curl against Docker registry URL: http://${DOCKER_REGISTRY_URL}"
+        echo "[INFO]  : Running curl against Docker registry URL: https://${DOCKER_REGISTRY_URL}"
         set +e
         set -x
         response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "https://${DOCKER_REGISTRY_URL}")
