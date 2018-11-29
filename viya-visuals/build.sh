@@ -354,6 +354,11 @@ function setup_environment() {
     mkdir ${PROJECT_DIRECTORY}
     cp -v templates/container.yml ${PROJECT_DIRECTORY}/
     cp -v templates/generate_manifests.yml ${PROJECT_DIRECTORY}/
+    
+    # The sitedefault file can be used to seed the Consul key/value store
+    if [[ -f sitedefault.yml ]]; then
+        cp -v sitedefault.yml ${PROJECT_DIRECTORY}/
+    fi
 }
 
 
@@ -528,9 +533,11 @@ EOL
     # Update Container yaml
     #
 
-    if [ -f ${PWD}/consul.data ]; then
-        consul_data_enc=$(cat ${PWD}/consul.data | base64 --wrap=0 )
-        sed -i "s|CONSUL_KEY_VALUE_DATA_ENC=|CONSUL_KEY_VALUE_DATA_ENC=${consul_data_enc}|g" container.yml
+    if [ -f ${SAS_VIYA_PLAYBOOK_DIR}/roles/consul/files/sitedefault.yml ]; then
+        sed -i "s|CONSUL_KEY_VALUE_DATA_ENC=|CONSUL_KEY_VALUE_DATA_ENC=$(cat ${SAS_VIYA_PLAYBOOK_DIR}/roles/consul/files/sitedefault.yml | base64 --wrap=0 )|g" container.yml
+    # Check the working directory to see if there is a file there
+    elif [ -f ${PWD}/sitedefault.yml ]; then
+        sed -i "s|CONSUL_KEY_VALUE_DATA_ENC=|CONSUL_KEY_VALUE_DATA_ENC=$(cat ${PWD}/sitedefault.yml | base64 --wrap=0 )|g" container.yml
     fi
 
     setinit_enc=$(cat sas_viya_playbook/SASViyaV0300*.txt | base64 --wrap=0 )
