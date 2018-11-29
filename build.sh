@@ -59,7 +59,7 @@ function copy_deployment_data_zip()
     local target_location=$1
     if [[ -n ${SAS_VIYA_PLAYBOOK_DIR} ]]; then
         echo "[INFO]  : Copying ${SAS_VIYA_PLAYBOOK_DIR} to ${target_location}"
-        cp -a "${SAS_VIYA_PLAYBOOK_DIR}" "${target_location}"        
+        cp -a "${SAS_VIYA_PLAYBOOK_DIR}" "${target_location}"
     elif [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
         echo "[INFO]  : Copying ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} to ${target_location}"
         cp -v "${SAS_VIYA_DEPLOYMENT_DATA_ZIP}" "${target_location}"
@@ -77,7 +77,7 @@ function add_layers()
 {
     # Now run through the addons
     # access and auth: added to programming, CAS and compute
-    # ide: added to programming  
+    # ide: added to programming
     docker_reg_location=$(echo "${DOCKER_REGISTRY_URL}" | cut -d'/' -f3 )/"${DOCKER_REGISTRY_NAMESPACE}"
     for sas_image in "${PROJECT_NAME}-programming" "${PROJECT_NAME}-computeserver" "${PROJECT_NAME}-sas-casserver-primary" "${PROJECT_NAME}-httpproxy"; do
         # Make sure the image exists
@@ -178,7 +178,7 @@ function add_layers()
                     popd
                 fi
             done
-    
+
             # push updated images to docker registry
 
             # if manifests exist, update the tags for programming, CAS and compute
@@ -222,6 +222,17 @@ function echo_footer()
     echo "kubectl create -f $1/working/manifests/kubernetes/secrets/"
     echo "kubectl create -f $1/working/manifests/kubernetes/deployments-mpp/"
     echo ""
+}
+
+function echo_experimental()
+{
+    echo
+    echo "  _______  ______  _____ ____  ___ __  __ _____ _   _ _____  _    _     "
+    echo " | ____\ \/ /  _ \| ____|  _ \|_ _|  \/  | ____| \ | |_   _|/ \  | |    "
+    echo " |  _|  \  /| |_) |  _| | |_) || || |\/| |  _| |  \| | | | / _ \ | |    "
+    echo " | |___ /  \|  __/| |___|  _ < | || |  | | |___| |\  | | |/ ___ \| |___ "
+    echo " |_____/_/\_\_|   |_____|_| \_\___|_|  |_|_____|_| \_| |_/_/   \_\_____|"
+    echo
 }
 
 #
@@ -427,7 +438,7 @@ fi
 # Currently for anything that is not a "single", the process will build and then
 # try to push to the Docker registry. If the correct info is not provided then this
 # action will fail. This script will also fail when we try to build the addons.
-# For now, validate that if we are doing a multiple of full build, that we 
+# For now, validate that if we are doing a multiple of full build, that we
 # perform the right set of verification.
 
 if [[ "${SAS_RECIPE_TYPE}" != "single" ]]; then
@@ -619,6 +630,8 @@ case ${SAS_RECIPE_TYPE} in
         echo_footer viya-programming/viya-multi-container
         ;;
     full)
+        echo_experimental
+
         # Copy the zip or the playbook to project
         copy_deployment_data_zip viya-visuals
 
@@ -638,7 +651,8 @@ case ${SAS_RECIPE_TYPE} in
 
         add_layers
 
-        # echo_footer viya-visuals
+        echo_footer viya-visuals
+        echo_experimental
         ;;
     *)
         echo "[ERROR] : Unknown type of '${SAS_RECIPE_TYPE}' passed in"
