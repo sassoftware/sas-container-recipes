@@ -377,7 +377,7 @@ if [[ "${SAS_CREATE_AC_VIRTUAL_ENV}" == "true" ]]; then
         pip install --upgrade pip==9.0.3
         pip install ansible-container[docker]
         echo "Updating the client timeout for the created virtual environment."
-        echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> ./env/lib/python2.7/site-packages/container/docker/templates/conductor-local-dockerfile.j2
+        echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> "${VIRTUAL_ENV}"/lib/python2.7/site-packages/container/docker/templates/conductor-local-dockerfile.j2
     elif [[ $PYTHON_MAJOR_VER -eq "3" ]]; then
         echo "WARN: Python3 support is experimental in ansible-container."
         echo "Updating requirements file for python3 compatibility..."
@@ -385,7 +385,7 @@ if [[ "${SAS_CREATE_AC_VIRTUAL_ENV}" == "true" ]]; then
         pip install --upgrade pip==9.0.3
         pip install -e git+https://github.com/ansible/ansible-container.git@develop#egg=ansible-container[docker]
         echo "Updating the client timeout for the created virtual environment."
-        echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> ./env/src/ansible-container/container/docker/templates/conductor-local-dockerfile.j2
+        echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> "${VIRTUAL_ENV}"/src/ansible-container/container/docker/templates/conductor-local-dockerfile.j2
     fi
     # Restore latest pip version
     pip install --upgrade pip setuptools
@@ -428,7 +428,7 @@ if [[ ! -z ${SKIP_PUSH+x} ]]; then
     exit 0
 fi
 
-[[ -z ${SAS_DOCKER_TAG+x} ]] && export SAS_DOCKER_TAG=${sas_version}-${${sas_datetime}}-${sas_sha1}
+[[ -z ${SAS_DOCKER_TAG+x} ]] && export SAS_DOCKER_TAG=${sas_recipe_version}-${sas_datetime}-${sas_sha1}
 
 echo
 echo "==================================="
