@@ -18,7 +18,7 @@ settings:
   # For built services, concatenated with service name to form the built image name.
   project_name: "sas-viya"
 
-  # The deployment_output_path is mounted to the Conductor container, and the 
+  # The deployment_output_path is mounted to the Conductor container, and the
   # `run` and `deployment` commands then write generated Ansible playbooks to it.
   # deployment_output_path: ./ansible-deployment
 
@@ -51,5 +51,5 @@ settings:
   #  description:
   #  display_name:
 
-services: 
+services:
 
