@@ -9,8 +9,10 @@ spec:
     metadata:
       labels:
         app: {{ settings.project_name }}-{{ item.key | lower }}
+        domain: {{ settings.project_name }}
     spec:
       hostname: {{ settings.project_name }}-{{ item.key | lower }}
+      subdomain: {{ settings.project_name }}-subdomain
       containers:
       - name: {{ settings.project_name }}-{{ item.key | lower }}
 {% for regkey,regvalue in registries.items() %}

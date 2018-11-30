@@ -1,7 +1,4 @@
-#! /bin/bash
-
-# Exit out if any process returns a non zero return code
-set -e
+#! /bin/bash -e
 
 # Enable debugging if SAS_DEBUG is set
 [[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
@@ -18,6 +15,9 @@ fi
 # Variables
 ###############################################################################
 
+[[ -z ${DEPLOYMENT_NAME+x} ]]   && export DEPLOYMENT_NAME="viya"
+[[ -z ${SASSERVICENAME+x} ]]    && export SASSERVICENAME="sas-{{ role_name }}"
+[[ -z ${SASSERVICECONTEXT+x} ]] && export SASSERVICECONTEXT=${SASSERVICENAME#sas-}
 [[ -z ${SASROOT+x} ]]           && export SASROOT=/opt/sas
 [[ -z ${SASDEPLOYID+x} ]]       && export SASDEPLOYID=viya
 [[ -z ${SASINSTANCE+x} ]]       && export SASINSTANCE=default
@@ -26,8 +26,19 @@ fi
 [[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
 [[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
 
+# The following are used in sas-start-functions
+servicename=${SASSERVICENAME}
+servicecontext=${SASSERVICECONTEXT}
+
 # Set of functions for supporting docker containers
 source ${SASHOME}/lib/envesntl/docker-functions
+
+###############################################################################
+# Setup Consul
+###############################################################################
+
+# Write tokens to disk if needed and echo CONSUL_HTTP_ADDR to file
+docker_define_consul_environment
 
 ###############################################################################
 # Configuration by convention
@@ -70,27 +81,6 @@ trap docker_shutdown_sas_services SIGTERM
 trap docker_shutdown_sas_services SIGINT
 
 ###############################################################################
-# Host Auth
-###############################################################################
-
-if [[ ! -z ${HOST_AUTH+x} ]]; then
-    echo_line "Creating host authentication script"
-    echo "${HOST_AUTH}" > /tmp/host_auth.sh
-    chmod -v a+x /tmp/host_auth.sh
-fi
-
-if [[ ! -z ${HOST_AUTH_STOP+x} ]]; then
-    echo_line "Creating host authentication stop script"
-    echo "${HOST_AUTH_STOP}" > /tmp/host_auth_stop.sh
-    chmod -v a+x /tmp/host_auth_stop.sh
-fi
-
-if [ -e "/tmp/host_auth.sh" ]; then
-    echo_line "Running host authentication script from /tmp"
-    /tmp/host_auth.sh
-fi
-
-###############################################################################
 # Pre Deploy
 ###############################################################################
 
@@ -128,10 +118,6 @@ runuser --shell "/bin/sh" \
     --login sas \
     --command "${SASPREHOME}/SASFoundation/utilities/bin/post_install build_add_cmacros"
 
-#touch ${SASCONFIG}/etc/workspaceserver/default/autoexec_deployment.sas
-#chown -v sas:sas ${SASCONFIG}/etc/workspaceserver/default/autoexec_deployment.sas
-#chmod -v 0644 ${SASCONFIG}/etc/workspaceserver/default/autoexec_deployment.sas
-#echo "options cashost=\"${CAS_CONTROLLER_HOST}\" casport=${CAS_CONTROLLER_PORT};" > ${SASCONFIG}/etc/workspaceserver/default/autoexec_deployment.sas
 [[ ! -z ${CAS_CONTROLLER_HOST+x} ]] && sed -i "s|options cashost=.*$|options cashost=\"${CAS_CONTROLLER_HOST}\" casport=${CAS_CONTROLLER_PORT};|" ${SASCONFIG}/etc/workspaceserver/default/autoexec_deployment.sas
 [[ ! -z ${CAS_CONTROLLER_HOST+x} ]] && sed -i "s|options cashost=.*$|options cashost=\"${CAS_CONTROLLER_HOST}\" casport=${CAS_CONTROLLER_PORT};|" ${SASCONFIG}/etc/batchserver/default/autoexec_deployment.sas
 
@@ -362,6 +348,11 @@ fi
 ###############################################################################
 # Run SAS services
 ###############################################################################
+
+docker_run_local_consul
+
+# Start and continually check the ops-agent process.
+${SASHOME}/lib/envesntl/docker-ops-agent &
 
 docker_run_sas_services
 

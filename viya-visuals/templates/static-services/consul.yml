@@ -1,7 +1,9 @@
   consul:
-    from: "centos:7"
+    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
+    - tini
     - consul
+    - cloud-config
     ports:
     - "8500:8500"
     - "8501:8501"
@@ -10,7 +12,10 @@
     - "8301:8301"
     - "8302:8302"
     - "8300:8300"
-    entrypoint: ["/opt/sas/viya/home/bin/consul-entrypoint.sh"]
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/consul-entrypoint.sh"]
+    labels:
+      sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
+      sas.layer.consul: "true"
     volumes:
     - static-content:/consul
     dev_overrides:

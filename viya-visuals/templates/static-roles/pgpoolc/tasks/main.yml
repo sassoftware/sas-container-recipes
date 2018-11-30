@@ -10,10 +10,6 @@
   include_role:
     name: sas-install
 
-- name: Add cloud configuration files
-  include_role:
-    name: cloud-config
-
 - name: Copy files to remote host
   copy:
     src: "{{ item.name }}"

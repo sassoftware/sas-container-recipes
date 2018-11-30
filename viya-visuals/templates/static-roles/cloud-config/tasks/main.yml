@@ -4,10 +4,11 @@
 - name: Copy cloud config files to remote host
   copy:
     src: "{{ item.name }}"
-    dest: "/opt/sas/viya/home/{{ item.path }}/{{ item.name }}"
+    dest: "{{ SASHOME }}/{{ item.path }}/{{ item.name }}"
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
     mode: "{{ item.mode }}"
   with_items:
   - { name: docker-functions, path: "lib/envesntl", mode: "0755" }
+  - { name: docker-ops-agent, path: "lib/envesntl", mode: "0755" }
 
