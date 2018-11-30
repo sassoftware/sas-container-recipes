@@ -41,7 +41,7 @@
     shell: rpm --rebuilddb
 
   # Install repo definitions
-  - name: Shell script to install repository defintions
+  - name: Shell script to install repository definitions
     shell: |
       REPOSITORIES=$(curl --silent --location --cert {{ METAREPO_CERT_DIR }}/{{ METAREPO_CERT_CLIENT }} --cacert {{ METAREPO_CERT_DIR }}/{{ METAREPO_CERT_CA }} {{ REPOSITORY_WAREHOUSE }}/entitlements.json | \
         grep repoPath | \
