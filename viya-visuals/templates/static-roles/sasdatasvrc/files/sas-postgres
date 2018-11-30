@@ -18,7 +18,7 @@ set -e
 source ${SASHOME}/lib/envesntl/docker-functions
 
 # In the case of Docker, we need to load up what the instance value is.
-# The instance was saved by the docker_entrypoint.sh so it can be used 
+# The instance was saved by the docker_entrypoint.sh so it can be used
 # by multiple scripts
 _sasuuidname=sas_${SASDEPLOYID}_${SASSERVICENAME}_uuid
 _k8ssasuuid=${PG_VOLUME}/${SAS_CURRENT_HOST}_${_sasuuidname}
@@ -136,7 +136,7 @@ if [ $? = 0 ]; then
   fi
 
   # Consul service registration
-  
+
   _consul_tags="--tags postgres"
   if [ "${_network_databaseTraffic_enabled}" = "true" ] || [ "${_network_databaseTraffic_enabled}" = "TRUE" ] ; then
     _consul_tags=$_consul_tags "--tags ssl"
