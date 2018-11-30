@@ -46,7 +46,7 @@ function usage()
     echo "  -d|--skip-docker-url-validation Skips validating the Docker registry URL"
     echo "  -k|--skip-mirror-url-validation Skips validating the mirror URL"
     echo "  -y|--type <value>               The type of depoyment we are doing"
-    echo "                                      Options: [ single | multiple ]"
+    echo "                                      Options: [ single | multiple | full ]"
     echo "                                      Default: single"
     echo "  -v|--virtual-host               The Kubernetes ingress path that defines the location of the HTTP endpoint"
     echo "  -z|--zip <value>                The path to the SAS_Viya_deployment_data.zip file"
@@ -59,7 +59,7 @@ function copy_deployment_data_zip()
     local target_location=$1
     if [[ -n ${SAS_VIYA_PLAYBOOK_DIR} ]]; then
         echo "[INFO]  : Copying ${SAS_VIYA_PLAYBOOK_DIR} to ${target_location}"
-        cp -a "${SAS_VIYA_PLAYBOOK_DIR}" "${target_location}"        
+        cp -a "${SAS_VIYA_PLAYBOOK_DIR}" "${target_location}"
     elif [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
         echo "[INFO]  : Copying ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} to ${target_location}"
         cp -v "${SAS_VIYA_DEPLOYMENT_DATA_ZIP}" "${target_location}"
@@ -77,7 +77,7 @@ function add_layers()
 {
     # Now run through the addons
     # access and auth: added to programming, CAS and compute
-    # ide: added to programming  
+    # ide: added to programming
     docker_reg_location=$(echo "${DOCKER_REGISTRY_URL}" | cut -d'/' -f3 )/"${DOCKER_REGISTRY_NAMESPACE}"
     for sas_image in "${PROJECT_NAME}-programming" "${PROJECT_NAME}-computeserver" "${PROJECT_NAME}-sas-casserver-primary" "${PROJECT_NAME}-httpproxy"; do
         # Make sure the image exists
@@ -178,7 +178,7 @@ function add_layers()
                     popd
                 fi
             done
-    
+
             # push updated images to docker registry
 
             # if manifests exist, update the tags for programming, CAS and compute
@@ -202,9 +202,9 @@ function add_layers()
 
 function echo_footer()
 {
-    echo "[INFO]  : Listing Docker images where \"label=sas.recipe.version=${sas_version}\" :"
+    echo "[INFO]  : Listing Docker images where \"label=sas.recipe.version=${sas_recipe_version}\" :"
     echo
-    docker images --filter "label=sas.recipe.version=${sas_version}"
+    docker images --filter "label=sas.recipe.version=${sas_recipe_version}"
     echo
     echo "Kubernetes manifests can be found at $1/manifests/kubernetes."
     echo "One should review the settings of the yaml files in $1/manifests/kubernetes/configmaps/"
@@ -224,11 +224,22 @@ function echo_footer()
     echo ""
 }
 
+function echo_experimental()
+{
+    echo
+    echo "  _______  ______  _____ ____  ___ __  __ _____ _   _ _____  _    _     "
+    echo " | ____\ \/ /  _ \| ____|  _ \|_ _|  \/  | ____| \ | |_   _|/ \  | |    "
+    echo " |  _|  \  /| |_) |  _| | |_) || || |\/| |  _| |  \| | | | / _ \ | |    "
+    echo " | |___ /  \|  __/| |___|  _ < | || |  | | |___| |\  | | |/ ___ \| |___ "
+    echo " |_____/_/\_\_|   |_____|_| \_\___|_|  |_|_____|_| \_| |_/_/   \_\_____|"
+    echo
+}
+
 #
 # Set some defaults
 #
 
-sas_version=$(cat VERSION)
+sas_recipe_version=$(cat VERSION)
 sas_datetime=$(date "+%Y%m%d%H%M%S")
 sas_sha1=$(git rev-parse --short HEAD)
 
@@ -240,7 +251,7 @@ sas_sha1=$(git rev-parse --short HEAD)
 [[ -z ${CHECK_MIRROR_URL+x} ]]   && CHECK_MIRROR_URL=true
 [[ -z ${CHECK_DOCKER_URL+x} ]]   && CHECK_DOCKER_URL=true
 [[ -z ${SAS_RPM_REPO_URL+x} ]]   && export SAS_RPM_REPO_URL=https://ses.sas.download/ses/
-[[ -z ${SAS_DOCKER_TAG+x} ]]     && export SAS_DOCKER_TAG=${sas_version}-${sas_datetime}-${sas_sha1}
+[[ -z ${SAS_DOCKER_TAG+x} ]]     && export SAS_DOCKER_TAG=${sas_recipe_version}-${sas_datetime}-${sas_sha1}
 [[ -z ${PROJECT_NAME+x} ]]       && export PROJECT_NAME=sas-viya
 #
 # Set options
@@ -427,15 +438,15 @@ fi
 # Currently for anything that is not a "single", the process will build and then
 # try to push to the Docker registry. If the correct info is not provided then this
 # action will fail. This script will also fail when we try to build the addons.
-# For now, validate that if we are doing a multiple of full build, that we 
+# For now, validate that if we are doing a multiple of full build, that we
 # perform the right set of verification.
 
 if [[ "${SAS_RECIPE_TYPE}" != "single" ]]; then
     if [[ ! -z ${DOCKER_REGISTRY_URL+x} ]] && ${CHECK_DOCKER_URL}; then
-        echo "[ERROR] : Running curl against Docker registry URL: http://${DOCKER_REGISTRY_URL}"
+        echo "[INFO]  : Running curl against Docker registry URL: https://${DOCKER_REGISTRY_URL}"
         set +e
         set -x
-        response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "http://${DOCKER_REGISTRY_URL}")
+        response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "https://${DOCKER_REGISTRY_URL}")
         set +x
         set -e
         if [ "${response}" != "200" ]; then
@@ -482,7 +493,7 @@ case ${SAS_RECIPE_TYPE} in
                 set -x
                 docker build \
                     --file Dockerfile \
-                    --label "sas.recipe.version=${sas_version}" \
+                    --label "sas.recipe.version=${sas_recipe_version}" \
                     --label "sas.layer.${str_image}=true" \
                     ${BUILD_ARG_BASEIMAGE} \
                     ${BUILD_ARG_BASETAG} \
@@ -587,7 +598,7 @@ case ${SAS_RECIPE_TYPE} in
         docker images
         echo
         echo "For the '${PROJECT_NAME}-programming' docker image, you can run the following command to create and start the container:"
-        echo "docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=$(hostname -f) --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 --name <docker container name> --hostname <docker hostname> ${PROJECT_NAME}-programming:${sas_version}-${sas_datetime}-${sas_sha1}"
+        echo "docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=$(hostname -f) --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 --name <docker container name> --hostname <docker hostname> ${PROJECT_NAME}-programming:${sas_recipe_version}-${sas_datetime}-${sas_sha1}"
         echo
         echo "To create and start a container with the 'viya-single-container' image and no addons, submit:"
         echo "docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=$(hostname -f) --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 --name ${PROJECT_NAME}-programming --hostname sas.viya.programming viya-single-container"
@@ -618,19 +629,31 @@ case ${SAS_RECIPE_TYPE} in
         # Provide some information to the end user on next steps
         echo_footer viya-programming/viya-multi-container
         ;;
-    # full)
-        # copy_deployment_data_zip viya-visuals
+    full)
+        echo_experimental
 
-        # pushd viya-visuals
+        # Copy the zip or the playbook to project
+        copy_deployment_data_zip viya-visuals
 
-        # ./build.sh
+        pushd viya-visuals
 
-        # popd
+        ./build.sh \
+          --baseimage "${BASEIMAGE}" \
+          --basetag "${BASETAG}" \
+          --platform "${PLATFORM}" \
+          --docker-url "${DOCKER_REGISTRY_URL}" \
+          --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
+          --sas-docker-tag "${SAS_DOCKER_TAG}" \
+          --skip-mirror-url-validation \
+          --virtual-host "${CAS_VIRTUAL_HOST}"
 
-        # add_layers
+        popd
 
-        # echo_footer viya-visuals
-        # ;;
+        add_layers
+
+        echo_footer viya-visuals
+        echo_experimental
+        ;;
     *)
         echo "[ERROR] : Unknown type of '${SAS_RECIPE_TYPE}' passed in"
         echo "[INFO]  : Type must be a value of [ single | multiple | full ]"
@@ -641,4 +664,3 @@ esac
 echo; # Formatting
 
 exit 0
-

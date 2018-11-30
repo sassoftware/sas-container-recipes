@@ -1,0 +1,69 @@
+#!/bin/bash
+
+###############################################################################
+# Point of this file is to provide a way to kick off a specific process to
+# manage starting and watching the ops-agent.
+###############################################################################
+
+###############################################################################
+# Start the ops-agent if it exists
+###############################################################################
+function docker_run_ops_agent()
+{
+    if [[ -f /etc/init.d/sas-${SASDEPLOYID}-ops-agent-default ]]; then
+        # Making sure the system can start ops-agent
+        if [[ -f ${SASHOME}/bin/sas-ops-agent ]]; then
+            opsagent_rc=1
+            while (( ${opsagent_rc} != 0 )); do
+                echo;echo "[INFO]  : Checking if environment is ready for sas-ops-agent";echo
+                set +e
+                ${SASHOME}/bin/sas-ops-agent query
+                opsagent_rc=$?
+                set -e
+                if (( ${opsagent_rc} == 0 )); then
+                    echo "[INFO]  : sas-ops-agent query returned success";
+                    break
+                else
+                    echo "[INFO]  : sas-ops-agent not ready. Pausing before checking again";
+                    sleep 2
+                fi
+            done
+            echo "[INFO]  : Environment is ready for sas-ops-agent"
+        else
+            echo "[ERROR} : Looks like ops-agent is installed but files are missing. Exiting"
+            exit 80
+        fi
+
+        /etc/init.d/sas-${SASDEPLOYID}-ops-agent-default start
+    fi
+}
+
+###############################################################################
+# Every 30 seconds, check the ops-agent service and see if it is running or not.
+# If it is not running, start it up again.
+###############################################################################
+function docker_check_ops_agent()
+{
+    if [[ -f /etc/init.d/sas-${SASDEPLOYID}-ops-agent-default ]]; then
+        set +e
+        status_check_resp=$(/etc/init.d/sas-${SASDEPLOYID}-ops-agent-default status 2>/dev/null)
+        status_check_rc=$?
+        set -e
+        if (( ${status_check_rc} != 0 )); then
+            echo "[INFO]  : ops-agent status = \"${status_check_resp}\""
+            echo "[WARN]  : ops-agent is not running...starting it again..."
+            /etc/init.d/sas-${SASDEPLOYID}-ops-agent-default start
+        fi
+    else
+        echo "[INFO]  : ops-agent is not on the host"
+        exit 0
+    fi
+}
+
+docker_run_ops_agent
+while :; do
+    docker_check_ops_agent
+
+    # Pause to give enough time between checks
+    sleep 30
+done

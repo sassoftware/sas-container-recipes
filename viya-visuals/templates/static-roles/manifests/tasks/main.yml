@@ -35,6 +35,11 @@
   set_fact:
     cas_manifest_type: "smp"
 
+- name: Create k8s domain service
+  template:
+    src: "domain-service_k8s.j2"
+    dest: "{{ playbook_dir }}/deploy/kubernetes/smp/domain-service.yml"
+
 - name: Create Consul k8s manifest
   template:
     src: "consul_k8s.j2"
@@ -46,19 +51,24 @@
   template:
     src: "pets_k8s.j2"
     dest: "{{ playbook_dir }}/deploy/kubernetes/smp/{{ item.key }}.yml"
-  when: item.key in 'consul, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
+  when: item.key in 'httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 
 - name: Create micro-services k8s manifest
   template:
     src: "microservice_k8s.j2"
     dest: "{{ playbook_dir }}/deploy/kubernetes/smp/{{ item.key }}.yml"
-  when: item.key not in 'httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
+  when: item.key not in 'consul, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 
 - name: Define variable to indicate what type of manifest we are creating
   set_fact:
     cas_manifest_type: "mpp"
+
+- name: Create k8s domain service
+  template:
+    src: "domain-service_k8s.j2"
+    dest: "{{ playbook_dir }}/deploy/kubernetes/mpp/domain-service.yml"
 
 - name: Create Consul k8s manifest
   template:
@@ -71,14 +81,14 @@
   template:
     src: "pets_k8s.j2"
     dest: "{{ playbook_dir }}/deploy/kubernetes/mpp/{{ item.key }}.yml"
-  when: item.key in 'consul, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
+  when: item.key in 'httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 
 - name: Create micro-services k8s manifest
   template:
     src: "microservice_k8s.j2"
     dest: "{{ playbook_dir }}/deploy/kubernetes/mpp/{{ item.key }}.yml"
-  when: item.key not in 'httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
+  when: item.key not in 'consul, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 
 - name: Create CAS worker manifest
