@@ -17,7 +17,7 @@
       sas.layer.programming: "true"
     deployment_overrides:
       resources:
-        limits: 
+        limits:
         - "memory=12000Mi"
         requests:
         - "memory=512Mi"
