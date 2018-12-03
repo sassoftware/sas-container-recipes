@@ -5,20 +5,20 @@
 # Context: @CONTEXT@
 # DO NOT MODIFY THIS SCRIPT ABOVE THIS LINE
 #
-# chkconfig: @CHECKCONFIG@
-# description: @NAME@ service daemon
+# chkconfig: - 99 01
+# description: sas-espserver service daemon
 #
 
 ### BEGIN INIT INFO
-# Provides: sas-viya-@SHORTNAME@-default
+# Provides: sas-viya-espserver-default
 # Required-Start: $network
 # Required-Stop: $network
 # Should-Start: $network
 # Should-Stop: $network
 # Default-Start: -
 # Default-Stop: -
-# Short-Description: start and stop @NAME@ service
-# Description: @NAME@ @CONTEXT@ service
+# Short-Description: start and stop sas-espserver service
+# Description: sas-espserver service
 ### END INIT INFO
 
 # Parse script name - assume it is of the form sas-$SASDEPLOYID-$SASPRODNAME-$SASINSTANCE
@@ -55,7 +55,7 @@ sas_debug_msg SASINSTANCE=$SASINSTANCE
 # Command script name - this is invoked by this init script to start/stop the service.
 # CHANGE to reflect the actual base script name to be executed.
 
-SASPRODCMD="@NAME@"
+SASPRODCMD="sas-espserver"
 SASPRODCMDARGS=
 
 #

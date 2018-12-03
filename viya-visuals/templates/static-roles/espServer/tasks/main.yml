@@ -28,10 +28,17 @@
 
 - name: Copy files to remote host
   copy:
-    src: "{{ item.name }}"
-    dest: "{{ SASHOME }}/{{ item.path }}/{{ item.name }}"
+    src: sas-espserver 
+    dest: "{{ SASHOME }}/bin/sas-espserver"
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
-    mode: "{{ item.mode }}"
-  with_items:
-  - { name: docker_esp.sh, path: "bin", mode: "0755" }
+    mode: 0755
+
+- name: Copy the init script to the init daemon directory
+  copy:
+    src: sas-viya-espserver-default
+    dest: /etc/init.d/sas-viya-espserver-default
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+    mode: 0755
+
