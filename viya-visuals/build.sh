@@ -82,19 +82,18 @@ function usage() {
     echo -e "                               Options: [ redhat | suse ]"
     echo -e "                               Default: redhat"
 
-    echo -e "  -w|--skip-docker-url-validation"
+    echo -e "  -d|--skip-docker-url-validation"
     echo -e "                           Skips validating the Docker registry URL"
 
-    echo -e "  -x|--skip-mirror-url-validation"
+    echo -e "  -k|--skip-mirror-url-validation"
     echo -e "                           Skips validating the mirror URL"
 
     echo -e "  -e|--environment-setup"
     echo -e "                           Setup python virtual environment"
 
     echo -e "  -s|--sas-docker-tag      The tag to apply to the images before pushing to the Docker registry"
-    echo -e "  -d|--debug               Calls 'set -x' for verbose debugging"
-    echo -e ""
 
+    echo -e ""
     echo -e "  -h|--help                Prints out this message"
     echo -e ""
 }
@@ -173,32 +172,32 @@ function validate_input() {
     fi
 
     # Validate that the provided RPM repo URL exists
-    if [[ ! -z ${SAS_RPM_REPO_URL+x} ]] && ${CHECK_MIRROR_URL}; then
-        mirror_url="${SAS_RPM_REPO_URL}"
-        if [[ "${mirror_url}" != "http://"* ]]; then
-            echo -e "[ERROR] : The mirror URL of '${mirror_url}' is not using an http based mirror."
-            echo -e "[INFO]  : For more information, see https://github.com/sassoftware/sas-container-recipes/blob/master/README.md#use-buildsh-to-build-the-images"
-            echo
-            exit 30
+    if [[ ${CHECK_MIRROR_URL} = "true" ]]; then
+        mirror_url=$(echo "${BUILD_ARG_SAS_RPM_REPO_URL}" | cut -d'=' -f2)
+        if [[ "${mirror_url}" = "http://"* ]]; then
+            echo -e "[WARN] : The mirror URL of '${mirror_url}' is using an http based mirror."
+            echo -e "[WARN] : For more information, see https://github.com/sassoftware/sas-container-recipes/blob/master/README.md#use-buildsh-to-build-the-images"
         fi
 
         set +e
         response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "${mirror_url}")
         set -e
         if [ "${response}" != "200" ]; then
-            echo -e "[ERROR] : Not able to ping mirror URL: ${mirror_url}"
+            echo -e "[ERROR] : Not able to ping mirror URL: ${mirror_url}" echo
+            echo -e "[INFO]  : To ignore this error use the -k|--skip-mirror-url-validation flag" echo
             echo
             exit 5
         fi
     fi
 
     # Validates that the provided docker registry exists
-    if [[ ! -z ${DOCKER_REGISTRY_URL+x} ]] && ${CHECK_DOCKER_URL}; then
+    if [[ ${CHECK_DOCKER_URL} = "true" ]]; then
         set +e
         response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "https://${DOCKER_REGISTRY_URL}")
         set -e
         if [ "${response}" != "200" ]; then
-            echo -e "[ERROR] : Not able to ping Docker registry URL: ${DOCKER_REGISTRY_URL}"
+            echo -e "[ERROR] : Not able to curl Docker registry URL: ${DOCKER_REGISTRY_URL}"
+            echo -e "[INFO]  : To ignore this error use the -d|--skip-mirror-url-url-validation flag" echo
             echo
             exit 5
         fi
@@ -217,8 +216,7 @@ function validate_input() {
 # Given the '--playbook' does not use the sas-orchestration tool to create a new playbook.
 #
 # Given the '--zip' option, unzip the contents and use the sas-orchestration
-# tool to create the playbook. Any changes made to this playbook will get
-# overridden in the next build.
+# tool to create the playbook. Any changes made to this playbook will get # overridden in the next build.
 #
 function get_playbook() {
     if [[ -d ${SAS_VIYA_PLAYBOOK_DIR} ]]; then
@@ -236,7 +234,7 @@ function get_playbook() {
             rm -v sas-orchestration-linux.tgz
             mv sas-orchestration ../
         fi
-
+        
         echo -e "[INFO] : Building the playbook from the SOE zip."
         ${SAS_ORCHESTRATION_LOCATION} build \
             --input ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} \
@@ -246,6 +244,7 @@ function get_playbook() {
         tar xvf SAS_Viya_playbook.tgz
         rm -v SAS_Viya_playbook.tgz
         cp -v sas_viya_playbook/*.pem .
+
     else
         echo -e "[ERROR] : Could not find a zip file or playbook to use"
         echo -e ""
@@ -270,7 +269,7 @@ function setup_defaults() {
     [[ -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP+x} ]] && SAS_VIYA_DEPLOYMENT_DATA_ZIP=${PWD}/SAS_Viya_deployment_data.zip
     [[ -z ${SAS_VIYA_PLAYBOOK_DIR+x} ]]        && SAS_VIYA_PLAYBOOK_DIR=${PWD}/sas_viya_playbook
     [[ -z ${PLATFORM+x} ]]                     && PLATFORM=redhat
-    [[ -z ${SAS_RPM_REPO_URL+x} ]]             && SAS_RPM_REPO_URL=https://ses.sas.com/download/ses
+    [[ -z ${SAS_RPM_REPO_URL+x} ]]             && SAS_RPM_REPO_URL=https://ses.sas.download/ses/
     [[ -z ${DOCKER_REGISTRY_URL+x} ]]          && DOCKER_REGISTRY_URL=http://docker.company.com
     [[ -z ${DOCKER_REGISTRY_NAMESPACE+x} ]]    && DOCKER_REGISTRY_NAMESPACE=sas
     [[ -z ${PROJECT_DIRECTORY+x} ]]            && PROJECT_DIRECTORY=working
@@ -578,8 +577,8 @@ function push_images() {
 # Steps mirrored in documentation - show the user what comes next
 function show_next_steps() {
     echo -e ""
-    echo -e "Success. The manifests directory contains all Kubernetes deployment resources."
-    echo -e "To import your resources use \`kubectl (create|replace) --filename deploy/kubernetes/ ... \`"
+    echo -e "Success. The working/deploy/kubernetes directory contains all Kubernetes deployment resources."
+    echo -e "To import your resources use \`kubectl (create|replace) --filename working/deploy/kubernetes/ ... \`"
     echo -e ""
 }
 
@@ -593,11 +592,6 @@ while [[ $# -gt 0 ]]; do
             usage
             echo
             exit 0
-            ;;
-        -d|--debug)
-            shift # past argument
-            export DEBUG=true
-            shift # past value
             ;;
         -i|--baseimage)
             shift # past argument
@@ -624,11 +618,11 @@ while [[ $# -gt 0 ]]; do
             export SAS_VIYA_DEPLOYMENT_DATA_ZIP=$1
             shift # past value
             ;;
-        -w|--skip-mirror-url-validation)
+        -k|--skip-mirror-url-validation)
             shift # past argument
             CHECK_MIRROR_URL=false
             ;;
-        -x|--skip-docker-url-validation)
+        -d|--skip-docker-url-validation)
             shift # past argument
             CHECK_DOCKER_URL=false
             ;;
