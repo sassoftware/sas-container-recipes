@@ -17,6 +17,11 @@
       environment:
         - "SAS_DEBUG=1"
     deployment_overrides:
+      environment:
+        - "SASLICENSEDIR=/opt/sas/viya/home/SASEventStreamProcessingEngine/current/etc/license"
+        - "SASLICENSEFILE=license.txt"
+      secrets:
+        - "SETINIT_TEXT_ENC="
       volumes:
         - "log=/opt/sas/viya/config/var/log"
       resources:
