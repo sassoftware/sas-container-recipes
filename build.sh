@@ -637,6 +637,8 @@ case ${SAS_RECIPE_TYPE} in
 
         pushd viya-visuals
 
+        CHECK_MIRROR_URL=${CHECK_MIRROR_URL} \
+        CHECK_DOCKER_URL=${CHECK_DOCKER_URL} \
         ./build.sh \
           --baseimage "${BASEIMAGE}" \
           --basetag "${BASETAG}" \
@@ -644,7 +646,6 @@ case ${SAS_RECIPE_TYPE} in
           --docker-url "${DOCKER_REGISTRY_URL}" \
           --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
           --sas-docker-tag "${SAS_DOCKER_TAG}" \
-          --skip-mirror-url-validation \
           --virtual-host "${CAS_VIRTUAL_HOST}"
 
         popd
