@@ -1,46 +1,20 @@
 # SAS for Containers: Recipes
-This repository contains a collection of recipes and other resources for building containers that include the SAS Viya software and other tools.
+A collection of recipes and other resources for building containers that include the SAS Viya software and other tools.
 
-- [/viya-programming](viya-programming/README.md) is a folder that includes a recipe and resources for creating SAS Viya 3.4 programming-only Docker images.
+- [/viya-programming](viya-programming) is a folder that includes a recipe and resources for creating SAS Viya 3.4 programming-only Docker images.
+- [/viya-visuals](viya-visuals) is a folder that includes resources for creating SAS Viya 3.4 Docker images for use in a Kubernetes environment.
 - [/addons](addons/README.md) contains recipes and resources that enhance the base SAS Viya software, such as configuration of SAS/ACCESS software and integration with LDAP.
 - A [build script](#use-buildsh-to-build-the-images) that you can use to create a container image that includes the SAS Viya software and addon layers.
 
 ## Prerequisites
-### SAS Software
-
 - SAS Viya 3.4 software: a SAS Viya 3.4 on Linux order and the SAS_Viya_deployment_data.zip from the Software Order Email (SOE) are required.
 - Creating a local mirror of the SAS software is strongly recommended. [Here's why](../wikis/Tips#create-a-local-mirror-repository). 
 
-### Other Software
-
-- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker is required.
-- Git is required.
-
-The following is required when building multiple containers:
-
-- Access to a Docker registry
-- Python2 or Python3
-- pip
-- virtualenv
-- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-- Access to a Kubernetes environment
-
-### Clone the Repository
-
-Here is an example of the `git clone` command for a Linux host that has Git and Docker installed. 
-The command assumes that you will clone the repository in the $HOME directory.
-
-```
-cd $HOME
-git clone https://github.com/sassoftware/sas-container-recipes.git
-```
-
-**Note:** On Windows, you can clone the repository by using PowerShell. Also, you can clone the repository on a Mac.
 
 ## SAS Viya Programming - Single Container
+A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker and git are required.
 
 ### At a Glance
-
 * The SAS Viya programming run-time in a single container on the Docker platform.
 * Includes SAS Studio, SAS Workspace Server, and the CAS server, which provides access to in-memory analytics. The CAS server allows for symmetric multi-processing (SMP) by users.
 * Ideal for data scientists and programmers who want on-demand access.
@@ -110,6 +84,15 @@ After the container has started, log on to SAS Studio with the user name `sasdem
  **Note:** The user name `sasdemo` and the password `sasdemo` are the credentials for the demo user that is set up by the auth-demo addon. 
 
 ## SAS Viya Programming - Multiple Containers
+
+The following is required when building multiple containers:
+
+- Access to a Docker registry
+- Python2 or Python3
+- pip
+- virtualenv
+- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+- Access to a Kubernetes environment
 
 ### Capabilities
 
@@ -195,6 +178,15 @@ After the container has started, log on to SAS Studio with the user name `sasdem
  http://sas-viya-http.company.com
 
 **Note:** The user name `sasdemo` and the password `sasdemo` are the credentials for the demo user that is set up by the auth-demo addon. 
+
+
+## Other Documentation
+Check out our [Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for specific details.
+Have a quick question? Open a ticket in the "issues" tab to get a response from the maintainers and other community members. If you're unsure about something just submit an issue anyways. We're glad to help!
+If you have a specific license question head over to the [support portal](https://support.sas.com/en/support-home.html).
+
+## Contributing
+Have something cool to share? SAS gladly accepts pull requests on GitHub! We appreciate your best efforts and value the transparent collaboration that GitHub has.
 
 ## Copyright
 
