@@ -8,7 +8,7 @@ A collection of recipes and other resources for building containers that include
 
 ## Prerequisites
 - SAS Viya 3.4 software: a SAS Viya 3.4 on Linux order and the SAS_Viya_deployment_data.zip from the Software Order Email (SOE) are required.
-- Creating a local mirror of the SAS software is strongly recommended. [Here's why](../wikis/Tips#create-a-local-mirror-repository). 
+- Creating a local mirror of the SAS software is strongly recommended. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
 
 
 ## SAS Viya Programming - Single Container
