@@ -425,7 +425,7 @@ echo
 echo "=============="
 echo "Variable check"
 echo "=============="
-echo ""
+echo "" 
 echo "  Deployment Type                 = ${SAS_RECIPE_TYPE}"
 echo "  BASEIMAGE                       = ${BASEIMAGE}"
 echo "  BASETAG                         = ${BASETAG}"
