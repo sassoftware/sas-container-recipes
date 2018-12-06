@@ -493,15 +493,6 @@ function push_images() {
     set +x
 }
 
-# Steps mirrored in documentation - show the user what comes next
-function show_next_steps() {
-    echo -e ""
-    echo -e "Success. The working/deploy/kubernetes directory contains all Kubernetes deployment resources."
-    echo -e "To import your resources use \`kubectl (create|replace) --filename working/deploy/kubernetes/ ... \`"
-    echo -e ""
-}
-
-
 # Use command line options if they have been provided and overrides environment settings
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -574,10 +565,6 @@ while [[ $# -gt 0 ]]; do
             SAS_DOCKER_TAG="$1"
             shift # past value
             ;;
-        *)  echo -e "Invalid argument: $1"
-            exit 1;
-            shift # past argument
-    ;;
     esac
 done
 
@@ -602,9 +589,8 @@ function main() {
     make_deployments
     echo -e "[INFO]  : Pushing images to registry"
     push_images
-    popd # back to viya-visuals directory
 
-    show_next_steps
+    popd # back to viya-visuals directory
     exit 0
 }
 main
