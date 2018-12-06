@@ -17,86 +17,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function usage() {
-    set +x
-    echo -e ""
-    echo -e " Framework to deploy SAS Viya environments using containers."
-    echo -e ""
-    echo -e "Single Container Arguments: "
-    echo -e "------------------------ "
-    echo -e ""
-    echo -e " Required: "
-    echo -e ""
-    echo -e "  -g|--single-container"
-    echo -e ""
-    echo -e "  -z|--zip <value>         Path to the SAS_Viya_deployment_data.zip file"
-    echo -e "                               example: /path/to/SAS_Viya_deployment_data.zip"
-    echo -e ""
-    echo -e " Optional:"
-    echo -e "  -a|--addons \"<value> [<value>]\"  "
-    echo -e "                           A space separated list of layers to add on to the main SAS image"
-    echo -e ""
-    echo -e ""
-    echo -e "Multi-Container Arguments "
-    echo -e "------------------------ "
-    echo -e ""
-    echo -e "  Required: "
-    echo -e ""
-
-    echo -e "  -n|--docker-namespace <value>"
-    echo -e "                           The namespace in the Docker registry where Docker
-                                        images will be pushed to. Used to prevent collisions."
-    echo -e "                               example: mynamespace"
-
-    echo -e "  -u|--docker-url <value>  URL of the Docker registry where Docker images will be pushed to."
-    echo -e "                               example: 10.12.13.14:5000 or my-registry.docker.com, do not add 'http://' "
-    echo -e ""
-
-    echo -e "  -z|--zip <value>         Path to the SAS_Viya_deployment_data.zip file"
-    echo -e "                               example: /path/to/SAS_Viya_deployment_data.zip"
-
-    echo -e "      [EITHER/OR]          "
-    echo -e "                           "
-
-    echo -e "  -l|--playbook <value>    Path to the sas_viya_playbook directory. If this is passed in along with the "
-    echo -e "                               SAS_Viya_deployment_data.zip then this will take precedence."
-
-    echo -e "  -v|--virtual-host        The Kubernetes ingress path that defines the location of the HTTP endpoint"
-    echo -e "                               example: ? (TODO)"
-
-    # ------------------------
-    echo -e ""
-    echo -e "  Optional: "
-    echo -e ""
-    echo -e "  -i|--baseimage <value>   The Docker image from which the SAS images will build on top of"
-    echo -e "                               Default: centos"
-
-    echo -e "  -t|--basetag <value>     The Docker tag for the base image that is being used"
-    echo -e "                               Default: latest"
-
-    echo -e "  -m|--mirror-url <value>  The location of the mirror URL."
-    echo -e "                               See https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html"
-    echo -e "                               for more information on setting up a mirror."
-
-    echo -e "  -p|--platform <value>    The type of operating system we are installing on top of"
-    echo -e "                               Options: [ redhat | suse ]"
-    echo -e "                               Default: redhat"
-
-    echo -e "  -d|--skip-docker-url-validation"
-    echo -e "                           Skips validating the Docker registry URL"
-
-    echo -e "  -k|--skip-mirror-url-validation"
-    echo -e "                           Skips validating the mirror URL"
-
-    echo -e "  -e|--environment-setup"
-    echo -e "                           Setup python virtual environment"
-
-    echo -e "  -s|--sas-docker-tag      The tag to apply to the images before pushing to the Docker registry"
-
-    echo -e ""
-    echo -e "  -h|--help                Prints out this message"
-    echo -e ""
-}
 
 # Run the ansible-container build in the clean workspace and build all services.
 # Or define the environment variable "REBUILDS" to only build a few services.
@@ -261,7 +181,6 @@ function setup_defaults() {
     [[ -z ${CHECK_MIRROR_URL+x} ]]             && CHECK_MIRROR_URL=true
     [[ -z ${CHECK_DOCKER_URL+x} ]]             && CHECK_DOCKER_URL=true
     [[ -z ${SETUP_VIRTUAL_ENVIRONMENT+x} ]]    && SETUP_VIRTUAL_ENVIRONMENT=true
-    [[ -z ${VIYA_SINGLE_CONTAINER+x} ]]        && VIYA_SINGLE_CONTAINER=false
     [[ -z ${SAS_DOCKER_TAG+x} ]]               && SAS_DOCKER_TAG=${sas_recipe_version}-${sas_datetime}-${sas_sha1}
     [[ -z ${PROJECT_NAME+x} ]]                 && PROJECT_NAME=sas-viya
     [[ -z ${BASEIMAGE+x} ]]                    && BASEIMAGE=centos
@@ -589,7 +508,7 @@ while [[ $# -gt 0 ]]; do
     case ${key} in
         -h|--help)
             shift
-            usage
+            echo "See top level readme for --help details"
             echo
             exit 0
             ;;
@@ -626,12 +545,12 @@ while [[ $# -gt 0 ]]; do
             shift # past argument
             CHECK_DOCKER_URL=false
             ;;
-        -u|--docker-url)
+        -u|--docker-url|--docker-registry-url)
             shift # past argument
             export DOCKER_REGISTRY_URL="$1"
             shift # past value
             ;;
-        -n|--docker-namespace)
+        -n|--docker-namespace|--docker-registry-namespace)
             shift # past argument
             export DOCKER_REGISTRY_NAMESPACE="$1"
             shift # past value
@@ -645,13 +564,9 @@ while [[ $# -gt 0 ]]; do
             CAS_VIRTUAL_HOST="$1"
             shift # past value
              ;;
-        -l|--playbook)
+        -l|--playbook-dir)
             shift # past argument
             SAS_VIYA_PLAYBOOK_DIR="$1"
-            shift # past value
-             ;;
-        -g|--single-container) shift # past argument
-            VIYA_SINGLE_CONTAINER=true
             shift # past value
              ;;
         -s|--sas-docker-tag)
