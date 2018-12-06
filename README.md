@@ -16,7 +16,7 @@ A [supported version](https://success.docker.com/article/maintenance-lifecycle) 
 
 ### At a Glance
 * The SAS Viya programming run-time in a single container on the Docker platform.
-* Includes SAS Studio, SAS Workspace Server, and the CAS server, which provides access to in-memory analytics. The CAS server allows for symmetric multi-processing (SMP) by users.
+* Includes SAS Studio, SAS Workspace Server, and the CAS server, which provides in-memory analytics. The CAS server allows for symmetric multi-processing (SMP) by users.
 * Ideal for data scientists and programmers who want on-demand access.
 * Ideal for ephemeral computing. By that, users should save code and store data in a permanent location outside the container.
 * Run the container in interactive mode so that users can access the SAS Viya programming run-time.
