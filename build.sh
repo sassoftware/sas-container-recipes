@@ -107,6 +107,32 @@ function usage() {
     echo -e ""
 }
 
+function enable_logging() {
+    # The parent process will enter this branch and set up logging
+
+    # Create a named piped for logging the child's output
+    PIPE=tmp.fifo
+    mkfifo $PIPE
+
+    # Launch the child process without redirected to the named pipe
+    SELF_LOGGING=1 sh $0 $* >$PIPE &
+
+    # Save PID of child process
+    PID=$!
+
+    # Launch tee in a separate process
+    tee -a "${PWD}"/build_sas_container.log <$PIPE &
+
+    # Unlink $PIPE because the parent process no longer needs it
+    rm $PIPE
+
+    # Wait for child process running the rest of this script
+    wait $PID
+
+    # Return the error code from the child process
+    exit $?
+}
+
 function copy_deployment_data_zip()
 {
     local target_location=$1
@@ -330,6 +356,11 @@ while [[ $# -gt 0 ]]; do
             BASETAG="$1"
             shift # past value
             ;;
+        -r|--docker-registry-type)
+            shift # past argument
+            DOCKER_REGISTRY_TYPE="$1"
+            shift # past value
+            ;;
         -m|--mirror-url)
             shift # past argument
             export SAS_RPM_REPO_URL=$1
@@ -419,7 +450,7 @@ if [ -f "${PWD}/build_sas_container.log" ]; then
     echo
 fi
 
-exec > >(tee -a "${PWD}"/build_sas_container.log) 2>&1
+enable_logging
 
 echo
 echo "=============="
@@ -436,6 +467,7 @@ echo "  Deployment Data Zip             = ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
 echo "  Addons                          = ${ADDONS}"
 echo "  Docker registry URL             = ${DOCKER_REGISTRY_URL}"
 echo "  Docker registry namespace       = ${DOCKER_REGISTRY_NAMESPACE}"
+echo "  Docker registry type            = ${DOCKER_REGISTRY_TYPE}"
 echo "  Validate Docker registry URL    = ${CHECK_DOCKER_URL}"
 echo "  HTTP Ingress endpoint           = ${CAS_VIRTUAL_HOST}"
 echo "  Tag SAS will apply              = ${SAS_DOCKER_TAG}"
@@ -668,6 +700,7 @@ case ${SAS_RECIPE_TYPE} in
           --basetag "${BASETAG}" \
           --platform "${PLATFORM}" \
           --docker-url "${DOCKER_REGISTRY_URL}" \
+          --docker-registry-type "${DOCKER_REGISTRY_TYPE}" \
           --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
           --sas-docker-tag "${SAS_DOCKER_TAG}" \
           --virtual-host "${CAS_VIRTUAL_HOST}"

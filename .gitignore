@@ -12,6 +12,7 @@ env/
 **/working/
 **/working_*
 **/deploy/
+sas-orchestration
 *~
 *.swo
 *.swp
