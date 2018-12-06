@@ -80,20 +80,20 @@
 - name: Create pets k8s manifest 
   template:
     src: "pets_k8s.j2"
-    dest: "{{ playbook_dir }}/manifests/kubernetes/mpp/{{ item.key }}.yml"
+    dest: "{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/{{ item.key }}.yml"
   when: item.key in 'httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 
 - name: Create micro-services k8s manifest
   template:
     src: "microservice_k8s.j2"
-    dest: "{{ playbook_dir }}/manifests/kubernetes/mpp/{{ item.key }}.yml"
+    dest: "{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/{{ item.key }}.yml"
   when: item.key not in 'consul, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 
 - name: Create CAS worker manifest
   template:
     src: "casworker_k8s.j2"
-    dest: "{{ playbook_dir }}/manifests/kubernetes/mpp/sas-casserver-worker.yml"
+    dest: "{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/sas-casserver-worker.yml"
   when: item.key in 'sas-casserver-primary'
   with_dict: '{{ services }}'
