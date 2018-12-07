@@ -25,7 +25,7 @@ fi
 [[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
 [[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
 [[ -z ${SASCASINSTANCE+x} ]]    && export SASCASINSTANCE="${SASINSTANCE}"
-[[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=localhost
+[[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
 
 _deployid=${SASDEPLOYID}
 export SAS_CAS_CONFIG="${SASROOT}/${_deployid}/config"
@@ -161,6 +161,8 @@ is_controller=true
 if [ "${SERVICE_NAME}" = "cascontroller" ]; then
     export CASCONTROLLERHOST="${SAS_CURRENT_HOST}"
     export CASWORKERHOSTS=""
+    # Update the controller host before updating Consul
+    sed -i "s|SASCONTROLLERHOST: .*|SASCONTROLLERHOST: ${CASCONTROLLERHOST}|" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
     echo "[INFO]  : Load the cas.yml file into consul"
     ${SASHOME}/bin/sas-bootstrap-config kv bulkload \
         --force \
@@ -171,11 +173,20 @@ elif [ "${SERVICE_NAME}" = "cassecondary" ]; then
     export CASCFG_MODE=mpp
 elif [ "${SERVICE_NAME}" = "casworker" ]; then
     is_controller=false
+    # Lookup in Consul for the kv pair....if it is not there, wait until it shows up. Look for the SASCONTROLLERHOST
+    # The following would need to take into consideration, the tenant (shared).
+    ${SASHOME}/bin/sas-bootstrap-config catalog serviceurl cas-shared-${SASCASINSTANCE}
     export CASWORKERHOSTS="${SAS_CURRENT_HOST}"
     export CASCFG_MODE=mpp
 else
     echo "[ERROR] - Unknown service type passed in."
     exit 11
+fi
+
+if [[ ! -f ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker ]]; then
+    touch ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
+    chown --verbose sas:sas ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
+    chmod --verbose 0644 ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 fi
 
 if [ "${CASCFG_MODE}" = "mpp" ]; then
@@ -194,7 +205,7 @@ if [ "${CASCFG_MODE}" = "mpp" ]; then
         fi
     else
         echo "[INFO]  - Running in MPP mode and CASKEY *was* provided as an environment variable."
-        echo "CASKEY=\"${CASKEY}\"" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+        echo "CASKEY=\"${CASKEY}\"" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
     fi
 
     [[ -z ${CASCFG_GCPORT+x} ]]         && export CASCFG_GCPORT=5571
@@ -204,27 +215,31 @@ if [ "${CASCFG_MODE}" = "mpp" ]; then
     [[ -z ${CASCFG_ELASTIC+x} ]]        && export CASCFG_ELASTIC=true
 fi
 
+# Forcing this so it will get sourced into supporting scripts. Was having issues 
+# when registering the services. They would register as localhost instead of the
+# defined host name.
+echo "SAS_CURRENT_HOST=${SAS_CURRENT_HOST}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 
-# Update the ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+# Update the ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 # to have updated settings.
 
-if [ -n "${CASCONTROLLERHOST}" ]; then
-    sed -i "s|SASCONTROLLERHOST=.*|SASCONTROLLERHOST=${CASCONTROLLERHOST}|" ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+if [[ -n ${CASCONTROLLERHOST} ]]; then
+    echo "SASCONTROLLERHOST=${CASCONTROLLERHOST}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 fi
-if [ -n "${CASWORKERHOSTS}" ]; then
-    sed -i "s|SASWORKERHOSTS=.*|SASWORKERHOSTS=${CASWORKERHOSTS}|" ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+if [[ -n ${CASWORKERHOSTS} ]]; then
+    echo "SASWORKERHOSTS=${CASWORKERHOSTS}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 fi
-if [ -n "${CASENV_CASDATADIR}" ]; then
-    sed -i "s|SASCASDATADIR=.*|SASCASDATADIR=${CASENV_CASDATADIR}|" ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+if [[ -n ${CASENV_CASDATADIR} ]]; then
+    echo "SASCASDATADIR=${CASENV_CASDATADIR}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 fi
 # DOCKER-404: Make sure the USERLOC starts from the CASDATADIR value
-if [ -n "${CASUSERLOCDIR}" ]; then
-    sed -i "s|SASUSERLOCDIR=.*|SASUSERLOCDIR=${CASUSERLOCDIR}|" ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+if [[ -n ${CASUSERLOCDIR} ]]; then
+    echo "SASUSERLOCDIR=${CASUSERLOCDIR}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 else
-    sed -i "s|SASUSERLOCDIR=.*|SASUSERLOCDIR=\${SASCASDATADIR}/casuserlibraries/%USER|" ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+    echo "SASUSERLOCDIR=\${SASCASDATADIR}/casuserlibraries/%USER" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 fi
-if [ -n "${CASENV_CASPERMSTORE}" ]; then
-    sed -i "s|SASPERMSTORE=.*|SASPERMSTORE=${CASENV_CASPERMSTORE}|" ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+if [[ -n ${CASENV_CASPERMSTORE} ]]; then
+    echo "SASPERMSTORE=${CASENV_CASPERMSTORE}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 fi
 
 # Define JAVA_HOME and update the LD_LIBRARY_PATH
@@ -331,16 +346,22 @@ sed -i "/-- Process a user specific file if available/i \ " ${SAS_CAS_CONFIG}/et
 
 sed -i '/cas_usermods.settings/i [ -f \$DIR/cas_docker.settings ]   && source \$DIR/cas_docker.settings' ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.settings
 
+# Update the sas-cas sysconfig file to process the Docker settings post what was done
+# setting up the image but before processing any settings in the usermods file
+
+sed -i '/sas-${SASDEPLOYID}-cas-${SASINSTID}-deployment/a \    [ -f ${_sysconf_dir}/sas/sas-${SASDEPLOYID}-cas-${SASINSTID}-docker ]     && source ${_sysconf_dir}/sas/sas-${SASDEPLOYID}-cas-${SASINSTID}-docker' ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas
+sed -i '/sas-cas-deployment/a \    [ -f ${_conf_dir_name}/sas-cas-docker ] && source ${_conf_dir_name}/sas-cas-docker' ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas
+
 # echo some stuff back to the user for helpfulness
 
-if [ -n "${CASENV_CASDATADIR}" ]; then
+if [[ -n ${CASENV_CASDATADIR} ]]; then
     echo "[INFO] : CASENV_CASDATADIR is '${CASENV_CASDATADIR}'"
 fi
 
 echo "[INFO] : CASENV_CAS_VIRTUAL_HOST is '${CASENV_CAS_VIRTUAL_HOST}'"
 echo "[INFO] : CASENV_CAS_VIRTUAL_PORT is '${CASENV_CAS_VIRTUAL_PORT}'"
 
-if [ -n "${CASENV_ADMIN_USER}" ]; then
+if [[ -n ${CASENV_ADMIN_USER} ]]; then
     echo "[INFO] : CASENV_ADMIN_USER is '${CASENV_ADMIN_USER}'"
 else
     echo "[INFO] : CASENV_ADMIN_USER is 'cas'"
@@ -351,7 +372,7 @@ sed -i 's|casData = getDataPath()|casData = os.getenv("CASDATADIR")|' ${SASHOME}
 
 # When set to zero, will make sure that the system will not get the servicesbaseurl from Consul
 [[ -z ${CHECK_HTTP+x} ]] && export CHECK_HTTP=1
-sed -i "s|^CHECK_HTTP=.*|CHECK_HTTP=${CHECK_HTTP}|" ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+echo "CHECK_HTTP=${CHECK_HTTP}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 
 # Make sure node.lua is pointing to the correct spot
 sed -i "s/config_loc \.\./current_dir \.\./g" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/node.lua
@@ -362,7 +383,7 @@ rm -f ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/start.d/05updateperms_startup.
 
 # Disable waiting on the worker nodes. Cloud deployments are elastic in nature
 # and will not use this feature
-echo "export CAS_CONSUL_WAIT_DISABLED=true" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+echo "export CAS_CONSUL_WAIT_DISABLED=true" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 
 # Believe this is only needed if we are not in a full stack deployment.
 # Using the consul token to define if we are in a full stack or not.
