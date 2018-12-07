@@ -15,6 +15,33 @@
 # limitations under the License.
 #
 
+# How to have a script log against itself that supports Linux and MacOS
+# https://stackoverflow.com/questions/3173131/redirect-copy-of-stdout-to-log-file-from-within-bash-script-itself/5200754#5200754
+# For now, we will only log on a linux system. A MacOS system will skip the logging.
+
+unameSystem="$(uname -s)"
+case "${unameSystem}" in
+    Linux*)     OPERATING_SYSTEM=linux;;
+    Darwin*)    OPERATING_SYSTEM=darwin;;
+    *)          echo "[WARN] : Unknown system: ${unameSystem}. Will assume Linux."
+esac
+
+#
+# Setup logging
+#
+
+if [[ "${OPERATING_SYSTEM}" != "darwin" ]]; then
+    if [ -f "${PWD}/build_sas_container.log" ]; then
+        echo
+        mkdir -vp ${PWD}/logs
+        # shellcheck disable=SC2086
+        mv -v ${PWD}/build_sas_container.log ${PWD}/logs/build_sas_container_${sas_datetime}.log
+        echo
+    fi
+
+    exec > >(tee -a "${PWD}"/build_sas_container.log) 2>&1
+fi
+
 #
 # Functions
 #
@@ -105,32 +132,6 @@ function usage() {
     echo -e ""
     echo -e "  -h|--help               Prints out this message"
     echo -e ""
-}
-
-function enable_logging() {
-    # The parent process will enter this branch and set up logging
-
-    # Create a named piped for logging the child's output
-    PIPE=tmp.fifo
-    mkfifo $PIPE
-
-    # Launch the child process without redirected to the named pipe
-    SELF_LOGGING=1 sh $0 $* >$PIPE &
-
-    # Save PID of child process
-    PID=$!
-
-    # Launch tee in a separate process
-    tee -a "${PWD}"/build_sas_container.log <$PIPE &
-
-    # Unlink $PIPE because the parent process no longer needs it
-    rm $PIPE
-
-    # Wait for child process running the rest of this script
-    wait $PID
-
-    # Return the error code from the child process
-    exit $?
 }
 
 function copy_deployment_data_zip()
@@ -322,6 +323,7 @@ sas_recipe_version=$(cat VERSION)
 sas_datetime=$(date "+%Y%m%d%H%M%S")
 sas_sha1=$(git rev-parse --short HEAD)
 
+[[ -z ${OPERATING_SYSTEM+x} ]]   && OPERATING_SYSTEM=linux
 [[ -z ${SAS_RECIPE_TYPE+x} ]]    && SAS_RECIPE_TYPE=single
 [[ -z ${BASEIMAGE+x} ]]          && BASEIMAGE=centos
 [[ -z ${BASETAG+x} ]]            && BASETAG=latest
@@ -438,25 +440,12 @@ if [ -n "${PLATFORM}" ]; then
     BUILD_ARG_PLATFORM="--build-arg PLATFORM=${PLATFORM}"
 fi
 
-#
-# Setup logging
-#
-
-if [ -f "${PWD}/build_sas_container.log" ]; then
-    echo
-    mkdir -vp ${PWD}/logs
-    # shellcheck disable=SC2086
-    mv -v ${PWD}/build_sas_container.log ${PWD}/logs/build_sas_container_${sas_datetime}.log
-    echo
-fi
-
-enable_logging
-
 echo
 echo "=============="
 echo "Variable check"
 echo "=============="
 echo ""
+echo "  Build System OS                 = ${OPERATING_SYSTEM}"
 echo "  Deployment Type                 = ${SAS_RECIPE_TYPE}"
 echo "  BASEIMAGE                       = ${BASEIMAGE}"
 echo "  BASETAG                         = ${BASETAG}"
@@ -496,26 +485,19 @@ if [ "${PLATFORM}" = "suse" ] && [[ -z ${SAS_RPM_REPO_URL+x} ]]; then
     exit 20
 fi
 
-if [[ ! -z ${SAS_RPM_REPO_URL+x} ]] && ${CHECK_MIRROR_URL}; then
-    mirror_url=$(echo "${BUILD_ARG_SAS_RPM_REPO_URL}" | cut -d'=' -f2)
-    if [[ "${mirror_url}" != "http://"* ]]; then
-        echo "[ERROR] : The mirror URL of '${mirror_url}' is not using an http based mirror."
-        echo "[INFO]  : For more information, see https://github.com/sassoftware/sas-container-recipes/blob/master/README.md#use-buildsh-to-build-the-images"
-        exit 30
-    fi
-
+if [[ ! -z ${SAS_RPM_REPO_URL+x} ]] && ${CHECK_MIRROR_URL} && [[ "${SAS_RPM_REPO_URL}" != "https://ses.sas.download/ses/" ]]; then
     set +e
-    response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "${mirror_url}")
+    response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "${SAS_RPM_REPO_URL}")
     set -e
     if [ "${response}" != "200" ]; then
-        echo "[ERROR] : Not able to ping mirror URL: ${mirror_url}"
+        echo "[ERROR] : Not able to ping mirror URL: ${SAS_RPM_REPO_URL}"
         echo
         exit 5
     else
-        echo "[INFO]  : Successful ping of mirror URL: ${mirror_url}"
+        echo "[INFO]  : Successful ping of mirror URL: ${SAS_RPM_REPO_URL}"
     fi
 else
-    echo "[INFO]  : Bypassing validation of mirror URL: ${mirror_url}"
+    echo "[INFO]  : Bypassing validation of mirror URL: ${SAS_RPM_REPO_URL}"
 fi
 
 # Currently for anything that is not a "single", the process will build and then
