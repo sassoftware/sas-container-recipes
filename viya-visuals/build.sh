@@ -92,18 +92,12 @@ function validate_input() {
     fi
 
     # Validate that the provided RPM repo URL exists
-    if [[ ${CHECK_MIRROR_URL} = "true" ]]; then
-        mirror_url=$(echo "${BUILD_ARG_SAS_RPM_REPO_URL}" | cut -d'=' -f2)
-        if [[ "${mirror_url}" = "http://"* ]]; then
-            echo -e "[WARN] : The mirror URL of '${mirror_url}' is using an http based mirror."
-            echo -e "[WARN] : For more information, see https://github.com/sassoftware/sas-container-recipes/blob/master/README.md#use-buildsh-to-build-the-images"
-        fi
-
+    if [[ ${CHECK_MIRROR_URL} = "true" ]] && [[ "${SAS_RPM_REPO_URL}" != "https://ses.sas.download/ses/" ]]; then
         set +e
-        response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "${mirror_url}")
+        response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "${SAS_RPM_REPO_URL}")
         set -e
         if [ "${response}" != "200" ]; then
-            echo -e "[ERROR] : Not able to ping mirror URL: ${mirror_url}" echo
+            echo -e "[ERROR] : Not able to ping mirror URL: ${SAS_RPM_REPO_URL}" echo
             echo -e "[INFO]  : To ignore this error use the -k|--skip-mirror-url-validation flag" echo
             echo
             exit 5
