@@ -8,7 +8,7 @@ A collection of recipes and other resources for building containers that include
 
 ## Prerequisites
 - SAS Viya 3.4 software: a SAS Viya 3.4 on Linux order and the SAS_Viya_deployment_data.zip from the Software Order Email (SOE) are required.
-- Creating a local mirror of the SAS software is strongly recommended. [Here's why](../wikis/Tips#create-a-local-mirror-repository). 
+- Creating a local mirror of the SAS software is strongly recommended. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
 
 
 ## SAS Viya Programming - Single Container
@@ -16,7 +16,7 @@ A [supported version](https://success.docker.com/article/maintenance-lifecycle) 
 
 ### At a Glance
 * The SAS Viya programming run-time in a single container on the Docker platform.
-* Includes SAS Studio, SAS Workspace Server, and the CAS server, which provides access to in-memory analytics. The CAS server allows for symmetric multi-processing (SMP) by users.
+* Includes SAS Studio, SAS Workspace Server, and the CAS server, which provides in-memory analytics. The CAS server allows for symmetric multi-processing (SMP) by users.
 * Ideal for data scientists and programmers who want on-demand access.
 * Ideal for ephemeral computing. By that, users should save code and store data in a permanent location outside the container.
 * Run the container in interactive mode so that users can access the SAS Viya programming run-time.
