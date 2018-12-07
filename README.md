@@ -101,7 +101,7 @@ After the container has started, log on to SAS Studio with the user name `sasdem
 ---
 
 
-# Multi-Container
+# Multiple Containers
 Build multiple Docker images of a SAS Viya programming-only environment or other SAS Viya Visuals environments. Leverage Kubernetes to create the deployments, create SMP or MPP CAS, and run these environments in interactive mode.
 
 ### Prerequisites
@@ -113,7 +113,7 @@ Build multiple Docker images of a SAS Viya programming-only environment or other
 ### Required `build.sh` Arguments
 ```    
 
-        example: build.sh --type single --zip /path/to/SAS_Viya_deployment_data.zip -m http://host.mycompany.com/sas_repo -addons "addons/auth-demo"
+        example: build.sh --type single --zip /path/to/SAS_Viya_deployment_data.zip -m http://host.mymirror.com/sas_repo -addons "addons/auth-demo"
 
   -y|--type [ multiple | full ] 
                           The type of deployment
@@ -179,6 +179,14 @@ Build multiple Docker images of a SAS Viya programming-only environment or other
   
   
 ```
+
+### After running `build.sh`
+- For a SAS Viya Programming deployment the Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests/kubernetes`
+- For a SAS Viya Visuals deployment the Kubernetes are located at `$PWD/viya-visuals/working/manifests/kubernetes/**[deployment-smp | deployment-mpp]**`
+
+Choose between SMP or MPP and Run a `kubectl create --file` or `kubectl replace --file` on those manifests 
+
+To check the status of the containers, run `kubectl get pods`. !!TODO: INGRESS!!
 
 
 **Notes:** 
