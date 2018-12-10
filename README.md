@@ -112,9 +112,12 @@ Build multiple Docker images of a SAS Viya programming-only environment or other
 
 ### Required `build.sh` Arguments
 ```    
-        SAS Programming Multiple example: ./build.sh --type multiple --zip /path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
 
-        SAS Viya Visuals example: ./build.sh --type full --docker-registry-namespace mynamespace --docker-registry-url my-registry.docker.com --zip /my/path/to/SAS_Viya_deployment_data.zip
+        SAS Viya Programming example: 
+            ./build.sh --type multiple --zip /path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
+
+        SAS Viya Visuals example: 
+            ./build.sh --type full --docker-registry-namespace mynamespace --docker-registry-url my-registry.docker.com --zip /my/path/to/SAS_Viya_deployment_data.zip
         
 
   -y|--type [ multiple | full ] 
@@ -192,7 +195,7 @@ Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other ser
 
 ```
 
-EXAMPLE
+    EXAMPLE
 
 spec:
   rules:
