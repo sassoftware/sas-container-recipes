@@ -15,7 +15,7 @@ Framework to deploy SAS Viya environments using containers. Learn more at https:
 # Single Container
 The SAS Viya programming run-time in a single container on the Docker platform. Includes SAS Studio, SAS Workspace Server, and the CAS server, which provides in-memory analytics. The CAS server allows for Symmetric Multi Processing (SMP) by users. Ideal for data scientists and programmers who want on-demand access and for ephemeral computing, where users should save code and store data in a permanent location outside the container. Run the container in interactive mode so that users can access the SAS Viya programming run-time or run the container in batch mode to execute SAS code on a scheduled basis.
 
-**A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker and git are required.**
+**A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker is required.**
 
 ### Required `build.sh` Arguments
 ```
