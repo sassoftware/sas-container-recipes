@@ -13,7 +13,7 @@ Framework to deploy SAS Viya environments using containers. Learn more at https:
 
 
 # Single Container
-The SAS Viya programming run-time in a single container on the Docker platform. Includes SAS Studio, SAS Workspace Server, and the CAS server, which provides in-memory analytics. The CAS server allows for symmetric multi-processing (SMP) by users. Ideal for data scientists and programmers who want on-demand access and for ephemeral computing, where users should save code and store data in a permanent location outside the container. Run the container in interactive mode so that users can access the SAS Viya programming run-time or run the container in batch mode to execute SAS code on a scheduled basis.
+The SAS Viya programming run-time in a single container on the Docker platform. Includes SAS Studio, SAS Workspace Server, and the CAS server, which provides in-memory analytics. The CAS server allows for Symmetric Multi Processing (SMP) by users. Ideal for data scientists and programmers who want on-demand access and for ephemeral computing, where users should save code and store data in a permanent location outside the container. Run the container in interactive mode so that users can access the SAS Viya programming run-time or run the container in batch mode to execute SAS code on a scheduled basis.
 
 **A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker and git are required.**
 
@@ -112,8 +112,10 @@ Build multiple Docker images of a SAS Viya programming-only environment or other
 
 ### Required `build.sh` Arguments
 ```    
+        SAS Programming Multiple example: ./build.sh --type multiple --zip /path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
 
-        example: build.sh --type single --zip /path/to/SAS_Viya_deployment_data.zip -m http://host.mymirror.com/sas_repo -addons "addons/auth-demo"
+        SAS Viya Visuals example: ./build.sh --type full --docker-registry-namespace mynamespace --docker-registry-url my-registry.docker.com --zip /my/path/to/SAS_Viya_deployment_data.zip
+        
 
   -y|--type [ multiple | full ] 
                           The type of deployment
@@ -182,17 +184,40 @@ Build multiple Docker images of a SAS Viya programming-only environment or other
 
 ### After running `build.sh`
 - For a SAS Viya Programming deployment the Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests/kubernetes`
-- For a SAS Viya Visuals deployment the Kubernetes are located at `$PWD/viya-visuals/working/manifests/kubernetes/**[deployment-smp | deployment-mpp]**`
+- For a SAS Viya Visuals deployment the Kubernetes are located at `$PWD/viya-visuals/working/manifests/kubernetes/**[deployment-smp OR deployment-mpp]**`
 
-Choose between SMP or MPP and Run a `kubectl create --file` or `kubectl replace --file` on those manifests 
+Choose between Symmetric Multi Processing (SMP) or Massively Parallel Processing (MPP) and run a `kubectl create --file` or `kubectl replace --file` on those manifests 
 
-To check the status of the containers, run `kubectl get pods`. !!TODO: INGRESS!!
+Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other services using `kubectl edit ingress`.
+
+```
+
+EXAMPLE
+
+spec:
+  rules:
+  - host: sas-viya-http.mycompany.com
+    http:
+      paths:
+      - backend:
+          serviceName: sas-viya-httpproxy
+          servicePort: 80
+          
+  - host: sas-viya-cas.mycompany.com
+    http:
+      paths:
+      - backend:
+          serviceName: sas-viya-sas-casserver-primary
+          servicePort: 5570
 
 
-**Notes:** 
-- The sizes of the viya-single-container image and the svc-auth-demo image vary depending on your order.
-- In the example output, the identical size for two images can be misleading. There is an image that is 8.52 GB, which includes the three images. The svc-auth-demo image is a small image layer stacked on the viya-single-container image, which is a large image layer stacked on the centos image.
-- If an [addon](addons/README.md) does not include a Dockerfile, an image is not created.  
+```
+For more details on Ingress Controllers see [the official Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/).
+
+Finally, go to the host address that's defined in your Kubernetes Ingress to view your SAS product(s). 
+If there is no response from the host then check the status of the containers by running `kubectl get pods`. There should be one or more `sas-viya-<service>` pods, depending on your software order. You may also need to correct the host name on your Ingress Controller and check your Kubernetes configurations.
+
+
 
 ## Other Documentation
 Check out our [Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for specific details.
