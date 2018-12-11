@@ -1,12 +1,19 @@
 # SAS Container Recipes
-Framework to deploy SAS Viya environments using containers. Learn more at https://github.com/sassoftware/sas-container-recipes/wiki
+Framework to deploy SAS Viya environments using Docker containers. 
 
-## Prerequisites
-1. A SAS Viya 3.4 on Linux order with the SAS_Viya_deployment_data.zip from the Software Order Email (SOE) are required.
-2. Clone this repository and use [`build.sh`](#use-buildsh-to-build-the-images) in this project to create a container images.
 
-**Choose between a [Single Container](https://github.com/sassoftware/sas-container-recipes#single-container) or [Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers) deployment type below.**
+1. Place a SAS Viya software order for Linux and download the SAS_Viya_deployment_data.zip from the Software Order Email (SOE)
+2. Clone this repository to use the [`build.sh`](#use-buildsh-to-build-the-images) script
+3. Choose your flavor and follow the instructions below to build and deploy:
 
+    a. SAS Programming - [Single Container](https://github.com/sassoftware/sas-container-recipes#single-container) (**Dockerfile**): SAS Studio + CAS (Cloud Analytic Services) for individual data scientists.
+
+    b. SAS Programming - [Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers) (**Kubernetes**): For collaborative data science environments with SAS Studio + CAS Massively Parallel Processing (MPP).
+    
+    c. SAS Visuals     - [Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers) (**Kubernetes**): Visual Analytics based collaborative environment
+    
+
+Learn more at https://github.com/sassoftware/sas-container-recipes/wiki
 
 ---
 ---
@@ -51,7 +58,6 @@ To see the images after the build completes successfully, use the `docker images
 
 ```
 
-
   REPOSITORY                TAG                               IMAGE ID            CREATED             SIZE
   sas-viya-programming      18.10.0-20181018113621-577b88f    965b522a213d        21 hours ago        8.52GB
   svc-auth-demo             latest                            965b522a213d        21 hours ago        8.52GB
@@ -78,6 +84,7 @@ After the build is complete, use the `docker run` command to start the container
     --hostname sas-viya-programming \
     sas-viya-programming:18.10.0-20181018113621-577b88f
     
+    
 ```
 
 To check the status of the containers, run `docker ps`.
@@ -88,13 +95,12 @@ To check the status of the containers, run `docker ps`.
   CONTAINER ID        NAMES                   IMAGE                   STATUS              PORTS
   4b426ce49b6b        sas-viya-programming    sas-viya-programming    Up 2 minutes        0.0.0.0:8081->80/tcp, 0.0.0.0:33221->443/tcp, 0.0.0.0:33220->5570/tcp    
 
+
 ```
 
-After the container has started, log on to SAS Studio with the user name `sasdemo` and the password `sasdemo` at:
- 
- http://_host-name-where-docker-is-running_:8081
+After the container has started, log on to SAS Studio with the user name `sasdemo` and the password `sasdemo` at `http://_host-name-where-docker-is-running_:8081`
 
- **Note:** The user name `sasdemo` and the password `sasdemo` are the credentials for the demo user that is set up by the auth-demo addon. 
+  **Note:** The user name `sasdemo` and the password `sasdemo` are the credentials for the demo user that is set up by the auth-demo addon. 
 
 
 ---
@@ -125,7 +131,7 @@ Build multiple Docker images of a SAS Viya programming-only environment or other
 
   -n|--docker-registry-namespace <value>
                           The namespace in the Docker registry where Docker
-                           images will be pushed to. Used to prevent collisions.
+                          images will be pushed to. Used to prevent collisions.
                                example: mynamespace
 
   -u|--docker-registry-url <value>
@@ -144,6 +150,7 @@ Build multiple Docker images of a SAS Viya programming-only environment or other
   -v|--virtual-host 
                           The Kubernetes ingress path that defines the location of the HTTP endpoint.
                                example: user-myproject.mylocal.com
+    
                                
 ```
 
@@ -186,13 +193,12 @@ Build multiple Docker images of a SAS Viya programming-only environment or other
 ```
 
 ### After running `build.sh`
-- For a SAS Viya Programming deployment the Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests/kubernetes`
-- For a SAS Viya Visuals deployment the Kubernetes are located at `$PWD/viya-visuals/working/manifests/kubernetes/**[deployment-smp OR deployment-mpp]**`
+* For a SAS Viya Programming deployment the Kubernetes manifests are located at `viya-programming/viya-multi-container/working/manifests/kubernetes`
+* For a SAS Viya Visuals deployment the Kubernetes are located at `viya-visuals/working/manifests/kubernetes/**[deployment-smp OR deployment-mpp]**`
 
 Choose between Symmetric Multi Processing (SMP) or Massively Parallel Processing (MPP) and run a `kubectl create --file` or `kubectl replace --file` on those manifests 
 
-Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other services using `kubectl edit ingress`.
-
+Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other services using `kubectl edit ingress`:
 ```
 
     EXAMPLE
@@ -221,14 +227,13 @@ Finally, go to the host address that's defined in your Kubernetes Ingress to vie
 If there is no response from the host then check the status of the containers by running `kubectl get pods`. There should be one or more `sas-viya-<service>` pods, depending on your software order. You may also need to correct the host name on your Ingress Controller and check your Kubernetes configurations.
 
 
-
 ## Other Documentation
 Check out our [Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for specific details.
 Have a quick question? Open a ticket in the "issues" tab to get a response from the maintainers and other community members. If you're unsure about something just submit an issue anyways. We're glad to help!
 If you have a specific license question head over to the [support portal](https://support.sas.com/en/support-home.html).
 
 ## Contributing
-Have something cool to share? SAS gladly accepts pull requests on GitHub! We appreciate your best efforts and value the transparent collaboration that GitHub has.
+Have something cool to share? SAS gladly accepts pull requests on GitHub! For more details see [CONTRIBUTING.md](https://github.com/sassoftware/sas-container-recipes/blob/master/CONTRIBUTING.md).
 
 ## Copyright
 
