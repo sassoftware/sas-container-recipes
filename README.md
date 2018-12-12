@@ -181,7 +181,7 @@ Have a quick question? Open a ticket in the "issues" tab to get a response from 
 If you have a specific license question head over to the [support portal](https://support.sas.com/en/support-home.html).
 
 ## Contributing
-Have something cool to share? SAS gladly accepts pull requests on GitHub! For more details see [CONTRIBUTING.md](https://github.com/sassoftware/sas-container-recipes/blob/master/CONTRIBUTING.md).
+Have something cool to share? SAS gladly accepts pull requests on GitHub! For more details see [CONTRIBUTING.md](https://github.com/sassoftware/sas-container-recipes/blob/master/docs/CONTRIBUTING.md).
 
 ## Copyright
 
