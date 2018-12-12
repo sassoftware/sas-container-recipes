@@ -38,7 +38,7 @@ function usage()
 #
 # Set some defaults
 #
-sas_recipe_version=$(cat ${PWD}/../../VERSION)
+sas_recipe_version=$(cat ${PWD}/../../docs/VERSION)
 sas_datetime=$(date "+%Y%m%d%H%M%S")
 sas_sha1=$(git rev-parse --short HEAD)
 
