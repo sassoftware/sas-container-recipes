@@ -1,5 +1,6 @@
+<img src="https://gitlab.sas.com/sassoftware/sas-container-recipes/raw/master/docs/icon-sas-container-chart.jpg" width="230"><br>
 # SAS Container Recipes
-Framework to deploy SAS Viya environments using Docker containers. 
+Framework to build and deploy SAS Viya environments using Docker images and Kubernetes.
 
 Learn more at https://github.com/sassoftware/sas-container-recipes/wiki
 
