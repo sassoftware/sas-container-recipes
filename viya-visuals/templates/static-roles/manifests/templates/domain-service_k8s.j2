@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ settings.project_name }}-subdomain
+spec:
+  selector:
+    domain: {{ settings.project_name }}
+  clusterIP: None
+  ports:
+    - name: nonexistent
+      port: 80

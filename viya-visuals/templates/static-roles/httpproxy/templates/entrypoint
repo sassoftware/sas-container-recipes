@@ -1,0 +1,138 @@
+#!/bin/bash -e
+
+# Enable debugging if SAS_DEBUG is set
+[[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
+if [ ${SAS_DEBUG} -gt 0 ]; then
+    set -x
+fi
+
+# if given a command, run that
+if [[ -n "$1" ]]; then
+  exec "$@"
+fi
+
+[[ -z ${DEPLOYMENT_NAME+x} ]]   && export DEPLOYMENT_NAME="viya"
+[[ -z ${SASSERVICENAME+x} ]]    && export SASSERVICENAME="sas-{{ role_name }}"
+[[ -z ${SASSERVICECONTEXT+x} ]] && export SASSERVICECONTEXT=${SASSERVICENAME#sas-}
+[[ -z ${SASROOT+x} ]]           && export SASROOT=/opt/sas
+[[ -z ${SASDEPLOYID+x} ]]       && export SASDEPLOYID=viya
+[[ -z ${SASINSTANCE+x} ]]       && export SASINSTANCE=default
+[[ -z ${SASHOME+x} ]]           && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
+[[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
+[[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
+[[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
+
+# The following are used in sas-start-functions
+servicename=${SASSERVICENAME}
+servicecontext=${SASSERVICECONTEXT}
+
+# Set of functions for supporting docker containers
+source ${SASHOME}/lib/envesntl/docker-functions
+
+###############################################################################
+# Setup Consul
+###############################################################################
+
+# Write tokens to disk if needed and echo CONSUL_HTTP_ADDR to file
+docker_define_consul_environment
+
+###############################################################################
+# Shutdown
+###############################################################################
+
+trap docker_shutdown_sas_services SIGTERM
+trap docker_shutdown_sas_services SIGINT
+
+###############################################################################
+# Configure httpd
+###############################################################################
+
+[[ -z $APACHE_ROOT ]] && APACHE_ROOT=
+
+if [ -z $APACHE_CONF_D ]; then
+  if [ -d $APACHE_ROOT/etc/httpd/conf.d ]; then
+    APACHE_CONF_D=$APACHE_ROOT/etc/httpd/conf.d
+    APACHE_CONF=$APACHE_ROOT/etc/httpd/conf/httpd.conf
+    APACHE_BIN=/usr/sbin/httpd
+    APACHE_DOCROOT=/var/www/html
+    APACHE_PID=/var/run/httpd/httpd.pid
+  else
+    APACHE_CONF_D=$APACHE_ROOT/etc/apache2/conf.d
+    APACHE_CONF=$APACHE_ROOT/etc/apache2/httpd.conf
+    APACHE_BIN=/usr/sbin/apachectl
+    APACHE_DOCROOT=/srv/www/htdocs
+    APACHE_PID=/var/run/httpd.pid
+  fi
+fi
+
+echo "[INFO]  : Change 80 to 64 as the deciding factor to use IP instead of hostname in ${SASCONFIG}/consul/proxy.conf.ctmpl"
+sed -i 's|gt 80|gt 64|g' ${SASCONFIG}/consul/proxy.conf.ctmpl
+
+echo "[INFO]  : Change httpd start command in ${SASHOME}/bin/replace_httpd_default_cert.sh"
+sed -i 's/$APACHE_CTL restart/$APACHE_CTL -k restart/' ${SASHOME}/bin/replace_httpd_default_cert.sh
+
+if [ -f ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem ]
+then
+    echo "Using SSL certificate in ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem."
+    sed -i 's,/etc/ssl/certs/ssl-cert-snakeoil.pem,${SASCONFIG}/srv/httpd/certs/ssl-cert.pem,' /etc/apache2/sites-enabled/default-ssl.conf
+else
+    echo "[INFO]  : Turn off starting the httpd service in ${SASHOME}/bin/replace_httpd_default_cert.sh"
+    sed -i.bak 's/service httpd restart$/#service httpd restart/' ${SASHOME}/bin/replace_httpd_default_cert.sh
+
+    echo "[INFO]  : No SSL certificate found in ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem. Using self-signed certificate."
+    ${SASHOME}/bin/replace_httpd_default_cert.sh
+
+    # Take the result of this and echo it out to Kubernetes
+fi
+
+echo "[INFO]  : Change httpd start command in ${SASHOME}/bin/${SASSERVICENAME}"
+sed -i 's/$APACHE_CTL start/$APACHE_CTL -k start/' ${SASHOME}/bin/${SASSERVICENAME}
+
+echo "[INFO]  : Change httpd stop command in /etc/init.d/sas-${SASDEPLOYID}-${SASSERVICECONTEXT}-${SASINSTANCE}"
+sed -i 's/$APACHE_CTL stop/$APACHE_CTL -k stop/' /etc/init.d/sas-${SASDEPLOYID}-${SASSERVICECONTEXT}-${SASINSTANCE}
+
+echo "[INFO]  : Change httpd re-start command in ${SASHOME}/bin/restart_httpd.sh"
+sed -i 's/$APACHE_CTL start/$APACHE_CTL -k start/' ${SASHOME}/bin/${SASSERVICENAME}
+sed -i.bak 's/$APACHE_CTL graceful/$APACHE_CTL -k graceful/' ${SASHOME}/bin/restart_httpd.sh
+
+if [[ ! -e "${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig" ]] && [[ -e "${SASCONFIG}/etc/sysconfig/httpproxy.conf" ]] ; then
+    echo
+    cp -v ${SASCONFIG}/etc/sysconfig/httpproxy.conf ${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig
+    echo
+elif [[ ! -e "${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig" ]] && [[ ! -e "${SASCONFIG}/etc/sysconfig/httpproxy.conf" ]] ; then
+    touch "${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig"
+fi
+
+echo
+cp -v ${SASCONFIG}/etc/sysconfig/httpproxy.conf.orig ${SASCONFIG}/etc/sysconfig/httpproxy.conf
+echo
+echo "[INFO]  : Setting APACHE_CTL to \"${APACHE_BIN}\" in ${SASCONFIG}/etc/sysconfig/httpproxy.conf"
+echo "export APACHE_CTL=\"${APACHE_BIN}\"" >> ${SASCONFIG}/etc/sysconfig/httpproxy.conf
+echo "export APACHE_CTL=\"${APACHE_BIN}\"" >> /etc/sysconfig/sas/sas-${SASDEPLOYID}-${SASSERVICECONTEXT}-${SASINSTANCE}
+echo ""
+
+# removed shared memory segment files between restarts
+rm --verbose --force /run/httpd/authdigest_shm.*
+
+###############################################################################
+# Logging
+###############################################################################
+sed -ri -e 's!^(\s*CustomLog)\s+\S+!\1 /proc/self/fd/1!g' ${APACHE_CONF}
+sed -ri -e 's!^(\s*ErrorLog)\s+\S+!\1 /proc/self/fd/2!g' ${APACHE_CONF}
+
+###############################################################################
+# Run httpd
+###############################################################################
+
+docker_run_local_consul
+
+# Start and continually check the ops-agent process.
+${SASHOME}/lib/envesntl/docker-ops-agent &
+
+docker_run_sas_services
+
+###############################################################################
+# Keep the container alive until it is killed
+###############################################################################
+
+docker_check_sas_services

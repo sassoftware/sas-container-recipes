@@ -1,0 +1,31 @@
+  espserver:
+    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
+    roles:
+    - tini
+    - sas-java
+    - espServer
+    - cloud-config
+    ports:
+    - "2552:2552"
+    - "8082:8082"
+    - "5000:5000"
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/espserver-entrypoint.sh"]
+    labels:
+      sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
+      sas.layer.espserver: "true"
+    dev_overrides:
+      environment:
+        - "SAS_DEBUG=1"
+    deployment_overrides:
+      environment:
+        - "SASLICENSEDIR=/opt/sas/viya/home/SASEventStreamProcessingEngine/current/etc/license"
+        - "SASLICENSEFILE=license.txt"
+      secrets:
+        - "SETINIT_TEXT_ENC="
+      volumes:
+        - "log=/opt/sas/viya/config/var/log"
+      resources:
+        limits:
+        - "memory=10Gi"
+        requests:
+        - "memory=2Gi"

@@ -1,0 +1,27 @@
+  rabbitmq:
+    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
+    roles:
+    - tini
+    - rabbitmq
+    - cloud-config
+    ports:
+    - "5672:5672"
+    - "15672:15672"
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/rabbitmq-entrypoint.sh"]
+    labels:
+      sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
+      sas.layer.rabbitmq: "true"
+    volumes:
+    - static-content:/rabbitmq
+    dev_overrides:
+      environment:
+        - "SAS_DEBUG=1"
+    deployment_overrides:
+      resources:
+        limits:
+        - "memory=1024Mi"
+        requests:
+        - "memory=1024Mi"
+      volumes:
+        - "data=/rabbitmq/data"
+        - "log=/opt/sas/viya/config/var/log"

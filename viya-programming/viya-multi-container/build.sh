@@ -14,6 +14,8 @@ function usage()
     echo "  -t|--basetag <value>            The Docker tag for the base image that is being used"
     echo "                                      Default: latest"
     echo "  -n|--docker-namespace <value>   The namespace in the Docker registry where Docker images will be pushed to."
+    echo "  -r|--docker-registry-type <value>   The type od Docker registry where Docker images will be pushed to."
+    echo "                                      Valid options are default and ecr"
     echo "  -u|--docker-url <value>         The URL of the Docker registry where Docker images will be pushed to."
     echo "  -h|--help                       Prints out this message"
     echo "  -m|--mirror-url <value>         (OPTIONAL) The location of the mirror URL."
@@ -40,15 +42,24 @@ sas_recipe_version=$(cat ${PWD}/../../VERSION)
 sas_datetime=$(date "+%Y%m%d%H%M%S")
 sas_sha1=$(git rev-parse --short HEAD)
 
+unameSystem="$(uname -s)"
+case "${unameSystem}" in
+    Linux*)     OPERATING_SYSTEM=linux;;
+    Darwin*)    OPERATING_SYSTEM=darwin;;
+    *)          echo "Unsupported system: ${unameSystem}"
+esac
+
 [[ -z ${PROJECT_NAME+x} ]]                 && PROJECT_NAME=sas-viya
 [[ -z ${BASEIMAGE+x} ]]                    && BASEIMAGE=centos
 [[ -z ${BASETAG+x} ]]                      && BASETAG=latest
 [[ -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP+x} ]] && SAS_VIYA_DEPLOYMENT_DATA_ZIP=${PWD}/SAS_Viya_deployment_data.zip
 [[ -z ${SAS_VIYA_PLAYBOOK_DIR+x} ]]        && SAS_VIYA_PLAYBOOK_DIR=${PWD}/sas_viya_playbook
 [[ -z ${PLATFORM+x} ]]                     && PLATFORM=redhat
+[[ -z ${OPERATING_SYSTEM+x} ]]             && OPERATING_SYSTEM=linux
 [[ -z ${SAS_RPM_REPO_URL+x} ]]             && SAS_RPM_REPO_URL=https://ses.sas.download/ses/
 [[ -z ${DOCKER_REGISTRY_URL+x} ]]          && DOCKER_REGISTRY_URL=http://docker.company.com
 [[ -z ${DOCKER_REGISTRY_NAMESPACE+x} ]]    && DOCKER_REGISTRY_NAMESPACE=sas
+[[ -z ${DOCKER_REGISTRY_TYPE+x} ]]         && DOCKER_REGISTRY_TYPE=default
 
 #
 # Set options
@@ -72,6 +83,11 @@ while [[ $# -gt 0 ]]; do
         -t|--basetag)
             shift # past argument
             BASETAG="$1"
+            shift # past value
+            ;;
+        -r|--docker-registry-type)
+            shift # past argument
+            DOCKER_REGISTRY_TYPE="$1"
             shift # past value
             ;;
         -m|--mirror-url)
@@ -130,11 +146,13 @@ echo ""
 echo "  BASEIMAGE                       = ${BASEIMAGE}"
 echo "  BASETAG                         = ${BASETAG}"
 echo "  Platform                        = ${PLATFORM}"
+echo "  Build System OS                 = ${OPERATING_SYSTEM}"
 echo "  Mirror URL                      = ${SAS_RPM_REPO_URL}"
 echo "  Deployment Data Zip             = ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
 echo "  Playbook Directory              = ${SAS_VIYA_PLAYBOOK_DIR}"
 echo "  Docker registry URL             = ${DOCKER_REGISTRY_URL}"
 echo "  Docker registry namespace       = ${DOCKER_REGISTRY_NAMESPACE}"
+echo "  Docker registry type            = ${DOCKER_REGISTRY_TYPE}"  
 echo "  HTTP Ingress endpoint           = ${CAS_VIRTUAL_HOST}"
 echo "  Tag SAS will apply              = ${SAS_DOCKER_TAG}"
 echo
@@ -151,10 +169,17 @@ if [[ -n ${SAS_VIYA_PLAYBOOK_DIR} && -d ${SAS_VIYA_PLAYBOOK_DIR} ]]; then
 elif [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
     if [[ -f ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
         if [[ ! -f ${PWD}/sas-orchestration ]]; then
+          if [[ "${OPERATING_SYSTEM}" == "darwin" ]]; then
+              echo "[INFO]  : Get orchestrationCLI Mac";echo
+              curl --silent --remote-name https://support.sas.com/installation/viya/34/sas-orchestration-cli/mac/sas-orchestration-osx.tgz
+              tar xvf sas-orchestration-osx.tgz
+              rm sas-orchestration-osx.tgz
+          else
             echo "[INFO]  : Get orchestrationCLI";echo
             curl --silent --remote-name https://support.sas.com/installation/viya/34/sas-orchestration-cli/lax/sas-orchestration-linux.tgz
             tar xvf sas-orchestration-linux.tgz
             rm sas-orchestration-linux.tgz
+          fi
         fi
 
         # Used later to run the orchestrationCLI
@@ -190,8 +215,8 @@ if [[ "${generate_playbook}" == "true" ]]; then
     ../sas-orchestration build \
       --input ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} \
       --repository-warehouse ${SAS_RPM_REPO_URL} \
-      --deployment-type programming \
-      --platform $PLATFORM
+      --platform $PLATFORM \
+      --deployment-type programming
 
     tar xvf ${PWD}/SAS_Viya_playbook.tgz
 
@@ -218,23 +243,23 @@ for file in $(ls -1 ${SAS_VIYA_PLAYBOOK_DIR}/group_vars); do
         if (( ${pkg_grep_rc} == 0 )) || (( ${grp_grep_rc} == 0 )); then
 
             echo "***   Create the roles directory for service '${file}'"; echo
-            mkdir --parents --verbose roles/${file}/tasks
-            mkdir --parents --verbose roles/${file}/templates
-            mkdir --parents --verbose roles/${file}/vars
+            mkdir -p -v roles/${file}/tasks
+            mkdir -p -v roles/${file}/templates
+            mkdir -p -v roles/${file}/vars
 
             if [ ! -f "roles/${file}/tasks/main.yml" ]; then
                 echo; echo "***     Copy the tasks file for service '${file}'"; echo
-                cp -v templates/task.yml roles/${file}/tasks/main.yml
+                cp -v ../templates/task.yml roles/${file}/tasks/main.yml
             else
                 echo; echo "***     Tasks file for service '${file}' already exists"; echo
             fi
 
-            if [ ! -f "roles/${file}/templates/entrypoint" ]; then
-                echo; echo "***     Copy the entrypoint file for service '${file}'"; echo
-                cp -v templates/entrypoint roles/${file}/templates/entrypoint
-            else
-                echo; echo "***     entrypoint file for service '${file}' already exists"; echo
-            fi
+            # if [ ! -f "roles/${file}/templates/entrypoint" ]; then
+            #     echo; echo "***     Copy the entrypoint file for service '${file}'"; echo
+            #     cp -v ../templates/entrypoint roles/${file}/templates/entrypoint
+            # else
+            #     echo; echo "***     entrypoint file for service '${file}' already exists"; echo
+            # fi
 
         else
             echo
@@ -281,8 +306,17 @@ echo "SPRE_DEPLOYMENT_ID: spre" >> everything.yml
 
 cp ${SAS_VIYA_PLAYBOOK_DIR}/group_vars/all temp_all
 chmod u+w temp_all
-sed -i 's|^DEPLOYMENT_ID:.*||' temp_all
-sed -i 's|^SPRE_DEPLOYMENT_ID:.*||' temp_all
+
+# MAC sed works different than linux
+# https://stackoverflow.com/a/22084103/1212443
+if [[ "$OPERATING_SYSTEM" == "darwin" ]]; then
+    sed_i_option="-i ''"
+else
+    sed_i_option='-i '
+fi
+
+sed ${sed_i_option} 's|^DEPLOYMENT_ID:.*||' temp_all
+sed ${sed_i_option} 's|^SPRE_DEPLOYMENT_ID:.*||' temp_all
 
 cat temp_all >> everything.yml
 
@@ -291,17 +325,17 @@ rm -v temp_all
 cat ${SAS_VIYA_PLAYBOOK_DIR}/vars.yml >> everything.yml
 cat ${SAS_VIYA_PLAYBOOK_DIR}/internal/soe_defaults.yml >> everything.yml
 
-sed -i 's|---||g' everything.yml
-sed -i 's|^SERVICE_NAME_DEFAULT|#SERVICE_NAME_DEFAULT|' everything.yml
-sed -i 's|^CONSUL_EXTERNAL_ADDRESS|#CONSUL_EXTERNAL_ADDRESS|' everything.yml
-sed -i 's|^YUM_INSTALL_BATCH_SIZE|#YUM_INSTALL_BATCH_SIZE|' everything.yml
-sed -i 's|^sasenv_license|#sasenv_license|' everything.yml
-sed -i 's|^sasenv_composite_license|#sasenv_composite_license|' everything.yml
-sed -i 's|^METAREPO_CERT_SOURCE|#METAREPO_CERT_SOURCE|' everything.yml
-sed -i 's|^ENTITLEMENT_PATH|#ENTITLEMENT_PATH|' everything.yml
-sed -i 's|^SAS_CERT_PATH|#SAS_CERT_PATH|' everything.yml
-sed -i 's|^SECURE_CONSUL:.*|SECURE_CONSUL: false|' everything.yml
-sed -i "s|#CAS_VIRTUAL_HOST:.*|CAS_VIRTUAL_HOST: '${CAS_VIRTUAL_HOST}'|" everything.yml
+sed ${sed_i_option} 's|---||g' everything.yml
+sed ${sed_i_option} 's|^SERVICE_NAME_DEFAULT|#SERVICE_NAME_DEFAULT|' everything.yml
+sed ${sed_i_option} 's|^CONSUL_EXTERNAL_ADDRESS|#CONSUL_EXTERNAL_ADDRESS|' everything.yml
+sed ${sed_i_option} 's|^YUM_INSTALL_BATCH_SIZE|#YUM_INSTALL_BATCH_SIZE|' everything.yml
+sed ${sed_i_option} 's|^sasenv_license|#sasenv_license|' everything.yml
+sed ${sed_i_option} 's|^sasenv_composite_license|#sasenv_composite_license|' everything.yml
+sed ${sed_i_option} 's|^METAREPO_CERT_SOURCE|#METAREPO_CERT_SOURCE|' everything.yml
+sed ${sed_i_option} 's|^ENTITLEMENT_PATH|#ENTITLEMENT_PATH|' everything.yml
+sed ${sed_i_option} 's|^SAS_CERT_PATH|#SAS_CERT_PATH|' everything.yml
+sed ${sed_i_option} 's|^SECURE_CONSUL:.*|SECURE_CONSUL: false|' everything.yml
+sed ${sed_i_option} "s|#CAS_VIRTUAL_HOST:.*|CAS_VIRTUAL_HOST: '${CAS_VIRTUAL_HOST}'|" everything.yml
 
 #
 # Copy over the certificates that will be needed to do the install
@@ -324,15 +358,27 @@ chmod u+w SAS_CA_Certificate.pem
 #
 
 if [ -f ${PWD}/consul.data ]; then
-    consul_data_enc=$(cat ${PWD}/consul.data | base64 --wrap=0 )
-    sed -i "s|CONSUL_KEY_VALUE_DATA_ENC=|CONSUL_KEY_VALUE_DATA_ENC=${consul_data_enc}|g" container.yml
+    # This is the default on MAC.
+    # https://stackoverflow.com/a/46464081/1212443
+    if [[ "${OPERATING_SYSTEM}" == "darwin" ]]; then
+      consul_data_enc=$(cat ${PWD}/consul.data | base64 )
+    else
+      consul_data_enc=$(cat ${PWD}/consul.data | base64 --wrap=0 )
+    fi
+    sed ${sed_i_option} "s|CONSUL_KEY_VALUE_DATA_ENC=|CONSUL_KEY_VALUE_DATA_ENC=${consul_data_enc}|g" container.yml
 fi
 
-setinit_enc=$(cat ${SAS_VIYA_PLAYBOOK_DIR}/SASViyaV0300*.txt | base64 --wrap=0 )
-sed -i "s|SETINIT_TEXT_ENC=|SETINIT_TEXT_ENC=${setinit_enc}|g" container.yml
-sed -i "s|{{ DOCKER_REGISTRY_URL }}|${DOCKER_REGISTRY_URL}|" container.yml
-sed -i "s|{{ DOCKER_REGISTRY_NAMESPACE }}|${DOCKER_REGISTRY_NAMESPACE}|" container.yml
-sed -i "s|{{ PROJECT_NAME }}|${PROJECT_NAME}|" container.yml
+# This is the default on MAC.
+# https://stackoverflow.com/a/46464081/1212443
+if [[ "${OPERATING_SYSTEM}" == "darwin" ]]; then
+  setinit_enc=$(cat ${SAS_VIYA_PLAYBOOK_DIR}/SASViyaV0300*.txt | base64 )
+else
+  setinit_enc=$(cat ${SAS_VIYA_PLAYBOOK_DIR}/SASViyaV0300*.txt | base64 --wrap=0 )
+fi
+sed ${sed_i_option} "s|SETINIT_TEXT_ENC=|SETINIT_TEXT_ENC=${setinit_enc}|g" container.yml
+sed ${sed_i_option} "s|{{ DOCKER_REGISTRY_URL }}|${DOCKER_REGISTRY_URL}|" container.yml
+sed ${sed_i_option} "s|{{ DOCKER_REGISTRY_NAMESPACE }}|${DOCKER_REGISTRY_NAMESPACE}|" container.yml
+sed ${sed_i_option} "s|{{ PROJECT_NAME }}|${PROJECT_NAME}|" container.yml
 
 #
 # Remove the playbook directory
@@ -376,16 +422,15 @@ if [[ "${SAS_CREATE_AC_VIRTUAL_ENV}" == "true" ]]; then
         # Install ansible-container
         pip install --upgrade pip==9.0.3
         pip install ansible-container[docker]
-        echo "Updating the client timeout for the created virtual environment."
-        echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> ./env/lib/python2.7/site-packages/container/docker/templates/conductor-local-dockerfile.j2
+        echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> "${VIRTUAL_ENV}"/lib/python2.7/site-packages/container/docker/templates/conductor-local-dockerfile.j2
     elif [[ $PYTHON_MAJOR_VER -eq "3" ]]; then
         echo "WARN: Python3 support is experimental in ansible-container."
         echo "Updating requirements file for python3 compatibility..."
-        sed -i.bak '/ruamel.ordereddict==0.4.13/d' ./requirements.txt
+        sed ${sed_i_option} '/ruamel.ordereddict==0.4.13/d' ./requirements.txt
         pip install --upgrade pip==9.0.3
         pip install -e git+https://github.com/ansible/ansible-container.git@develop#egg=ansible-container[docker]
         echo "Updating the client timeout for the created virtual environment."
-        echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> ./env/src/ansible-container/container/docker/templates/conductor-local-dockerfile.j2
+        echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> "${VIRTUAL_ENV}"/src/ansible-container/container/docker/templates/conductor-local-dockerfile.j2
     fi
     # Restore latest pip version
     pip install --upgrade pip setuptools
@@ -428,7 +473,7 @@ if [[ ! -z ${SKIP_PUSH+x} ]]; then
     exit 0
 fi
 
-[[ -z ${SAS_DOCKER_TAG+x} ]] && export SAS_DOCKER_TAG=${sas_recipe_version}-${${sas_datetime}}-${sas_sha1}
+[[ -z ${SAS_DOCKER_TAG+x} ]] && export SAS_DOCKER_TAG=${sas_recipe_version}-${sas_datetime}-${sas_sha1}
 
 echo
 echo "==================================="
@@ -438,7 +483,20 @@ echo
 
 set +e
 set -x
-ansible-container push --push-to docker-registry --tag ${SAS_DOCKER_TAG} # ${ARG_DOCKER_REG_USERNAME} ${ARG_DOCKER_REG_PASSWORD}
+
+if [[ "${DOCKER_REGISTRY_TYPE}" == "ecr" ]]; then
+  ARG_DOCKER_REG_USERNAME=AWS
+
+  PREFIX=' -p '
+  SUFFIX=' -e none '
+
+  aws_login=$(aws ecr get-login);
+  ARG_DOCKER_REG_PASSWORD=`echo $aws_login | sed -e "s/.*${PREFIX}//;s/${SUFFIX}.*//"`
+
+  ansible-container push --push-to docker-registry --tag ${SAS_DOCKER_TAG} --username ${ARG_DOCKER_REG_USERNAME} --password ${ARG_DOCKER_REG_PASSWORD}
+else
+  ansible-container push --push-to docker-registry --tag ${SAS_DOCKER_TAG}
+fi
 push_rc=$?
 set +x
 set -e

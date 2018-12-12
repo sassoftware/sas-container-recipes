@@ -1,0 +1,52 @@
+# Deployment customizable properties
+# Managed by the SAS deployment technology
+#
+
+sasstudio.appserver.consul.register=true
+sasstudio.appserver.contextpath=/SASStudio
+
+# Created from STUDIO_CONFIGURATION:init in vars.yml
+
+# webdms.workspaceServer.hostName and webdms.workspaceServer.port are set to localhost and 8591 out of the box.
+# If the values provided are the same as the install values then we will not set the file.
+
+
+{% if STUDIO_CONFIGURATION.init is defined and STUDIO_CONFIGURATION.init %}
+{%   for key, value in STUDIO_CONFIGURATION.init.items() %}
+{%     for cmntkey, cmntvalue in STUDIO_CONFIGURATION.init.items() %}
+{%       if key == 'webdms.workspaceServer.hostName' and cmntkey == 'webdms.workspaceServer.hostName_comment' %}
+{{ cmntvalue }}
+{%       endif %}
+{%     endfor %}
+{%     if key == 'webdms.workspaceServer.hostName' and value != 'localhost' %}
+{{ key | trim }}={{ value | trim }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+{% if STUDIO_CONFIGURATION.init is defined and STUDIO_CONFIGURATION.init %}
+{%   for key, value in STUDIO_CONFIGURATION.init.items() %}
+{%     for cmntkey, cmntvalue in STUDIO_CONFIGURATION.init.items() %}
+{%       if key == 'webdms.workspaceServer.port' and cmntkey == 'webdms.workspaceServer.port_comment' %}
+{{ cmntvalue | trim }}
+{%       endif %}
+{%     endfor %}
+{%     if key == 'webdms.workspaceServer.port' and value != 8591 %}
+{{ key | trim }}={{ value | trim }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+
+{% if STUDIO_CONFIGURATION.init is defined and STUDIO_CONFIGURATION.init %}
+{%   for key, value in STUDIO_CONFIGURATION.init.items() %}
+{%     if 'webdms.workspaceServer' not in key and 'sasstudio.appserver.https.port' not in key and 'sasstudio.appserver.port' not in key %}
+{%       for cmntkey, cmntvalue in STUDIO_CONFIGURATION.init.items() %}
+{%         if cmntkey == (key + '_comment') %}
+{{ cmntvalue | trim }}
+{%         endif %}
+{%       endfor %}
+{%       if '_comment' not in key %}
+{{ key | trim }}={{ value | trim }}
+{%       endif %}
+{%     endif %}
+{%   endfor %}
+{% endif %}
