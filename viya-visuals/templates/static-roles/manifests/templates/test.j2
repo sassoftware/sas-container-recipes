@@ -1,0 +1,10 @@
+version: "3"
+networks:
+  default
+services:
+
+{% for key, value in services.items() %}
+    {{ key }}
+    {{ value }}
+    
+{% endfor %}

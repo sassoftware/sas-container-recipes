@@ -1,47 +1,20 @@
 # SAS for Containers: Recipes
 A collection of recipes and other resources for building containers that include the SAS Viya software and other tools.
 
-- `/viya-programming` is a folder that includes recipes and resources for creating single or multiple containers of the SAS Viya 3.4 programming-only deployment.
-- `/addons` contains recipes and resources that enhance the base SAS Viya software, such as configuration of SAS/ACCESS software and integration with LDAP. [README](addons/README.md)
-- `build.sh` is a build script located at the repository root level. Use it to build Docker images for SAS Viya 3.4.
-- `/all-in-one` is a recipe for a SAS Viya programming-only analytic container from one Dockerfile. Presented at SAS Global Forum 2018, this recipe includes SAS Studio, R Studio, and Jupyter Lab. [README](all-in-one/README.md)
+- [/viya-programming](viya-programming) is a folder that includes a recipe and resources for creating SAS Viya 3.4 programming-only Docker images.
+- [/viya-visuals](viya-visuals) is a folder that includes resources for creating SAS Viya 3.4 Docker images for use in a Kubernetes environment.
+- [/addons](addons/README.md) contains recipes and resources that enhance the base SAS Viya software, such as configuration of SAS/ACCESS software and integration with LDAP.
+- A [build script](#use-buildsh-to-build-the-images) that you can use to create a container image that includes the SAS Viya software and addon layers.
 
 ## Prerequisites
-### SAS Software
-
 - SAS Viya 3.4 software: a SAS Viya 3.4 on Linux order and the SAS_Viya_deployment_data.zip from the Software Order Email (SOE) are required.
-- Creating a local mirror of the SAS software is strongly recommended. [Here's why](../wikis/The-Basics#why-do-i-need-a-local-mirror-repository). 
+- Creating a local mirror of the SAS software is strongly recommended. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
 
-### Other Software
-
-- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker is required.
-- Git is required.
-
-The following is required when building multiple containers:
-
-- Access to a Docker registry
-- Python2 or Python3
-- pip
-- virtualenv
-- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-- Access to a Kubernetes environment
-
-### Clone the Repository
-
-Here is an example of the `git clone` command for a Linux host that has Git and Docker installed. 
-The command assumes that you will clone the repository in the $HOME directory.
-
-```
-cd $HOME
-git clone https://github.com/sassoftware/sas-container-recipes.git
-```
-
-**Note:** On Windows, you can clone the repository by using PowerShell. Also, you can clone the repository on a Mac.
 
 ## SAS Viya Programming - Single Container
+A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker and git are required.
 
 ### At a Glance
-
 * The SAS Viya programming run-time in a single container on the Docker platform.
 * Includes SAS Studio, SAS Workspace Server, and the CAS server, which provides in-memory analytics. The CAS server allows for symmetric multi-processing (SMP) by users.
 * Ideal for data scientists and programmers who want on-demand access.
@@ -51,17 +24,14 @@ git clone https://github.com/sassoftware/sas-container-recipes.git
 
 ### Use build.sh to Build the Images
 
-Look for `build.sh` at the repository root level. After the sassoftware/sas-container-recipes project is cloned, run `build.sh` to build a set of Docker images for SAS Viya 3.4.
+A script named `build.sh` is at the repository root level. After the sassoftware/sas-container-recipes project is cloned, run `build.sh` to build a set of Docker images for SAS Viya 3.4.
 
 The following example assumes that you are in the 
 /$HOME/sas-container-recipes directory, a mirror repository is set up at `http://host.company.com/sas_repo`, and an addon layer, [auth-demo](addons/auth-demo/README.md), is included in the build.
 
 ```
-build.sh \
---type single \
---zip /path/to/SAS_Viya_deployment_data.zip \
---mirror-url http://host.company.com/sas_repo \
---addons "addons/auth-demo"
+export SAS_RPM_REPO_URL=http://host.company.com/sas_repo
+build.sh --type single --zip /path/to/SAS_Viya_deployment_data.zip -m http://host.company.com/sas_repo -addons "addons/auth-demo"
 ```
 
 ### List Images
@@ -115,12 +85,22 @@ After the container has started, log on to SAS Studio with the user name `sasdem
 
 ## SAS Viya Programming - Multiple Containers
 
-### At a Glance
+The following is required when building multiple containers:
 
-* The SAS Viya programming run-time deployed to multiple Docker containers with Kubernetes.
-* A typical deployment includes a container for the SAS Viya programming run-time, a container for the CAS server, and a container for an HTTP proxy server.
-* Ideal for the [users described above](#at-a-glance), but who want to step up the analytics and data processing to CAS massively parallel processing (MPP).
-* Leverage Kubernetes to create the deployments, create the CAS server (SMP or MPP), and to run the containers in interactive mode so that users can access the SAS Viya programming run-time.
+- Access to a Docker registry
+- Python2 or Python3
+- pip
+- virtualenv
+- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+- Access to a Kubernetes environment
+
+### Capabilities
+
+* Build multiple Docker images of a SAS Viya programming-only environment
+* Leverage Kubernetes to: 
+    * Create the deployments
+    * Create SMP or MPP CAS 
+    * Run these environments in interactive mode
 
 ### Docker Registry
 
@@ -128,9 +108,9 @@ The build process will push built Docker images automatically to the Docker regi
 
 ### Kubernetes Ingress Configuration
 
-The instructions here assume that you will configure an Ingress Controller to point to the `sas-via-httpproxy` service. 
+The instructions here assume that you will be configuring an Ingress Controller to point to the `sas-via-httpproxy` service. 
 
-Here is an example of the Ingress configuration that needs to be loaded into Kubernetes. This is defining the Ingress path, not the Ingress Controller. Create a file called sas-viya.ing and add the following to it:
+Here is an example of the Ingress configuration that needs to be loaded into Kubernetes. This is defining the Ingress path, not the Ingress Controller. Create a file called sas-viya.ing and put the following contents in it:
 
 ```
 apiVersion: extensions/v1beta1
@@ -162,11 +142,6 @@ kubectl create -f sas-viya.ing
 
 ### Use build.sh to Build the Images
 
-Look for `build.sh` at the repository root level. After the sassoftware/sas-container-recipes project is cloned, run `build.sh` to build a set of Docker images for SAS Viya 3.4.
-
-The following example assumes that you are in the 
-/$HOME/sas-container-recipes directory, a mirror repository is set up at `http://host.company.com/sas_repo`, and an addon layer, [auth-demo](addons/auth-demo/README.md), is included in the build.
-
 ```
 build.sh \
 --type multiple \
@@ -175,7 +150,7 @@ build.sh \
 --docker-url docker.registry.company.com \
 --docker-namespace sas \
 --virtual-host sas-viya-http.company.com \
---addons "addons/auth-demo"
+-addons "addons/auth-demo"
 ```
 
 ### Start the Containers
@@ -200,9 +175,18 @@ sas-viya-sas-casserver-primary-0                1/1     Running   0          21h
 
 After the container has started, log on to SAS Studio with the user name `sasdemo` and the password `sasdemo` at:
  
- http://_sas-viya-http.company_.com
+ http://sas-viya-http.company.com
 
 **Note:** The user name `sasdemo` and the password `sasdemo` are the credentials for the demo user that is set up by the auth-demo addon. 
+
+
+## Other Documentation
+Check out our [Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for specific details.
+Have a quick question? Open a ticket in the "issues" tab to get a response from the maintainers and other community members. If you're unsure about something just submit an issue anyways. We're glad to help!
+If you have a specific license question head over to the [support portal](https://support.sas.com/en/support-home.html).
+
+## Contributing
+Have something cool to share? SAS gladly accepts pull requests on GitHub! We appreciate your best efforts and value the transparent collaboration that GitHub has.
 
 ## Copyright
 
@@ -219,3 +203,4 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
