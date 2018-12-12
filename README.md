@@ -6,7 +6,7 @@ Learn more at https://github.com/sassoftware/sas-container-recipes/wiki
 
 1. Retrieve the `SAS_Viya_deployment_data.zip` file from the your SAS Viya for Linux Software Order Email (SOE) or [place a purchase order of SAS Viya Software](https://www.sas.com/en_us/software/how-to-buy.html).
 2. Download [the latest release of this project](https://github.com/sassoftware/sas-container-recipes/releases) or clone this repository to use the [`build.sh`](#use-buildsh-to-build-the-images) script
-3. Choose your flavor and follow the instructions below to build and deploy:
+3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
     a. SAS Programming - [Single Container Quickstart](https://github.com/sassoftware/sas-container-recipes#single-container-quickstart) (**Dockerfile**): SAS Studio + CAS (Cloud Analytic Services) for individual data scientists.
 
