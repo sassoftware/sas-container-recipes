@@ -1,106 +1,53 @@
 # SAS Container Recipes
 Framework to deploy SAS Viya environments using Docker containers. 
 
+Learn more at https://github.com/sassoftware/sas-container-recipes/wiki
 
-1. Place a SAS Viya software order for Linux and download the SAS_Viya_deployment_data.zip from the Software Order Email (SOE)
-2. Clone this repository to use the [`build.sh`](#use-buildsh-to-build-the-images) script
+
+1. Retrieve the `SAS_Viya_deployment_data.zip` file from the your SAS Viya for Linux Software Order Email (SOE) or [place a purchase order of SAS Viya Software](https://www.sas.com/en_us/software/how-to-buy.html).
+2. Download [the latest release of this project](https://github.com/sassoftware/sas-container-recipes/releases) or clone this repository to use the [`build.sh`](#use-buildsh-to-build-the-images) script
 3. Choose your flavor and follow the instructions below to build and deploy:
 
-    a. SAS Programming - [Single Container](https://github.com/sassoftware/sas-container-recipes#single-container) (**Dockerfile**): SAS Studio + CAS (Cloud Analytic Services) for individual data scientists.
+    a. SAS Programming - [Single Container Quickstart](https://github.com/sassoftware/sas-container-recipes#single-container-quickstart) (**Dockerfile**): SAS Studio + CAS (Cloud Analytic Services) for individual data scientists.
 
     b. SAS Programming - [Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers) (**Kubernetes**): For collaborative data science environments with SAS Studio + CAS Massively Parallel Processing (MPP).
     
     c. SAS Visuals     - [Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers) (**Kubernetes**): Visual Analytics based collaborative environment
     
 
-Learn more at https://github.com/sassoftware/sas-container-recipes/wiki
-
 ---
 ---
 
 
-# Single Container
+# Single Container Quickstart
 The SAS Viya programming run-time in a single container on the Docker platform. Includes SAS Studio, SAS Workspace Server, and the CAS server, which provides in-memory analytics. The CAS server allows for Symmetric Multi Processing (SMP) by users. Ideal for data scientists and programmers who want on-demand access and for ephemeral computing, where users should save code and store data in a permanent location outside the container. Run the container in interactive mode so that users can access the SAS Viya programming run-time or run the container in batch mode to execute SAS code on a scheduled basis.
 
 **A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker is required.**
 
-### Required `build.sh` Arguments
-```
 
-    example: ./build.sh -y single -z ~/my/path/to/SAS_Viya_deployment_data.zip
+### Build the Container
+Run `./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip --addons "addons/auth-demo"` to create a user 'sasdemo' with the password 'sasdemo' for product evaluation.
+Addons can also be used to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more in the [`addons/` directory.](https://github.com/sassoftware/sas-container-recipes/tree/master/addons)
+                         
 
-  -y|--type single        The type of deployment
-                               Options: [ single | multiple | full ]
-                               Default: single
-
-  -z|--zip <value>        Path to the SAS_Viya_deployment_data.zip file
-                              example: /path/to/SAS_Viya_deployment_data.zip
-
+### Run the Container
 
 ```
 
-### Optional `build.sh` Arguments:
-
-```
-
-  -a|--addons "<value> [<value>]"  
-                          A space separated list of layers to add on to the main SAS image
-                          The `/addons` directory contains recipes and resources that enhance
-                          the base SAS Viya software, such as configuration of SAS/ACCESS 
-                          software and integration with LDAP.
-    
-                          
-```
-
-### After running `build.sh`
-
-To see the images after the build completes successfully, use the `docker images` command. Here is an example of the output:
-
-```
-
-  REPOSITORY                TAG                               IMAGE ID            CREATED             SIZE
-  sas-viya-programming      18.10.0-20181018113621-577b88f    965b522a213d        21 hours ago        8.52GB
-  svc-auth-demo             latest                            965b522a213d        21 hours ago        8.52GB
-  viya-single-container     latest                            2351f556f15a        2 days ago          8.52GB
-  centos                    latest                            5182e96772bf        6 weeks ago         200MB
-
-
-```
-
-### Start the Container
-
-After the build is complete, use the `docker run` command to start the container.
-
-```
-
-  docker run \
-    --detach \
-    --rm \
+  docker run --detach --rm --hostname sas-viya-programming \
     --env CASENV_CAS_VIRTUAL_HOST=<host-name-where-docker-is-running> \
     --env CASENV_CAS_VIRTUAL_PORT=8081 \
     --publish-all \
     --publish 8081:80 \
     --name sas-viya-programming \
-    --hostname sas-viya-programming \
-    sas-viya-programming:18.10.0-20181018113621-577b88f
+    sas-viya-programming:latest
+
     
-    
 ```
-
-To check the status of the containers, run `docker ps`.
-
-```
-
-  docker ps --filter name=sas-viya-programming --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}} \t{{.Ports}}"
-  CONTAINER ID        NAMES                   IMAGE                   STATUS              PORTS
-  4b426ce49b6b        sas-viya-programming    sas-viya-programming    Up 2 minutes        0.0.0.0:8081->80/tcp, 0.0.0.0:33221->443/tcp, 0.0.0.0:33220->5570/tcp    
+Use the `docker images` command to see what images were built then use `docker ps` to list the running containers.
 
 
-```
-
-After the container has started, log on to SAS Studio with the user name `sasdemo` and the password `sasdemo` at `http://_host-name-where-docker-is-running_:8081`
-
-  **Note:** The user name `sasdemo` and the password `sasdemo` are the credentials for the demo user that is set up by the auth-demo addon. 
+Finally go to the address `http://_host-name-where-docker-is-running_:8081` and start using SAS Studio!
 
 
 ---
@@ -108,7 +55,7 @@ After the container has started, log on to SAS Studio with the user name `sasdem
 
 
 # Multiple Containers
-Build multiple Docker images of a SAS Viya programming-only environment or other SAS Viya Visuals environments. Leverage Kubernetes to create the deployments, create SMP or MPP CAS, and run these environments in interactive mode.
+Build multiple Docker images of SAS Viya programming-only environments or other SAS Viya Visuals environments. Leverage Kubernetes to create the deployments, create SMP or MPP CAS, and run these environments in interactive mode.
 
 ### Prerequisites
 - Python2 or Python3 and python-pip 
