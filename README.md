@@ -30,7 +30,7 @@ code and scoring accelerators, or specific analytic capabilities.
 
 ---
 
-### It's easy as ...
+## Getting Started
 1. Retrieve the `SAS_Viya_deployment_data.zip` file from the your SAS Viya for Linux Software Order Email (SOE). If you don't know if your organization purchased SAS Software then [contact us](https://www.sas.com/en_us/software/how-to-buy.html) or see the [SAS License Assistance](https://support.sas.com/en/technical-support/license-assistance.html) page.
 
     <a href="https://www.sas.com/en_us/software/how-to-buy.html" alt="SAS Software Order">
@@ -39,7 +39,7 @@ code and scoring accelerators, or specific analytic capabilities.
 2. Download this project or clone this repository to use the [`build.sh`](#use-buildsh-to-build-the-images) script.
 
     <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes">
-        <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&style=for-the-badge&label=Latest Version"/></a>    
+        <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&style=for-the-badge&label=Latest Stable Release"/></a>    
 
 3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
@@ -51,11 +51,9 @@ code and scoring accelerators, or specific analytic capabilities.
 
 4. There are numerous post-deployment options to suit your use case. 
 
-    -[SAS Viya 3.4 for Linux Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=titlepage.htm&docsetVersion=3.4&locale=en) 
-    
-    -[The GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for high level details and FAQs
-    
-    -[SAS Administrators Support](https://support.sas.com/en/sas-administrators.html) for technical details.
+  - [SAS Viya 3.4 for Linux Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=titlepage.htm&docsetVersion=3.4&locale=en) for validation and configurations
+  - [The GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for high level details and FAQs
+  - [SAS Administrators Support](https://support.sas.com/en/sas-administrators.html) for technical details.
  
 
 ---
