@@ -1,34 +1,58 @@
-<img src="https://gitlab.sas.com/sassoftware/sas-container-recipes/raw/master/docs/icon-sas-container-chart.jpg" width="230"><br>
-# SAS Container Recipes
-Framework to build and deploy SAS Viya environments using Docker images and Kubernetes.
+<p align="center">
+    <img src="https://gitlab.sas.com/sassoftware/sas-container-recipes/raw/master/docs/icon-sas-container-chart.jpg" alt="SAS Containers Banner" height="200">
+</p>
 
-Learn more at https://github.com/sassoftware/sas-container-recipes/wiki
+# SAS® Viya® Container Recipes
+<p align="center">
+    <a href="https://www.sas.com/en_us/software/viya.html">
+        <img src="https://img.shields.io/badge/SAS%20Viya-3.4-blue.svg" alt="SAS Viya Version"/></a>
+    <a href="https://www.docker.com/">
+        <img src="https://img.shields.io/badge/Docker--ce-18+-blue.svg" alt="Docker Version"></a>
+    <a href="https://kubernetes.io/">
+        <img src="https://img.shields.io/badge/Kubernetes-1.0+-blue.svg" alt="Kubernetes Version"></a>
+    <a href="https://github.com/ansible/ansible-container" alt="Ansible Container">
+        <img src="https://img.shields.io/badge/Ansible%20Container-0.9+-lightgrey.svg" /></a>
+</p>
 
+Framework to build SAS Viya environments using Docker images and deploy using Kubernetes. 
+
+Container deployments are more lightweight and don't carry as much
+overhead as traditional virtual machines. By running a SAS engine inside a 
+container, you can provision resources more efficiently to address a wide variety
+of SAS workloads. Choose a fixed container with specific SAS products for 
+immediate deployment or select a base SAS recipe, and create custom containers 
+with specific products or configurations – e.g, access to data sources, in-database
+code and scoring accelerators, or specific analytic capabilities.
+
+---
 
 ### It's easy as ...
 1. Retrieve the `SAS_Viya_deployment_data.zip` file from the your SAS Viya for Linux Software Order Email (SOE) or [place a purchase order of SAS Viya Software](https://www.sas.com/en_us/software/how-to-buy.html).
 2. Download [the latest release of this project](https://github.com/sassoftware/sas-container-recipes/releases) or clone this repository to use the [`build.sh`](#use-buildsh-to-build-the-images) script
 3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
-    a. SAS Programming - [Single Container Quickstart](https://github.com/sassoftware/sas-container-recipes#single-container-quickstart) (**Dockerfile**): SAS Studio + CAS (Cloud Analytic Services) SMP for individual data scientists.
+    a. SAS Programming - [Single Container Quickstart](https://github.com/sassoftware/sas-container-recipes#single-container-quickstart) (**Dockerfile**): tailored towards most individual data scientists and developers.
 
     b. SAS Programming - [Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers) (**Kubernetes**): For collaborative data science environments with SAS Studio + CAS Massively Parallel Processing (MPP).
     
     c. SAS Visuals     - [Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers) (**Kubernetes**): Visual Analytics based collaborative environment
-    
+
+4. Refer to our [GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for more details and FAQs or see the full [SAS Viya 3.4 for Linux Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=titlepage.htm&docsetVersion=3.4&locale=en).
+ 
 
 ---
 ---
 
 
-# Single Container Quickstart
-The SAS Viya programming run-time in a single container on the Docker platform. Includes SAS Studio, SAS Workspace Server, and the CAS server, which provides in-memory analytics. The CAS server allows for Symmetric Multi Processing (SMP) by users. Ideal for data scientists and programmers who want on-demand access and for ephemeral computing, where users should save code and store data in a permanent location outside the container. Run the container in interactive mode so that users can access the SAS Viya programming run-time or run the container in batch mode to execute SAS code on a scheduled basis.
+# For Single Container Quickstart
+The SAS Viya programming run-time in a single container on the Docker platform, tailored towards most individual data scientists and developers. 
+Includes SAS  Studio, SAS Workspace Server, and the CAS server, which provides in-memory analytics. The CAS server allows for Symmetric Multi Processing (SMP) by users. Ideal for data scientists and programmers who want on-demand access and for ephemeral computing, where users should save code and store data in a permanent location outside the container. Run the container in interactive mode so that users can access the SAS Viya programming run-time or run the container in batch mode to execute SAS code on a scheduled basis.
 
-**A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker is required.**
+**A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker-ce (community edition) is required.**
 
 
 ### Build the Container
-Run `./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip --addons "addons/auth-demo"` to create a user 'sasdemo' with the password 'sasdemo' for product evaluation.
+Run `./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip --addons "addons/auth-demo"` to create a user 'sasdemo' with the password 'sasdemo' for product evaluation. A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) is recommended for all build commands.
 Addons can also be used to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more in the [`addons/` directory.](https://github.com/sassoftware/sas-container-recipes/tree/master/addons)
                          
 
@@ -60,6 +84,7 @@ Finally go to the address `http://_host-name-where-docker-is-running_:8081` and 
 Build multiple Docker images of SAS Viya programming-only environments or other SAS Viya Visuals environments. Leverage Kubernetes to create the deployments, create SMP or MPP CAS, and run these environments in interactive mode.
 
 ### Prerequisites
+- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker-ce (community edition) is required.
 - Python2 or Python3 and python-pip 
 - **Access to a Docker registry**: The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
 - [Kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed and access to a Kubernetes environment: The instructions here assume that you will be configuring an Ingress Controller to point to the `sas-viya-httpproxy` service. 
