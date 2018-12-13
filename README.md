@@ -31,8 +31,16 @@ code and scoring accelerators, or specific analytic capabilities.
 ---
 
 ### It's easy as ...
-1. Retrieve the `SAS_Viya_deployment_data.zip` file from the your SAS Viya for Linux Software Order Email (SOE) or [place a purchase order of SAS Viya Software](https://www.sas.com/en_us/software/how-to-buy.html).
-2. Download [the latest release of this project](https://github.com/sassoftware/sas-container-recipes/releases) or clone this repository to use the [`build.sh`](#use-buildsh-to-build-the-images) script
+1. Retrieve the `SAS_Viya_deployment_data.zip` file from the your SAS Viya for Linux Software Order Email (SOE). If you don't know if your organization purchased SAS Software then [contact us](https://www.sas.com/en_us/software/how-to-buy.html) or see the [SAS License Assistance](https://support.sas.com/en/technical-support/license-assistance.html) page.
+
+    <a href="https://www.sas.com/en_us/software/how-to-buy.html" alt="SAS Software Order">
+        <img src="https://img.shields.io/badge/SAS%20Viya%20License-Try%20It%20Out-lightgrey.svg?&style=for-the-badge"/></a>
+        
+2. Download this project or clone this repository to use the [`build.sh`](#use-buildsh-to-build-the-images) script.
+
+    <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes">
+        <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&style=for-the-badge&label=Latest Version"/></a>    
+
 3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
     a. SAS Programming - [Single Container Quickstart](https://github.com/sassoftware/sas-container-recipes#single-container-quickstart) (**Dockerfile**): tailored towards most individual data scientists and developers.
@@ -41,7 +49,13 @@ code and scoring accelerators, or specific analytic capabilities.
     
     c. SAS Visuals     - [Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers) (**Kubernetes**): Visual Analytics based collaborative environment
 
-4. After deployment refer to the full [SAS Viya 3.4 for Linux Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=titlepage.htm&docsetVersion=3.4&locale=en) or the [GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for high level details and FAQs .
+4. There are numerous post-deployment options to suit your use case. 
+
+    -[SAS Viya 3.4 for Linux Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=titlepage.htm&docsetVersion=3.4&locale=en) 
+    
+    -[The GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for high level details and FAQs
+    
+    -[SAS Administrators Support](https://support.sas.com/en/sas-administrators.html) for technical details.
  
 
 ---
@@ -88,7 +102,7 @@ Finally go to the address `http://_host-name-where-docker-is-running_:8081` and 
 Build multiple Docker images of SAS Viya programming-only environments or other SAS Viya Visuals environments. Leverage Kubernetes to create the deployments, create SMP or MPP CAS, and run these environments in interactive mode.
 
 ### Prerequisites
-- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker-ce (community edition) is required.
+- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker-ce such as v18+ (community edition) is required.
 - Python2 or Python3 and python-pip 
 - **Access to a Docker registry**: The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
 - [Kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed and access to a Kubernetes environment: The instructions here assume that you will be configuring an Ingress Controller to point to the `sas-viya-httpproxy` service. 
@@ -105,7 +119,10 @@ Build multiple Docker images of SAS Viya programming-only environments or other 
         
 
   -y|--type [ multiple | full ] 
-                          The type of deployment
+                          The type of deployment.
+                                Multiple: SAS Viya Programming Multi-Container deployment with Kubernetes
+                                Full: SAS Visuals based deployment with Kubernetes.
+                                Single: One container for SAS Programming. See the "Single Container" guide section.
 
   -n|--docker-registry-namespace <value>
                           The namespace in the Docker registry where Docker
@@ -117,16 +134,24 @@ Build multiple Docker images of SAS Viya programming-only environments or other 
                                example: 10.12.13.14:5000 or my-registry.docker.com, do not add 'http://' 
 
   -z|--zip <value>
-                          Path to the SAS_Viya_deployment_data.zip file
+                          Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
+                          If you do not know if your organization has a SAS license then contact
+                          https://www.sas.com/en_us/software/how-to-buy.html
+                          
                                example: /path/to/SAS_Viya_deployment_data.zip
       [EITHER/OR]          
 
   -l|--playbook-dir <value>
-                          Path to the sas_viya_playbook directory. If this is passed in along with the 
-                               SAS_Viya_deployment_data.zip then this will take precedence.
+                          Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
+                          whereas new deployments utilize the above '--zip' argument. If this is passed in along with
+                          the zip file then this playbook location will take precendence. 
+
 
   -v|--virtual-host 
-                          The Kubernetes ingress path that defines the location of the HTTP endpoint.
+                          The Kubernetes Ingress path that defines the location of the HTTP endpoint.
+                          For more details on Ingress see the official Kubernetes documentation at
+                          https://kubernetes.io/docs/concepts/services-networking/ingress/
+                          
                                example: user-myproject.mylocal.com
     
                                
@@ -144,12 +169,12 @@ Build multiple Docker images of SAS Viya programming-only environments or other 
                                Default: latest
 
   -m|--mirror-url <value>
-                          The location of the mirror URL.
-                               See https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
-                               for more information on setting up a mirror.
+                          The location of the mirror URL.See the Mirror Manager guide at
+                          https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
+
 
   -p|--platform <value>
-                          The type of operating system we are installing on top of
+                          The type of distribution that this build script is being run on.
                                Options: [ redhat | suse ]
                                Default: redhat
 
@@ -157,16 +182,17 @@ Build multiple Docker images of SAS Viya programming-only environments or other 
                           Skips validating the Docker registry URL
 
   -k|--skip-mirror-url-validation
-                          Skips validating the mirror URL
+                          Skips validating the mirror URL from the --mirror-url flag.
 
   -e|--environment-setup
-                          Setup python virtual environment
+                          Automatically sets up a python virtual environment called 'env',
+                          installs the required packages, and sources the virtual environment
+                          during the build process.
 
   -s|--sas-docker-tag
-                          The tag to apply to the images before pushing to the Docker registry
-
-  -h|--help               Prints out this message
-  
+                          The tag to apply to the images before pushing to the Docker registry.
+                              default: ${recipe_project_version}-${datetime}-${last_commit_sha1}
+                              example: 18.12.0-20181209115304-b197206
   
 ```
 
