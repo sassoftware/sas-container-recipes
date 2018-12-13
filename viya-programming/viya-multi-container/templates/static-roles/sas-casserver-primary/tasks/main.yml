@@ -22,10 +22,6 @@
     group: "{{ INSTALL_GROUP }}"
     mode: "{{ item.mode }}"
   with_items:
-<<<<<<< HEAD
-=======
-  - { name: createudfformats_startup.lua, path: "share/cas", mode: "0755" }
->>>>>>> 18m12
   - { name: register_cas.sh, path: "SASFoundation/utilities/bin", mode: "0755" }
   - { name: tenant_setup_docker.sh, path: "bin", mode: "0755" }
 
