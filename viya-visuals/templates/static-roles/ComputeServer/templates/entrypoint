@@ -1,0 +1,173 @@
+#!/bin/bash
+#
+# Copyright 2018 SAS Institute Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Exit out if any process returns a non zero return code
+#set -e
+
+# Enable debugging if SAS_DEBUG is set
+[[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
+if [ ${SAS_DEBUG} -gt 0 ]; then
+    set -x
+fi
+
+ # if given a command, run that
+ if [[ -n "$1" ]]; then
+     exec "$@"
+ fi
+
+###############################################################################
+# Set Default Variables (if not defined)
+###############################################################################
+[[ -z ${DEPLOYMENT_NAME+x} ]]    && export DEPLOYMENT_NAME="viya"
+[[ -z ${SASSERVICENAME+x} ]]     && export SASSERVICENAME="sas-computeserver"
+[[ -z ${SASSERVICECONTEXT+x} ]]  && export SASSERVICECONTEXT=${SASSERVICENAME#sas-}
+[[ -z ${SASROOT+x} ]]            && export SASROOT=/opt/sas
+[[ -z ${SASDEPLOYID+x} ]]        && export SASDEPLOYID=viya
+[[ -z ${SASINSTANCE+x} ]]        && export SASINSTANCE=default
+[[ -z ${SASHOME+x} ]]            && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
+[[ -z ${SASCONFIG+x} ]]          && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
+[[ -z ${SASTOKENDIR+x} ]]        && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
+[[ -z ${SAS_CURRENT_HOST+x} ]]   && export SAS_CURRENT_HOST=$(hostname -f)
+[[ -z ${SAS_LOGS_TO_STDOUT+x} ]] && export SAS_LOGS_TO_STDOUT=true
+
+# Some products expect the license to be in a non-standard location
+[[ -z ${SASLICENSEDIR+x} ]]     && export SASLICENSEDIR=${SASCONFIG}/etc/
+[[ -z ${SASLICENSEFILE+x} ]]    && export SASLICENSEFILE=setinit.txt
+
+# Decode secrets into the license directory
+[[ ! -z ${SETINIT_TEXT+x} ]]     && echo $SETINIT_TEXT > $SASLICENSEDIR/$SASLICENSEFILE
+[[ ! -z ${SETINIT_TEXT_ENC+x} ]] && echo $SETINIT_TEXT_ENC | base64 --decode --ignore-garbage > $SASLICENSEDIR/$SASLICENSEFILE
+
+# The following are used in sas-start-functions
+servicename=${SASSERVICENAME}
+servicecontext=${SASSERVICECONTEXT}
+
+# Set of functions for supporting docker containers
+source ${SASHOME}/lib/envesntl/docker-functions
+
+###############################################################################
+# Setup Consul
+###############################################################################
+
+# Write tokens to disk if needed and echo CONSUL_HTTP_ADDR to file
+docker_define_consul_environment
+
+###############################################################################
+# Shutdown
+###############################################################################
+
+trap docker_shutdown_sas_services SIGTERM
+trap docker_shutdown_sas_services SIGINT
+
+###############################################################################
+# Pre Deploy
+###############################################################################
+
+if [ ! -z "${PRE_DEPLOY_SCRIPT}" ]; then
+    echo_line "Creating pre deploy script"
+    echo "${PRE_DEPLOY_SCRIPT}" > /tmp/pre_deploy.sh
+    chmod -v a+x /tmp/pre_deploy.sh
+fi
+
+n_pre_deploy_count=$(find /tmp -type f -name "*pre_deploy.sh" | wc -c)
+if (( ${n_pre_deploy_count} > 0 )); then
+    for str_pre_script in $(ls -1 /tmp/*pre_deploy.sh); do
+        echo "Running pre deploy script \"${str_pre_script}\""
+        ${str_pre_script}
+    done
+fi
+
+###############################################################################
+# Configure
+###############################################################################
+
+[[ -z ${SASPREHOME+x} ]]       && export SASPREHOME=${SASROOT}/spre/home
+[[ -z ${LAUNCHER_OPTIONS+x} ]] && export LAUNCHER_OPTIONS=''
+[[ -z ${SERVICE_NAME+x} ]]     && export SERVICE_NAME="${DEPLOYMENT_NAME}-computeserver"
+
+runuser --shell "/bin/sh" --login sas \
+    --command "${SASPREHOME}/SASFoundation/utilities/bin/apply_license \
+    ${SASLICENSEDIR}/${SASLICENSEFILE}"
+
+runuser --shell "/bin/sh" \
+    --login sas \
+    --command "${SASPREHOME}/SASFoundation/utilities/bin/post_install build_nickname"
+
+runuser --shell "/bin/sh" \
+    --login sas \
+    --command "${SASPREHOME}/SASFoundation/utilities/bin/post_install build_add_cmacros"
+
+# If Launcher config file is passed in, use it.
+if [ ! -z "${SAS_LAUNCHER_LOG_CONFIG}" ]; then
+    echo "${SAS_LAUNCHER_LOG_CONFIG}" > ${SASCONFIG}/etc/sysconfig/sas-runlauncher/${SASINSTANCE}/logconfig.xml
+    export LAUNCHER_OPTIONS="${LAUNCHER_OPTIONS} --log-config ${SASCONFIG}/etc/sysconfig/sas-runlauncher/${SASINSTANCE}/logconfig.xml"
+fi
+
+#sed -i 's|^altlogdir=.*|altlogdir=|g' ${SASHOME}/bin/sas-runlauncher
+sed -i '/# append configuration-related options/a [[ ! -z ${LAUNCHER_OPTIONS+x} ]] && launcher_options=${LAUNCHER_OPTIONS}' ${SASHOME}/bin/sas-runlauncher
+sed -i 's/launcher_options="--consul-config/launcher_options="${launcher_options} --consul-config/' ${SASHOME}/bin/sas-runlauncher
+echo "export SAS_LAUNCHER_PORT=5600" >> ${SASCONFIG}/etc/sysconfig/sas-runlauncher/${SASINSTANCE}/sas-runlauncher
+echo "export SAS_LAUNCHER_HOSTNAME=${SERVICE_NAME}" >> ${SASCONFIG}/etc/sysconfig/sas-runlauncher/${SASINSTANCE}/sas-runlauncher
+echo "export LAUNCHER_OPTIONS=\"${LAUNCHER_OPTIONS}\"" >> ${SASCONFIG}/etc/sysconfig/sas-runlauncher/${SASINSTANCE}/sas-runlauncher
+
+# Make sure the following are setup correctly
+mkdir -vp --mode=2777 ${SASCONFIG}/var/log/compsrv/${SASINSTANCE}
+chown -vR sas:sas ${SASCONFIG}/var/log/compsrv
+mkdir -vp --mode=0777 ${SASCONFIG}/var/spool/compsrv/${SASINSTANCE}
+mkdir -vp --mode=0777 ${SASCONFIG}/var/tmp/compsrv/${SASINSTANCE}
+
+###############################################################################
+# Post Deploy
+###############################################################################
+
+if [ ! -z "${POST_DEPLOY_SCRIPT}" ]; then
+    echo_line "Creating post deploy script"
+    echo "${POST_DEPLOY_SCRIPT}" > /tmp/post_deploy.sh
+    chmod -v a+x /tmp/post_deploy.sh
+fi
+
+n_post_deploy_count=$(find /tmp -type f -name "*post_deploy.sh" | wc -c)
+if (( ${n_post_deploy_count} > 0 )); then
+    for str_post_script in $(ls -1 /tmp/*post_deploy.sh); do
+        echo "Running post deploy script \"${str_post_script}\""
+        ${str_post_script}
+    done
+fi
+
+###############################################################################
+# Run SAS services
+###############################################################################
+
+docker_run_local_consul
+
+# Start and continually check the ops-agent process.
+${SASHOME}/lib/envesntl/docker-ops-agent &
+
+# Make sure the launcher can create the users home directory if it does not exist.
+# https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=p0npk8pk8rezusn0zss8b14tk8t0.htm&docsetVersion=3.4&locale=en#n0wq5wobjqak86n1m04o6mgx8v5q
+set +e
+runuser --shell "/bin/sh" \
+    --login sas \
+    --command "${SASHOME}/bin/sas-bootstrap-config --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token kv write config/launcher-server/global/environment/SASMAKEHOMEDIR 1"
+set -e
+
+docker_run_sas_services
+
+###############################################################################
+# Keep the container alive until it is killed
+###############################################################################
+
+docker_check_sas_services

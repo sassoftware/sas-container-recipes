@@ -172,7 +172,7 @@ function add_layers()
             set -x
             docker tag "${docker_reg_location}"/"${sas_image}:${SAS_DOCKER_TAG}" "${docker_reg_location}"/"${sas_image}:${SAS_DOCKER_TAG}-base"
             set +x
-            echo "[INFO]  : ...and now push the preserver image."
+            echo "[INFO]  : ...and now push the preserved image."
             set -x
             docker push "${docker_reg_location}"/"${sas_image}:${SAS_DOCKER_TAG}-base"
             set +x
@@ -278,7 +278,7 @@ function add_layers()
                 echo "[INFO]  : No base images were adjusted so there are no new images to tag and push."
             fi
         else
-            echo "[INFO]  : The image '${sas_image}' doe not exist"
+            echo "[INFO]  : The image '${sas_image}' does not exist"
         fi
     done
 }
@@ -422,6 +422,11 @@ while [[ $# -gt 0 ]]; do
         -l|--playbook-dir)
             shift # past argument
             export SAS_VIYA_PLAYBOOK_DIR="$1"
+            shift # past value
+            ;;
+        -s|--sas-docker-tag)
+            shift # past argument
+            export SAS_DOCKER_TAG="$1"
             shift # past value
             ;;
         *)    # Assuming this is an addon for backward compatibility.
