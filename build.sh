@@ -699,7 +699,7 @@ case ${SAS_RECIPE_TYPE} in
         # We will not pass the CHECK_*_URL values here as they are not used in the lower level script
         [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
 
-        ./build.sh \
+        ./viya-multi-build.sh \
           --baseimage "${BASEIMAGE}" \
           --basetag "${BASETAG}" \
           --platform "${PLATFORM}" \
@@ -736,7 +736,7 @@ case ${SAS_RECIPE_TYPE} in
         [[ ! -z ${CHECK_DOCKER_URL} ]] && export CHECK_DOCKER_URL
         [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
 
-        ./build.sh \
+        ./viya-visuals-build.sh \
           --baseimage "${BASEIMAGE}" \
           --basetag "${BASETAG}" \
           --platform "${PLATFORM}" \
