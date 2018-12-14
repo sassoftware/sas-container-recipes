@@ -1,0 +1,109 @@
+#!/bin/bash
+#
+# Copyright 2018 SAS Institute Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Exit out if any process returns a non zero return code
+#set -e
+
+# Enable debugging if SAS_DEBUG is set
+[[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
+if [ ${SAS_DEBUG} -gt 0 ]; then
+    set -x
+fi
+
+ # if given a command, run that
+ if [[ -n "$1" ]]; then
+     exec "$@"
+ fi
+
+###############################################################################
+# Set Default Variables (if not defined)
+###############################################################################
+[[ -z ${DEPLOYMENT_NAME+x} ]]    && export DEPLOYMENT_NAME="viya"
+[[ -z ${SASSERVICENAME+x} ]]     && export SASSERVICENAME="sas-{{ role_name }}"
+[[ -z ${SASSERVICECONTEXT+x} ]]  && export SASSERVICECONTEXT=${SASSERVICENAME#sas-}
+[[ -z ${SASROOT+x} ]]            && export SASROOT=/opt/sas
+[[ -z ${SASDEPLOYID+x} ]]        && export SASDEPLOYID=viya
+[[ -z ${SASINSTANCE+x} ]]        && export SASINSTANCE=default
+[[ -z ${SASHOME+x} ]]            && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
+[[ -z ${SASCONFIG+x} ]]          && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
+[[ -z ${SASTOKENDIR+x} ]]        && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
+[[ -z ${SAS_CURRENT_HOST+x} ]]   && export SAS_CURRENT_HOST=$(hostname -f)
+[[ -z ${SAS_LOGS_TO_STDOUT+x} ]] && export SAS_LOGS_TO_STDOUT=true
+
+# Some products expect the license to be in a non-standard location
+[[ -z ${SASLICENSEDIR+x} ]]     && export SASLICENSEDIR={{ SASLICENSEDIR | default('${SASCONFIG}/etc/license') }}
+[[ -z ${SASLICENSEFILE+x} ]]    && export SASLICENSEFILE={{ SASLICENSEFILE | default('setinit.txt') }}
+
+# Decode secrets into the license directory
+[[ ! -z ${SETINIT_TEXT+x} ]]     && echo $SETINIT_TEXT > $SASLICENSEDIR/$SASLICENSEFILE
+[[ ! -z ${SETINIT_TEXT_ENC+x} ]] && echo $SETINIT_TEXT_ENC | base64 --decode --ignore-garbage > $SASLICENSEDIR/$SASLICENSEFILE
+if [[ -n ${SAS_LICENSE} ]]; then
+    echo "${SAS_LICENSE}" > ${SASCONFIG}/etc/licenses/default
+fi
+if [[ -n ${SAS_CLIENT_CERT} ]]; then
+    echo "${SAS_CLIENT_CERT}" | base64 --decode --ignore-garbage > ${SASCONFIG}/etc/pki/certs/entitlement_certificate.pem
+fi
+if [[ -n ${SAS_CA_CERT} ]]; then
+    echo "${SAS_CA_CERT}" | base64 --decode --ignore-garbage > ${SASCONFIG}/etc/pki/private/SAS_CA_Certificate.pem
+fi
+
+# The following are used in sas-start-functions
+servicename=${SASSERVICENAME}
+servicecontext=${SASSERVICECONTEXT}
+
+# Set of functions for supporting docker containers
+source ${SASHOME}/lib/envesntl/docker-functions
+
+###############################################################################
+# Setup Consul
+###############################################################################
+
+# Write tokens to disk if needed and echo CONSUL_HTTP_ADDR to file
+docker_define_consul_environment
+
+###############################################################################
+# Shutdown
+###############################################################################
+
+trap docker_shutdown_sas_services SIGTERM
+trap docker_shutdown_sas_services SIGINT
+
+###############################################################################
+# Run something
+###############################################################################
+
+docker_run_local_consul
+
+# Start and continually check the ops-agent process.
+${SASHOME}/lib/envesntl/docker-ops-agent &
+
+# Set the following property to fix an issue loading data sources
+# If this is run a second time, the write will fail. Using the "set +e" to guard
+# against shutting down the server
+
+set +e
+runuser --shell "/bin/sh" \
+    --login sas \
+    --command "${SASHOME}/bin/sas-bootstrap-config --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token kv write --site-default config/SASDataExplorer/jvm/java_option_fjpcp -Djava.util.concurrent.ForkJoinPool.common.parallelism=16"
+set -e
+
+docker_run_sas_services
+
+###############################################################################
+# Keep the container alive until it is killed
+###############################################################################
+
+docker_check_sas_services
