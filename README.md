@@ -4,7 +4,7 @@
     <img src="https://gitlab.sas.com/sassoftware/sas-container-recipes/raw/master/docs/icon-sas-container-chart.jpg" alt="SAS Container Recipes Banner" height="170">
 
     <p>
-        <p>Framework to build SAS Viya environments using Docker images and deploy using Kubernetes.</p>
+        <p>Framework to build SAS Viya Docker images and create deployments using Kubernetes.</p>
     
         <a href="https://www.sas.com/en_us/software/viya.html">
             <img src="https://img.shields.io/badge/SAS%20Viya-3.4-blue.svg?&colorA=0b5788&style=for-the-badge&logoWidth=30&logo=data:image/png;base64,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"
@@ -78,8 +78,10 @@ This environment includes SAS Studio, SAS Workspace Server, and the CAS server t
 
 
 ### Build the Container
-Run `./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip --addons "addons/auth-demo"` to create a user 'sasdemo' with the password 'sasdemo' for product evaluation. A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) is recommended for all build commands.
-Addons can also be used to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more in the [`addons/` directory.](https://github.com/sassoftware/sas-container-recipes/tree/master/addons)
+Run `./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip --addons "addons/auth-demo"` to create a user 'sasdemo' with the password 'sasdemo' for product evaluation. 
+A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) is recommended for all build commands.
+Addons can also be used to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, 
+and more in the [`addons/` directory.](https://github.com/sassoftware/sas-container-recipes/tree/master/addons)
                          
 
 ### Run the Container
@@ -209,9 +211,10 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
 
 ### After running `build.sh`
 * For a SAS Viya Programming deployment the Kubernetes manifests are located at `viya-programming/viya-multi-container/working/manifests/kubernetes`
-* For a SAS Viya Visuals deployment the Kubernetes are located at `viya-visuals/working/manifests/kubernetes/**[deployment-smp OR deployment-mpp]**`
+* For a SAS Viya Visuals deployment the Kubernetes manifests are located at `viya-visuals/working/manifests/kubernetes/`
 
-Choose between Symmetric Multi Processing (SMP) or Massively Parallel Processing (MPP) and run a `kubectl create --file` or `kubectl replace --file` on those manifests 
+Choose between Symmetric Multi Processing (SMP) or Massively Parallel Processing (MPP) and run a 
+`kubectl create --file` or `kubectl replace --file` on the manifests inside the kubernetes directory.
 
 Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other services using `kubectl edit ingress`.
 ```
@@ -239,7 +242,9 @@ Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other ser
 For more details on Ingress Controllers see [the official Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/).
 
 Finally, go to the host address that's defined in your Kubernetes Ingress to view your SAS product(s). 
-If there is no response from the host then check the status of the containers by running `kubectl get pods`. There should be one or more `sas-viya-<service>` pods, depending on your software order. You may also need to correct the host name on your Ingress Controller and check your Kubernetes configurations.
+If there is no response from the host then check the status of the containers by running `kubectl get pods`.
+There should be one or more `sas-viya-<service>` pods, depending on your software order. 
+You may also need to correct the host name on your Ingress Controller and check your Kubernetes configurations.
 
 
 <br>
@@ -250,11 +255,13 @@ If there is no response from the host then check the status of the containers by
 
 ## Other Documentation
 Check out our [Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for specific details.
-Have a quick question? Open a ticket in the "issues" tab to get a response from the maintainers and other community members. If you're unsure about something just submit an issue anyways. We're glad to help!
+Have a quick question? Open a ticket in the "issues" tab to get a response from the maintainers and 
+other community members. If you're unsure about something just submit an issue anyways. We're glad to help!
 If you have a specific license question head over to the [support portal](https://support.sas.com/en/support-home.html).
 
 ## Contributing
-Have something cool to share? SAS gladly accepts pull requests on GitHub! For more details see [CONTRIBUTING.md](https://github.com/sassoftware/sas-container-recipes/blob/master/docs/CONTRIBUTING.md).
+Have something cool to share? SAS gladly accepts pull requests on GitHub! 
+For more details see [CONTRIBUTING.md](https://github.com/sassoftware/sas-container-recipes/blob/master/docs/CONTRIBUTING.md).
 
 ## Copyright
 
