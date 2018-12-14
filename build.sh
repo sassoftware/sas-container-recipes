@@ -305,6 +305,7 @@ function echo_footer()
     echo "kubectl create -f $1/working/manifests/kubernetes/secrets/"
     echo "kubectl create -f $1/working/manifests/kubernetes/deployments-mpp/"
     echo ""
+    kubectl version > /dev/null 2>&1 || echo -e "*** Kubernetes (kubectl) is required for the deployment step. See https://kubernetes.io/docs/tasks/tools/install-kubectl/"
 }
 
 function missing_dependencies() {
@@ -686,7 +687,6 @@ case ${SAS_RECIPE_TYPE} in
         docker --version || missing_dependencies 
         python --version || missing_dependencies
         pip    --version || missing_dependencies
-        kubectl  version || missing_dependencies   
 
         # Copy the zip or the playbook to project
         copy_deployment_data_zip viya-programming/viya-multi-container
@@ -729,7 +729,6 @@ case ${SAS_RECIPE_TYPE} in
         docker --version || missing_dependencies 
         python --version || missing_dependencies
         pip    --version || missing_dependencies
-        kubectl  version || missing_dependencies   
 
         # export the values so that they are picked up by the lower level scipt.
         [[ ! -z ${CHECK_MIRROR_URL} ]] && export CHECK_MIRROR_URL
