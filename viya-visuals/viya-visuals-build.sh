@@ -452,11 +452,6 @@ EOL
         sed -i "s|CONSUL_KEY_VALUE_DATA_ENC=|CONSUL_KEY_VALUE_DATA_ENC=$(cat ${PWD}/sitedefault.yml | base64 --wrap=0 )|g" container.yml
     fi
 
-    setinit_enc=$(cat sas_viya_playbook/SASViyaV0300*.txt | base64 --wrap=0 )
-    sed -i "s|SETINIT_TEXT_ENC=|SETINIT_TEXT_ENC=${setinit_enc}|g" container.yml
-    sed -i "s|SAS_LICENSE=|SAS_LICENSE=$(cat sas_viya_playbook/SASViyaV0300*.jwt)|g" container.yml
-    sed -i "s|SAS_CLIENT_CERT=|SAS_CLIENT_CERT=$(cat entitlement_certificate.pem  | base64 --wrap=0 )|g" container.yml
-    sed -i "s|SAS_CA_CERT=|SAS_CA_CERT=$(cat SAS_CA_Certificate.pem | base64 --wrap=0 )|g" container.yml
     sed -i "s|{{ DOCKER_REGISTRY_URL }}|${DOCKER_REGISTRY_URL}|" container.yml
     sed -i "s|{{ DOCKER_REGISTRY_NAMESPACE }}|${DOCKER_REGISTRY_NAMESPACE}|" container.yml
     sed -i "s|{{ PROJECT_NAME }}|${PROJECT_NAME}|" container.yml
@@ -487,6 +482,18 @@ function push_images() {
     set +x
 }
 
+# For larger orders we see that if the container.yml is too many characters then
+# ansible-container would not run. So, for now, we will copy the container.yml
+# and update the copy which will then be used for generating manifests
+function make_manifest_yaml() {
+    cp container.yml manifest.yml
+    setinit_enc=$(cat sas_viya_playbook/SASViyaV0300*.txt | base64 --wrap=0 )
+    sed -i "s|SETINIT_TEXT_ENC=|SETINIT_TEXT_ENC=${setinit_enc}|g" manifest.yml
+    sed -i "s|SAS_LICENSE=|SAS_LICENSE=$(cat sas_viya_playbook/SASViyaV0300*.jwt)|g" manifest.yml
+    sed -i "s|SAS_CLIENT_CERT=|SAS_CLIENT_CERT=$(cat entitlement_certificate.pem  | base64 --wrap=0 )|g" manifest.yml
+    sed -i "s|SAS_CA_CERT=|SAS_CA_CERT=$(cat SAS_CA_Certificate.pem | base64 --wrap=0 )|g" manifest.yml
+}
+ 
 # Use command line options if they have been provided and overrides environment settings
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -579,10 +586,12 @@ function main() {
     make_ansible_yamls
     echo -e "[INFO]  : Building ansible-container services"
     ansible_build
-    echo -e "[INFO]  : Generating deployments"
-    make_deployments
     echo -e "[INFO]  : Pushing images to registry"
     push_images
+    echo -e "[INFO]  : Create manifest.yml"
+    make_manifest_yaml
+    echo -e "[INFO]  : Generating deployments"
+    make_deployments
 
     popd # back to viya-visuals directory
     exit 0
