@@ -69,10 +69,12 @@ code and scoring accelerators, or specific analytic capabilities.
 
 
 # SAS® Viya® Programming Quickstart - Single Container
-The SAS Viya programming run-time in a single container on the Docker platform, tailored towards most individual data scientists and developers. 
-Includes SAS  Studio, SAS Workspace Server, and the CAS server, which provides in-memory analytics. The CAS server allows for Symmetric Multi Processing (SMP) by users. Ideal for data scientists and programmers who want on-demand access and for ephemeral computing, where users should save code and store data in a permanent location outside the container. Run the container in interactive mode so that users can access the SAS Viya programming run-time or run the container in batch mode to execute SAS code on a scheduled basis.
+For most independent data scientists and developers, those want portable on-demand interactive SAS code execusion. 
+All code and data should be stored in a persistent location outside the container.
+This environment includes SAS Studio, SAS Workspace Server, and the CAS server to which provide in-memory analytics for Symmetric Multi Processing (SMP).
 
-**A [supported version](https://success.docker.com/article/maintenance-lifecycle) of Docker-ce (community edition) is required.**
+
+**A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce (community edition)](https://docs.docker.com/install/linux/docker-ce/centos/) is required.**
 
 
 ### Build the Container
@@ -128,25 +130,25 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
 
   -y|--type [ multiple | full ] 
                           The type of deployment.
-                                Multiple: SAS Viya Programming Multi-Container deployment with Kubernetes
-                                Full: SAS Visuals based deployment with Kubernetes.
-                                Single: One container for SAS Programming. See the "Single Container" guide section.
+                            Multiple: SAS Viya Programming Multi-Container deployment with Kubernetes
+                            Full: SAS Visuals based deployment with Kubernetes.
+                            Single: One container for SAS Programming. See the "Single Container" guide section.
 
   -n|--docker-registry-namespace <value>
                           The namespace in the Docker registry where Docker
                           images will be pushed to. Used to prevent collisions.
-                               example: mynamespace
+                            example: mynamespace
 
   -u|--docker-registry-url <value>
                           URL of the Docker registry where Docker images will be pushed to.
-                               example: 10.12.13.14:5000 or my-registry.docker.com, do not add 'http://' 
+                            example: 10.12.13.14:5000 or my-registry.docker.com, do not add 'http://' 
 
   -z|--zip <value>
                           Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
                           If you do not know if your organization has a SAS license then contact
                           https://www.sas.com/en_us/software/how-to-buy.html
                           
-                               example: /path/to/SAS_Viya_deployment_data.zip
+                            example: /path/to/SAS_Viya_deployment_data.zip
       [EITHER/OR]          
 
   -l|--playbook-dir <value>
@@ -160,7 +162,7 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
                           For more details on Ingress see the official Kubernetes documentation at
                           https://kubernetes.io/docs/concepts/services-networking/ingress/
                           
-                               example: user-myproject.mylocal.com
+                            example: user-myproject.mylocal.com
     
                                
 ```
@@ -170,11 +172,11 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
 
   -i|--baseimage <value>
                           The Docker image from which the SAS images will build on top of
-                               Default: centos
+                            Default: centos
 
   -t|--basetag <value>
                           The Docker tag for the base image that is being used
-                               Default: latest
+                            Default: latest
 
   -m|--mirror-url <value>
                           The location of the mirror URL.See the Mirror Manager guide at
@@ -183,8 +185,8 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
 
   -p|--platform <value>
                           The type of distribution that this build script is being run on.
-                               Options: [ redhat | suse ]
-                               Default: redhat
+                            Options: [ redhat | suse ]
+                            Default: redhat
 
   -d|--skip-docker-url-validation
                           Skips validating the Docker registry URL
@@ -199,8 +201,8 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
 
   -s|--sas-docker-tag
                           The tag to apply to the images before pushing to the Docker registry.
-                              default: ${recipe_project_version}-${datetime}-${last_commit_sha1}
-                              example: 18.12.0-20181209115304-b197206
+                            default: ${recipe_project_version}-${datetime}-${last_commit_sha1}
+                            example: 18.12.0-20181209115304-b197206
   
   
 ```
