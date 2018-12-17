@@ -172,6 +172,9 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
 
 ### Optional `build.sh` Arguments
 ```
+  -a|--addons \"<value> [<value>]\"
+                          A space separated list of layers to add on to the main SAS image.
+                          See the 'addons' directory for more details on adding access engines and other tools.
 
   -i|--baseimage <value>
                           The Docker image from which the SAS images will build on top of
@@ -184,7 +187,6 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
   -m|--mirror-url <value>
                           The location of the mirror URL.See the Mirror Manager guide at
                           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
-
 
   -p|--platform <value>
                           The type of distribution that this build script is being run on.
