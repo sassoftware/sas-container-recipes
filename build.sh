@@ -56,19 +56,21 @@ function usage() {
     Single Container Arguments:
     ------------------------
 
+        example: ./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip
+
     Required:
 
-        -y|--type single        The type of deployment
-            Options: [ single | multiple | full ]
-            Default: single
-    
-        -z|--zip <value>        Path to the SAS_Viya_deployment_data.zip file
+      -z|--zip <value>        
+          Path to the SAS_Viya_deployment_data.zip file
             example: /path/to/SAS_Viya_deployment_data.zip
+
+      Note: The --type flag is set for a 'single' container deployment by default.
    
     Optional:
 
-        -a|--addons \"<value> [<value>]\"
-            A space separated list of layers to add on to the main SAS image
+      -a|--addons \"<value> [<value>]\"
+          A space separated list of layers to add on to the main SAS image.
+          See the 'addons' directory for more details on adding access engines and other tools.
    
     
     Multi-Container Arguments
@@ -81,43 +83,48 @@ function usage() {
             ./build.sh --type full --docker-registry-namespace mynamespace --docker-registry-url my-registry.docker.com --zip /my/path/to/SAS_Viya_deployment_data.zip
         
 
-      -y|--type [ multiple | full ] 
-                          The type of deployment.
-                            Multiple: SAS Viya Programming Multi-Container deployment with Kubernetes
-                            Full: SAS Visuals based deployment with Kubernetes.
-                            Single: One container for SAS Programming. See the "Single Container" guide section.
+      -y|--type [ multiple | full | single ] 
+          The type of deployment.
+            Multiple: SAS Viya Programming Multi-Container deployment with Kubernetes
+            Full: SAS Visuals based deployment with Kubernetes.
+            Single: One container for SAS Programming. See the "Single Container" guide section.
 
       -n|--docker-registry-namespace <value>
-                          The namespace in the Docker registry where Docker
-                          images will be pushed to. Used to prevent collisions.
-                            example: mynamespace
+          The namespace in the Docker registry where Docker
+          images will be pushed to. Used to prevent collisions.
+            example: mynamespace
 
       -u|--docker-registry-url <value>
-                          URL of the Docker registry where Docker images will be pushed to.
-                            example: 10.12.13.14:5000 or my-registry.docker.com
+          URL of the Docker registry where Docker images will be pushed to.
+            example: 10.12.13.14:5000 or my-registry.docker.com
 
       -z|--zip <value>
-                          Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
-                          If you do not know if your organization has a SAS license then contact
-                          https://www.sas.com/en_us/software/how-to-buy.html
-                          
-                            example: /path/to/SAS_Viya_deployment_data.zip
+          Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
+          If you do not know if your organization has a SAS license then contact
+          https://www.sas.com/en_us/software/how-to-buy.html
+          
+            example: /path/to/SAS_Viya_deployment_data.zip
 
         [ EITHER --zip OR --playbook-dir ]          
 
       -l|--playbook-dir <value>
-                          Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
-                          whereas new deployments utilize the above '--zip' argument. If this is passed in along with
-                          the zip file then this playbook location will take precendence. 
+          Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
+          whereas new deployments utilize the above '--zip' argument. If this is passed in along with
+          the zip file then this playbook location will take precendence. 
 
 
       -v|--virtual-host 
-                          The Kubernetes Ingress path that defines the location of the HTTP endpoint.
-                          For more details on Ingress see the official Kubernetes documentation at
-                          https://kubernetes.io/docs/concepts/services-networking/ingress/
-                          
-                            example: user-myproject.mylocal.com
+          The Kubernetes Ingress path that defines the location of the HTTP endpoint.
+          For more details on Ingress see the official Kubernetes documentation at
+          https://kubernetes.io/docs/concepts/services-networking/ingress/
+          
+            example: user-myproject.mylocal.com
+
     Optional:
+
+      -a|--addons \"<value> [<value>]\"
+          A space separated list of layers to add on to the main SAS image.
+          See the 'addons' directory for more details on adding access engines and other tools.
 
       -i|--baseimage <value>
           The Docker image from which the SAS images will build on top of
@@ -130,7 +137,6 @@ function usage() {
       -m|--mirror-url <value>
           The location of the mirror URL.See the Mirror Manager guide at
           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
-
 
       -p|--platform <value>
           The type of distribution that this build script is being run on.
