@@ -309,7 +309,7 @@ function echo_footer()
 }
 
 function missing_dependencies() {
-    echo -e "One or more dependencies are missing. See the README for prerequisites to the build process."
+    echo -e "The dependency '$1' is missing. See the README for prerequisites to the build process."
     exit 1
 }
 
@@ -554,7 +554,7 @@ echo; # Formatting
 case ${SAS_RECIPE_TYPE} in
     single)
         # Ensure docker is installed
-        docker --version || missing_dependencies
+        docker --version || missing_dependencies docker
 
         copy_deployment_data_zip viya-programming/${SAS_VIYA_CONTAINER}
 
@@ -684,9 +684,9 @@ case ${SAS_RECIPE_TYPE} in
     multiple)
 
         # Check for required dependencies
-        docker --version || missing_dependencies 
-        python --version || missing_dependencies
-        pip    --version || missing_dependencies
+        docker --version || missing_dependencies docker
+        python --version || missing_dependencies python
+        pip    --version || missing_dependencies pip
 
         # Copy the zip or the playbook to project
         copy_deployment_data_zip viya-programming/viya-multi-container
@@ -726,9 +726,9 @@ case ${SAS_RECIPE_TYPE} in
         pushd viya-visuals
 
         # Check for required dependencies
-        docker --version || missing_dependencies 
-        python --version || missing_dependencies
-        pip    --version || missing_dependencies
+        docker --version || missing_dependencies docker
+        python --version || missing_dependencies python
+        pip    --version || missing_dependencies pip
 
         # export the values so that they are picked up by the lower level scipt.
         [[ ! -z ${CHECK_MIRROR_URL} ]] && export CHECK_MIRROR_URL
