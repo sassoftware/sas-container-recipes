@@ -1,7 +1,7 @@
 <div align="center">  
 
     <h1>SAS® Viya® Container Recipes</h1>
-    <img src="docs/sas-container-icon.jpg" alt="SAS Container Recipes Banner" height="200">
+    <img src="docs/sas-container-icon.jpg" alt="SAS Containers Icon" height="200">
 
     <p>
         <p>Framework to build SAS Viya Docker images and create deployments using Kubernetes.</p>
@@ -246,6 +246,8 @@ Finally, go to the host address that's defined in your Kubernetes Ingress to vie
 If there is no response from the host then check the status of the containers by running `kubectl get pods`.
 There should be one or more `sas-viya-<service>` pods, depending on your software order. 
 You may also need to correct the host name on your Ingress Controller and check your Kubernetes configurations.
+
+<img src="docs/sas-logon-screen.png" alt="SAS Logon Screen" style="width: 100%; height: 100%; object-fit: contain;">
 
 
 <br>
