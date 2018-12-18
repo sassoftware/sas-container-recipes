@@ -162,6 +162,9 @@ set +e
 runuser --shell "/bin/sh" \
     --login sas \
     --command "${SASHOME}/bin/sas-bootstrap-config --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token kv write config/launcher-server/global/environment/SASMAKEHOMEDIR 1"
+runuser --shell "/bin/sh" \
+    --login sas \
+    --command "exit_loop=false; while ! \$exit_loop; do httpd_url=\$(${SASHOME}/bin/sas-bootstrap-config --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token catalog serviceurl httpd); if [[ \"\${httpd_url}\" != \"\" ]]; then exit_loop=true; else sleep 5; fi; done"
 set -e
 
 docker_run_sas_services
