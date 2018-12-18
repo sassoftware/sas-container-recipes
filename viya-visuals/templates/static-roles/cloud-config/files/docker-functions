@@ -184,6 +184,7 @@ function docker_run_sas_services()
         echo ${viya_process}
         if [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
            [[ "${viya_process}" != *"sasgpud"* ]] &&
+           [[ "${viya_process}" != *"sas-${SASDEPLOYID}-vault"* ]] &&
            [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-"* ]]; then
             echo "[INFO]  : Starting ${viya_process}"
             ${viya_process} start
@@ -218,6 +219,7 @@ function docker_shutdown_sas_services()
     for viya_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-*); do
         echo ${viya_process}
         if [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
+           [[ "${viya_process}" != *"sas-${SASDEPLOYID}-vault"* ]] &&
            [[ "${viya_process}" != *"sas-${SASDEPLOYID}-consul-"* ]]; then
             echo "[INFO]  : Stopping ${viya_process}"
             ${viya_process} stop
@@ -292,6 +294,7 @@ function docker_check_sas_services()
             elif [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
                [[ "${viya_process}" != *"sas-${SASDEPLOYID}-httpproxy-"* ]] &&
                [[ "${viya_process}" != *"sas-${SASDEPLOYID}-sasgpud-"* ]] &&
+               [[ "${viya_process}" != *"sas-${SASDEPLOYID}-vault"* ]] &&
                [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-"* ]]; then
                 set +e
                 ${viya_process} status >/dev/null
