@@ -111,13 +111,23 @@ docker_start_consul()
         echo_line "Starting local Consul Agent.."
     fi
 
-    docker_create_pid_file
+    consul_pid="/var/run/sas/sas-${SASDEPLOYID}-consul-${SASINSTANCE}.pid"
+    touch "${consul_pid}"
+    chmod 0744 "${consul_pid}"
+    chown sas:sas "${consul_pid}"
 
     # Start Consul
-    exec ${SASHOME}/bin/${SASSERVICENAME} -p ${DOCKERPIDFILE}
+    exec ${SASHOME}/bin/${SASSERVICENAME} -p "${consul_pid}" &
 
     docker_wait_for_consul_leader
 }
+
+###############################################################################
+# Shutdown
+###############################################################################
+
+trap docker_shutdown_sas_services SIGTERM
+trap docker_shutdown_sas_services SIGINT
 
 ###############################################################################
 # Setup Consul
@@ -158,3 +168,14 @@ WATCH
 
 docker_setup_consul
 docker_start_consul
+
+# Start and continually check the ops-agent process.
+${SASHOME}/lib/envesntl/docker-ops-agent &
+
+docker_run_sas_services
+
+###############################################################################
+# Keep the container alive until it is killed
+###############################################################################
+
+docker_check_sas_services
