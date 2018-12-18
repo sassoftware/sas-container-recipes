@@ -2,6 +2,7 @@
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-java
     - consul
     - cloud-config
     ports:
