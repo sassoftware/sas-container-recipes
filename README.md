@@ -1,7 +1,7 @@
 <div align="center">  
 
     <h1>SAS® Viya® Container Recipes</h1>
-    <img src="docs/icon-sas-container-chart.jpg" alt="SAS Container Recipes Banner" height="200">
+    <img src="docs/sas-container-icon.jpg" alt="SAS Container Recipes Banner" height="200">
 
     <p>
         <p>Framework to build SAS Viya Docker images and create deployments using Kubernetes.</p>
