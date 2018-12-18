@@ -49,92 +49,123 @@ fi
 # Functions
 #
 function usage() {
-    echo -e ""
-    echo -e "Framework to deploy SAS Viya environments using containers."
-    echo -e "   https://github.com/sassoftware/sas-container-recipes/wiki"
-    echo -e ""
-    echo -e "Single Container Arguments: "
-    echo -e "------------------------ "
-    echo -e ""
-    echo -e " Required: "
-    echo -e ""
-    echo -e "  -y|--type single        The type of deployment"
-    echo -e "                               Options: [ single | multiple | full ]"
-    echo -e "                               Default: single"
-    echo -e ""
-    echo -e "  -z|--zip <value>        Path to the SAS_Viya_deployment_data.zip file"
-    echo -e "                              example: /path/to/SAS_Viya_deployment_data.zip"
-    echo -e ""
-    echo -e " Optional:"
-    echo -e ""
-    echo -e "  -a|--addons \"<value> [<value>]\"  "
-    echo -e "                          A space separated list of layers to add on to the main SAS image"
-    echo -e ""
-    echo -e ""
-    echo -e "Multi-Container Arguments "
-    echo -e "------------------------ "
-    echo -e ""
-    echo -e " Required: "
-    echo -e ""
-    echo -e "  -y|--type [ multiple | full ] "
-    echo -e "                          The type of deployment"
-    echo -e ""
-    echo -e "  -n|--docker-registry-namespace <value>"
-    echo -e "                          The namespace in the Docker registry where Docker"
-    echo -e "                           images will be pushed to. Used to prevent collisions."
-    echo -e "                               example: mynamespace"
-    echo -e ""
-    echo -e "  -u|--docker-registry-url <value>"
-    echo -e "                          URL of the Docker registry where Docker images will be pushed to."
-    echo -e "                               example: 10.12.13.14:5000 or my-registry.docker.com, do not add 'http://' "
-    echo -e ""
-    echo -e "  -z|--zip <value>"
-    echo -e "                          Path to the SAS_Viya_deployment_data.zip file"
-    echo -e "                               example: /path/to/SAS_Viya_deployment_data.zip"
-    echo -e "      [EITHER/OR]          "
-    echo -e ""
-    echo -e "  -l|--playbook-dir <value>"
-    echo -e "                          Path to the sas_viya_playbook directory. If this is passed in along with the "
-    echo -e "                               SAS_Viya_deployment_data.zip then this will take precedence."
-    echo -e ""
-    echo -e "  -v|--virtual-host "
-    echo -e "                          The Kubernetes ingress path that defines the location of the HTTP endpoint."
-    echo -e "                               example: user-myproject.mylocal.com" 
-    echo -e ""
-    echo -e " Optional: "
-    echo -e ""
-    echo -e "  -i|--baseimage <value>"
-    echo -e "                          The Docker image from which the SAS images will build on top of"
-    echo -e "                               Default: centos"
-    echo -e ""
-    echo -e "  -t|--basetag <value>"
-    echo -e "                          The Docker tag for the base image that is being used"
-    echo -e "                               Default: latest"
-    echo -e ""
-    echo -e "  -m|--mirror-url <value>"
-    echo -e "                          The location of the mirror URL."
-    echo -e "                               See https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html"
-    echo -e "                               for more information on setting up a mirror."
-    echo -e ""
-    echo -e "  -p|--platform <value>"
-    echo -e "                          The type of operating system we are installing on top of"
-    echo -e "                               Options: [ redhat | suse ]"
-    echo -e "                               Default: redhat"
-    echo -e ""
-    echo -e "  -d|--skip-docker-url-validation"
-    echo -e "                          Skips validating the Docker registry URL"
-    echo -e ""
-    echo -e "  -k|--skip-mirror-url-validation"
-    echo -e "                          Skips validating the mirror URL"
-    echo -e ""
-    echo -e "  -e|--environment-setup"
-    echo -e "                          Setup python virtual environment"
-    echo -e ""
-    echo -e "  -s|--sas-docker-tag"
-    echo -e "                          The tag to apply to the images before pushing to the Docker registry"
-    echo -e ""
-    echo -e "  -h|--help               Prints out this message"
-    echo -e ""
+    echo -e "
+    Framework to build SAS Viya Docker images and create deployments using Kubernetes.
+        https://github.com/sassoftware/sas-container-recipes
+
+    Single Container Arguments:
+    ------------------------
+
+        example: ./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip
+
+    Required:
+
+      -z|--zip <value>        
+          Path to the SAS_Viya_deployment_data.zip file
+            example: /path/to/SAS_Viya_deployment_data.zip
+
+      Note: The --type flag is set for a 'single' container deployment by default.
+   
+    Optional:
+
+      -a|--addons \"<value> [<value>]\"
+          A space separated list of layers to add on to the main SAS image.
+          See the 'addons' directory for more details on adding access engines and other tools.
+   
+    
+    Multi-Container Arguments
+    ------------------------ 
+
+        SAS Viya Programming example: 
+            ./build.sh --type multiple --zip /path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
+
+        SAS Viya Visuals example: 
+            ./build.sh --type full --docker-registry-namespace mynamespace --docker-registry-url my-registry.docker.com --zip /my/path/to/SAS_Viya_deployment_data.zip
+        
+
+      -y|--type [ multiple | full | single ] 
+          The type of deployment.
+            Multiple: SAS Viya Programming Multi-Container deployment with Kubernetes
+            Full: SAS Visuals based deployment with Kubernetes.
+            Single: One container for SAS Programming. See the "Single Container" guide section.
+
+      -n|--docker-registry-namespace <value>
+          The namespace in the Docker registry where Docker
+          images will be pushed to. Used to prevent collisions.
+            example: mynamespace
+
+      -u|--docker-registry-url <value>
+          URL of the Docker registry where Docker images will be pushed to.
+            example: 10.12.13.14:5000 or my-registry.docker.com
+
+      -z|--zip <value>
+          Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
+          If you do not know if your organization has a SAS license then contact
+          https://www.sas.com/en_us/software/how-to-buy.html
+          
+            example: /path/to/SAS_Viya_deployment_data.zip
+
+        [ EITHER --zip OR --playbook-dir ]          
+
+      -l|--playbook-dir <value>
+          Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
+          whereas new deployments utilize the above '--zip' argument. If this is passed in along with
+          the zip file then this playbook location will take precendence. 
+
+
+      -v|--virtual-host 
+          The Kubernetes Ingress path that defines the location of the HTTP endpoint.
+          For more details on Ingress see the official Kubernetes documentation at
+          https://kubernetes.io/docs/concepts/services-networking/ingress/
+          
+            example: user-myproject.mylocal.com
+
+    Optional:
+
+      -a|--addons \"<value> [<value>]\"
+          A space separated list of layers to add on to the main SAS image.
+          See the 'addons' directory for more details on adding access engines and other tools.
+
+      -i|--baseimage <value>
+          The Docker image from which the SAS images will build on top of
+            Default: centos
+
+      -t|--basetag <value>
+          The Docker tag for the base image that is being used
+            Default: latest
+
+      -m|--mirror-url <value>
+          The location of the mirror URL.See the Mirror Manager guide at
+          https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
+
+      -p|--platform <value>
+          The type of distribution that this build script is being run on.
+            Options: [ redhat | suse ]
+            Default: redhat
+
+      -d|--skip-docker-url-validation
+          Skips validating the Docker registry URL
+
+      -k|--skip-mirror-url-validation
+          Skips validating the mirror URL from the --mirror-url flag.
+
+      -e|--environment-setup
+          Automatically sets up a python virtual environment called 'env',
+          installs the required packages, and sources the virtual environment
+          during the build process.
+
+      -s|--sas-docker-tag
+          The tag to apply to the images before pushing to the Docker registry.
+            default: \${recipe_project_version}-\${datetime}-\${last_commit_sha1}
+            example: 18.12.0-20181209115304-b197206
+
+      -h|--help
+          Prints out this message. Other resources:
+            GitHub Issues for questions, features, and bug reports:
+                https://github.com/sassoftware/sas-container-recipes/issues
+            GitHub Wiki for FAQs, troubleshooting, and tips.
+                https://github.com/sassoftware/sas-container-recipes/wiki
+    "
 }
 
 function copy_deployment_data_zip()
@@ -161,7 +192,7 @@ function add_layers()
     # Now run through the addons
     # access and auth: added to programming, CAS and compute
     # ide: added to programming
-    docker_reg_location=$(echo "${DOCKER_REGISTRY_URL}" | cut -d'/' -f3 )/"${DOCKER_REGISTRY_NAMESPACE}"
+    docker_reg_location="${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}"
     for sas_image in "${PROJECT_NAME}-programming" "${PROJECT_NAME}-computeserver" "${PROJECT_NAME}-sas-casserver-primary" "${PROJECT_NAME}-httpproxy"; do
         # Make sure the image exists
         # shellcheck disable=SC2086
@@ -407,7 +438,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -u|--docker-url|--docker-registry-url)
             shift # past argument
-            export DOCKER_REGISTRY_URL="$1"
+            export DOCKER_REGISTRY_URL=$(echo $1 | cut -d'/' -f3)
             shift # past value
             ;;
         -n|--docker-namespace|--docker-registry-namespace)
