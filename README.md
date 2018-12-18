@@ -144,7 +144,7 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
 
   -u|--docker-registry-url <value>
                           URL of the Docker registry where Docker images will be pushed to.
-                            example: 10.12.13.14:5000 or my-registry.docker.com, do not add 'http://' 
+                            example: 10.12.13.14:5000 or my-registry.docker.com
 
   -z|--zip <value>
                           Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
@@ -152,7 +152,8 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
                           https://www.sas.com/en_us/software/how-to-buy.html
                           
                             example: /path/to/SAS_Viya_deployment_data.zip
-      [EITHER/OR]          
+
+   [ EITHER --zip OR --playbook-dir ]          
 
   -l|--playbook-dir <value>
                           Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
@@ -172,6 +173,9 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
 
 ### Optional `build.sh` Arguments
 ```
+  -a|--addons \"<value> [<value>]\"
+                          A space separated list of layers to add on to the main SAS image.
+                          See the 'addons' directory for more details on adding access engines and other tools.
 
   -i|--baseimage <value>
                           The Docker image from which the SAS images will build on top of
@@ -184,7 +188,6 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
   -m|--mirror-url <value>
                           The location of the mirror URL.See the Mirror Manager guide at
                           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
-
 
   -p|--platform <value>
                           The type of distribution that this build script is being run on.
