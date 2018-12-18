@@ -22,7 +22,7 @@
 </div>
 
 <br><br>
-Container deployments are more lightweight and don't carry as much
+Container deployments are more lightweight and don't have as much
 overhead as traditional virtual machines. By running a SAS engine inside a 
 container, you can provision resources more efficiently to address a wide variety
 of SAS workloads. Choose a fixed container with specific SAS products for 
@@ -33,27 +33,26 @@ code and scoring accelerators, or specific analytic capabilities.
 
 
 ## Getting Started
-1. Retrieve the `SAS_Viya_deployment_data.zip` file from the your SAS Viya for Linux Software Order Email (SOE). If you don't know if your organization purchased SAS Software then [contact us](https://www.sas.com/en_us/software/how-to-buy.html) or see the [SAS License Assistance](https://support.sas.com/en/technical-support/license-assistance.html) page.
+1. Locate your SAS Viya for Linux Software Order Email (SOE) and retrieve the `SAS_Viya_deployment_data.zip` file from it. If you don't know if your organization purchased SAS Software then [contact us](https://www.sas.com/en_us/software/how-to-buy.html) 
+or see the [SAS License Assistance](https://support.sas.com/en/technical-support/license-assistance.html) page.
 
-    <a href="https://www.sas.com/en_us/software/how-to-buy.html" alt="SAS Software Order">
-        <img src="https://img.shields.io/badge/SAS%20Viya%20License-Try%20It%20Out-lightgrey.svg?&style=for-the-badge"/></a>
+    <a href="https://www.sas.com/en_us/software/how-to-buy.html" alt="SAS Software How to Buy">
+        <img src="https://img.shields.io/badge/Try%20Out%20SAS%20Viya-lightgrey.svg?&colorB=0b5788&style=for-the-badge" alt="SAS Software Order"/></a>
         
-2. Download this project or `git clone git@github.com:sassoftware/sas-container-recipes.git` to use the [`build.sh`](#use-buildsh-to-build-the-images) script.
+2. Download this project or `git clone git@github.com:sassoftware/sas-container-recipes.git`. 
 
-    <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes">
-        <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&style=for-the-badge&label=Latest Stable Release"/></a>    
+    <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes Releases">
+        <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&label=Latest Release" alt="Latest Release"/></a>    
 
 3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
-    a. SAS Programming - [Single Container Quickstart](https://github.com/sassoftware/sas-container-recipes#single-container-quickstart) (**Dockerfile**): tailored towards most individual data scientists and developers.
+    a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in SAS Programming running on a [Single Container](https://github.com/sassoftware/sas-container-recipes#single-container-quickstart).
 
-    b. SAS Programming - [Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers) (**Kubernetes**): For collaborative data science environments with SAS Studio + CAS Massively Parallel Processing (MPP).
-    
-    c. SAS Visuals     - [Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers) (**Kubernetes**): Visual Analytics based collaborative environment
+    b. If you would like an environment suitable for collaborative data science work, then you may be interested in a SAS Programming environment or a SAS Viya environment on [Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers).
 
-4. Check out post-deployment details to suit your use case.
+4. Check out post-deployment details relevant to your deployment.
 
-    [SAS Viya 3.4 for Linux Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=titlepage.htm&docsetVersion=3.4&locale=en) for validation and configurations
+    [SAS Viya 3.4 for Linux Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=titlepage.htm&docsetVersion=3.4&locale=en) for validation and configuration refinements.
   
     [The GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for high level details and FAQs.
   
@@ -68,20 +67,22 @@ code and scoring accelerators, or specific analytic capabilities.
 <br>
 
 
-# SAS® Viya® Programming Quickstart - Single Container
-For most independent data scientists and developers, those want portable on-demand interactive SAS code execusion. 
+# SAS® Viya® Programming - Single Container
+Use these instructions to create a single container for use by independent data scientists and developers to execute SAS code. 
 All code and data should be stored in a persistent location outside the container.
-This environment includes SAS Studio, SAS Workspace Server, and the CAS server to which provide in-memory analytics for Symmetric Multi Processing (SMP).
-
+This environment includes SAS Studio, SAS Workspace Server, and a CAS server which provides in-memory analytics for 
+Symmetric Multi Processing (SMP).
 
 **A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce (community edition)](https://docs.docker.com/install/linux/docker-ce/centos/) is required.**
 
 
 ### Build the Container
-Run `./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip --addons "addons/auth-demo"` to create a user 'sasdemo' with the password 'sasdemo' for product evaluation. 
-A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) is recommended for all build commands.
-Addons can also be used to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, 
-and more in the [`addons/` directory.](https://github.com/sassoftware/sas-container-recipes/tree/master/addons)
+Run `./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip --addons "addons/auth-demo"` to create a user 'sasdemo' 
+with the password 'sasdemo' for product evaluation. 
+A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) is recommended 
+for all build commands.
+You can use addons found in [`addons/` directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) 
+to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more.
                          
 
 ### Run the Container
@@ -278,4 +279,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
