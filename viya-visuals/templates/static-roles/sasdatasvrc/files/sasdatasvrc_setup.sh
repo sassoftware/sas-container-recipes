@@ -16,7 +16,7 @@ set -e
 [[ -z ${SAS_CURRENT_HOST+x} ]] && export SAS_CURRENT_HOST=$(hostname -f)
 
 # In the case of Docker, we need to load up what the instance value is.
-# The instance was saved by the docker_entrypoint.sh so it can be used 
+# The instance was saved by the docker_entrypoint.sh so it can be used
 # by multiple scripts
 _sasuuidname=sas_${SASDEPLOYID}_${SASSERVICENAME}_uuid
 _k8ssasuuid=${PG_VOLUME}/${SAS_CURRENT_HOST}_${_sasuuidname}
@@ -41,6 +41,8 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -z ${SAS_DEFAULT_PGPWD+x} ]] && exit 1
 [[ -z ${SAS_INSTANCE_PGUSER+x} ]] && export SAS_INSTANCE_PGUSER="${SAS_DEFAULT_PGUSER}"
 [[ -z ${SAS_INSTANCE_PGPWD+x} ]] && export SAS_INSTANCE_PGPWD="${SAS_DEFAULT_PGPWD}"
+[[ -z ${SAS_DATAMINING_USER+x} ]]     && export SAS_DATAMINING_USER="dataMiningWarehouse"
+[[ -z ${SAS_DATAMINING_PASSWORD+x} ]] && export SAS_DATAMINING_PASSWORD="${SAS_DEFAULT_PGPWD}"
 [[ -z ${SASPOSTGRESREPLUSER+x} ]] && export SASPOSTGRESREPLUSER="replication"
 [[ -z ${SASPOSTGRESREPLPWD+x} ]] && exit 1
 [[ -z ${PG_DATADIR+x} ]] && export PG_DATADIR="${PG_VOLUME}/${SASINSTANCE}"
@@ -297,11 +299,16 @@ function create_user {
 
     echo_line "Updating password for user ${dbuser}..."
     ${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c "ALTER ROLE \"${dbuser}\" WITH PASSWORD '${dbpwd}'"
+
+    if [[ "${dbuser}" == "${SAS_DATAMINING_USER}" ]]; then
+        ${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c "ALTER ROLE \"${dbuser}\" WITH NOINHERIT"
+    fi
 }
 
 function create_database {
     create_user ${SAS_DEFAULT_PGUSER} ${SAS_DEFAULT_PGPWD}
     create_user ${SAS_INSTANCE_PGUSER} ${SAS_INSTANCE_PGPWD}
+    create_user ${SAS_DATAMINING_USER} ${SAS_DATAMINING_PASSWORD}
 
     echo_line "setting up database ${SAS_DBNAME}"
 
