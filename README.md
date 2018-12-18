@@ -33,16 +33,11 @@ code and scoring accelerators, or specific analytic capabilities.
 
 
 ## Getting Started
-1. Locate your SAS Viya for Linux Software Order Email (SOE) and retrieve the `SAS_Viya_deployment_data.zip` file from it. If you don't know if your organization purchased SAS Software then [contact us](https://www.sas.com/en_us/software/how-to-buy.html) 
-or see the [SAS License Assistance](https://support.sas.com/en/technical-support/license-assistance.html) page.
-
-    <a href="https://www.sas.com/en_us/software/how-to-buy.html" alt="SAS Software How to Buy">
-        <img src="https://img.shields.io/badge/Try%20Out%20SAS%20Viya-lightgrey.svg?&colorB=0b5788&style=for-the-badge" alt="SAS Software Order"/></a>
-        
-2. Download this project or `git clone git@github.com:sassoftware/sas-container-recipes.git`. 
-
-    <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes Releases">
-        <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&label=Latest Release" alt="Latest Release"/></a>    
+1. Locate your SAS Viya for Linux Software Order Email (SOE) and retrieve the `SAS_Viya_deployment_data.zip` file from it or [**start a free trial**](https://www.sas.com/trials.html) of SAS Viya. Not sure if your organization purchased SAS Software? [Contact Us](https://www.sas.com/en_us/software/how-to-buy.html) or get [SAS License Assistance](https://support.sas.com/en/technical-support/license-assistance.html).
+    
+2. Download the latest <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes Releases">
+        <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&" alt="Latest Release"/></a> 
+or `git clone git@github.com:sassoftware/sas-container-recipes.git`. 
 
 3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
