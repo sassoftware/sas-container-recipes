@@ -46,6 +46,8 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -z ${SAS_DEFAULT_PGPWD+x} ]]      && exit 1
 [[ -z ${SAS_INSTANCE_PGUSER+x} ]]    && export SAS_INSTANCE_PGUSER="${SAS_DEFAULT_PGUSER}"
 [[ -z ${SAS_INSTANCE_PGPWD+x} ]]     && export SAS_INSTANCE_PGPWD="${SAS_DEFAULT_PGPWD}"
+[[ -z ${SAS_DATAMINING_USER+x} ]]     && export SAS_DATAMINING_USER="dataMiningWarehouse"
+[[ -z ${SAS_DATAMINING_PASSWORD+x} ]] && export SAS_DATAMINING_PASSWORD="${SAS_DEFAULT_PGPWD}"
 [[ -z ${SASPOSTGRESREPLUSER+x} ]]    && export SASPOSTGRESREPLUSER="replication"
 [[ -z ${SASPOSTGRESREPLPWD+x} ]]     && exit 1
 [[ -z ${SASPOSTGRESRUNDIR+x} ]]      && export SASPOSTGRESRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
@@ -168,6 +170,8 @@ if [ $? = 0 ]; then
   ${BOOTSTRAP_CONFIG} kv write "config/application/postgres/password" ${SAS_DEFAULT_PGPWD}
   ${BOOTSTRAP_CONFIG} kv write "config/application/sas/database/${SASSERVICENAME}/username" ${SAS_INSTANCE_PGUSER}
   ${BOOTSTRAP_CONFIG} kv write "config/application/sas/database/${SASSERVICENAME}/password" ${SAS_INSTANCE_PGPWD}
+  ${BOOTSTRAP_CONFIG} kv write "config/application/sas.datamining.warehouse/dbUser" ${SAS_DATAMINING_USER}
+  ${BOOTSTRAP_CONFIG} kv write "config/application/sas.datamining.warehouse/dbPassword"  ${SAS_DATAMINING_PASSWORD}
 
   # In the postgresql-setup script the writing to the following locations was already done on the primary
   # config/application/sas/database/${SASSERVICENAME}/primary ${SAS_CURRENT_HOST}

@@ -27,6 +27,7 @@
       secrets:
         - "SAS_DEFAULT_PGPWD=Go4thsas"
         - "SASPOSTGRESREPLPWD=Go4thsas"
+        - "SAS_DATAMINING_PASSWORD=Go4thsas"
       volumes:
         - "data=/database/data"
         - "log=/opt/sas/viya/config/var/log"
