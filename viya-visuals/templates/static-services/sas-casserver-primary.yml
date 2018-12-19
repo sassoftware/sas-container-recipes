@@ -18,6 +18,10 @@
       environment:
         - "SERVICE_NAME=cascontroller"
         - "CASCFG_MODE=smp"
+        - "CASENV_ADMIN_USER=sasdemo"
+        - "CASENV_CAS_VIRTUAL_PROTO=http"
+        - "CASENV_CASDATADIR=/cas/data"
+        - "CASENV_CASPERMSTORE=/cas/permstore"
       resources:
         limits:
         - "memory=12000Mi"
