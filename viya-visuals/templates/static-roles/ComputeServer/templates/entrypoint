@@ -126,8 +126,10 @@ echo "export LAUNCHER_OPTIONS=\"${LAUNCHER_OPTIONS}\"" >> ${SASCONFIG}/etc/sysco
 # Make sure the following are setup correctly
 mkdir -vp --mode=2777 ${SASCONFIG}/var/log/compsrv/${SASINSTANCE}
 chown -vR sas:sas ${SASCONFIG}/var/log/compsrv
-mkdir -vp --mode=0777 ${SASCONFIG}/var/spool/compsrv/${SASINSTANCE}
-mkdir -vp --mode=0777 ${SASCONFIG}/var/tmp/compsrv/${SASINSTANCE}
+mkdir -vp ${SASCONFIG}/var/spool/compsrv/${SASINSTANCE}
+chmod -v 0777 ${SASCONFIG}/var/spool/compsrv/${SASINSTANCE}
+mkdir -vp ${SASCONFIG}/var/tmp/compsrv/${SASINSTANCE}
+chmod -v 0777 ${SASCONFIG}/var/tmp/compsrv/${SASINSTANCE}
 
 ###############################################################################
 # Post Deploy
