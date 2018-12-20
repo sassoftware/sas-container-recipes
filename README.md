@@ -59,20 +59,23 @@ or `git clone git@github.com:sassoftware/sas-container-recipes.git`.
 <br>
 
 
-# SAS® Viya® Programming - Single Container
-Use these instructions to create a single container for use by independent data scientists and developers to execute SAS code. 
-All code and data should be stored in a persistent location outside the container.
-This environment includes SAS Studio, SAS Workspace Server, and a CAS server which provides in-memory analytics for 
-Symmetric Multi Processing (SMP).
+# For a Single User - SAS® Viya® Programming running on a Single Container
+Use these instructions to create a SAS® Viya® Programming single container for 
+an independent data scientist or developer to execute SAS code. All code and 
+data should be stored in a persistent location outside the container.
+This environment includes SAS Studio, SAS Workspace Server, and a CAS server, 
+which provides in-memory analytics for Symmetric Multi Processing (SMP).
+
 
 **A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce (community edition)](https://docs.docker.com/install/linux/docker-ce/centos/) is required.**
 
 
 ### Build the Container
-Run `./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip --addons "addons/auth-demo"` to create a user 'sasdemo' 
-with the password 'sasdemo' for product evaluation. 
-A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) is recommended 
-for all build commands.
+Run `./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip --addons "addons/auth-demo"` 
+to create a user 'sasdemo' with the password 'sasdemo' for product evaluation. 
+A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
+is recommended for all build commands.
+
 You can use addons found in [`addons/` directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) 
 to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more.
                          
@@ -98,20 +101,31 @@ Finally go to the address `http://_host-name-where-docker-is-running_:8081` and 
 
 
 <br>
+
 ---
----
+
 <br>
 
+# For one or more users - SAS® Viya® Programming or SAS® Viya® full environment running on multiple containers
+Use these instructions to build multiple Docker images to run **SAS Viya Programming**  
+or  **SAS® Viya®** full environments for one or more users. Leverage Kubernetes 
+to create the deployments which can use SMP or MPP CAS, which provide in-memory analytics.
+<br><br>
+A programming-only deployment supports data scientists and programmers who use 
+SAS Studio or direct programming interfaces such as Python or REST APIs. 
+Understand that this type of deployment does not include SAS Drive, 
+SAS Environment Manager, and the complete suite of services that are 
+included with a full deployment. Therefore, make sure that you are providing 
+your users with the features that they require.
 
-# Multiple SAS® Viya®  Containers
-Build multiple Docker images of **SAS Viya Programming** environments **or** other **SAS Viya Visuals** environments. Leverage Kubernetes to create the deployments, create SMP or MPP CAS, and run these environments in interactive mode.
+
 
 ### Prerequisites
-- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) such as v18+ (community edition) is required.
-- Python2 or Python3 and python-pip are required to build
-- **Access to a Docker registry**: The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
-- [Kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed and access to a Kubernetes environment. This is required for the deployment step but it is not required for the build step.
-- A local mirror of the SAS software is **strongly recommended**. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
+- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) such as v18+ (community edition) 
+- Python2 or Python3 and python-pip
+- **Access to a Docker registry:** The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
+- Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed: required for the deployment step but not required for the build step.
+- **Strongly recommended:** A local mirror of the SAS software. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
 
 ### Required `build.sh` Arguments
 ```    
@@ -119,7 +133,7 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
         SAS Viya Programming example: 
             ./build.sh --type multiple --zip /path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
 
-        SAS Viya Visuals example: 
+        SAS Viya Full example: 
             ./build.sh --type full --docker-registry-namespace mynamespace --docker-registry-url my-registry.docker.com --zip /my/path/to/SAS_Viya_deployment_data.zip
         
 
@@ -206,8 +220,8 @@ Build multiple Docker images of **SAS Viya Programming** environments **or** oth
 ```
 
 ### After running `build.sh`
-* For a SAS Viya Programming deployment the Kubernetes manifests are located at `viya-programming/viya-multi-container/working/manifests/kubernetes`
-* For a SAS Viya Visuals deployment the Kubernetes manifests are located at `viya-visuals/working/manifests/kubernetes/`
+* For a SAS Viya Programming deployment, the Kubernetes manifests are located at `viya-programming/viya-multi-container/working/manifests/kubernetes`
+* For a SAS Viya Full deployment, the Kubernetes manifests are located at `viya-visuals/working/manifests/kubernetes/`
 
 Choose between Symmetric Multi Processing (SMP) or Massively Parallel Processing (MPP) and run a 
 `kubectl create --file` or `kubectl replace --file` on the manifests inside the kubernetes directory.
@@ -238,7 +252,7 @@ Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other ser
 For more details on Ingress Controllers see [the official Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/).
 
 Finally, go to the host address that's defined in your Kubernetes Ingress to view your SAS product(s). 
-If there is no response from the host then check the status of the containers by running `kubectl get pods`.
+If there is no response from the host, then check the status of the containers by running `kubectl get pods`.
 There should be one or more `sas-viya-<service>` pods, depending on your software order. 
 You may also need to correct the host name on your Ingress Controller and check your Kubernetes configurations.
 
