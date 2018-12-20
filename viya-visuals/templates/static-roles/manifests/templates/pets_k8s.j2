@@ -59,6 +59,10 @@ spec:
         - name: CASCFG_MODE
           value: "mpp"
 {% endif %}
+{% if item.key == "sas-casserver-primary" %}
+        - name: SERVICE_NAME
+          value: "cascontroller"
+{% endif %}
 {% if SECURE_CONSUL %}
         - name: SECURE_CONSUL
           value: "true"
