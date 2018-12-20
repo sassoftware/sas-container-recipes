@@ -28,13 +28,30 @@ spec:
         - name: DEPLOYMENT_NAME
           value: "{{ settings.project_name }}"
 {% if services.consul is defined %}
-        - name: CONSUL_HTTP_ADDR
-          value: "http://{{ settings.project_name }}-consul:8500"
+        - name: CONSUL_SERVER_LIST
+          value: "{{ settings.project_name }}-consul"
 {% endif %}
+        - name: CASCFG_MODE
+          value: "mpp"
         - name: SERVICE_NAME
           value: "casworker"
         - name: CASCONTROLLERHOST
           value: "{{ settings.project_name }}-sas-casserver-primary" 
+{% if SECURE_CONSUL %}
+        - name: SECURE_CONSUL
+          value: "true"
+{% endif %}
+{% if services.consul is defined %}
+{%   for environment in services.consul.deployment_overrides.environment %}
+{%     if environment.split('=')[0] == 'CONSUL_DATACENTER_NAME' %}
+        - name: {{ environment.split('=')[0] }}
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: {{ environment.split('=')[0] | lower }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
 {% if item.value.deployment_overrides.environment is defined and item.value.deployment_overrides.environment %}
 {%   for environment in item.value.deployment_overrides.environment %}
 {%     if "SERVICE_NAME" not in environment %}
@@ -43,6 +60,17 @@ spec:
             configMapKeyRef:
               name: {{ settings.project_name }}-{{ item.key }}
               key: {{ environment.split('=')[0] | lower }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+{% if services.consul is defined %}
+{%   for secrets in services.consul.deployment_overrides.secrets %}
+{%     if secrets.split('=')[0] != 'CONSUL_TOKENS_MANAGEMENT' %}
+        - name: {{ secrets.split('=')[0] }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: {{ secrets.split('=')[0] | lower }}
 {%     endif %}
 {%   endfor %}
 {% endif %}
@@ -57,17 +85,6 @@ spec:
             secretKeyRef:
               name: {{ settings.project_name }}-{{ item.key | lower }}
               key: {{ secrets.split('=')[0] | lower }}
-{%   endfor %}
-{% endif %}
-{% if services.consul is defined %}
-{%   for secrets in services.consul.deployment_overrides.secrets %}
-{%     if secrets.split('=')[0] != 'CONSUL_TOKENS_MANAGEMENT' %}
-        - name: {{ secrets.split('=')[0] }}
-          valueFrom:
-            secretKeyRef:
-              name: {{ settings.project_name }}-consul
-              key: {{ secrets.split('=')[0] | lower }}
-{%     endif %}
 {%   endfor %}
 {% endif %}
 {% if item.value.deployment_overrides.resources is defined and item.value.deployment_overrides.resources %}
