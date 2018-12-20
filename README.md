@@ -60,7 +60,7 @@ or `git clone git@github.com:sassoftware/sas-container-recipes.git`.
 
 
 # For a Single User - SAS® Viya® Programming running on a Single Container
-Use these instructions to create a SAS® Viya® Programming single container for 
+Use these instructions to create a SAS Viya Programming single container for 
 an independent data scientist or developer to execute SAS code. All code and 
 data should be stored in a persistent location outside the container.
 This environment includes SAS Studio, SAS Workspace Server, and a CAS server, 
@@ -107,9 +107,7 @@ Finally go to the address `http://_host-name-where-docker-is-running_:8081` and 
 <br>
 
 # For one or more users - SAS® Viya® Programming or SAS® Viya® full environment running on multiple containers
-Use these instructions to build multiple Docker images to run **SAS Viya Programming**  
-or  **SAS® Viya®** full environments for one or more users. Leverage Kubernetes 
-to create the deployments which can use SMP or MPP CAS, which provide in-memory analytics.
+Use these instructions to build multiple Docker images to run **SAS Viya Programming**  or  **SAS Viya** full environments for one or more users. Leverage Kubernetes to create the deployments which can use SMP or MPP CAS, which provide in-memory analytics.
 <br><br>
 A programming-only deployment supports data scientists and programmers who use 
 SAS Studio or direct programming interfaces such as Python or REST APIs. 
@@ -179,6 +177,7 @@ your users with the features that they require.
 
 ### Optional `build.sh` Arguments
 ```
+
   -a|--addons \"<value> [<value>]\"
                           A space separated list of layers to add on to the main SAS image.
                           See the 'addons' directory for more details on adding access engines and other tools.
