@@ -33,7 +33,7 @@ code and scoring accelerators, or specific analytic capabilities.
     
 2. Download the latest <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes Releases">
         <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&" alt="Latest Release"/></a> 
-or `git clone git@github.com:sassoftware/sas-container-recipes.git`. 
+or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
 3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
@@ -71,10 +71,12 @@ which provides in-memory analytics for Symmetric Multi Processing (SMP).
 
 
 ### Build the Container
-Run `./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip --addons "addons/auth-demo"` 
-to create a user 'sasdemo' with the password 'sasdemo' for product evaluation. 
+Run the following to create a user 'sasdemo' with the password 'sasdemo' for product evaluation.
 A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
 is recommended for all build commands.
+```
+  ./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip --addons "addons/auth-demo"
+```
 
 You can use addons found in [`addons/` directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) 
 to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more.
@@ -85,7 +87,7 @@ to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more
 ```
 
   docker run --detach --rm --hostname sas-viya-programming \
-    --env CASENV_CAS_VIRTUAL_HOST=<host-name-where-docker-is-running> \
+    --env CASENV_CAS_VIRTUAL_HOST=<my_host_address> \
     --env CASENV_CAS_VIRTUAL_PORT=8081 \
     --publish-all \
     --publish 8081:80 \
@@ -97,7 +99,7 @@ to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more
 Use the `docker images` command to see what images were built then use `docker ps` to list the running containers.
 
 
-Finally go to the address `http://_host-name-where-docker-is-running_:8081` and start using SAS Studio!
+Finally go to the address `http://<myhostname>:8081` and start using SAS Studio!
 
 
 <br>
@@ -106,8 +108,8 @@ Finally go to the address `http://_host-name-where-docker-is-running_:8081` and 
 
 <br>
 
-# For one or more users - SAS® Viya® Programming or SAS® Viya® full environment running on multiple containers
-Use these instructions to build multiple Docker images to run **SAS Viya Programming**  or  **SAS Viya** full environments for one or more users. Leverage Kubernetes to create the deployments which can use SMP or MPP CAS, which provide in-memory analytics.
+# For one or more users - SAS® Viya® Programming or SAS® Viya® Full environment running on multiple containers
+Use these instructions to build multiple Docker images to run **SAS Viya Programming**  or  **SAS Viya Full** environments for one or more users. Leverage Kubernetes to create the deployments which can use SMP or MPP CAS, which provide in-memory analytics.
 <br><br>
 A programming-only deployment supports data scientists and programmers who use 
 SAS Studio or direct programming interfaces such as Python or REST APIs. 
@@ -128,42 +130,28 @@ your users with the features that they require.
 ### Required `build.sh` Arguments
 ```    
 
-        SAS Viya Programming example: 
+        SAS Viya Programming example:
             ./build.sh --type multiple --zip /path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
 
         SAS Viya Full example: 
-            ./build.sh --type full --docker-registry-namespace mynamespace --docker-registry-url my-registry.docker.com --zip /my/path/to/SAS_Viya_deployment_data.zip
+            ./build.sh --type full --docker-registry-namespace myuniquename --docker-registry-url myregistry.myhost.com --zip /my/path/to/SAS_Viya_deployment_data.zip
         
 
   -y|--type [ multiple | full ] 
                           The type of deployment.
-                            Multiple: SAS Viya Programming Multi-Container deployment with Kubernetes
-                            Full: SAS Visuals based deployment with Kubernetes.
-                            Single: One container for SAS Programming. See the "Single Container" guide section.
+                            multiple: SAS Viya Programming Multi-Container deployment with Kubernetes
+                            full: SAS Visuals based deployment with Kubernetes.
+                            single: One container for SAS Programming. See the "Single Container" guide section.
 
   -n|--docker-registry-namespace <value>
-                          The namespace in the Docker registry where Docker
-                          images will be pushed to. Used to prevent collisions.
-                            example: mynamespace
+                          The namespace in the Docker registry where Docker images 
+                          will be pushed to. Use a unique name to prevent collisions.
+                            example: myuniquename
 
   -u|--docker-registry-url <value>
                           URL of the Docker registry where Docker images will be pushed to.
-                            example: 10.12.13.14:5000 or my-registry.docker.com
-
-  -z|--zip <value>
-                          Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
-                          If you do not know if your organization has a SAS license then contact
-                          https://www.sas.com/en_us/software/how-to-buy.html
-                          
-                            example: /path/to/SAS_Viya_deployment_data.zip
-
-   [ EITHER --zip OR --playbook-dir ]          
-
-  -l|--playbook-dir <value>
-                          Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
-                          whereas new deployments utilize the above '--zip' argument. If this is passed in along with
-                          the zip file then this playbook location will take precendence. 
-
+                          This is required for Kubernetes 
+                            example: 10.12.13.14:5000 or myregistry.myhost.com
 
   -v|--virtual-host 
                           The Kubernetes Ingress path that defines the location of the HTTP endpoint.
@@ -171,6 +159,23 @@ your users with the features that they require.
                           https://kubernetes.io/docs/concepts/services-networking/ingress/
                           
                             example: user-myproject.mylocal.com
+
+  -z|--zip <value>
+                          Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
+                            example: /my/path/to/SAS_Viya_deployment_data.zip
+                            
+                            SAS License Assistance: https://support.sas.com/en/technical-support/license-assistance.html
+                            SAS Software Purchase: https://www.sas.com/en_us/software/how-to-buy.html
+                            SAS Software Trial: https://www.sas.com/en_us/trials.html
+                          
+                            
+
+   [ EITHER --zip OR --playbook-dir ]          
+
+  -l|--playbook-dir <value>
+                          Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
+                          whereas new deployments utilize the above '--zip' argument. If this is passed in along with
+                          the zip file then this playbook location will take precendence.
     
                                
 ```
@@ -230,16 +235,21 @@ Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other ser
 
     - Kubernetes Ingress Example -
 
+  apiVersion: extensions/v1beta1
+  kind: Ingress
+  metadata:
+    namespace: <myuniquename>
+    name: example ingress
   spec:
     rules:
-    - host: sas-viya-http.mycompany.com
+    - host: sas-viya-http.<mycompany>.com
       http:
         paths:
         - backend:
             serviceName: sas-viya-httpproxy
             servicePort: 80
           
-    - host: sas-viya-cas.mycompany.com
+    - host: sas-viya-cas.<mycompany>.com
       http:
         paths:
         - backend:
