@@ -167,10 +167,9 @@ your users with the features that they require.
                             SAS License Assistance: https://support.sas.com/en/technical-support/license-assistance.html
                             SAS Software Purchase: https://www.sas.com/en_us/software/how-to-buy.html
                             SAS Software Trial: https://www.sas.com/en_us/trials.html
-                          
+                        
                             
-
-   [ EITHER --zip OR --playbook-dir ]          
+   ** [ EITHER --zip OR --playbook-dir ]  **
 
   -l|--playbook-dir <value>
                           Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
