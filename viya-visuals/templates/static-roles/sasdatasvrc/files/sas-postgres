@@ -46,8 +46,8 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -z ${SAS_DEFAULT_PGPWD+x} ]]      && exit 1
 [[ -z ${SAS_INSTANCE_PGUSER+x} ]]    && export SAS_INSTANCE_PGUSER="${SAS_DEFAULT_PGUSER}"
 [[ -z ${SAS_INSTANCE_PGPWD+x} ]]     && export SAS_INSTANCE_PGPWD="${SAS_DEFAULT_PGPWD}"
-[[ -z ${SAS_DATAMINING_USER+x} ]]     && export SAS_DATAMINING_USER="dataMiningWarehouse"
-[[ -z ${SAS_DATAMINING_PASSWORD+x} ]] && export SAS_DATAMINING_PASSWORD="${SAS_DEFAULT_PGPWD}"
+[[ -z ${SAS_DATAMINING_USER+x} ]]     && export SAS_DATAMINING_USER="dataminingwarehouse"
+[[ -z ${SAS_DATAMINING_PASSWORD+x} ]] && exit 1
 [[ -z ${SASPOSTGRESREPLUSER+x} ]]    && export SASPOSTGRESREPLUSER="replication"
 [[ -z ${SASPOSTGRESREPLPWD+x} ]]     && exit 1
 [[ -z ${SASPOSTGRESRUNDIR+x} ]]      && export SASPOSTGRESRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
