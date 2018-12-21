@@ -60,6 +60,17 @@ if [[ -n ${SAS_CA_CERT} ]]; then
     echo "${SAS_CA_CERT}" | base64 --decode --ignore-garbage > ${SASCONFIG}/etc/pki/private/SAS_CA_Certificate.pem
 fi
 
+# For the services that are defining CUSTOM_LD_LIBRARY_PATH, unset the LD_LIBRARY_PATH
+# The list of services looks to be
+# - /opt/sas/viya/home/bin/sas-importvaspk
+# - /opt/sas/viya/home/bin/sas-reports
+# - /opt/sas/viya/home/bin/sas-report-data
+# - /opt/sas/viya/home/bin/sas-report-renderer
+
+for script in $(grep -l CUSTOM_LD_LIBRARY_PATH /opt/sas/viya/home/bin/*); do 
+    sed -i  '/^CUSTOM_LD_LIBRARY_PATH/i unset LD_LIBRARY_PATH' ${script}
+done
+
 # The following are used in sas-start-functions
 servicename=${SASSERVICENAME}
 servicecontext=${SASSERVICECONTEXT}
