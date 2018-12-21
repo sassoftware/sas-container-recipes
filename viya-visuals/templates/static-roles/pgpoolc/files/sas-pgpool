@@ -48,6 +48,8 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -z ${SASPGPOOLOIDDIR+x} ]]     && export SASPGPOOLOIDDIR="${SASLOGDIR}/oiddir"
 [[ -z ${SASPGPOOLRUNDIR+x} ]]     && export SASPGPOOLRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
 [[ -z ${SASPGPOOLPIDFILE+x} ]]    && export SASPGPOOLPIDFILE="sas-${SASDEPLOYID}-${SASSERVICENAME}-${SASINSTANCE}.pid"
+[[ -z ${SAS_DATAMINING_USER+x} ]]     && export SAS_DATAMINING_USER="dataminingwarehouse"
+[[ -z ${SAS_DATAMINING_PASSWORD+x} ]] && exit 1
 
 save_env sas SASLOGROOT
 save_env pgpool SASLOGDIR
@@ -463,6 +465,7 @@ export PCPPASSFILE=${pgpool_pcppass_conf_file}
 echo_line "[pgpool] Create the pool_password file"
 if [ ! -f ${SASPGPOOLCONFIGDIR}/pool_passwd ]; then
     ${SASHOME}/bin/pg_md5 -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -m -u ${SAS_DEFAULT_PGUSER} ${SAS_DEFAULT_PGPWD}
+    ${SASHOME}/bin/pg_md5 -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -m -u ${SAS_DATAMINING_USER} ${SAS_DATAMINING_PASSWORD}
     if [[ ${SASPOSTGRESREPLICATION} == 'true' ]]; then
         ${SASHOME}/bin/pg_md5 -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -m -u ${SASPOSTGRESREPLUSER} ${SASPOSTGRESREPLPWD}
     fi
