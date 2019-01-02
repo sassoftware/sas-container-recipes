@@ -23,8 +23,8 @@
         requests:
         - "memory=512Mi"
       secrets:
-        - "SAS_DEFAULT_PGPWD=Go4thsas"
-        - "SASPOSTGRESREPLPWD=Go4thsas"
-        - "SAS_DATAMINING_PASSWORD=Go4thsas"
+        - "SAS_DEFAULT_PGPWD=ChangePassword"
+        - "SASPOSTGRESREPLPWD=ChangePassword"
+        - "SAS_DATAMINING_PASSWORD=ChangePassword"
       volumes:
         - "log=/opt/sas/viya/config/var/log"

@@ -7,6 +7,18 @@ set -e
 # Variables
 ###############################################################################
 
+# Take in a name of a password variable and then see if that variable is set.
+# If the password is not set return an error
+function is_password_empty() {
+    passwd_to_test=$1
+    # Expand the variable in a variable
+    # https://stackoverflow.com/questions/14049057/bash-expand-variable-in-a-variable
+    if [[ -z ${!passwd_to_test+x} ]]; then
+        echo "[ERROR] : Value for '${passwd_to_test}' was not provided...exiting"
+        exit 1
+    fi
+}
+
 [[ -z ${SASDEPLOYID+x} ]]      && export SASDEPLOYID=viya
 [[ -z ${SASHOME+x} ]]          && export SASHOME=/opt/sas/viya/home
 [[ -z ${SASCONFIG+x} ]]        && export SASCONFIG=/opt/sas/${SASDEPLOYID}/config
@@ -16,7 +28,7 @@ set -e
 [[ -z ${SAS_CURRENT_HOST+x} ]] && export SAS_CURRENT_HOST=$(hostname -f)
 
 # In the case of Docker, we need to load up what the instance value is.
-# The instance was saved by the docker_entrypoint.sh so it can be used 
+# The instance was saved by the docker_entrypoint.sh so it can be used
 # by multiple scripts
 _sasuuidname=sas_${SASDEPLOYID}_${SASSERVICENAME}_uuid
 _k8ssasuuid=${PG_VOLUME}/${SAS_CURRENT_HOST}_${_sasuuidname}
@@ -37,10 +49,10 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -z ${SASCONSULDIR+x} ]]        && export SASCONSULDIR="${SASHOME}"
 [[ -z ${SASPGPOOLCONFIGDIR+x} ]]  && export SASPGPOOLCONFIGDIR="${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}"
 [[ -z ${SAS_DEFAULT_PGUSER+x} ]]  && export SAS_DEFAULT_PGUSER="dbmsowner"
-[[ -z ${SAS_DEFAULT_PGPWD+x} ]]   && exit 1
+is_password_empty SAS_DEFAULT_PGPWD
 [[ -z ${SASPOSTGRESREPLICATION+x} ]] && export SASPOSTGRESREPLICATION=false
 [[ -z ${SASPOSTGRESREPLUSER+x} ]] && export SASPOSTGRESREPLUSER="replication"
-[[ -z ${SASPOSTGRESREPLPWD+x} ]]  && exit 1
+is_password_empty SASPOSTGRESREPLPWD
 [[ -z ${SAS_PCPUSER+x} ]]         && export SAS_PCPUSER="dbmsowner"
 [[ -z ${SAS_PCPPWD+x} ]]          && export SAS_PCPPWD="${SAS_DEFAULT_PGPWD}"
 [[ -z ${SASPGPOOLOWNER+x} ]]      && export SASPGPOOLOWNER="saspgpool"
@@ -49,7 +61,7 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -z ${SASPGPOOLRUNDIR+x} ]]     && export SASPGPOOLRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
 [[ -z ${SASPGPOOLPIDFILE+x} ]]    && export SASPGPOOLPIDFILE="sas-${SASDEPLOYID}-${SASSERVICENAME}-${SASINSTANCE}.pid"
 [[ -z ${SAS_DATAMINING_USER+x} ]]     && export SAS_DATAMINING_USER="dataminingwarehouse"
-[[ -z ${SAS_DATAMINING_PASSWORD+x} ]] && exit 1
+is_password_empty SAS_DATAMINING_PASSWORD
 
 save_env sas SASLOGROOT
 save_env pgpool SASLOGDIR
@@ -509,5 +521,5 @@ ${_bootstrap_config} agent check register \
     --name "pgpoolport"  \
     --interval 30s --timeout 5s \
     --tcp "${SAS_CURRENT_HOST}:${SAS_DATASERVER_POOL_COMMON_CONNECTION_PORT}"
-#    --script "${SASHOME}/libexec/sasdatasvrc/script/sds_consul_health_check.sh" 
+#    --script "${SASHOME}/libexec/sasdatasvrc/script/sds_consul_health_check.sh"
 
