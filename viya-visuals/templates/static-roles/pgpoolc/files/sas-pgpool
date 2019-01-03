@@ -60,7 +60,7 @@ is_password_empty SASPOSTGRESREPLPWD
 [[ -z ${SASPGPOOLOIDDIR+x} ]]     && export SASPGPOOLOIDDIR="${SASLOGDIR}/oiddir"
 [[ -z ${SASPGPOOLRUNDIR+x} ]]     && export SASPGPOOLRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
 [[ -z ${SASPGPOOLPIDFILE+x} ]]    && export SASPGPOOLPIDFILE="sas-${SASDEPLOYID}-${SASSERVICENAME}-${SASINSTANCE}.pid"
-[[ -z ${SAS_DATAMINING_USER+x} ]]     && export SAS_DATAMINING_USER="dataminingwarehouse"
+[[ -z ${SAS_DATAMINING_USER+x} ]] && export SAS_DATAMINING_USER="dataminingwarehouse"
 is_password_empty SAS_DATAMINING_PASSWORD
 
 save_env sas SASLOGROOT
