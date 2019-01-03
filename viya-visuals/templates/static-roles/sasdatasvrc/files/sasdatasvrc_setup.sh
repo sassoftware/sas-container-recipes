@@ -7,6 +7,18 @@ set -e
 # Variables
 ###############################################################################
 
+# Take in a name of a password variable and then see if that variable is set.
+# If the password is not set return an error
+function is_password_empty() {
+    passwd_to_test=$1
+    # Expand the variable in a variable
+    # https://stackoverflow.com/questions/14049057/bash-expand-variable-in-a-variable
+    if [[ -z ${!passwd_to_test+x} ]]; then
+        echo "[ERROR] : Value for '${passwd_to_test}' was not provided...exiting"
+        exit 1
+    fi
+}
+
 [[ -z ${SASDEPLOYID+x} ]]      && export SASDEPLOYID=viya
 [[ -z ${SASHOME+x} ]]          && export SASHOME=/opt/sas/viya/home
 [[ -z ${SASCONFIG+x} ]]        && export SASCONFIG=/opt/sas/${SASDEPLOYID}/config
@@ -30,27 +42,27 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -e ${_sysconfig} ]] && source ${_sysconfig}
 
 # set standard environment if not already set
-[[ -z ${SASLOGROOT+x} ]] && export SASLOGROOT="${SASCONFIG}/var/log"
-[[ -z ${SASLOGDIR+x} ]] && export SASLOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICENAME}"
-[[ -z ${SASCONSULDIR+x} ]] && export SASCONSULDIR="${SASHOME}"
-[[ -z ${SASPOSTGRESPORT+x} ]] && export SASPOSTGRESPORT=5432
-[[ -z ${SASPOSTGRESOWNER+x} ]] && export SASPOSTGRESOWNER="postgres"
-[[ -z ${SASPOSTGRESGROUP+x} ]] && export SASPOSTGRESGROUP="postgres"
-[[ -z ${SAS_DBNAME+x} ]] && export SAS_DBNAME="SharedServices"
-[[ -z ${SAS_DEFAULT_PGUSER+x} ]] && export SAS_DEFAULT_PGUSER="dbmsowner"
-[[ -z ${SAS_DEFAULT_PGPWD+x} ]] && exit 1
-[[ -z ${SAS_INSTANCE_PGUSER+x} ]] && export SAS_INSTANCE_PGUSER="${SAS_DEFAULT_PGUSER}"
-[[ -z ${SAS_INSTANCE_PGPWD+x} ]] && export SAS_INSTANCE_PGPWD="${SAS_DEFAULT_PGPWD}"
-[[ -z ${SAS_DATAMINING_USER+x} ]]     && export SAS_DATAMINING_USER="dataminingwarehouse"
-[[ -z ${SAS_DATAMINING_PASSWORD+x} ]] && exit 1
-[[ -z ${SASPOSTGRESREPLUSER+x} ]] && export SASPOSTGRESREPLUSER="replication"
-[[ -z ${SASPOSTGRESREPLPWD+x} ]] && exit 1
-[[ -z ${PG_DATADIR+x} ]] && export PG_DATADIR="${PG_VOLUME}/${SASINSTANCE}"
+[[ -z ${SASLOGROOT+x} ]]           && export SASLOGROOT="${SASCONFIG}/var/log"
+[[ -z ${SASLOGDIR+x} ]]            && export SASLOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICENAME}"
+[[ -z ${SASCONSULDIR+x} ]]         && export SASCONSULDIR="${SASHOME}"
+[[ -z ${SASPOSTGRESPORT+x} ]]      && export SASPOSTGRESPORT=5432
+[[ -z ${SASPOSTGRESOWNER+x} ]]     && export SASPOSTGRESOWNER="postgres"
+[[ -z ${SASPOSTGRESGROUP+x} ]]     && export SASPOSTGRESGROUP="postgres"
+[[ -z ${SAS_DBNAME+x} ]]           && export SAS_DBNAME="SharedServices"
+[[ -z ${SAS_DEFAULT_PGUSER+x} ]]   && export SAS_DEFAULT_PGUSER="dbmsowner"
+is_password_empty SAS_DEFAULT_PGPWD
+[[ -z ${SAS_INSTANCE_PGUSER+x} ]]  && export SAS_INSTANCE_PGUSER="${SAS_DEFAULT_PGUSER}"
+[[ -z ${SAS_INSTANCE_PGPWD+x} ]]   && export SAS_INSTANCE_PGPWD="${SAS_DEFAULT_PGPWD}"
+[[ -z ${SAS_DATAMINING_USER+x} ]]  && export SAS_DATAMINING_USER="dataminingwarehouse"
+is_password_empty SAS_DATAMINING_PASSWORD
+[[ -z ${SASPOSTGRESREPLUSER+x} ]]  && export SASPOSTGRESREPLUSER="replication"
+is_password_empty SASPOSTGRESREPLPWD
+[[ -z ${PG_DATADIR+x} ]]           && export PG_DATADIR="${PG_VOLUME}/${SASINSTANCE}"
 [[ -z ${SASPOSTGRESCONFIGDIR+x} ]] && export SASPOSTGRESCONFIGDIR="${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}"
-[[ -z ${SASPOSTGRESRUNDIR+x} ]] && export SASPOSTGRESRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
-[[ -z ${SASPOSTGRESPIDFILE+x} ]] && export SASPOSTGRESPIDFILE="sas-${SASDEPLOYID}-${SASSERVICENAME}-${SASINSTANCE}.pid"
-[[ -z ${SASPOSTGRESDBSIZE+x} ]] && export SASPOSTGRESDBSIZE="large"
-[[ -z ${SASPOSTGRESPRIMARY+x} ]] && export SASPOSTGRESPRIMARY=false
+[[ -z ${SASPOSTGRESRUNDIR+x} ]]    && export SASPOSTGRESRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
+[[ -z ${SASPOSTGRESPIDFILE+x} ]]   && export SASPOSTGRESPIDFILE="sas-${SASDEPLOYID}-${SASSERVICENAME}-${SASINSTANCE}.pid"
+[[ -z ${SASPOSTGRESDBSIZE+x} ]]    && export SASPOSTGRESDBSIZE="large"
+[[ -z ${SASPOSTGRESPRIMARY+x} ]]   && export SASPOSTGRESPRIMARY=false
 
 POSTGRESQL_CONFIG_DEFN="sas.dataserver.conf"
 POSTGRESQL_CONF_SECTIONS="CONNECTIONSETTINGS,SECURITYANDAUTHENTICATION,TCPKEEPALIVES,MEMORY,DISK,KERNELRESOURCEUSAGE,COSTBASEDVACUUMDELAY,BACKGROUNDWRITER,ASYNCHRONOUSBEHAVIOR,WRITEAHEADLOGSETTINGS,WRITEAHEADLOGCHECKPOINTS,WRITEAHEADLOGARCHIVING,REPLICATIONSENDINGSERVER,REPLICATIONMASTERSERVER,REPLICATIONSTANDBYSERVERS,PLANNERMETHODCONFIGURATION,PLANNERCOSTCONSTANTS,GENETICQUERYOPTIMIZER,OTHERPLANNEROPTIONS,WHERETOLOG,WHENTOLOG,WHATTOLOG,QUERYINDEXSTATISTICSCOLLECTOR,STATISTICSMONITORING,AUTOVACUUMPARAMETERS,CLIENTCONNECTIONDEFAULTSSTATEMENTBEHAVIOR,CLIENTCONNECTIONDEFAULTSLOCALEANDFORMATTING,CLIENTCONNECTIONDEFAULTSOTHERDEFAULTS,LOCKMANAGEMENT,PREVIOUSPOSTGRESQLVERSIONS,OTHERPLATFORMSANDCLIENTS,ERRORHANDLING"
