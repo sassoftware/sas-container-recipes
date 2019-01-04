@@ -131,6 +131,33 @@ chmod -v 0777 ${SASCONFIG}/var/spool/compsrv/${SASINSTANCE}
 mkdir -vp ${SASCONFIG}/var/tmp/compsrv/${SASINSTANCE}
 chmod -v 0777 ${SASCONFIG}/var/tmp/compsrv/${SASINSTANCE}
 
+#
+# Take a collection of configurations and cat them into the usermod files.
+#
+
+n_sasserver_count=$(find /tmp -type f -name "*_sasserver.sh" | wc -c)
+if (( ${n_sasserver_count} > 0 )); then
+    for str_sasserver in $(ls -1 /tmp/*_sasserver.sh); do
+        echo "Dumping contents of \"${str_sasserver}\" into ${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv-docker"
+        echo "" >> ${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv-docker
+        cat ${str_sasserver} >> ${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv-docker
+        echo "" >> ${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv-docker
+    done
+fi
+
+# Modify the sysconfig file to process the docker file if present
+echo "" >> ${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv
+echo "[[ -e ${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv-docker ]] && source ${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv-docker " >> ${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv
+echo "[[ -e ${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv-usermods ]] && source ${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv-usermods " >> ${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv
+echo "" >> ${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv
+
+if [ -d "${SASINSIDE}" ]; then
+    if [ -f ${SASINSIDE}/sas-compsrv-usermods ]; then
+        echo "Overriding \"${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv-usermods\" with \"${SASINSIDE}/sas-compsrv-usermods\""
+        cp ${SASINSIDE}/sas-compsrv-usermods ${SASCONFIG}/etc/sysconfig/compsrv/${SASINSTANCE}/sas-compsrv-usermods
+    fi
+fi
+
 ###############################################################################
 # Post Deploy
 ###############################################################################
