@@ -345,6 +345,7 @@ sed -i "/-- Process a user specific file if available/i \ " ${SAS_CAS_CONFIG}/et
 # setting up the image but before processing any settings in the usermods file
 
 sed -i '/cas_usermods.settings/i [ -f \$DIR/cas_docker.settings ]   && source \$DIR/cas_docker.settings' ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.settings
+sed -i '/\\$DIR\/cas_usermods.settings/i [ -f \\$DIR/cas_docker.settings ]   && source \\$DIR/cas_docker.settings' ${SASHOME}/bin/cas_setup.sh
 
 # Update the sas-cas sysconfig file to process the Docker settings post what was done
 # setting up the image but before processing any settings in the usermods file
