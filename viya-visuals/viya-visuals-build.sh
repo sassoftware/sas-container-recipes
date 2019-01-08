@@ -242,7 +242,7 @@ function setup_environment() {
         if [[ $PYTHON_MAJOR_VER -eq "2" ]]; then
             # Install ansible-container
             pip install --upgrade pip==9.0.3
-            pip install ansible-container[docker]
+            pip install ansible-container[docker]==0.9.2
             echo "Updating the client timeout for the created virtual environment."
             echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> ${VIRTUAL_ENV}/lib/python2.7/site-packages/container/docker/templates/conductor-local-dockerfile.j2
         elif [[ $PYTHON_MAJOR_VER -eq "3" ]]; then
@@ -250,7 +250,7 @@ function setup_environment() {
             echo "Updating requirements file for python3 compatibility..."
             sed -i.bak '/ruamel.ordereddict==0.4.13/d' ./templates/requirements.txt
             pip install --upgrade pip==9.0.3
-            pip install -e git+https://github.com/ansible/ansible-container.git@develop#egg=ansible-container[docker]
+            pip install -e git+https://github.com/ansible/ansible-container.git@release-0.9.2#egg=ansible-container[docker]
             echo "Updating the client timeout for the created virtual environment."
             echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> ${VIRTUAL_ENV}/src/ansible-container/container/docker/templates/conductor-local-dockerfile.j2
         fi
