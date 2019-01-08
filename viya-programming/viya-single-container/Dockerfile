@@ -71,10 +71,12 @@ RUN set -e; \
         yum install --assumeyes java-1.8.0-openjdk libselinux-python which; \
         yum clean all; \
         rm --verbose --recursive --force /root/.cache /var/cache/yum; \
+        rm --verbose /etc/security/limits.d/20-nproc.conf; \
     elif [ "$PLATFORM" = "suse" ]; then \
         zypper --non-interactive install -y java-1_8_0-openjdk tar curl hostname iproute2 which gzip; \
         zypper clean --all; \
         rm --verbose --recursive --force /var/cache/zypp; \
+        sed -i 's/^*/#*/g' /etc/security/limits.conf; \
     fi;
 
 #
@@ -125,7 +127,7 @@ RUN set -e; \
         yum install --assumeyes python iproute openssh-clients initscripts sudo; \
     elif [ "$PLATFORM" = "suse" ]; then \
         #Ansible needs \
-        zypper --non-interactive install -y python-setuptools python-pyOpenSSL; \
+        zypper --non-interactive install -y python-setuptools python-pyOpenSSL python-devel; \
         #Playbook needs \
         zypper --non-interactive install -y openssh sudo; \
         easy_install pip; \
