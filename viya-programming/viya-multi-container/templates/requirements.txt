@@ -17,7 +17,7 @@ pyasn1==0.4.4
 pyasn1-modules==0.2.2
 python-dateutil==2.7.3
 python-string-utils==0.6.0
-PyYAML==3.13
+PyYAML==4.2b1
 requests==2.20.1
 rsa==3.4.2
 ruamel.yaml==0.15.51
