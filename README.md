@@ -97,9 +97,8 @@ After the container is built then instructions for how to run the image will be 
 
     
 ```
-Where `<VERSION-TAG>` depends on the recipe version and build date (example: `19.0.1-20190109112555-48f98d8`).
-Use the `docker images` command to see what images were built and what the most recent tag is,
-then use `docker ps` to list the running containers.
+Use the `docker images` command to see what images were built and what the most recent tag is (example: tag `19.0.1-20190109112555-48f98d8`).
+Once the docker run command is completed, use docker ps to list the running container.
 
 
 Finally go to the address `http://<myhostname>:8081` and start using SAS Studio!
