@@ -84,6 +84,7 @@ to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more
 
 ### Run the Container
 
+After the container is built then instructions for how to run the image will be printed out.
 ```
 
   docker run --detach --rm --hostname sas-viya-programming \
@@ -92,11 +93,13 @@ to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more
     --publish-all \
     --publish 8081:80 \
     --name sas-viya-programming \
-    sas-viya-programming:latest
+    sas-viya-programming:<VERSION-TAG>
 
     
 ```
-Use the `docker images` command to see what images were built then use `docker ps` to list the running containers.
+Where `<VERSION-TAG>` depends on the recipe version and build date (example: `19.0.1-20190109112555-48f98d8`).
+Use the `docker images` command to see what images were built and what the most recent tag is,
+then use `docker ps` to list the running containers.
 
 
 Finally go to the address `http://<myhostname>:8081` and start using SAS Studio!
