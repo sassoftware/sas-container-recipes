@@ -43,13 +43,20 @@ or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
 4. Check out post-deployment details relevant to your deployment.
 
-    [SAS Viya 3.4 for Linux Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=titlepage.htm&docsetVersion=3.4&locale=en) for validation and configuration refinements.
+    [SAS Viya 3.4 for Containers Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0dkr&docsetTarget=titlepage.htm&docsetVersion=3.4&locale=en) for `viya-programming` documentation.
+
+    [SAS Viya 3.4 for Linux Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=titlepage.htm&docsetVersion=3.4&locale=en) for `viya-visuals` documentation.
   
-    [The GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for high level details and FAQs.
-  
-    [SAS Administrators Support](https://support.sas.com/en/sas-administrators.html) for System Administrators.
+    [SAS Administrators Support](https://support.sas.com/en/sas-administrators.html) for System Admins.
     
-    [GitHub Issues Page](https://github.com/sassoftware/sas-container-recipes/issues) to ask questions, request features, and more.
+    [GitHub Project Issues Page](https://github.com/sassoftware/sas-container-recipes/issues) for questions and project improvements.
+    
+    [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki) for high level details and FAQs.
+
+    [Official Kubernetes Documentation](https://kubernetes.io/docs/home/) for general Kubernetes help.
+
+    [Official Docker Documentation](https://docs.docker.com/) for general Docker help.
+
 
 
 <br>
@@ -275,12 +282,6 @@ You may also need to correct the host name on your Ingress Controller and check 
 
 <br>
 
-
-## Other Documentation
-Check out our [Wiki](https://github.com/sassoftware/sas-container-recipes/wiki) for specific details.
-Have a quick question? Open a ticket in the "issues" tab to get a response from the maintainers and 
-other community members. If you're unsure about something just submit an issue anyways. We're glad to help!
-If you have a specific license question head over to the [support portal](https://support.sas.com/en/support-home.html).
 
 ## Contributing
 Have something cool to share? SAS gladly accepts pull requests on GitHub! 
