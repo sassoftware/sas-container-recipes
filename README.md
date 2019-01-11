@@ -283,10 +283,6 @@ You may also need to correct the host name on your Ingress Controller and check 
 <br>
 
 
-## Contributing
-Have something cool to share? SAS gladly accepts pull requests on GitHub! 
-For more details see [CONTRIBUTING.md](https://github.com/sassoftware/sas-container-recipes/blob/master/docs/CONTRIBUTING.md).
-
 ## Copyright
 
 Copyright 2018 SAS Institute Inc.
