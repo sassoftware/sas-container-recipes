@@ -7,8 +7,6 @@ assignees: ''
 
 ---
 
-Reporting Security Issues: We take security seriously. If you discover a security issue then please DO NOT file a public issue, instead send a report to support@sas.com.
-
 **Describe the bug**
 A clear and concise description of what the bug is.
 
