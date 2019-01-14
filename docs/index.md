@@ -1,3 +1,6 @@
+--
+layout: default
+--
 # SAS Container Recipes
 At the forefront of digital transformation is the need for IT to support data science teams, while 
 taking advantage of cost-efficient cloud infrastructures. There is also an insatiable need for flexibility 
