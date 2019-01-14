@@ -27,7 +27,6 @@ with specific products or configurations – e.g, access to data sources, in-dat
 code and scoring accelerators, or specific analytic capabilities.
 <br><br>
 
-
 ## Getting Started
 1. Locate your SAS Viya for Linux Software Order Email (SOE) and retrieve the `SAS_Viya_deployment_data.zip` file from it or [**start a free trial**](https://www.sas.com/en_us/trials.html) of SAS Viya. Not sure if your organization purchased SAS Software? [Contact Us](https://www.sas.com/en_us/software/how-to-buy.html) or get [SAS License Assistance](https://support.sas.com/en/technical-support/license-assistance.html).
     
