@@ -40,7 +40,7 @@ function usage()
 #
 sas_recipe_version=$(cat ${PWD}/../../docs/VERSION)
 sas_datetime=$(date "+%Y%m%d%H%M%S")
-sas_sha1=$(git rev-parse --short HEAD)
+sas_sha1=$(git rev-parse --short HEAD || echo "no-git-sha")
 
 unameSystem="$(uname -s)"
 case "${unameSystem}" in
