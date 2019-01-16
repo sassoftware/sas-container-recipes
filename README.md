@@ -53,7 +53,7 @@ or `git clone git@github.com:sassoftware/sas-container-recipes.git`
     [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki) for high level details and FAQs.
 
     [Official Kubernetes Documentation](https://kubernetes.io/docs/home/) for general Kubernetes help.
-
+    
     [Official Docker Documentation](https://docs.docker.com/) for general Docker help.
 
 
@@ -104,9 +104,7 @@ After the container is built then instructions for how to run the image will be 
     
 ```
 Use the `docker images` command to see what images were built and what the most recent tag is (example: tag `19.0.1-20190109112555-48f98d8`).
-Once the docker run command is completed, use docker ps to list the running container.
-
-
+Once the docker run command is completed, use docker ps to list the running container.  
 Finally go to the address `http://<myhostname>:8081` and start using SAS Studio!
 
 
@@ -217,11 +215,6 @@ your users with the features that they require.
   -k|--skip-mirror-url-validation
                           Skips validating the mirror URL from the --mirror-url flag.
 
-  -e|--environment-setup
-                          Automatically sets up a python virtual environment called 'env',
-                          installs the required packages, and sources the virtual environment
-                          during the build process.
-
   -s|--sas-docker-tag
                           The tag to apply to the images before pushing to the Docker registry.
                             default: ${recipe_project_version}-${datetime}-${last_commit_sha1}
@@ -236,8 +229,10 @@ your users with the features that they require.
 
 Choose between Symmetric Multi Processing (SMP) or Massively Parallel Processing (MPP) and run a 
 `kubectl create --file` or `kubectl replace --file` on the manifests inside the kubernetes directory.
+- Note: If you are running the build process process multiple times then use `kubectl replace` to add your new manifests instead of `kubectl create`.
 
 Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other services using `kubectl edit ingress`.
+
 ```
 
     - Kubernetes Ingress Example -
@@ -269,7 +264,8 @@ For more details on Ingress Controllers see [the official Kubernetes documentati
 
 Finally, go to the host address that's defined in your Kubernetes Ingress to view your SAS product(s). 
 If there is no response from the host, then check the status of the containers by running `kubectl get pods`.
-There should be one or more `sas-viya-<service>` pods, depending on your software order. 
+There should be one or more `sas-viya-<service>` pods, depending on your software order. It may take several
+minutes to see a login screen, even with all pods showing a "Running" status.
 You may also need to correct the host name on your Ingress Controller and check your Kubernetes configurations.
 
 <img src="docs/sas-logon-screen.png" alt="SAS Logon Screen" style="width: 100%; height: 100%; object-fit: contain;">

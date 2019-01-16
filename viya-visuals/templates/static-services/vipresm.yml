@@ -15,10 +15,13 @@
       environment:
         - "SAS_DEBUG=1"
     deployment_overrides:
-      volumes:
-        - "log=/opt/sas/viya/config/var/log"
+      environment:
+        - "SASLICENSEDIR=/opt/sas/viya/config/etc/sysconfig/sas-esm-service/default"
+        - "SASLICENSEFILE=license.txt"
       secrets:
         - "SETINIT_TEXT_ENC="
+      volumes:
+        - "log=/opt/sas/viya/config/var/log"
       resources:
         limits:
         - "memory=10Gi"
