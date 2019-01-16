@@ -143,7 +143,7 @@ function get_playbook() {
 function setup_defaults() {
     sas_recipe_version=$(cat templates/VERSION)
     sas_datetime=$(date "+%Y%m%d%H%M%S")
-    sas_sha1=$(git rev-parse --short HEAD)
+    sas_sha1=$(git rev-parse --short HEAD || echo "no-git-sha")
 
     [[ -z ${SAS_RECIPE_TYPE+x} ]]              && SAS_RECIPE_TYPE=single
     [[ -z ${CHECK_MIRROR_URL+x} ]]             && CHECK_MIRROR_URL=true

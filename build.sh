@@ -575,7 +575,10 @@ if [[ "${SAS_RECIPE_TYPE}" != "single" ]]; then
         echo "[INFO]  : Running curl against Docker registry URL: https://${DOCKER_REGISTRY_URL}"
         set +e
         set -x
-        response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "https://${DOCKER_REGISTRY_URL}")
+        # Curl to see if the registry exists - just a high level test.
+        # This does not mean that you can authenticate with and push to the registry.
+        # The --insecure flag is a workaround to get a 200 status code from a registry using a self-signed cert.
+        response=$(curl --write-out "%{http_code}" --insecure --silent --location --head --output /dev/null "https://${DOCKER_REGISTRY_URL}")
         set +x
         set -e
         if [ "${response}" != "200" ]; then
