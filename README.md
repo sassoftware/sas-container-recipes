@@ -84,8 +84,10 @@ is recommended for all build commands.
   ./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip --addons "addons/auth-demo"
 ```
 
-You can use addons found in [`addons/` directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) 
-to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more.
+You can use addons found in the [`addons/` directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) 
+to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more. 
+For each addon that will be included with the build, review the readme associated 
+with the addon for important information and any possible prerequisite requirements.
                          
 
 ### Run the Container
