@@ -21,8 +21,7 @@
 Container deployments are more lightweight and don't have as much
 overhead as traditional virtual machines. By running a SAS engine inside a 
 container, you can provision resources more efficiently to address a wide variety
-of SAS workloads. Choose a fixed container with specific SAS products for 
-immediate deployment or select a base SAS recipe, and create custom containers 
+of SAS workloads. Select a base SAS recipe and create custom containers 
 with specific products or configurations – e.g, access to data sources, in-database
 code and scoring accelerators, or specific analytic capabilities.
 <br><br>
