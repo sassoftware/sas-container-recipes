@@ -130,7 +130,7 @@ your users with the features that they require.
 
 
 ### Prerequisites
-- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) such as v18+ (community edition) 
+- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) such as v18+ (community edition) on Linux
 - Python2 or Python3 and python-pip
 - **Access to a Docker registry:** The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
 - Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed: required for the deployment step but not required for the build step.
