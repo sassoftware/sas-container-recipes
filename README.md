@@ -24,6 +24,8 @@ container, you can provision resources more efficiently to address a wide variet
 of SAS workloads. Select a base SAS recipe and create custom containers 
 with specific products or configurations – e.g, access to data sources, in-database
 code and scoring accelerators, or specific analytic capabilities.
+For more information see [SAS for Containers](http://support.sas.com/rnd/containers/).
+
 <br><br>
 
 ## Getting Started
