@@ -29,34 +29,28 @@ For more information see [SAS for Containers](http://support.sas.com/rnd/contain
 <br><br>
 
 ## Getting Started
+
 1. Locate your SAS Viya for Linux Software Order Email (SOE) and retrieve the `SAS_Viya_deployment_data.zip` file from it or [**start a free trial**](https://www.sas.com/en_us/trials.html) of SAS Viya. Not sure if your organization purchased SAS Software? [Contact Us](https://www.sas.com/en_us/software/how-to-buy.html) or get [SAS License Assistance](https://support.sas.com/en/technical-support/license-assistance.html).
     
 2. Download the latest <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes Releases">
         <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&" alt="Latest Release"/></a> 
 or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
-3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
+3. Choose your flavor and follow the recipe to build, test, and deploy your container(s). For specific details and pre-build options see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki).
 
-    a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in SAS Programming running on a [Single Container](https://github.com/sassoftware/sas-container-recipes#single-container-quickstart).
+    a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in [SAS Programming running on a Single Container](https://github.com/sassoftware/sas-container-recipes#single-container-quickstart).
 
-    b. If you would like an environment suitable for collaborative data science work, then you may be interested in a SAS programming-only environment or a SAS Viya full deployment on [Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers).
+    b. If you would like an environment suitable for collaborative data science work, then you may be interested in a SAS programming-only deployment or a SAS Viya full [deployment on Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers).
 
-4. Check out post-deployment details relevant to your deployment.
 
-    [SAS Viya 3.4 for Containers Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0dkr&docsetTarget=titlepage.htm&docsetVersion=3.4&locale=en) for `viya-programming` documentation.
+### Other Resources
+[GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki) for all documentation.
 
-    [SAS Viya 3.4 for Linux Deployment Guide](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=titlepage.htm&docsetVersion=3.4&locale=en) for `viya-visuals` documentation.
-  
-    [SAS Administrators Support](https://support.sas.com/en/sas-administrators.html) for System Admins.
-    
-    [GitHub Project Issues Page](https://github.com/sassoftware/sas-container-recipes/issues) for questions and project improvements.
-    
-    [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki) for high level details and FAQs.
+[GitHub Project Issues Page](https://github.com/sassoftware/sas-container-recipes/issues) for questions and project improvements.
 
-    [Official Kubernetes Documentation](https://kubernetes.io/docs/home/) for general Kubernetes help.
+[Official Kubernetes Documentation](https://kubernetes.io/docs/home/) for general Kubernetes help.
 
-    [Official Docker Documentation](https://docs.docker.com/) for general Docker help.
-
+[Official Docker Documentation](https://docs.docker.com/) for general Docker help.
 
 
 <br>
@@ -110,6 +104,7 @@ Once the docker run command is completed, use docker ps to list the running cont
 
 Finally go to the address `http://<myhostname>:8081` and start using SAS Studio!
 
+For more info see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki).
 
 <br>
 
@@ -275,6 +270,7 @@ You may also need to correct the host name on your Ingress Controller and check 
 
 <img src="docs/sas-logon-screen.png" alt="SAS Logon Screen" style="width: 100%; height: 100%; object-fit: contain;">
 
+For more info see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki).
 
 <br>
 
