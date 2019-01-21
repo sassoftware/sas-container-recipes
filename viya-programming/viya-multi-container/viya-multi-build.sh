@@ -38,7 +38,6 @@ function usage()
 #
 # Set some defaults
 #
-sas_recipe_version=$(cat ${PWD}/../../docs/VERSION)
 sas_datetime=$(date "+%Y%m%d%H%M%S")
 sas_sha1=$(git rev-parse --short HEAD || echo "no-git-sha")
 
@@ -60,6 +59,7 @@ esac
 [[ -z ${DOCKER_REGISTRY_URL+x} ]]          && DOCKER_REGISTRY_URL=http://docker.company.com
 [[ -z ${DOCKER_REGISTRY_NAMESPACE+x} ]]    && DOCKER_REGISTRY_NAMESPACE=sas
 [[ -z ${DOCKER_REGISTRY_TYPE+x} ]]         && DOCKER_REGISTRY_TYPE=default
+[[ -z ${SAS_RECIPE_VERSION+x} ]]           && SAS_RECIPE_VERSION=$(cat ${PWD}/../../docs/VERSION)
 
 #
 # Set options
@@ -299,7 +299,7 @@ echo "BASETAG: ${BASETAG}" >> everything.yml
 echo "PLATFORM: ${PLATFORM}" >> everything.yml
 echo "DOCKER_REGISTRY_URL: ${DOCKER_REGISTRY_URL}" >> everything.yml
 echo "DOCKER_REGISTRY_NAMESPACE: ${DOCKER_REGISTRY_NAMESPACE}" >> everything.yml
-echo "SAS_RECIPE_VERSION: ${sas_recipe_version}" >> everything.yml
+echo "SAS_RECIPE_VERSION: ${SAS_RECIPE_VERSION}" >> everything.yml
 echo "" >> everything.yml
 echo "DEPLOYMENT_ID: viya" >> everything.yml
 echo "SPRE_DEPLOYMENT_ID: spre" >> everything.yml
@@ -473,7 +473,7 @@ if [[ ! -z ${SKIP_PUSH+x} ]]; then
     exit 0
 fi
 
-[[ -z ${SAS_DOCKER_TAG+x} ]] && export SAS_DOCKER_TAG=${sas_recipe_version}-${sas_datetime}-${sas_sha1}
+[[ -z ${SAS_DOCKER_TAG+x} ]] && export SAS_DOCKER_TAG=${SAS_RECIPE_VERSION}-${sas_datetime}-${sas_sha1}
 
 echo
 echo "==================================="
