@@ -7,16 +7,10 @@ We take security seriously. If you discover a security issue then please
 
 #### Reporting Problems or Improvements
 Check our [GitHub issues section](https://github.com/sassoftware/sas-container-recipes/issues)
-to see if the problem or suggestion exists before submitting a new issue. 
-**Be sure to replace sensitive or protected info with a censor defining what is being hidden.**
-For example, replace `My Key: mysupersecretkey` with `My Key: <HIDDEN-KEY>`
-
-When submitting a problem please include the following:
-1. SAS Container Recipes version
-2. Steps to reproduce the issue including the build and run commands used
-3. What's the expected result?
-4. What's the actual result?
-5. Additional context and screenshots
+to see if the problem or suggestion exists before submitting a new issue. When creating a new 
+issue there are options to select a ticket format: "Flag Security Issue", "Report Problem", 
+or "Suggest Improvement". These standard ticket templates assist in communicating all relevant
+details, or you can select "Open a regular issue" to skip the ticket formats.
 
 #### Pull Requests
 Have something cool to share? SAS gladly accepts pull requests on GitHub!
