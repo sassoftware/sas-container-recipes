@@ -14,9 +14,9 @@ settings:
   - everything.yml
   #
   #
-  # Set the name of the project. Defaults to basename of the project directory.
+  # Set the name of the project. Defaults to sas-viya.
   # For built services, concatenated with service name to form the built image name.
-  project_name: "sas-viya"
+  project_name: "{{ PROJECT_NAME }}"
 
   # The deployment_output_path is mounted to the Conductor container, and the
   # `run` and `deployment` commands then write generated Ansible playbooks to it.
