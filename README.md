@@ -203,7 +203,7 @@ your users with the features that they require.
                           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
   -p|--platform <value>
-                          The type of distribution that this build script is being run on.
+                           The type of distribution of the image defined by the "baseimage" option.
                             Options: [ redhat | suse ]
                             Default: redhat
 
