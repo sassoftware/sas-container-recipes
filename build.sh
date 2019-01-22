@@ -361,7 +361,7 @@ function echo_experimental()
 
 export SAS_RECIPE_VERSION=$(cat docs/VERSION)
 sas_datetime=$(date "+%Y%m%d%H%M%S")
-sas_sha1=$(git rev-parse --short HEAD || echo "no-git-sha")
+sas_sha1=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
 
 [[ -z ${OPERATING_SYSTEM+x} ]]   && OPERATING_SYSTEM=linux
 [[ -z ${SAS_RECIPE_TYPE+x} ]]    && SAS_RECIPE_TYPE=single
