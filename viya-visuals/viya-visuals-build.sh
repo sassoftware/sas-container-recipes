@@ -167,15 +167,15 @@ function get_playbook() {
 }
 
 function setup_defaults() {
-    sas_recipe_version=$(cat templates/VERSION)
     sas_datetime=$(date "+%Y%m%d%H%M%S")
     sas_sha1=$(git rev-parse --short HEAD || echo "no-git-sha")
 
     [[ -z ${SAS_RECIPE_TYPE+x} ]]              && SAS_RECIPE_TYPE=single
+    [[ -z ${SAS_RECIPE_VERSION+x} ]]           && SAS_RECIPE_VERSION=$(cat ../docs/VERSION)
     [[ -z ${CHECK_MIRROR_URL+x} ]]             && CHECK_MIRROR_URL=true
     [[ -z ${CHECK_DOCKER_URL+x} ]]             && CHECK_DOCKER_URL=true
     [[ -z ${SETUP_VIRTUAL_ENVIRONMENT+x} ]]    && SETUP_VIRTUAL_ENVIRONMENT=true
-    [[ -z ${SAS_DOCKER_TAG+x} ]]               && SAS_DOCKER_TAG=${sas_recipe_version}-${sas_datetime}-${sas_sha1}
+    [[ -z ${SAS_DOCKER_TAG+x} ]]               && SAS_DOCKER_TAG=${SAS_RECIPE_VERSION}-${sas_datetime}-${sas_sha1}
     [[ -z ${PROJECT_NAME+x} ]]                 && PROJECT_NAME=sas-viya
     [[ -z ${BASEIMAGE+x} ]]                    && BASEIMAGE=centos
     [[ -z ${BASETAG+x} ]]                      && BASETAG="7"
@@ -411,7 +411,7 @@ EOL
     echo "PLATFORM: ${PLATFORM}" >> everything.yml
     echo "DOCKER_REGISTRY_URL: ${DOCKER_REGISTRY_URL}" >> everything.yml
     echo "DOCKER_REGISTRY_NAMESPACE: ${DOCKER_REGISTRY_NAMESPACE}" >> everything.yml
-    echo "SAS_RECIPE_VERSION: ${sas_recipe_version}" >> everything.yml
+    echo "SAS_RECIPE_VERSION: ${SAS_RECIPE_VERSION}" >> everything.yml
     echo "" >> everything.yml
     echo "DEPLOYMENT_ID: viya" >> everything.yml
     echo "SPRE_DEPLOYMENT_ID: spre" >> everything.yml

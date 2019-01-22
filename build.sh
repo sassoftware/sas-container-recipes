@@ -316,9 +316,9 @@ function add_layers()
 
 function echo_footer()
 {
-    echo "[INFO]  : Listing Docker images where \"label=sas.recipe.version=${sas_recipe_version}\" :"
+    echo "[INFO]  : Listing Docker images where \"label=sas.recipe.version=${SAS_RECIPE_VERSION}\" :"
     echo
-    docker images --filter "label=sas.recipe.version=${sas_recipe_version}"
+    docker images --filter "label=sas.recipe.version=${SAS_RECIPE_VERSION}"
     echo
     echo "Kubernetes manifests can be found at $1/manifests/kubernetes."
     echo "One should review the settings of the yaml files in $1/manifests/kubernetes/configmaps/"
@@ -359,7 +359,7 @@ function echo_experimental()
 # Set some defaults
 #
 
-sas_recipe_version=$(cat docs/VERSION)
+export SAS_RECIPE_VERSION=$(cat docs/VERSION)
 sas_datetime=$(date "+%Y%m%d%H%M%S")
 sas_sha1=$(git rev-parse --short HEAD || echo "no-git-sha")
 
@@ -372,7 +372,7 @@ sas_sha1=$(git rev-parse --short HEAD || echo "no-git-sha")
 [[ -z ${CHECK_MIRROR_URL+x} ]]   && CHECK_MIRROR_URL=true
 [[ -z ${CHECK_DOCKER_URL+x} ]]   && CHECK_DOCKER_URL=true
 [[ -z ${SAS_RPM_REPO_URL+x} ]]   && export SAS_RPM_REPO_URL=https://ses.sas.download/ses/
-[[ -z ${SAS_DOCKER_TAG+x} ]]     && export SAS_DOCKER_TAG=${sas_recipe_version}-${sas_datetime}-${sas_sha1}
+[[ -z ${SAS_DOCKER_TAG+x} ]]     && export SAS_DOCKER_TAG=${SAS_RECIPE_VERSION}-${sas_datetime}-${sas_sha1}
 [[ -z ${PROJECT_NAME+x} ]]       && export PROJECT_NAME=sas-viya
 
 # Set options
@@ -609,7 +609,7 @@ case ${SAS_RECIPE_TYPE} in
                 set -x
                 docker build \
                     --file Dockerfile \
-                    --label "sas.recipe.version=${sas_recipe_version}" \
+                    --label "sas.recipe.version=${SAS_RECIPE_VERSION}" \
                     --label "sas.layer.${str_image}=true" \
                     ${BUILD_ARG_BASEIMAGE} \
                     ${BUILD_ARG_BASETAG} \
@@ -714,7 +714,7 @@ case ${SAS_RECIPE_TYPE} in
         docker images
         echo
         echo "For the '${PROJECT_NAME}-programming' docker image, you can run the following command to create and start the container:"
-        echo "docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=$(hostname -f) --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 --name <docker container name> --hostname <docker hostname> ${PROJECT_NAME}-programming:${sas_recipe_version}-${sas_datetime}-${sas_sha1}"
+        echo "docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=$(hostname -f) --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 --name <docker container name> --hostname <docker hostname> ${PROJECT_NAME}-programming:${SAS_RECIPE_VERSION}-${sas_datetime}-${sas_sha1}"
         echo
         echo "To create and start a container with the 'viya-single-container' image and no addons, submit:"
         echo "docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=$(hostname -f) --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 --name ${PROJECT_NAME}-programming --hostname sas.viya.programming viya-single-container"
