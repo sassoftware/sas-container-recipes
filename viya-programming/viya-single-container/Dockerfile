@@ -49,6 +49,18 @@ COPY SAS_Viya_deployment_data.zip ./
 #COPY sas_viya_playbook/ sas_viya_playbook/
 
 #
+# Check and see if playbook is a programming only one
+#
+
+RUN set -e; \
+    if [ -d sas_viya_playbook ]; then \
+        if [ -d sas_viya_playbook/roles/vault_tokens ]; then \
+            echo; echo "####### [ERROR] : Provided playbook is not a programming only version"; echo; \
+            exit 4; \
+        fi; \
+    fi
+
+#
 # Install some of the expected packages in their own layer
 #
 
