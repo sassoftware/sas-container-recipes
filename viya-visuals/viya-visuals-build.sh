@@ -91,32 +91,6 @@ function validate_input() {
         exit 20
     fi
 
-    # Validate that the provided RPM repo URL exists
-    if [[ ${CHECK_MIRROR_URL} = "true" ]] && [[ "${SAS_RPM_REPO_URL}" != "https://ses.sas.download/ses/" ]]; then
-        set +e
-        response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "${SAS_RPM_REPO_URL}")
-        set -e
-        if [ "${response}" != "200" ]; then
-            echo -e "[ERROR] : Not able to ping mirror URL: ${SAS_RPM_REPO_URL}" echo
-            echo -e "[INFO]  : To ignore this error use the -k|--skip-mirror-url-validation flag" echo
-            echo
-            exit 5
-        fi
-    fi
-
-    # Validates that the provided docker registry exists
-    if [[ ${CHECK_DOCKER_URL} = "true" ]]; then
-        set +e
-        response=$(curl --write-out "%{http_code}" --silent --location --head --output /dev/null "https://${DOCKER_REGISTRY_URL}")
-        set -e
-        if [ "${response}" != "200" ]; then
-            echo -e "[ERROR] : Not able to curl Docker registry URL: ${DOCKER_REGISTRY_URL}"
-            echo -e "[INFO]  : To ignore this error use the -d|--skip-mirror-url-url-validation flag" echo
-            echo
-            exit 5
-        fi
-    fi
-
     if [[ ( -z ${DOCKER_REGISTRY_URL+x} || -z ${DOCKER_REGISTRY_URL+x} ) && "${SAS_RECIPE_TYPE}" != "single" ]]; then
         echo -e "[ERROR] : Trying to use a type of '${SAS_RECIPE_TYPE}' without giving the Docker registry URL or name space"
         echo
