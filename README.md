@@ -199,7 +199,7 @@ your users with the features that they require.
                             Default: latest
 
   -m|--mirror-url <value>
-                          The location of the mirror URL.See the Mirror Manager guide at
+                          The location of the mirror URL. See the Mirror Manager guide at
                           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
   -p|--platform <value>
