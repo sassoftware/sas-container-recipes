@@ -71,6 +71,31 @@ function usage() {
       -a|--addons \"<value> [<value>]\"
           A space separated list of layers to add on to the main SAS image.
           See the 'addons' directory for more details on adding access engines and other tools.
+
+      -i|--baseimage <value>
+          The Docker image from which the SAS images will build on top of
+            Default: centos
+
+      -t|--basetag <value>
+          The Docker tag for the base image that is being used
+            Default: latest
+
+      -m|--mirror-url <value>
+          The location of the mirror URL. See the Mirror Manager guide at
+          https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
+
+      -p|--platform <value>
+          The type of distribution that this build script is being run on.
+            Options: [ redhat | suse ]
+            Default: redhat
+
+      -k|--skip-mirror-url-validation
+          Skips validating the mirror URL from the --mirror-url flag.
+
+      -s|--sas-docker-tag
+          The tag to apply to the images before pushing to the Docker registry.
+            default: \${recipe_project_version}-\${datetime}-\${last_commit_sha1}
+            example: 18.12.0-20181209115304-b197206
    
     
     Multi-Container Arguments
@@ -98,6 +123,13 @@ function usage() {
           URL of the Docker registry where Docker images will be pushed to.
             example: 10.12.13.14:5000 or my-registry.docker.com
 
+      -v|--virtual-host 
+          The Kubernetes Ingress path that defines the location of the HTTP endpoint.
+          For more details on Ingress see the official Kubernetes documentation at
+          https://kubernetes.io/docs/concepts/services-networking/ingress/
+          
+            example: user-myproject.mylocal.com
+
       -z|--zip <value>
           Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
           If you do not know if your organization has a SAS license then contact
@@ -111,14 +143,6 @@ function usage() {
           Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
           whereas new deployments utilize the above '--zip' argument. If this is passed in along with
           the zip file then this playbook location will take precendence. 
-
-
-      -v|--virtual-host 
-          The Kubernetes Ingress path that defines the location of the HTTP endpoint.
-          For more details on Ingress see the official Kubernetes documentation at
-          https://kubernetes.io/docs/concepts/services-networking/ingress/
-          
-            example: user-myproject.mylocal.com
 
     Optional:
 
@@ -148,11 +172,6 @@ function usage() {
 
       -k|--skip-mirror-url-validation
           Skips validating the mirror URL from the --mirror-url flag.
-
-      -e|--environment-setup
-          Automatically sets up a python virtual environment called 'env',
-          installs the required packages, and sources the virtual environment
-          during the build process.
 
       -s|--sas-docker-tag
           The tag to apply to the images before pushing to the Docker registry.
