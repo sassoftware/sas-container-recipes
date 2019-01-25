@@ -207,8 +207,8 @@ A non-root user is recommended for all build commands.
                           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
   -p|--platform <value>
-                           The type of distribution of the image defined by the "baseimage" option.
-                            Options: [ redhat | suse ]
+                          The type of distribution of the image defined by the \"baseimage\" option.
+                            Options: [ redhat ]
                             Default: redhat
 
   -d|--skip-docker-url-validation
