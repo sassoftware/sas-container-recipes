@@ -85,7 +85,7 @@ function usage() {
           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
       -p|--platform <value>
-          The type of distribution that this build script is being run on.
+          The type of distribution of the image defined by the \"baseimage\" option.
             Options: [ redhat | suse ]
             Default: redhat
 
@@ -163,8 +163,8 @@ function usage() {
           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
       -p|--platform <value>
-          The type of distribution that this build script is being run on.
-            Options: [ redhat | suse ]
+          The type of distribution of the image defined by the \"baseimage\" option.
+            Options: [ redhat ]
             Default: redhat
 
       -d|--skip-docker-url-validation
@@ -543,10 +543,16 @@ if (( match == 0 )); then
     exit 10
 fi
 
-if [ "${PLATFORM}" = "suse" ] && [[ -z ${SAS_RPM_REPO_URL+x} ]]; then
-    echo "[ERROR] : For SuSE based platforms, a mirror must be provided."
+if [ "${PLATFORM}" = "suse" ] && [[ "${SAS_RECIPE_TYPE}" != "single" ]]; then
+    echo "[ERROR] : For SuSE based platforms, only \"single\" build types are currently supported."
     echo
-    exit 20
+    exit 21
+fi
+
+if [ "${PLATFORM}" = "suse" ] && ([[ -z ${SAS_RPM_REPO_URL+x} ]] || [[ "${SAS_RPM_REPO_URL}" == "https://ses.sas.download/ses/" ]]); then
+    echo "[ERROR] : For SuSE based platforms, \"${SAS_RPM_REPO_URL}\" is not a valid mirror."
+    echo
+    exit 22
 fi
 
 if [[ ! -z ${SAS_RPM_REPO_URL+x} ]] && ${CHECK_MIRROR_URL} && [[ "${SAS_RPM_REPO_URL}" != "https://ses.sas.download/ses/" ]]; then
