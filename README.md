@@ -76,7 +76,7 @@ Run the following to create a user 'sasdemo' with the password 'sasdemo' for pro
 A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
 is recommended for all build commands.
 ```
-  ./build.sh --zip ~/my/path/to/SAS_Viya_deploy_data.zip --addons "addons/auth-demo"
+  ./build.sh --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
 ```
 
 You can use addons found in the [`addons/` directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) 
