@@ -60,11 +60,11 @@ or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 <br>
 
 
-# For a Single User - SAS® Viya® Programming running on a Single Container
-Use these instructions to create a SAS Viya Programming single container for 
-an independent data scientist or developer to execute SAS code. All code and 
+# For a Single User - SAS® Viya® programming-only deployment running on a Single Container
+Use these instructions to create a SAS Viya programming-only deployment in a single container for
+an independent data scientist or developer to execute SAS code. All code and
 data should be stored in a persistent location outside the container.
-This environment includes SAS Studio, SAS Workspace Server, and a CAS server, 
+This deployment includes SAS Studio, SAS Workspace Server, and a CAS server,
 which provides in-memory analytics for Symmetric Multi Processing (SMP).
 
 
@@ -112,10 +112,13 @@ For more info see the [GitHub Project Wiki Page](https://github.com/sassoftware/
 
 <br>
 
-# For one or more users - SAS® Viya® Programming or SAS® Viya® Full environment running on multiple containers
-Use these instructions to build multiple Docker images to run **SAS Viya Programming**  or  **SAS Viya Full** environments for one or more users. 
+# For one or more users - SAS® Viya® programming-only or SAS® Viya® full deployment running on multiple containers
+Use these instructions to build multiple Docker images and then use the images 
+to create a SAS Viya programming-only or a SAS Viya full deployment in Kubernetes. 
+These deployments can have SMP or MPP (Massive Parallel Processing) CAS servers,
+which provide in-memory analytics, and can be used by one or more users. 
 Leverage Kubernetes to create the deployments which can use SMP or MPP CAS, which provide in-memory analytics.
-<br><br>
+
 A programming-only deployment supports data scientists and programmers who use 
 SAS Studio or direct programming interfaces such as Python or REST APIs. 
 Understand that this type of deployment does not include SAS Drive, 
