@@ -117,7 +117,6 @@ Use these instructions to build multiple Docker images and then use the images
 to create a SAS Viya programming-only or a SAS Viya full deployment in Kubernetes. 
 These deployments can have SMP or MPP (Massive Parallel Processing) CAS servers,
 which provide in-memory analytics, and can be used by one or more users. 
-Leverage Kubernetes to create the deployments which can use SMP or MPP CAS, which provide in-memory analytics.
 
 A programming-only deployment supports data scientists and programmers who use 
 SAS Studio or direct programming interfaces such as Python or REST APIs. 
