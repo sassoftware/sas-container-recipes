@@ -44,7 +44,7 @@ or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
 3. Choose your flavor and follow the recipe to build, test, and deploy your container(s). For specific details and pre-build options see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki).
 
-    a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in [SAS Programming running on a Single Container](https://github.com/sassoftware/sas-container-recipes#single-container-quickstart).
+    a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in a [SAS programming-only deployment running on a Single Container](https://github.com/sassoftware/sas-container-recipes#single-container-quickstart).
 
     b. If you would like an environment suitable for collaborative data science work, then you may be interested in a SAS programming-only deployment or a SAS Viya full [deployment on Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers).
 
