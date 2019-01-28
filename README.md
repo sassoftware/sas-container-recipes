@@ -30,7 +30,13 @@ For more information see [SAS for Containers](http://support.sas.com/rnd/contain
 
 ## Getting Started
 
-1. Locate your SAS Viya for Linux Software Order Email (SOE) and retrieve the `SAS_Viya_deployment_data.zip` file from it or [**start a free trial**](https://www.sas.com/en_us/trials.html) of SAS Viya. Not sure if your organization purchased SAS Software? [Contact Us](https://www.sas.com/en_us/software/how-to-buy.html) or get [SAS License Assistance](https://support.sas.com/en/technical-support/license-assistance.html).
+1. Locate your SAS Viya for Linux Software Order Email (SOE) and retrieve the 
+`SAS_Viya_deployment_data.zip` file from it. Not sure if your organization 
+purchased SAS Software? [Contact Us](https://www.sas.com/en_us/software/how-to-buy.html) 
+or get [SAS License Assistance](https://support.sas.com/en/technical-support/license-assistance.html). 
+If you have not purchased SAS Software but would like to give it a try, 
+please check out our [Free Software Trials](https://www.sas.com/en_us/trials.html).
+
     
 2. Download the latest <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes Releases">
         <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&" alt="Latest Release"/></a> 
