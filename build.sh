@@ -620,7 +620,16 @@ case ${SAS_RECIPE_TYPE} in
         # Ensure docker is installed
         docker --version || missing_dependencies docker
 
-        copy_deployment_data_zip viya-programming/${SAS_VIYA_CONTAINER}
+        if [[ -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
+            echo "[ERROR] : the --zip argument pointing to the SAS_Viya_deployment_data.zip file is required"
+            exit 31
+        fi
+        if [[ ! -f ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
+            echo "[ERROR] : Cannot find SAS_Viya_deployment_data.zip at ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
+            exit 30
+        fi
+        echo "[INFO]  : Copying ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} to viya-programming/${SAS_VIYA_CONTIANER}"
+        cp -v ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} viya-programming/${SAS_VIYA_CONTAINER}
 
         echo; # Formatting
 
