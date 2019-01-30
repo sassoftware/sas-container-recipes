@@ -201,7 +201,7 @@ A non-root user is recommended for all build commands.
   -a|--addons "[<value>]" "[<value>]"
                           A space separated list of layers to add on to the main SAS image.
                           See the 'addons' directory for more details on adding access engines and other tools.
-                            example: --addons \"addons/auth-sssd\" \"addons/access-postgres\"
+                            example: --addons "addons/auth-sssd" "addons/access-postgres"
 
   -i|--baseimage <value>
                           The Docker image from which the SAS images will build on top of
