@@ -1,0 +1,124 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sas-programming
+data:
+  poac.SAS_DEBUG: ""
+  poac.DEPLOYMENT_NAME: "sas-programming"
+  poac.SETINIT_TEXT: |
+    "@REPLACE_ME_WITH_CONTENTS_OF_SASViyaV0300_*_Linux_x86-64.txt@"
+#  poac.PRE_DEPLOY_SCRIPT: |
+#    ""
+#  poac.POST_DEPLOY_SCRIPT: |
+#    ""
+#  poac.RUN_MODE: "developer"
+  poac.CASENV_CAS_VIRTUAL_HOST: "@REPLACE_ME: see virtual host note@"
+  poac.CASENV_CAS_VIRTUAL_PORT: "@REPLACE_ME: see virtual port note@"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sas-programming
+spec:
+  selector:
+    app: sas-programming
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  sessionAffinity: None
+  clusterIP: None
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: sas-programming
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: sas-programming
+    hostname: sas-programming
+    spec:
+      containers:
+      - name: sas-programming
+        image: @REPLACE_ME with location-of-docker-image:tag@
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5570
+        - containerPort: 80
+        env:
+        - name: SERVICE_NAME
+          value: cascontroller
+        - name: SAS_DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: sas-programming
+              key: poac.SAS_DEBUG
+        - name: DEPLOYMENT_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: sas-programming
+              key: poac.DEPLOYMENT_NAME
+        - name: SETINIT_TEXT
+          valueFrom:
+            configMapKeyRef:
+              name: sas-programming
+              key: poac.SETINIT_TEXT
+#        - name: PRE_DEPLOY_SCRIPT
+#          valueFrom:
+#            configMapKeyRef:
+#              name: sas-programming
+#              key: poac.PRE_DEPLOY_SCRIPT
+#        - name: POST_DEPLOY_SCRIPT
+#          valueFrom:
+#            configMapKeyRef:
+#              name: sas-programming
+#              key: poac.POST_DEPLOY_SCRIPT
+#        - name: RUN_MODE
+#          valueFrom:
+#            configMapKeyRef:
+#              name: sas-programming
+#              key: poac.RUN_MODE
+        - name: CASENV_ADMIN_USER
+          value: "sasdemo"
+        - name: CASENV_CASDATADIR
+          value: "/cas/data"
+        - name: CASENV_CASPERMSTORE
+          value: "/cas/permstore"
+        resources:
+          limits:
+            cpu: 8
+            memory: 8Gi
+          requests:
+            cpu: 250m
+            memory: 4Gi
+        volumeMounts:
+        - name: cas-volume
+          mountPath: /cas/data
+        - name: cas-volume
+          mountPath: /cas/permstore
+        - name: cas-volume
+          mountPath: /cas/cache
+        - name: data-volume
+          mountPath: /data
+#        - name: sasinside
+#          mountPath: /sasinside
+      volumes:
+      - name: cas-volume
+        emptyDir: {}
+      - name: data-volume
+        emptyDir: {}
+#      - name: sasinside
+#        nfs:
+#          server: "server-name"
+#          path: "path-to-mount"
+...
