@@ -1,0 +1,19 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+  name: sas-viya-visuals-ingress
+  namespace: @REPLACE_ME_WITH_YOUR_K8S_NAMESPACE@
+spec:
+  rules:
+  - host: @REPLACE_ME_WITH_YOUR_DOMAIN@
+    http:
+      paths:
+      - backend:
+          serviceName: sas-viya-httpproxy
+          servicePort: 80
+#  tls:
+#  - hosts:
+#    - @REPLACE_ME_WITH_YOUR_DOMAIN@
+#    secretName: @REPLACE_ME_WITH_TLS_SECRET@
