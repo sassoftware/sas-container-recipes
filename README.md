@@ -29,6 +29,8 @@ For more information see [SAS for Containers](http://support.sas.com/rnd/contain
 <br><br>
 
 ## Quick Start
+Use the instructions on this page to quickly build and launch SAS Viya containers. 
+For more extensive infomation about building and launching SAS Viya containers, see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki)
 
 1. Locate your SAS Viya for Linux Software Order Email (SOE) and retrieve the 
 `SAS_Viya_deployment_data.zip` file from it. Not sure if your organization 
@@ -42,7 +44,7 @@ please check out our [Free Software Trials](https://www.sas.com/en_us/trials.htm
         <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&" alt="Latest Release"/></a> 
 or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
-3. Choose your flavor and follow the recipe to build, test, and deploy your container(s). For specific details and pre-build options see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki).
+3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
     a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in a [SAS programming-only deployment running on a Single Container](https://github.com/sassoftware/sas-container-recipes#for-a-single-user-sas-viya-programming-only-deployment-running-on-a-single-container).
 
