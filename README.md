@@ -28,7 +28,7 @@ For more information see [SAS for Containers](http://support.sas.com/rnd/contain
 
 <br><br>
 
-## Getting Started
+## Quick Start
 
 1. Locate your SAS Viya for Linux Software Order Email (SOE) and retrieve the 
 `SAS_Viya_deployment_data.zip` file from it. Not sure if your organization 
@@ -44,9 +44,9 @@ or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
 3. Choose your flavor and follow the recipe to build, test, and deploy your container(s). For specific details and pre-build options see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki).
 
-    a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in a [SAS programming-only deployment running on a Single Container](https://github.com/sassoftware/sas-container-recipes#single-container-quickstart).
+    a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in a [SAS programming-only deployment running on a Single Container](https://github.com/sassoftware/sas-container-recipes#for-a-single-user-sas-viya-programming-only-deployment-running-on-a-single-container).
 
-    b. If you would like an environment suitable for collaborative data science work, then you may be interested in a SAS programming-only deployment or a SAS Viya full [deployment on Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers).
+    b. If you would like an environment suitable for collaborative data science work, then you may be interested in a SAS programming-only deployment or a SAS Viya full [deployment on Multiple Containers](https://github.com/sassoftware/sas-container-recipes#for-one-or-more-users-sas-viya-programming-only-or-sas-viya-full-deployment-running-on-multiple-containers).
 
 
 ### Other Resources
@@ -67,7 +67,7 @@ or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
 
 # For a Single User - SAS® Viya® programming-only deployment running on a Single Container
-Use these quickstart instructions to create a SAS Viya programming-only deployment in a single container for
+Use these instructions to create a SAS Viya programming-only deployment in a single container for
 an independent data scientist or developer to execute SAS code. All code and
 data should be stored in a persistent location outside the container.
 This deployment includes SAS Studio, SAS Workspace Server, and a CAS server,
@@ -119,7 +119,7 @@ For more info see the [GitHub Project Wiki Page](https://github.com/sassoftware/
 <br>
 
 # For one or more users - SAS® Viya® programming-only or SAS® Viya® full deployment running on multiple containers
-Use these quickstart instructions to build multiple Docker images and then use the images 
+Use these instructions to build multiple Docker images and then use the images 
 to create a SAS Viya programming-only or a SAS Viya full deployment in Kubernetes. 
 These deployments can have SMP or MPP (Massive Parallel Processing) CAS servers,
 which provide in-memory analytics, and can be used by one or more users. 
