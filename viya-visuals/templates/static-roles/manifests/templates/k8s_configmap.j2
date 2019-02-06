@@ -7,6 +7,10 @@ metadata:
 data:
 {%   for environment in item.value.deployment_overrides.environment %}
 {%     set cm_key = environment.split('=')[0] + '=' %}
+{%     if item.key == 'espserver' and 'ESPENV' in environment %}
+  {{ environment.split('=')[0] | lower }}: "{{ environment.split('=')[0] }}='{{ environment | replace( cm_key, '', 1) }}'"
+{%     else %}
   {{ environment.split('=')[0] | lower }}: "{{ environment | replace( cm_key, '', 1) }}"
+{%     endif %}
 {%   endfor %}
 {% endif %}
