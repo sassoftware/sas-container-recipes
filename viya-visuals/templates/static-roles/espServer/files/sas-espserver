@@ -1,80 +1,103 @@
-#!/bin/bash
+#!/bin/bash -e
+# Copyright (c) 2017, SAS Institute Inc., Cary, NC, USA, All Rights Reserved
+#
+# Service: espserver
+# Context: espserver
+# DO NOT MODIFY THIS SCRIPT ABOVE THIS LINE
 
-DATA_PATH=/data
-ESP_PATH=/opt/sas/viya/home/SASEventStreamProcessingEngine/current
-ESP_CONFIG_PATH=/opt/sas/viya/config/etc/SASEventStreamProcessingEngine/default
-DFESP_HOME=${ESP_PATH}
-SASEXE=/opt/sas/viya/home/SASFoundation/sasexe
-LD_LIBRARY_PATH=${ESP_PATH}/lib:${ESP_PATH}/lib/plugins:${SASEXE}:${ESP_PATH}/lib/tk:${LD_LIBRARY_PATH}
-PATH=${PATH}:${ESP_PATH}/BIN
+servicename=espserver
+shortname=espserver
+servicecontext=espserver
 
-HTTP_PORT=8080
-PUB_SUB_PORT=5000
-HTTP_PUB_SUB_PORT=8082
-HOSTNAME=`hostname`
+# SASDEPLOYID, SASINSTANCE and pidfile are typically specified by command arguments,
+# but may be also be specified by environment variable.  If neither is specified, these
+# default values are used.
+[[ -z ${SASDEPLOYID+x} ]] && SASDEPLOYID=viya
+[[ -z ${SASINSTANCE+x} ]] && SASINSTANCE=default
+[[ -z ${pidfile+x} ]] && pidfile=/var/run/sas/sas-${SASDEPLOYID}-${shortname}-${SASINSTANCE}.pid
 
-export ESP_PATH
-export DFESP_HOME
-export LD_LIBRARY_PATH
-export PATH
+# Uncomment the set -x to run in debug mode
+# set -x
 
-if [ -n "${ESM_FRIENDLY_NAME}" ]
-then
-  export FRIENDLY_NAME=${ESM_FRIENDLY_NAME}
+excessargs=()
+
+while [ -n "$1" ]
+do
+  case "$1" in
+    -p)
+      shift
+      pidfile="$1"
+      ;;
+
+    -r)
+      shift
+      echo "[WARN] -r rootdir option is deprecated and ignored"
+      ;;
+
+    -l)
+      shift
+      echo "[WARN] -l logdir option is deprecated and ignored"
+      ;;
+
+    -d)
+      shift
+      SASDEPLOYID="$1"
+      ;;
+
+    -i)
+      shift
+      SASINSTANCE="$1"
+      ;;
+
+     *)
+# if we don't recognize argument as expected opt, accumulate and let something else consume those
+      excessargs+=("$1")
+      ;;
+  esac
+  shift  # next value
+done
+
+# look for an optional sasenv.conf for this SASDEPLOYID
+[[ -f /etc/sysconfig/sas/$SASDEPLOYID/sasenv.conf ]] && source /etc/sysconfig/sas/$SASDEPLOYID/sasenv.conf
+
+# set standard environment if not already set
+[[ -z ${SASHOME+x} ]] && SASHOME=/opt/sas/${SASDEPLOYID}/home
+
+source $SASHOME/lib/envesntl/sas-start-functions
+
+sas_set_service_env || sas_fail 1 "Unable to set up service environment"
+
+[[ -n $SAS_CONFIG ]] ||                 export SAS_CONFIG='/opt/sas/${SASDEPLOYID}/config'
+[[ -n $ESPVERSION ]] ||                 export ESPVERSION="$(basename $(readlink -f $SASHOME/SASEventStreamProcessingEngine/current))"
+[[ -n $DFESP_CONFIG ]] ||               export DFESP_CONFIG=$SAS_CONFIG/etc/SASEventStreamProcessingEngine/default
+[[ -n $DFESP_HOME ]] ||                 export DFESP_HOME=$SASHOME/SASEventStreamProcessingEngine/$ESPVERSION
+[[ -n $ESP_AUTHENTICATION_STRING ]] ||  export ESP_AUTHENTICATION_STRING=""
+[[ -n $ESP_LOGLEVEL_STRING ]] ||        export ESP_LOGLEVEL_STRING=""
+[[ -n $ESP_MODEL_STRING ]] ||           export ESP_MODEL_STRING=""
+[[ -n $ESP_HTTP_PORT ]] ||              export ESP_HTTP_PORT=31413
+[[ -n $ESP_PUBSUB_PORT ]] ||            export ESP_PUBSUB_PORT=31416
+[[ -z $SASLOGON_SERVERPORT ]] ||        export ESP_AUTHENTICATION_STRING="-auth saslogon://$SASLOGON_SERVERPORT"
+[[ -z $ESP_LOGGING_LEVEL ]] ||          export ESP_LOGLEVEL_STRING="-loglevel ${ESP_LOGGING_LEVEL}"
+[[ -z $ESP_MODEL_PATH ]] ||             export ESP_MODEL_STRING="-model ${ESP_MODEL_PATH}"
+[[ -z $ESPENV ]] ||                     export ESPENV=""
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DFESP_HOME/lib:$SASHOME/SASFoundation/sasexe
+
+[[ -f $SAS_CONFIG/etc/sysconfig/SASEventStreamProcessingEngine/sas-esp ]] && source $SAS_CONFIG/etc/sysconfig/SASEventStreamProcessingEngine/sas-esp
+
+# check for security policy
+[[ -n $DFESP_SEC_YAML ]] && cp $DFESP_SEC_YAML $DFESP_CONFIG/security-properties.yml && cp $ESP_SERVER_CERT $DFESP_CONFIG && cp $ESP_CLIENT_CACERT $SAS_CONFIG/etc/SASSecurityCertificateFramework/cacerts/
+
+[[ -d /data ]] && cd /data
+
+if [[ -z $ESPENV ]]; then
+    $DFESP_HOME/bin/dfesp_xml_server -http $ESP_HTTP_PORT -pubsub $ESP_PUBSUB_PORT $ESP_AUTHENTICATION_STRING $ESP_MODEL_STRING $ESP_LOGLEVEL_STRING
 else
-  export FRIENDLY_NAME=${HOSTNAME}
+	$DFESP_HOME/bin/dfesp_xml_server
 fi
 
-if [ -n "${SAS_ESP_HTTP_ADMIN_PORT}" ]
-then
-  export HTTP_PORT=${SAS_ESP_HTTP_ADMIN_PORT}
+pid=$!  # Bash get process ID of the most recently executed background (asynchronous) command
+if [ -n "${pidfile}" ]; then
+    # The variable pidfile is non-empty.
+    echo "${pid}" > "${pidfile}"
 fi
-
-if [ -n "${SAS_ESP_HTTP_PUBSUB_PORT}" ]
-then
-  export HTTP_PUB_SUB_PORT=${SAS_ESP_HTTP_PUBSUB_PORT}
-fi
-
-export LD_LIBRARY_PATH=${DFESP_HOME}/lib:${DFESP_HOME}/lib/tk:${SASEXE}:${LD_LIBRARY_PATH}
-export TKPATH=/opt/sas/viya/home/SASFoundation/sasexe
-
-if [ -f "${DATA_PATH}/twitterpublisher.properties" ]
-then
-   cp "${DATA_PATH}/twitterpublisher.properties" "${DFESP_HOME}/etc/"
-fi
-
-# Write a file with the current timestamp in to indicate when this server started.
-echo `date +%s` > ${ESP_PATH}/startup.timestamp
-
-if [ -n "${SAS_ESP_SSL_HOST}" ]
-then
-  export DFESP_SSLPATH=${DFESP_HOME}/lib
-  cp /data/ca.pem ${DFESP_HOME}/etc/
-  cp /data/ca.pem ${ESP_CONFIG_PATH}
-  
-  # Compile to openssl properties file.
-  while IFS='' read -r line || [[ -n "$line" ]]; do
-    eval "echo \"$line\"" >> "${DFESP_HOME}/openssl.conf"
-  done < "${DFESP_HOME}/openssl.conf.template"
-  IPCOUNTER=1
-  for IP in `hostname -I`
-  do
-    echo "IP.${IPCOUNTER} = ${IP}" >> ${DFESP_HOME}/openssl.conf
-	let IPCOUNTER=IPCOUNTER+1
-  done
-  openssl req -sha256 -key /data/ca.key -new -out server.csr -subj "/C=US/ST=NC/L=Cary/O=SAS Institute/CN=${SAS_ESP_SSL_HOST}/emailAddress=GBR_RD_Scotland_ESP_Team@wnt.sas.com" -config ${DFESP_HOME}/openssl.conf
-  openssl x509 -sha256 -req -in server.csr -CA /data/ca.pem -CAkey /data/ca.key -CAcreateserial -out server.crt -days 365 -extensions v3_req -extfile ${DFESP_HOME}/openssl.conf
-  cat server.crt /data/ca.key > ${ESP_CONFIG_PATH}/server.pem
-  keytool -importcert -keystore /etc/pki/java/cacerts -file /data/ca.pem -storepass changeit -noprompt -alias sasrds
-  export HTTP_PUB_SUB_PORT=${HTTP_PUB_SUB_PORT}s
-  export HTTP_PORT=${HTTP_PORT}s
-fi
-
-ESP_ARGS="-pubsub ${PUB_SUB_PORT} -http ${HTTP_PORT} -plugindir ${SASEXE} -engine ${FRIENDLY_NAME}"
-
-if [ -n "${SAS_ESP_OAUTH_CLIENT}" ]
-then
-    ESP_ARGS="${ESP_ARGS} -auth ${SAS_ESP_OAUTH_CLIENT}"
-fi
-
-${DFESP_HOME}/bin/dfesp_xml_server ${ESP_ARGS}
