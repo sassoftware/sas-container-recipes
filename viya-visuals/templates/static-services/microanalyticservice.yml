@@ -1,0 +1,24 @@
+  microanalyticservice:
+    from: "{{ BASEIMAGE }}:{{ BASETAG }}"
+    roles:
+    - tini
+    - sas-java
+    - MicroAnalyticService
+    - cloud-config
+    ports: {}
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/microanalytics-entrypoint.sh"]
+    labels:
+      sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
+      sas.layer.operations: "true"
+    deployment_overrides:
+      environment:
+        - "SASLICENSEDIR=/opt/sas/viya/config/etc/SASMicroAnalyticService/"
+      secrets:
+        - "SETINIT_TEXT_ENC="
+      volumes:
+        - "log=/opt/sas/viya/config/var/log"
+      resources:
+        limits:
+        - "memory=10Gi"
+        requests:
+        - "memory=2Gi"
