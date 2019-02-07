@@ -43,7 +43,7 @@ if [[ "${OPERATING_SYSTEM}" != "darwin" ]]; then
 fi
 
 
-### TODO: -r argument 
+### TODO: -r argument
 
 #
 # Functions
@@ -60,18 +60,18 @@ function usage() {
 
     Required:
 
-      -z|--zip <value>        
+      -z|--zip <value>
           Path to the SAS_Viya_deployment_data.zip file
             example: /path/to/SAS_Viya_deployment_data.zip
 
       Note: The --type flag is set for a 'single' container deployment by default.
-   
+
     Optional:
 
       -a|--addons \"[<value>] [<value>]\"
           A space separated list of layers to add on to the main SAS image.
           See the 'addons' directory for more details on adding access engines and other tools.
-            example: --addons \"addons/auth-sssd addons/access-postgres\" 
+            example: --addons \"addons/auth-sssd addons/access-postgres\"
 
       -i|--baseimage <value>
           The Docker image from which the SAS images will build on top of
@@ -97,19 +97,19 @@ function usage() {
           The tag to apply to the images before pushing to the Docker registry.
             default: \${recipe_project_version}-\${datetime}-\${last_commit_sha1}
             example: 18.12.0-20181209115304-b197206
-   
-    
-    Multi-Container Arguments
-    ------------------------ 
 
-        SAS Viya Programming example: 
+
+    Multi-Container Arguments
+    ------------------------
+
+        SAS Viya Programming example:
             ./build.sh --type multiple --zip /path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
 
-        SAS Viya Visuals example: 
+        SAS Viya Visuals example:
             ./build.sh --type full --docker-registry-namespace mynamespace --docker-registry-url my-registry.docker.com --zip /my/path/to/SAS_Viya_deployment_data.zip
-        
 
-      -y|--type [ multiple | full | single ] 
+
+      -y|--type [ multiple | full | single ]
           The type of deployment.
             Multiple: SAS Viya Programming Multi-Container deployment with Kubernetes
             Full: SAS Visuals based deployment with Kubernetes.
@@ -124,33 +124,33 @@ function usage() {
           URL of the Docker registry where Docker images will be pushed to.
             example: 10.12.13.14:5000 or my-registry.docker.com
 
-      -v|--virtual-host 
+      -v|--virtual-host
           The Kubernetes Ingress path that defines the location of the HTTP endpoint.
           For more details on Ingress see the official Kubernetes documentation at
           https://kubernetes.io/docs/concepts/services-networking/ingress/
-          
+
             example: user-myproject.mylocal.com
 
       -z|--zip <value>
           Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
           If you do not know if your organization has a SAS license then contact
           https://www.sas.com/en_us/software/how-to-buy.html
-          
+
             example: /path/to/SAS_Viya_deployment_data.zip
 
-        [ EITHER --zip OR --playbook-dir ]          
+        [ EITHER --zip OR --playbook-dir ]
 
       -l|--playbook-dir <value>
           Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
           whereas new deployments utilize the above '--zip' argument. If this is passed in along with
-          the zip file then this playbook location will take precendence. 
+          the zip file then this playbook location will take precendence.
 
     Optional:
 
       -a|--addons \"[<value>] [<value>]\"
           A space separated list of layers to add on to the main SAS image.
           See the 'addons' directory for more details on adding access engines and other tools.
-            example: --addons \"addons/auth-sssd addons/access-postgres\" 
+            example: --addons \"addons/auth-sssd addons/access-postgres\"
 
       -i|--baseimage <value>
           The Docker image from which the SAS images will build on top of
@@ -197,7 +197,7 @@ function copy_deployment_data_zip()
         cp -a "${SAS_VIYA_PLAYBOOK_DIR}" "${target_location}"
     elif [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
         echo "[INFO]  : Copying ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} to ${target_location}"
-        cp -v "${SAS_VIYA_DEPLOYMENT_DATA_ZIP}" "${target_location}"
+        cp -v "${SAS_VIYA_DEPLOYMENT_DATA_ZIP}" "${target_location}/SAS_Viya_deployment_data.zip"
     else
         if [[ ! -f ${target_location}/SAS_Viya_deployment_data.zip ]]; then
             echo "[ERROR] : No SAS_Viya_deployment_data.zip at ${target_location}"
@@ -827,4 +827,3 @@ esac
 echo; # Formatting
 
 exit 0
-
