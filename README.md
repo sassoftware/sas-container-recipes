@@ -28,7 +28,9 @@ For more information see [SAS for Containers](http://support.sas.com/rnd/contain
 
 <br><br>
 
-## Getting Started
+## Quick Start
+Use the instructions on this page to quickly build and launch SAS Viya containers. 
+For more extensive infomation about building and launching SAS Viya containers, see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki)
 
 1. Locate your SAS Viya for Linux Software Order Email (SOE) and retrieve the 
 `SAS_Viya_deployment_data.zip` file from it. Not sure if your organization 
@@ -42,11 +44,11 @@ please check out our [Free Software Trials](https://www.sas.com/en_us/trials.htm
         <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&" alt="Latest Release"/></a> 
 or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
-3. Choose your flavor and follow the recipe to build, test, and deploy your container(s). For specific details and pre-build options see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki).
+3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
-    a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in a [SAS programming-only deployment running on a Single Container](https://github.com/sassoftware/sas-container-recipes#single-container-quickstart).
+    a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in a [SAS programming-only deployment running on a Single Container](https://github.com/sassoftware/sas-container-recipes#for-a-single-user-sas-viya-programming-only-deployment-running-on-a-single-container).
 
-    b. If you would like an environment suitable for collaborative data science work, then you may be interested in a SAS programming-only deployment or a SAS Viya full [deployment on Multiple Containers](https://github.com/sassoftware/sas-container-recipes#multiple-containers).
+    b. If you would like an environment suitable for collaborative data science work, then you may be interested in a SAS programming-only deployment or a SAS Viya full [deployment on Multiple Containers](https://github.com/sassoftware/sas-container-recipes#for-one-or-more-users-sas-viya-programming-only-or-sas-viya-full-deployment-running-on-multiple-containers).
 
 
 ### Other Resources
@@ -136,7 +138,7 @@ your users with the features that they require.
 ### Prerequisites
 - A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux must be installed on the build machine
 - Python2 with python-pip2 and virtualenv or Python3 and python-pip3 must be installed on the build machine
-- java-1.8.0-openjdk must be installed on the build machine
+- `java-1.8.0-openjdk` or another Java Runtime Environment (1.8.x) must be installed on the build machine
 - **Access to a Docker registry:** The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
 - Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed: required for the deployment step but not required for the build step.
 - **Strongly recommended:** A local mirror of the SAS software. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
@@ -189,9 +191,10 @@ A non-root user is recommended for all build commands.
 ### Optional `build.sh` Arguments
 ```
 
-  -a|--addons \"<value> [<value>]\"
+  -a|--addons "[<value>] [<value>]"
                           A space separated list of layers to add on to the main SAS image.
                           See the 'addons' directory for more details on adding access engines and other tools.
+                            example: --addons "addons/auth-sssd addons/access-postgres"
 
   -i|--baseimage <value>
                           The Docker image from which the SAS images will build on top of
