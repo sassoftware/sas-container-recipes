@@ -185,16 +185,7 @@ A non-root user is recommended for all build commands.
                             SAS License Assistance: https://support.sas.com/en/technical-support/license-assistance.html
                             SAS Software Purchase: https://www.sas.com/en_us/software/how-to-buy.html
                             SAS Software Trial: https://www.sas.com/en_us/trials.html
-                        
-                            
-   ** [ EITHER --zip OR --playbook-dir ]  **
-
-  -l|--playbook-dir <value>
-                          Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
-                          whereas new deployments utilize the above '--zip' argument. If this is passed in along with
-                          the zip file then this playbook location will take precendence.
-    
-                               
+                      
 ```
 
 ### Optional `build.sh` Arguments
