@@ -229,9 +229,9 @@ function add_layers()
             docker push "${docker_reg_location}"/"${sas_image}:${SAS_DOCKER_TAG}-base"
             set +x
             for str_image in ${ADDONS}; do
-                if [[( "${str_image}" == *"ide"* && "${sas_image}" == "${PROJECT_NAME}-programming" ) || \
-                     ( "${str_image}" == *"access"* && "${sas_image}" != "${PROJECT_NAME}-httpproxy" ) || \
-                     ( "${str_image}" == *"auth"* && "${sas_image}" != "${PROJECT_NAME}-httpproxy" ) ]]; then
+                if [[ ( "${str_image}" == *"ide"* && "${sas_image}" == "${PROJECT_NAME}-programming" ) || \
+                      ( "${str_image}" == *"access"* && "${sas_image}" != "${PROJECT_NAME}-httpproxy" ) || \
+                      ( "${str_image}" == *"auth"* && "${sas_image}" != "${PROJECT_NAME}-httpproxy" ) ]]; then
 
                     echo "[INFO]  : Adding '${str_image}' to '${sas_image}'"
                     pushd "${str_image}"
@@ -267,7 +267,7 @@ function add_layers()
                         echo
                         str_previous_image="${str_image_tag}"
                     else
-                        echo "[WARN]  : No Dockerfile exists in '${PWD}' so skipping building of image"
+                        echo "[INFO]  : No Dockerfile exists in '${PWD}' so skipping building of image"
                     fi
                     popd
                 else
@@ -308,9 +308,136 @@ function add_layers()
                         echo
                         str_previous_image="${str_image_tag}"
                     else
-                        echo "[WARN]  : No Dockerfile_http exists in '${PWD}' so skipping building of image"
+                        echo "[INFO]  : No Dockerfile_http exists in '${PWD}' so skipping building of image"
                     fi
                     popd
+                fi
+            done
+
+            # push updated images to docker registry
+
+            # if manifests exist, update the tags for programming, CAS and compute
+            if [[ "${new_image}" == "true" ]]; then
+                echo "[INFO]  : Base images were adjusted so we need to retag the image..."
+                set -x
+                docker tag "${str_previous_image}":latest "${docker_reg_location}"/"${sas_image}:${SAS_DOCKER_TAG}"
+                set +x
+                echo "[INFO]  : ...and now push the image."
+                set -x
+                docker push "${docker_reg_location}"/"${sas_image}:${SAS_DOCKER_TAG}"
+                set +x
+            else
+                echo "[INFO]  : No base images were adjusted so there are no new images to tag and push."
+            fi
+        else
+            echo "[INFO]  : The image '${sas_image}' does not exist"
+        fi
+    done
+}
+
+function add_esp_layers()
+{
+    # Now run through the addons
+    docker_reg_location="${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}"
+    for sas_image in "${PROJECT_NAME}-espstreamviewer" "${PROJECT_NAME}-espstudio" "${PROJECT_NAME}-vipresm"; do
+        # Make sure the image exists
+        # shellcheck disable=SC2086
+        if [[ "$(docker images -q ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG} 2> /dev/null)" != "" ]]; then
+            str_previous_image=${sas_image}
+            new_image=false
+            echo "[INFO]  : Preserve image ${str_previous_image} before it is modified..."
+            set -x
+            docker tag "${docker_reg_location}"/"${sas_image}:${SAS_DOCKER_TAG}" "${docker_reg_location}"/"${sas_image}:${SAS_DOCKER_TAG}-base"
+            set +x
+            echo "[INFO]  : ...and now push the preserved image."
+            set -x
+            docker push "${docker_reg_location}"/"${sas_image}:${SAS_DOCKER_TAG}-base"
+            set +x
+            for str_addon in ${ADDONS}; do
+                if [[ "${str_addon}" == *"esp"* ]]; then
+                    echo "[INFO]  : Adding '${str_addon}' to '${sas_image}'"
+                    if [[ -d ${str_addon} ]]; then
+                        pushd "${str_addon}"
+                        target_image=$(echo ${sas_image#${PROJECT_NAME}-})
+                        if [ -f "Dockerfile_${target_image}" ]; then
+                            new_image=true
+                            addon_name=$(basename "${str_addon}")
+                            str_image_tag=svc-"${addon_name}"
+                            echo
+                            echo "[INFO]  : Building image '${str_image_tag}'"
+                            echo
+                            set +e
+                            set -x
+                            docker build \
+                                --file Dockerfile_${target_image} \
+                                --label sas.layer."${addon_name}"=true \
+                                --build-arg BASEIMAGE="${str_previous_image}" \
+                                ${BUILD_ARG_PLATFORM} \
+                                . \
+                                --tag "${str_image_tag}"
+                            n_docker_build_rc=$?
+                            set +x
+                            set -e
+                            if (( n_docker_build_rc != 0 )); then
+                                echo
+                                echo "[ERROR] : Could not add layer '${str_image_tag}'"
+                                echo
+                                popd
+                                exit 2
+                            fi
+
+                            echo
+                            echo "[INFO]  : Image created with image name '${str_image_tag}'"
+                            echo
+                            str_previous_image="${str_image_tag}"
+                        else
+                            echo "[INFO]  : No Dockerfile exists in '${PWD}' so skipping building of image"
+                        fi
+                        popd
+                    fi
+                else
+                    echo "[INFO]  : Skipping putting '${str_addon}' into '${sas_image}'"
+                fi
+                if [[ "${sas_image}" == "${PROJECT_NAME}-httpproxy" ]]; then
+                    echo "[INFO]  : Checking each addon to see if it has a http proxy configuration."
+                    if [[ -d ${str_addon} ]]; then
+                        pushd "${str_addon}"
+                        if [ -f "Dockerfile_http" ]; then
+                            new_image=true
+                            addon_name=$(basename "${str_addon}")
+                            str_image_tag="svc-${addon_name}-http"
+                            echo
+                            echo "[INFO]  : Building image '${str_image_tag}'"
+                            echo
+                            set +e
+                            set -x
+                            docker build \
+                                --file Dockerfile_http \
+                                --label "sas.layer.${addon_name}.http=true" \
+                                --build-arg BASEIMAGE="${str_previous_image}" \
+                                ${BUILD_ARG_PLATFORM} \
+                                . \
+                                --tag "${str_image_tag}"
+                            n_docker_build_rc=$?
+                            set +x
+                            set -e
+                            if (( n_docker_build_rc != 0 )); then
+                                echo
+                                echo "[ERROR] : Could not add http layer '${str_image_tag}'"
+                                echo
+                                popd
+                                exit 2
+                            fi
+
+                            echo
+                            echo "[INFO]  : Image created with image name '${str_image_tag}'"
+                            echo
+                            str_previous_image="${str_image_tag}"
+                        else
+                            echo "[INFO]  : No Dockerfile_http exists in '${PWD}' so skipping building of image"
+                        fi
+                        popd
+                    fi
                 fi
             done
 
@@ -813,6 +940,7 @@ case ${SAS_RECIPE_TYPE} in
         popd
 
         add_layers
+        add_esp_layers
 
         echo_footer viya-visuals
         echo_experimental
