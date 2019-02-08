@@ -24,5 +24,6 @@ ARG PROJECT_NAME=sas-viya
 
 USER root
 
-COPY override /data/override
+COPY override/ /opt/sas/viya/config/data/espvm/override/
 COPY espvm.conf /opt/sas/viya/config/etc/sysconfig/espvm.conf
+COPY config.yml /opt/sas/viya/home/share/espvm/config.yml
