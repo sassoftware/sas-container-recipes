@@ -7,6 +7,7 @@
     - cloud-config
     ports:
     - "31413:31413"
+    - "31414:31414"
     entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/espserver-entrypoint.sh"]
     labels:
       sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
