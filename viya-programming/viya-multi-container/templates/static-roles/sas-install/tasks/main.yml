@@ -67,21 +67,6 @@
       fi
     when: ( METAREPO_INSTALL | bool ) == true
 
-  - name: Install required packages
-    yum:
-      name: "{{ item }}"
-      state: "present"
-    with_items:
-    - initscripts
-    - which
-    - tree
-    - acl
-    - libpng12
-    - libXp
-    - libXmu
-    - net-tools
-    - xterm
-
   #
   # Parse the file and get all the things to install: rpms and groups
   - name: Collect yum groups
@@ -157,22 +142,6 @@
 
 - block:
 
-  - name: Install required packages
-    zypper:
-      name: "{{ item }}"
-      state: "present"
-      disable_gpg_check: yes
-    with_items:
-    - initscripts
-    - which
-    - tree
-    - acl
-    - libpng12
-    - libXp
-    - libXmu
-    - net-tools
-    - xterm
-
   - name: Collect rpms
     set_fact:
       packages_to_install: |-
@@ -208,8 +177,3 @@
     path: "{{ METAREPO_CERT_DIR }}"
     state: absent
   when: ( METAREPO_INSTALL | bool ) == true
-
-- name: Remove nproc file
-  file:
-    path: /etc/security/limits.d/20-nproc.conf
-    state: absent
