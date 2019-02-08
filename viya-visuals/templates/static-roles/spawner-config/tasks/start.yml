@@ -27,7 +27,7 @@
   ###### START - host #########
 - name: Set CAS host to default for containers
   set_fact:
-    controller_host: "{{ PROJECT_NAME }}-sas-casserver-primary"
+    controller_host: "{{ PROJECT_NAME }}-cas"
   when: sasenv_cas_host is not defined and ansible_env.ANSIBLE_CONTAINER is defined
 
 - name: Set CAS host to user-supplied value
