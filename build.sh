@@ -138,13 +138,6 @@ function usage() {
 
             example: /path/to/SAS_Viya_deployment_data.zip
 
-        [ EITHER --zip OR --playbook-dir ]
-
-      -l|--playbook-dir <value>
-          Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
-          whereas new deployments utilize the above '--zip' argument. If this is passed in along with
-          the zip file then this playbook location will take precendence.
-
     Optional:
 
       -a|--addons \"[<value>] [<value>]\"
@@ -470,11 +463,6 @@ while [[ $# -gt 0 ]]; do
         -v|--virtual-host)
             shift # past argument
             export CAS_VIRTUAL_HOST="$1"
-            shift # past value
-            ;;
-        -l|--playbook-dir)
-            shift # past argument
-            export SAS_VIYA_PLAYBOOK_DIR="$1"
             shift # past value
             ;;
         -s|--sas-docker-tag)
