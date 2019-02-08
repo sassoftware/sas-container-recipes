@@ -2,13 +2,16 @@
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-prerequisites
+    - sas-install-base-packages
     - sas-java
+    - sas-install-spre
     - programming
+    - cloud-config
     - spawner-config
     - batchserver
     - connect-config
     - sas-studio-config
-    - cloud-config
     ports:
     - "7080:7080"
     entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/programming-entrypoint.sh"]

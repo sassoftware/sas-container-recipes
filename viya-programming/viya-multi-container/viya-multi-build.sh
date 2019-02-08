@@ -35,6 +35,60 @@ function usage()
     echo "                                      Format: /path/to/SAS_Viya_deployment_data.zip"
 }
 
+# Push built images to the specified docker registry
+function push_images() {
+    # Sort the services so they are in alphabetical order
+    #https://stackoverflow.com/questions/7442417/how-to-sort-an-array-in-bash
+    readarray -t sorted_services < <(printf '%s\0' "${all_services[@]}" | sort -z | xargs -0n1)
+    for service in "${sorted_services[@]}"; do
+        early_exit=false
+        done=false
+        while [[ "$done" != "true" && "${early_exit}" == "false" ]]; do
+            if [[ "$(docker images -q ${PROJECT_NAME}-${service}:latest 2> /dev/null)" != "" ]]; then
+                echo "[INFO]  : Pushing ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}"
+                docker tag ${PROJECT_NAME}-${service}:latest ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}
+                docker push ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}
+                echo "[INFO]  : Completed push of ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}"
+                done=true
+            else
+                echo "[INFO]  : Cannot find '${PROJECT_NAME}-${service}:latest'...pausing 30 seconds"
+                sleep 30
+                # Check a-c process to make sure it did not exit out
+                if [[ "$(ps --no-headers ${SAS_ANSIBLE_CONTAINER_PID} | awk '{print $1}')" == "" ]]; then
+                    # if a-c is no longer running, break
+                    echo "[WARN]  : ansible-controller has stopped but not all images are built."
+                    early_exit=true
+                fi
+            fi
+        done
+        # Check a-c process to make sure it did not exit out
+        # if a-c is no longer running, break
+        if [[ "${early_exit}" == "true" ]]; then
+            break
+        fi
+    done
+
+    # Run through it one more time and collect any services that do not have images
+    # If we have any services with no images and a-c has exited, then we will assume
+    # that a-c exited early and thus we are in a error state and need to return early.
+    missing_images=()
+    for service in "${sorted_services[@]}"; do
+        if [[ "$(docker images -q ${PROJECT_NAME}-${service}:latest 2> /dev/null)" == "" ]]; then
+            missing_images+=( ${service} )
+        else
+            echo "[INFO]  : Second attempt to push ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}"
+            docker tag ${PROJECT_NAME}-${service}:latest ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}
+            docker push ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}
+        fi
+    done
+
+    # If we have any images that were not built, then we need to exit
+    if (( ${#missing_images[@]} > 0 )); then
+        echo "[ERROR] : Looks like ansible-container exited early and not all expected images are built...exiting"
+        exit 22
+    fi
+}
+
 #
 # Set some defaults
 #
@@ -152,7 +206,7 @@ echo "  Deployment Data Zip             = ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
 echo "  Playbook Directory              = ${SAS_VIYA_PLAYBOOK_DIR}"
 echo "  Docker registry URL             = ${DOCKER_REGISTRY_URL}"
 echo "  Docker registry namespace       = ${DOCKER_REGISTRY_NAMESPACE}"
-echo "  Docker registry type            = ${DOCKER_REGISTRY_TYPE}"  
+echo "  Docker registry type            = ${DOCKER_REGISTRY_TYPE}"
 echo "  HTTP Ingress endpoint           = ${CAS_VIRTUAL_HOST}"
 echo "  Tag SAS will apply              = ${SAS_DOCKER_TAG}"
 echo
@@ -160,6 +214,12 @@ echo
 #
 # Build and push images and then generate manifests
 #
+
+echo
+echo "=============================="
+echo "Pull down SAS orchestrationCLI"
+echo "=============================="
+echo ""
 
 # Default to indicate we will not run the orchestrationCLI
 generate_playbook=false
@@ -193,6 +253,13 @@ else
     exit 5
 fi
 
+echo
+echo "=================="
+echo "Create directories"
+echo "=================="
+echo ""
+
+
 # All steps happen inside of the debug directory
 # Grab a fresh container.yml template and override it in the debug directory
 [[ -z ${PROJECT_DIRECTORY+x} ]] && PROJECT_DIRECTORY=working
@@ -207,8 +274,63 @@ cp -v templates/container.yml ${PROJECT_DIRECTORY}/
 cp -v templates/generate_manifests.yml ${PROJECT_DIRECTORY}/
 cp -v templates/requirements.txt ${PROJECT_DIRECTORY}/
 
-# From here on out, everythign is in the working directory
+echo
+echo "=============================="
+echo "Create and activate virtualenv"
+echo "=============================="
+echo ""
+
+[[ -z ${SAS_CREATE_AC_VIRTUAL_ENV+x} ]] && SAS_CREATE_AC_VIRTUAL_ENV="true"
+
+# Python virtualenv configuration
+if [[ "${SAS_CREATE_AC_VIRTUAL_ENV}" == "true" ]]; then
+    # Detect virtualenv with $VIRTUAL_ENV
+    if [[ -n $VIRTUAL_ENV ]]; then
+        echo "Existing virtualenv detected..."
+    # Create default env if none
+    elif [[ -z $VIRTUAL_ENV ]] && [[ ! -d env/ ]]; then
+        echo "Creating virtualenv env..."
+        virtualenv --system-site-packages env
+        . env/bin/activate
+    # Activate existing env if available
+    elif [[ -d env/ ]]; then
+        echo "Activating virtualenv env..."
+        . env/bin/activate
+    fi
+    # Ensure env active or die
+    if [[ -z $VIRTUAL_ENV ]]; then
+        echo "Failed to activate virtualenv....exiting."
+        exit 1
+    fi
+    # Detect python 2+ or 3+
+    PYTHON_MAJOR_VER="$(python -c 'import platform; print(platform.python_version()[0])')"
+    if [[ $PYTHON_MAJOR_VER -eq "2" ]]; then
+        # Install ansible-container
+        pip install --upgrade pip==9.0.3
+        pip install --no-deps ansible-container[docker]
+        echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> "${VIRTUAL_ENV}"/lib/python2.7/site-packages/container/docker/templates/conductor-local-dockerfile.j2
+    elif [[ $PYTHON_MAJOR_VER -eq "3" ]]; then
+        echo "WARN: Python3 support is experimental in ansible-container."
+        echo "Updating requirements file for python3 compatibility..."
+        sed ${sed_i_option} '/ruamel.ordereddict==0.4.13/d' ./requirements.txt
+        pip install --upgrade pip==9.0.3
+        pip install --no-deps -e git+https://github.com/ansible/ansible-container.git@develop#egg=ansible-container[docker]
+        echo "Updating the client timeout for the created virtual environment."
+        echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> "${VIRTUAL_ENV}"/src/ansible-container/container/docker/templates/conductor-local-dockerfile.j2
+    fi
+    # Restore latest pip version
+    pip install --upgrade pip setuptools
+    pip install -r templates/requirements.txt
+fi
+
+# From here on out, everything is in the working directory
 pushd ${PROJECT_DIRECTORY}
+
+echo
+echo "================="
+echo "Generate Playbook"
+echo "================="
+echo ""
 
 if [[ "${generate_playbook}" == "true" ]]; then
     echo;echo "[INFO]  : Generate programming playbook";echo
@@ -223,6 +345,13 @@ if [[ "${generate_playbook}" == "true" ]]; then
     SAS_VIYA_PLAYBOOK_DIR=${PWD}/sas_viya_playbook
 fi
 
+echo
+echo "=========================================="
+echo "Collect the services that need to be built"
+echo "=========================================="
+echo ""
+
+all_services=() # Keep a list of the built services so they can be pushed a registry
 for file in $(ls -1 ${SAS_VIYA_PLAYBOOK_DIR}/group_vars); do
     echo; echo "*** Create the roles directory for the host groups"
     if [ "${file}" != "all" ] && \
@@ -241,6 +370,7 @@ for file in $(ls -1 ${SAS_VIYA_PLAYBOOK_DIR}/group_vars); do
         set -e
 
         if (( ${pkg_grep_rc} == 0 )) || (( ${grp_grep_rc} == 0 )); then
+            all_services+=( ${file,,} )
 
             echo "***   Create the roles directory for service '${file}'"; echo
             mkdir -p -v roles/${file}/tasks
@@ -285,6 +415,12 @@ for role in $(ls -1 roles); do
         fi
     fi
 done
+
+echo
+echo "================="
+echo "Create input file"
+echo "================="
+echo ""
 
 #
 # When first starting with Ansible-Container, it would not take multiple
@@ -394,136 +530,89 @@ echo; # Formatting
 echo; # Formatting
 echo; # Formatting
 
-[[ -z ${SAS_CREATE_AC_VIRTUAL_ENV+x} ]] && SAS_CREATE_AC_VIRTUAL_ENV="true"
-
-# Python virtualenv configuration
-if [[ "${SAS_CREATE_AC_VIRTUAL_ENV}" == "true" ]]; then
-    # Detect virtualenv with $VIRTUAL_ENV
-    if [[ -n $VIRTUAL_ENV ]]; then
-        echo "Existing virtualenv detected..."
-    # Create default env if none
-    elif [[ -z $VIRTUAL_ENV ]] && [[ ! -d env/ ]]; then
-        echo "Creating virtualenv env..."
-        virtualenv --system-site-packages env
-        . env/bin/activate
-    # Activate existing env if available
-    elif [[ -d env/ ]]; then
-        echo "Activating virtualenv env..."
-        . env/bin/activate
-    fi
-    # Ensure env active or die
-    if [[ -z $VIRTUAL_ENV ]]; then
-        echo "Failed to activate virtualenv....exiting."
-        exit 1
-    fi
-    # Detect python 2+ or 3+
-    PYTHON_MAJOR_VER="$(python -c 'import platform; print(platform.python_version()[0])')"
-    if [[ $PYTHON_MAJOR_VER -eq "2" ]]; then
-        # Install ansible-container
-        pip install --upgrade pip==9.0.3
-        pip install --no-deps ansible-container[docker]
-        echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> "${VIRTUAL_ENV}"/lib/python2.7/site-packages/container/docker/templates/conductor-local-dockerfile.j2
-    elif [[ $PYTHON_MAJOR_VER -eq "3" ]]; then
-        echo "WARN: Python3 support is experimental in ansible-container."
-        echo "Updating requirements file for python3 compatibility..."
-        sed ${sed_i_option} '/ruamel.ordereddict==0.4.13/d' ./requirements.txt
-        pip install --upgrade pip==9.0.3
-        pip install --no-deps -e git+https://github.com/ansible/ansible-container.git@develop#egg=ansible-container[docker]
-        echo "Updating the client timeout for the created virtual environment."
-        echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> "${VIRTUAL_ENV}"/src/ansible-container/container/docker/templates/conductor-local-dockerfile.j2
-    fi
-    # Restore latest pip version
-    pip install --upgrade pip setuptools
-    pip install -r requirements.txt
-fi
-
-# Prevent ansible-container build from importing virtualenv to conductor
-if [[ ! -w "$(pwd)/.dockerignore" ]]; then
-    echo "${VIRTUAL_ENV##*/}" > .dockerignore
-elif [[ -w "$(pwd)/.dockerignore" ]]; then
-    if [[ -z "$(grep $VIRTUAL_ENV .dockerignore)" ]]; then
-        echo "Adding current virtualenv to dockerignore..."
-        echo "${VIRTUAL_ENV##*/}" >> .dockerignore
-    fi
-fi
-
 if [[ ! -z ${SKIP_BUILD+x} ]]; then
-    echo " Skipping build "
-    exit 0
-fi
+    echo "[INFO]  : Skipping build "
+else
+    echo
+    echo "===================================="
+    echo "Building SAS Docker images"
+    echo "===================================="
+    echo
 
-echo
-echo "===================================="
-echo "[INFO]  : Building SAS Docker images"
-echo "===================================="
-echo
+    # Need to remove the latest tag as the push process is looking for the latest tag.
+    # If we are running the build process a second time, the latest tag will be found
+    # and pushed which may not be want we want. We will remove the latest tag
+    # and then kick off ansible-container. ansible-container always tags the image
+    # as latest and with a date-time stamp. Removing the latest tag does not remove
+    # the image.
+    echo -e "[INFO]  : Remove the latest tag from images if they already exist."
+    readarray -t sorted_services < <(printf '%s\0' "${all_services[@]}" | sort -z | xargs -0n1)
+    for service in "${sorted_services[@]}"; do
+        set +e
+        docker rmi ${PROJECT_NAME}-${service}:latest 2> /dev/null
+        set -e
+    done
 
-set +e
-ansible-container build
-build_rc=$?
-set -e
-
-if (( ${build_rc} != 0 )); then
-    echo "[ERROR] : Unable to build Docker images"; echo
-    exit 20
+    set +e
+    ansible-container build &
+    SAS_ANSIBLE_CONTAINER_PID=$!
+    echo ${SAS_ANSIBLE_CONTAINER_PID} > ${PWD}/sas_ansible_container.pid
+    set -e
 fi
 
 if [[ ! -z ${SKIP_PUSH+x} ]]; then
-    echo " Skipping push and manifest building "
-    exit 0
-fi
-
-[[ -z ${SAS_DOCKER_TAG+x} ]] && export SAS_DOCKER_TAG=${SAS_RECIPE_VERSION}-${sas_datetime}-${sas_sha1}
-
-echo
-echo "==================================="
-echo "[INFO]  : Pushing SAS Docker images"
-echo "==================================="
-echo
-
-set +e
-set -x
-
-if [[ "${DOCKER_REGISTRY_TYPE}" == "ecr" ]]; then
-  ARG_DOCKER_REG_USERNAME=AWS
-
-  PREFIX=' -p '
-  SUFFIX=' -e none '
-
-  aws_login=$(aws ecr get-login);
-  ARG_DOCKER_REG_PASSWORD=`echo $aws_login | sed -e "s/.*${PREFIX}//;s/${SUFFIX}.*//"`
-
-  ansible-container push --push-to docker-registry --tag ${SAS_DOCKER_TAG} --username ${ARG_DOCKER_REG_USERNAME} --password ${ARG_DOCKER_REG_PASSWORD}
+    echo "[INFO]  : Skipping push of images"
 else
-  ansible-container push --push-to docker-registry --tag ${SAS_DOCKER_TAG}
+    [[ -z ${SAS_DOCKER_TAG+x} ]] && export SAS_DOCKER_TAG=${SAS_RECIPE_VERSION}-${sas_datetime}-${sas_sha1}
+
+    echo
+    echo "==================================="
+    echo "Pushing SAS Docker images"
+    echo "==================================="
+    echo
+
+    set +e
+
+    if [[ "${DOCKER_REGISTRY_TYPE}" == "ecr" ]]; then
+      ARG_DOCKER_REG_USERNAME=AWS
+
+      PREFIX=' -p '
+      SUFFIX=' -e none '
+
+      aws_login=$(aws ecr get-login);
+      ARG_DOCKER_REG_PASSWORD=`echo $aws_login | sed -e "s/.*${PREFIX}//;s/${SUFFIX}.*//"`
+
+      set -x
+      ansible-container push --push-to docker-registry --tag ${SAS_DOCKER_TAG} --username ${ARG_DOCKER_REG_USERNAME} --password ${ARG_DOCKER_REG_PASSWORD}
+      set +x
+    else
+      push_images
+    fi
+    set -e
 fi
-push_rc=$?
-set +x
-set -e
 
-if (( ${push_rc} != 0 )); then
-    echo "[ERROR] : Unable to push Docker images"; echo
-    exit 22
-fi
+if [[ ! -z ${SKIP_MANIFESTSx} ]]; then
+    echo "[INFO]  : Skipping manifest building "
+else
+    echo
+    echo "========================================="
+    echo "Generating Kubernetes Manifests"
+    echo "========================================="
+    echo
 
-echo
-echo "========================================="
-echo "[INFO]  : Generating Kubernetes Manifests"
-echo "========================================="
-echo
+    set +e
+    # Ansible requires access to the host's libselinux-python lib. Setting ansible_python_interpreter.
+    pip install ansible==2.7
+    set -x
+    ansible-playbook generate_manifests.yml -e "docker_tag=${SAS_DOCKER_TAG}" -e 'ansible_python_interpreter=/usr/bin/python'
+    apgen_rc=$?
+    set +x
+    set -e
 
-set +e
-# Ansible requires access to the host's libselinux-python lib. Setting ansible_python_interpreter.
-set -x
-pip install ansible==2.7
-ansible-playbook generate_manifests.yml -e "docker_tag=${SAS_DOCKER_TAG}" -e 'ansible_python_interpreter=/usr/bin/python'
-apgen_rc=$?
-set +x
-set -e
-
-if (( ${apgen_rc} != 0 )); then
-    echo "[ERROR] : Unable to generate manifests"; echo
-    exit 30
+    if (( ${apgen_rc} != 0 )); then
+        echo "[ERROR] : Unable to generate manifests"; echo
+        exit 30
+    fi
 fi
 
 popd # Takes us back to viya-multi-containers

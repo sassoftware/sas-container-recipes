@@ -2,9 +2,11 @@
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-prerequisites
+    - sas-install-base-packages
     - sas-java
-    - Operations
     - sas-install-spre
+    - Operations
     - cloud-config
     ports: {}
     entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/operations-entrypoint.sh"]
