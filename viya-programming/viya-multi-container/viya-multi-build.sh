@@ -421,14 +421,14 @@ if [[ "${SAS_CREATE_AC_VIRTUAL_ENV}" == "true" ]]; then
     if [[ $PYTHON_MAJOR_VER -eq "2" ]]; then
         # Install ansible-container
         pip install --upgrade pip==9.0.3
-        pip install ansible-container[docker]
+        pip install --no-deps ansible-container[docker]
         echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> "${VIRTUAL_ENV}"/lib/python2.7/site-packages/container/docker/templates/conductor-local-dockerfile.j2
     elif [[ $PYTHON_MAJOR_VER -eq "3" ]]; then
         echo "WARN: Python3 support is experimental in ansible-container."
         echo "Updating requirements file for python3 compatibility..."
         sed ${sed_i_option} '/ruamel.ordereddict==0.4.13/d' ./requirements.txt
         pip install --upgrade pip==9.0.3
-        pip install -e git+https://github.com/ansible/ansible-container.git@develop#egg=ansible-container[docker]
+        pip install --no-deps -e git+https://github.com/ansible/ansible-container.git@develop#egg=ansible-container[docker]
         echo "Updating the client timeout for the created virtual environment."
         echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> "${VIRTUAL_ENV}"/src/ansible-container/container/docker/templates/conductor-local-dockerfile.j2
     fi
