@@ -185,7 +185,9 @@ function usage() {
 
       -a|--addons \"[<value>] [<value>]\"
           A space separated list of layers to add on to the main SAS image.
-          See the 'addons' directory for more details on adding access engines and other tools.
+          See the 'Appendix: Under the Hood' section in the wiki for details
+          on adding access engines and other tools.
+          https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
             example: --addons \"addons/auth-sssd addons/access-postgres\"
 
       -i|--baseimage <value>
