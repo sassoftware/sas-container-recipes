@@ -135,7 +135,7 @@ your users with the features that they require.
 
 
 ### Prerequisites
-- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux must be installed on the build machine
+- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux or Mac must be installed on the build machine
 - Python2 with python-pip2 and virtualenv or Python3 and python-pip3 must be installed on the build machine
 - `java-1.8.0-openjdk` or another Java Runtime Environment (1.8.x) must be installed on the build machine
 - **Access to a Docker registry:** The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
