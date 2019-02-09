@@ -215,6 +215,15 @@ function add_layers()
     # ide: added to programming
     docker_reg_location="${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}"
     for sas_image in "${PROJECT_NAME}-programming" "${PROJECT_NAME}-computeserver" "${PROJECT_NAME}-sas-casserver-primary" "${PROJECT_NAME}-httpproxy"; do
+        echo "[INFO]  : Pulling ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG} to modify it"
+        set +e
+        docker pull ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG}
+        docker_pull_rc=$?
+        set -e
+        if (( ${docker_pull_rc} > 0 )); then
+            echo "[ERROR] : Could not find image ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG}"
+            exit 5
+        fi
         # Make sure the image exists
         # shellcheck disable=SC2086
         if [[ "$(docker images -q ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG} 2> /dev/null)" != "" ]]; then
@@ -340,6 +349,15 @@ function add_esp_layers()
     # Now run through the addons
     docker_reg_location="${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}"
     for sas_image in "${PROJECT_NAME}-espstreamviewer" "${PROJECT_NAME}-espstudio" "${PROJECT_NAME}-vipresm"; do
+        echo "[INFO]  : Pulling ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG} to modify it"
+        set +e
+        docker pull ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG}
+        docker_pull_rc=$?
+        set -e
+        if (( ${docker_pull_rc} > 0 )); then
+            echo "[ERROR] : Could not find image ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG}"
+            exit 5
+        fi
         # Make sure the image exists
         # shellcheck disable=SC2086
         if [[ "$(docker images -q ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG} 2> /dev/null)" != "" ]]; then
@@ -391,7 +409,7 @@ function add_esp_layers()
                             echo
                             str_previous_image="${str_image_tag}"
                         else
-                            echo "[INFO]  : No Dockerfile exists in '${PWD}' so skipping building of image"
+                            echo "[INFO]  : No Dockerfile \"Dockerfile_${target_image}\" exists in '${PWD}' so skipping building of image"
                         fi
                         popd
                     fi
@@ -875,34 +893,35 @@ case ${SAS_RECIPE_TYPE} in
         echo
         ;;
     multiple)
+        if [[ -z ${SKIP_SAS_BASE_IMAGES_BUILD} ]]; then
+            # Check for required dependencies
+            docker --version || missing_dependencies docker
+            python --version || missing_dependencies python
+            pip    --version || missing_dependencies pip
 
-        # Check for required dependencies
-        docker --version || missing_dependencies docker
-        python --version || missing_dependencies python
-        pip    --version || missing_dependencies pip
+            # Copy the zip or the playbook to project
+            copy_deployment_data_zip viya-programming/viya-multi-container
 
-        # Copy the zip or the playbook to project
-        copy_deployment_data_zip viya-programming/viya-multi-container
+            pushd viya-programming/viya-multi-container
 
-        pushd viya-programming/viya-multi-container
+            # Call to build and push images and generate deployment manifests
 
-        # Call to build and push images and generate deployment manifests
+            # export the values so that they are picked up by the lower level scipt.
+            # We will not pass the CHECK_*_URL values here as they are not used in the lower level script
+            [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
 
-        # export the values so that they are picked up by the lower level scipt.
-        # We will not pass the CHECK_*_URL values here as they are not used in the lower level script
-        [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
+            ./viya-multi-build.sh \
+              --baseimage "${BASEIMAGE}" \
+              --basetag "${BASETAG}" \
+              --platform "${PLATFORM}" \
+              --docker-url "${DOCKER_REGISTRY_URL}" \
+              --docker-registry-type "${DOCKER_REGISTRY_TYPE}" \
+              --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
+              --sas-docker-tag "${SAS_DOCKER_TAG}" \
+              --virtual-host "${CAS_VIRTUAL_HOST}"
 
-        ./viya-multi-build.sh \
-          --baseimage "${BASEIMAGE}" \
-          --basetag "${BASETAG}" \
-          --platform "${PLATFORM}" \
-          --docker-url "${DOCKER_REGISTRY_URL}" \
-          --docker-registry-type "${DOCKER_REGISTRY_TYPE}" \
-          --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
-          --sas-docker-tag "${SAS_DOCKER_TAG}" \
-          --virtual-host "${CAS_VIRTUAL_HOST}"
-
-        popd
+            popd
+        fi
 
         # Add more layers to the programming and CAS containers
         add_layers
@@ -911,33 +930,35 @@ case ${SAS_RECIPE_TYPE} in
         echo_footer viya-programming/viya-multi-container
         ;;
     full)
-        echo_experimental
+        if [[ -z ${SKIP_SAS_BASE_IMAGES_BUILD} ]]; then
+            echo_experimental
 
-        # Copy the zip or the playbook to project
-        copy_deployment_data_zip viya-visuals
+            # Copy the zip or the playbook to project
+            copy_deployment_data_zip viya-visuals
 
-        pushd viya-visuals
+            pushd viya-visuals
 
-        # Check for required dependencies
-        docker --version || missing_dependencies docker
-        python --version || missing_dependencies python
-        pip    --version || missing_dependencies pip
+            # Check for required dependencies
+            docker --version || missing_dependencies docker
+            python --version || missing_dependencies python
+            pip    --version || missing_dependencies pip
 
-        # export the values so that they are picked up by the lower level scipt.
-        [[ ! -z ${CHECK_MIRROR_URL} ]] && export CHECK_MIRROR_URL
-        [[ ! -z ${CHECK_DOCKER_URL} ]] && export CHECK_DOCKER_URL
-        [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
+            # export the values so that they are picked up by the lower level scipt.
+            [[ ! -z ${CHECK_MIRROR_URL} ]] && export CHECK_MIRROR_URL
+            [[ ! -z ${CHECK_DOCKER_URL} ]] && export CHECK_DOCKER_URL
+            [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
 
-        ./viya-visuals-build.sh \
-          --baseimage "${BASEIMAGE}" \
-          --basetag "${BASETAG}" \
-          --platform "${PLATFORM}" \
-          --docker-url "${DOCKER_REGISTRY_URL}" \
-          --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
-          --sas-docker-tag "${SAS_DOCKER_TAG}" \
-          --virtual-host "${CAS_VIRTUAL_HOST}"
+            ./viya-visuals-build.sh \
+              --baseimage "${BASEIMAGE}" \
+              --basetag "${BASETAG}" \
+              --platform "${PLATFORM}" \
+              --docker-url "${DOCKER_REGISTRY_URL}" \
+              --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
+              --sas-docker-tag "${SAS_DOCKER_TAG}" \
+              --virtual-host "${CAS_VIRTUAL_HOST}"
 
-        popd
+            popd
+        fi
 
         add_layers
         add_esp_layers
