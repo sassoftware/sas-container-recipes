@@ -79,7 +79,7 @@ which provides in-memory analytics for Symmetric Multi Processing (SMP).
 **A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce (community edition)](https://docs.docker.com/install/linux/docker-ce/centos/) is required.**
 
 
-### Build the Container
+### Build the Image
 Run the following to create a user 'sasdemo' with the password 'sasdemo' for product evaluation.
 A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
 is recommended for all build commands.
