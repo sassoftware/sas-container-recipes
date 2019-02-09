@@ -89,8 +89,7 @@ is recommended for all build commands.
 
 You can use addons found in the [`addons/` directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) 
 to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more. 
-For each addon that will be included with the build, review the readme associated 
-with the addon for important information and any possible prerequisite requirements.
+For each addon that will be included with the build, review the [Appendix](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#addons) for important information and any possible prerequisite requirements.
                          
 
 ### Run the Container
