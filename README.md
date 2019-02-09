@@ -148,10 +148,10 @@ A non-root user is recommended for all build commands.
 ```    
 
         SAS Viya Programming example:
-            ./build.sh --type multiple --zip /path/to/SAS_Viya_deployment_data.zip --docker-registry-namespace myuniquename --docker-registry-url myregistry.myhost.com --addons "addons/auth-demo"
+            ./build.sh --type multiple --zip /path/to/SAS_Viya_deployment_data.zip --docker-registry-namespace myuniquename --docker-registry-url myregistry.myhost.com --virtual-host ingress-path --addons "addons/auth-demo"
 
         SAS Viya Full example: 
-            ./build.sh --type full --docker-registry-namespace myuniquename --docker-registry-url myregistry.myhost.com --zip /my/path/to/SAS_Viya_deployment_data.zip
+            ./build.sh --type full --zip /path/to/SAS_Viya_deployment_data.zip --docker-registry-namespace myuniquename --docker-registry-url myregistry.myhost.com --virtual-host ingress-path --addons "addons/auth-sssd"
         
 
   -y|--type [ multiple | full ] 
