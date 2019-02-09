@@ -50,6 +50,8 @@ or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
     b. If you would like an environment suitable for collaborative data science work, then you may be interested in a SAS programming-only deployment or a SAS Viya full [deployment on Multiple Containers](https://github.com/sassoftware/sas-container-recipes#for-one-or-more-users-sas-viya-programming-only-or-sas-viya-full-deployment-running-on-multiple-containers).
 
+    c. For either single or multiple containers, addons found in the [`addons/` directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) can enhance the base SAS Viya images with SAS/ACCESS, LDAP configuration, and more. For each addon, review the [Appendix](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#addons) for important information and any possible prerequisite requirements.
+
 
 ### Other Resources
 [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki) for all documentation.
@@ -85,12 +87,7 @@ A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manag
 is recommended for all build commands.
 ```
   ./build.sh --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
-```
-
-You can use addons found in the [`addons/` directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) 
-to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more. 
-For each addon that will be included with the build, review the [Appendix](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#addons) for important information and any possible prerequisite requirements.
-                         
+```                         
 
 ### Run the Container
 
