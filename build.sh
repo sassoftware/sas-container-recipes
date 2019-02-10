@@ -45,6 +45,40 @@ fi
 #
 # Functions
 #
+
+function sas_container_recipes_shutdown()
+{
+    echo
+    echo "================================"
+    echo "Shutting down SAS recipe process"
+    echo "================================"
+    echo
+
+    case "${SAS_RECIPE_TYPE}" in
+        multiple)
+            if [[ -f ${PWD}/viya-programming/viya-multi-container/working/sas_ansible_container.pid ]]; then
+                echo "[INFO]  : Shutting ansible-container process '$(cat ${PWD}/viya-programming/viya-multi-container/working/sas_ansible_container.pid)'"
+                kill -TERM $(cat ${PWD}/viya-programming/viya-multi-container/working/sas_ansible_container.pid)
+            fi
+            ;;
+        full)
+            if [[ -f ${PWD}/viya-visuals/working/sas_ansible_container.pid ]]; then
+                echo "[INFO]  : Shutting ansible-container process '$(cat ${PWD}/viya-visuals/working/sas_ansible_container.pid)'"
+                kill -TERM $(cat ${PWD}/viya-visuals/working/sas_ansible_container.pid)
+            fi
+            ;;
+    esac
+
+    # See if Docker still has any containers that are of type ${PROJECT_NAME}_*
+    echo "[INFO]  : Stopping and removing any Docker containers of type '${PROJECT_NAME}_*'"
+    set +e
+    docker stop $(docker container ls -q --filter "name=${PROJECT_NAME}_*")
+    docker rm $(docker container ls -aq --filter "name=${PROJECT_NAME}_*")
+    set -e
+
+    exit 1
+}
+
 function usage() {
     echo -e "
     Framework to build SAS Viya Docker images and create deployments using Kubernetes.
@@ -67,7 +101,9 @@ function usage() {
 
       -a|--addons \"[<value>] [<value>]\"
           A space separated list of layers to add on to the main SAS image.
-          See the 'addons' directory for more details on adding access engines and other tools.
+          See the 'Appendix: Under the Hood' section in the wiki for details
+          on adding access engines and other tools.
+          https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
             example: --addons \"addons/auth-sssd addons/access-postgres\"
 
       -i|--baseimage <value>
@@ -139,7 +175,9 @@ function usage() {
 
       -a|--addons \"[<value>] [<value>]\"
           A space separated list of layers to add on to the main SAS image.
-          See the 'addons' directory for more details on adding access engines and other tools.
+          See the 'Appendix: Under the Hood' section in the wiki for details
+          on adding access engines and other tools.
+          https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
             example: --addons \"addons/auth-sssd addons/access-postgres\"
 
       -i|--baseimage <value>
@@ -364,6 +402,13 @@ function echo_experimental()
     echo " |_____/_/\_\_|   |_____|_| \_\___|_|  |_|_____|_| \_| |_/_/   \_\_____|"
     echo
 }
+
+###############################################################################
+# Shutdown
+###############################################################################
+
+trap sas_container_recipes_shutdown SIGTERM
+trap sas_container_recipes_shutdown SIGINT
 
 #
 # Set some defaults
@@ -749,6 +794,7 @@ case ${SAS_RECIPE_TYPE} in
         # We will not pass the CHECK_*_URL values here as they are not used in the lower level script
         [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
 
+        set +e
         ./viya-multi-build.sh \
           --baseimage "${BASEIMAGE}" \
           --basetag "${BASETAG}" \
@@ -759,6 +805,12 @@ case ${SAS_RECIPE_TYPE} in
           --sas-docker-tag "${SAS_DOCKER_TAG}" \
           --virtual-host "${CAS_VIRTUAL_HOST}"
 
+        multi_build_rc=$?
+        set -e
+        if (( ${multi_build_rc} > 0 )); then
+            echo "[ERROR] : The viya-multi-build.sh has exited with a non zero return code."
+            sas_container_recipes_shutdown
+        fi
         popd
 
         # Add more layers to the programming and CAS containers
@@ -785,6 +837,7 @@ case ${SAS_RECIPE_TYPE} in
         [[ ! -z ${CHECK_DOCKER_URL} ]] && export CHECK_DOCKER_URL
         [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
 
+        set +e
         ./viya-visuals-build.sh \
           --baseimage "${BASEIMAGE}" \
           --basetag "${BASETAG}" \
@@ -793,6 +846,13 @@ case ${SAS_RECIPE_TYPE} in
           --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
           --sas-docker-tag "${SAS_DOCKER_TAG}" \
           --virtual-host "${CAS_VIRTUAL_HOST}"
+
+        visuals_build_rc=$?
+        set -e
+        if (( ${visuals_build_rc} > 0 )); then
+            echo "[ERROR] : The viya-visuals-build.sh has exited with a non zero return code."
+            sas_container_recipes_shutdown
+        fi
 
         popd
 

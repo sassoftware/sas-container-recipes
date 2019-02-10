@@ -211,6 +211,7 @@ if [ "${CASCFG_MODE}" = "mpp" ]; then
     [[ -z ${CASCFG_INITIALWORKERS+x} ]] && export CASCFG_INITIALWORKERS=1
     [[ -z ${CASCFG_KEYFILE+x} ]]        && export CASCFG_KEYFILE=${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_key
     [[ -z ${CASCFG_ELASTIC+x} ]]        && export CASCFG_ELASTIC=true
+    [[ -z ${CASCFG_COLOCATION+x} ]]     && export CASCFG_COLOCATION=none
 fi
 
 

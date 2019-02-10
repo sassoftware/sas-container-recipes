@@ -1,5 +1,5 @@
 ---
-# tasks file for sas-java
+# tasks file for sas-install-base-packages
 
 - name: Add repository information
   template:
@@ -67,17 +67,14 @@
       fi
     when: (METAREPO_INSTALL | bool == true)
 
-  - name: "Install {{ sas_default_java }}"
-    yum:
-      name: "{{ sas_default_java }}"
-      state: "{{ sas_install_java_action }}"
-
-  - name: Install the SAS Java configuration
+  - name: Install the SAS base packages
     yum:
       name: "{{ item }}"
       state: latest
     with_items:
-    - sas-javaesntl
+    - sas-envesntl
+    - sas-bootstrap-config
+    - sas-runjavasvc
 
   - name: Uninstall the SAS repository definitions
     shell: |
@@ -108,17 +105,15 @@
 
 - block:
 
-  - name: "Install {{ sas_default_java }}"
+  - name: Install the SAS base packages
     zypper:
-      name: "{{ sas_default_java }}"
-      state: "{{ sas_install_java_action }}"
-      disable_gpg_check: yes
-  
-  - name: Install the SAS Java configuration
-    zypper:
-      name: sas-javaesntl
+      name: "{{ item }}"
       state: latest
       disable_gpg_check: yes
+    with_items:
+    - sas-envesntl
+    - sas-bootstrap-config
+    - sas-runjavasvc
 
   when: ansible_os_family == 'Suse'
 
@@ -133,18 +128,3 @@
     path: "{{ METAREPO_CERT_DIR }}"
     state: absent
   when: (METAREPO_INSTALL | bool == true)
-
-- name: Set Java to use Java 1.8 when it is not the default Java on the system
-  set_fact:
-    sas_java_home: "{{ sas_default_jre_path }}"
-  no_log: yes
-
-- name: Set SAS_JAVA_HOME
-  lineinfile:
-    dest: "{{ SAS_CONFIG_ROOT }}/etc/sysconfig/sas-javaesntl/sas-java"
-    create: no
-    line: "{{ 'SAS_JAVA_HOME=\"' + sas_java_home + '\"' }}"
-    regexp: "^(#)*SAS_JAVA_HOME\\s*=\\s*(.+)*$"
-    state: present
-    owner: "{{ INSTALL_USER }}"
-    group: "{{ INSTALL_GROUP }}"
