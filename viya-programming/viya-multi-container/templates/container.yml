@@ -18,6 +18,7 @@ services:
   httpproxy:
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
+    - sas-prerequisites
     - httpproxy
     ports:
     - "80:80"
@@ -44,6 +45,7 @@ services:
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-prerequisites
     - sas-java
     - programming
     - spawner-config
@@ -71,6 +73,7 @@ services:
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-prerequisites
     - sas-java
     - sas-casserver-primary
     ports:

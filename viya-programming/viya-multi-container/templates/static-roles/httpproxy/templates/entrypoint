@@ -42,9 +42,9 @@ cat > $APACHE_CONF_D/proxy.conf << HTTPD
 RedirectMatch "^/$" /SASStudio
 
 <location /cas-shared-default-http>
-  ProxyPass         http://{{ PROJECT_NAME }}-sas-casserver-primary:8777/cas-shared-default-http
-  ProxyPassReverse  http://{{ PROJECT_NAME }}-sas-casserver-primary:8777/cas-shared-default-http
-  RequestHeader set Origin "http://{{ PROJECT_NAME }}-sas-casserver-primary:8777"
+  ProxyPass         http://{{ PROJECT_NAME }}-cas:8777/cas-shared-default-http
+  ProxyPassReverse  http://{{ PROJECT_NAME }}-cas:8777/cas-shared-default-http
+  RequestHeader set Origin "http://{{ PROJECT_NAME }}-cas:8777"
 </Location>
 
 <Location /SASStudio/mobile>

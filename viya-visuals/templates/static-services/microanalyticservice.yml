@@ -1,23 +1,18 @@
-  operations:
+  microanalyticservice:
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
-    - sas-prerequisites
-    - sas-install-base-packages
     - sas-java
-    - sas-install-spre
-    - Operations
+    - MicroAnalyticService
     - cloud-config
     ports: {}
-    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/operations-entrypoint.sh"]
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/microanalyticservice-entrypoint.sh"]
     labels:
       sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
       sas.layer.operations: "true"
     deployment_overrides:
       environment:
-        - "SAS_LICENSE="
-        - "SAS_CLIENT_CERT="
-        - "SAS_CA_CERT="
+        - "SASLICENSEDIR=/opt/sas/viya/config/etc/SASMicroAnalyticService/"
       secrets:
         - "SETINIT_TEXT_ENC="
       volumes:

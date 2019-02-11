@@ -23,14 +23,30 @@
 # example: export REBUILDS="myservice myotherservice anotherone" ./build.sh ...
 # https://www.ansible.com/integrations/containers/ansible-container
 function ansible_build() {
+    # Need to remove the latest tag as the push process is looking for the latest tag.
+    # If we are running the build process a second time, the latest tag will be found
+    # and pushed which may not be want we want. We will remove the latest tag
+    # and then kick off ansible-container. ansible-container always tags the image
+    # as latest and with a date-time stamp. Removing the latest tag does not remove
+    # the image.
+    echo -e "[INFO]  : Remove the latest tag from images if they already exist."
+    readarray -t sorted_services < <(printf '%s\0' "${all_services[@]}" | sort -z | xargs -0n1)
+    for service in "${sorted_services[@]}"; do
+        set +e
+        docker rmi ${PROJECT_NAME}-${service}:latest 2> /dev/null
+        set -e
+    done
+
+    SAS_ANSIBLE_CONTAINER_PID=
     if [[ ! -z ${REBUILDS} ]]; then
         echo -e "Rebuilding services ${REBUILDS}"
-        ansible-container build --services $REBUILDS
+        ansible-container build --services $REBUILDS &
+        SAS_ANSIBLE_CONTAINER_PID=$!
     else
-        ansible-container build
+        ansible-container build &
+        SAS_ANSIBLE_CONTAINER_PID=$!
     fi
-    build_rc=$?
-    set -e
+    echo ${SAS_ANSIBLE_CONTAINER_PID} > ${PWD}/sas_ansible_container.pid
 }
 
 # At the start of the process output details on the environment and build flags
@@ -44,7 +60,6 @@ function setup_logging() {
     echo -e "  Platform                        = ${PLATFORM}"
     echo -e "  HTTP Ingress endpoint           = ${CAS_VIRTUAL_HOST}"
     echo -e "  Deployment Data Zip             = ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
-    echo -e "  Playbook Location               = ${SAS_VIYA_PLAYBOOK_DIR}"
     echo -e "  Addons                          = ${ADDONS}"
     echo -e "  Docker registry URL             = ${DOCKER_REGISTRY_URL}"
     echo -e "  Docker registry namespace       = ${DOCKER_REGISTRY_NAMESPACE}"
@@ -107,11 +122,7 @@ function validate_input() {
 # tool to create the playbook. Any changes made to this playbook will get # overridden in the next build.
 #
 function get_playbook() {
-    if [[ -d ${SAS_VIYA_PLAYBOOK_DIR} ]]; then
-        # Playbook path given and it's valid
-        cp -v ${SAS_VIYA_PLAYBOOK_DIR} .
-
-    elif [[ ! -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
+    if [[ ! -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
         # SAS_Viya_deployment_data.zip given and it's valid
         SAS_ORCHESTRATION_LOCATION=${PWD}/../sas-orchestration
         if [[ ! -f ${SAS_ORCHESTRATION_LOCATION} ]]; then
@@ -122,8 +133,8 @@ function get_playbook() {
             rm -v sas-orchestration-linux.tgz
             mv sas-orchestration ../
         fi
-        
-        echo -e "[INFO] : Building the playbook from the SOE zip."
+
+        echo -e "[INFO]  : Building the playbook from the SOE zip."
         ${SAS_ORCHESTRATION_LOCATION} build \
             --input ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} \
             --repository-warehouse ${SAS_RPM_REPO_URL} \
@@ -134,7 +145,7 @@ function get_playbook() {
         cp -v sas_viya_playbook/*.pem .
 
     else
-        echo -e "[ERROR] : Could not find a zip file or playbook to use"
+        echo -e "[ERROR] : Could not find a zip file to use"
         echo -e ""
         exit 1
     fi
@@ -231,6 +242,7 @@ function setup_environment() {
         # Restore latest pip version
         pip install --upgrade pip setuptools
         pip install -r templates/requirements.txt
+        pip install ansible==2.7
     fi
 
     # Start with a clean working space by moving everything into the working directory
@@ -256,6 +268,7 @@ function setup_environment() {
 # https://www.ansible.com/integrations/containers/ansible-container
 #
 function make_ansible_yamls() {
+    all_services=() # Keep a list of the built services so they can be pushed a registry
     # Each directory in the group_vars is a new host
     for file in $(ls -1 sas_viya_playbook/group_vars); do
 
@@ -302,17 +315,21 @@ function make_ansible_yamls() {
                         cat ../templates/static-services/${service} >> container.yml
                         echo -e "" >> container.yml
                         is_static=true
+                        all_services+=( $(basename -s .yml ${service}) )
                     fi
                 done
 
                 # Service is not static, meaning it needs to be dynamically created
                 if [ $is_static != true ]; then
+                    all_services+=( ${file,,} )
                     cat >> container.yml <<EOL
 
   ${file,,}:
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-prerequisites
+    - sas-install-base-packages
     - sas-java
     - ${file}
     - cloud-config
@@ -433,27 +450,63 @@ EOL
 
 # Generate the Kubernetes resources
 function make_deployments() {
-    pip install ansible==2.7
     # Force Ansible to show the colored output
     ANSIBLE_FORCE_COLOR=true
     ansible-playbook generate_manifests.yml -e "docker_tag=${SAS_DOCKER_TAG}" -e 'ansible_python_interpreter=/usr/bin/python'
 }
 
-# Push built images to the specified private docker registry
+# Push built images to the specified docker registry
 function push_images() {
-    # Example line: `ansible-container push --push-to my-company-repo --tag 18.10.0-20181120130951-4887f72`
-    # This pushes all images defined in the container.yml file to the registry defined in the container.yml
-    #
-    # Within the container.yml there is something similar to:
-    #
-    # registries:
-    #   docker-registry: <--- This is the name used in the "--push-to". The url is NOT used in --push-to.
-    #     url: docker.mycompany.com
-    #     namespace: mynamespace
-    set -x
-    echo -e "ansible-container push --push-to ${DOCKER_REGISTRY_URL} --tag ${SAS_DOCKER_TAG}"
-    ansible-container push --push-to docker-registry --tag ${SAS_DOCKER_TAG}
-    set +x
+    # Sort the services so they are in alphabetical order
+    #https://stackoverflow.com/questions/7442417/how-to-sort-an-array-in-bash
+    readarray -t sorted_services < <(printf '%s\0' "${all_services[@]}" | sort -z | xargs -0n1)
+    for service in "${sorted_services[@]}"; do
+        early_exit=false
+        done=false
+        while [[ "$done" != "true" && "${early_exit}" == "false" ]]; do
+            if [[ "$(docker images -q ${PROJECT_NAME}-${service}:latest 2> /dev/null)" != "" ]]; then
+                echo "[INFO]  : Pushing ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}"
+                docker tag ${PROJECT_NAME}-${service}:latest ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}
+                docker push ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}
+                echo "[INFO]  : Completed push of ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}"
+                done=true
+            else
+                echo "[INFO]  : Cannot find '${PROJECT_NAME}-${service}:latest'...pausing 30 seconds"
+                sleep 30
+                # Check a-c process to make sure it did not exit out
+                if [[ "$(ps --no-headers ${SAS_ANSIBLE_CONTAINER_PID} | awk '{print $1}')" == "" ]]; then
+                    # if a-c is no longer running, break
+                    echo "[WARN]  : ansible-controller has stopped but not all images are built."
+                    early_exit=true
+                fi
+            fi
+        done
+        # Check a-c process to make sure it did not exit out
+        # if a-c is no longer running, break
+        if [[ "${early_exit}" == "true" ]]; then
+            break
+        fi
+    done
+
+    # Run through it one more time and collect any services that do not have images
+    # If we have any services with no images and a-c has exited, then we will assume
+    # that a-c exited early and thus we are in a error state and need to return early.
+    missing_images=()
+    for service in "${sorted_services[@]}"; do
+        if [[ "$(docker images -q ${PROJECT_NAME}-${service}:latest 2> /dev/null)" == "" ]]; then
+            missing_images+=( ${service} )
+        else
+            echo "[INFO]  : Second attempt to push ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}"
+            docker tag ${PROJECT_NAME}-${service}:latest ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}
+            docker push ${DOCKER_REGISTRY_URL}/${DOCKER_REGISTRY_NAMESPACE}/${PROJECT_NAME}-${service}:${SAS_DOCKER_TAG}
+        fi
+    done
+
+    # If we have any images that were not built, then we need to exit
+    if (( ${#missing_images[@]} > 0 )); then
+        echo "[ERROR] : Looks like ansible-container exited early and not all expected images are built...exiting"
+        exit 22
+    fi
 }
 
 # For larger orders we see that if the container.yml is too many characters then
@@ -467,17 +520,11 @@ function make_manifest_yaml() {
     sed -i "s|SAS_CLIENT_CERT=|SAS_CLIENT_CERT=$(cat entitlement_certificate.pem  | base64 --wrap=0 )|g" manifest.yml
     sed -i "s|SAS_CA_CERT=|SAS_CA_CERT=$(cat SAS_CA_Certificate.pem | base64 --wrap=0 )|g" manifest.yml
 }
- 
+
 # Use command line options if they have been provided and overrides environment settings
 while [[ $# -gt 0 ]]; do
     key="$1"
     case ${key} in
-        -h|--help)
-            shift
-            echo "See top level readme for --help details"
-            echo
-            exit 0
-            ;;
         -i|--baseimage)
             shift # past argument
             BASEIMAGE="$1"
@@ -528,11 +575,6 @@ while [[ $# -gt 0 ]]; do
         -v|--virtual-host)
             shift # past argument
             CAS_VIRTUAL_HOST="$1"
-            shift # past value
-             ;;
-        -l|--playbook-dir)
-            shift # past argument
-            SAS_VIYA_PLAYBOOK_DIR="$1"
             shift # past value
              ;;
         -s|--sas-docker-tag)

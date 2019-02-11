@@ -2,6 +2,8 @@
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-prerequisites
+    - sas-install-base-packages
     - sas-java
     - viprESM
     - cloud-config
@@ -16,8 +18,8 @@
         - "SAS_DEBUG=1"
     deployment_overrides:
       environment:
-        - "SASLICENSEDIR=/opt/sas/viya/config/etc/sysconfig"
-        - "SASLICENSEFILE=esm_license.txt"
+        - "SASLICENSEDIR=/opt/sas/viya/config/etc/sysconfig/sas-esm-service/default"
+        - "SASLICENSEFILE=license.txt"
       secrets:
         - "SETINIT_TEXT_ENC="
       volumes:
