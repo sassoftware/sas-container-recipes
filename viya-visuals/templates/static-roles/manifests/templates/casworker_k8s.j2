@@ -1,19 +1,19 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: {{ settings.project_name }}-sas-casserver-worker
+  name: {{ settings.project_name }}-cas-worker
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: {{ settings.project_name }}-sas-casserver-worker
+        app: {{ settings.project_name }}-cas-worker
         domain: {{ settings.project_name }}
     spec:
-      hostname: {{ settings.project_name }}-sas-casserver-worker
+      hostname: {{ settings.project_name }}-cas-worker
       subdomain: {{ settings.project_name }}-subdomain
       containers:
-      - name: {{ settings.project_name }}-sas-casserver-worker
+      - name: {{ settings.project_name }}-cas-worker
 {% for regkey,regvalue in registries.items() %}
         image: {{ regvalue.url }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
 {% endfor %}
@@ -36,7 +36,7 @@ spec:
         - name: SERVICE_NAME
           value: "casworker"
         - name: CASCONTROLLERHOST
-          value: "{{ settings.project_name }}-sas-casserver-primary" 
+          value: "{{ settings.project_name }}-cas" 
 {% if SECURE_CONSUL %}
         - name: SECURE_CONSUL
           value: "true"
@@ -58,7 +58,7 @@ spec:
         - name: {{ environment.split('=')[0] }}
           valueFrom:
             configMapKeyRef:
-              name: {{ settings.project_name }}-{{ item.key }}
+              name: {{ settings.project_name }}-cas
               key: {{ environment.split('=')[0] | lower }}
 {%     endif %}
 {%   endfor %}
@@ -83,7 +83,7 @@ spec:
 {%     endif     %}
           valueFrom:
             secretKeyRef:
-              name: {{ settings.project_name }}-{{ item.key | lower }}
+              name: {{ settings.project_name }}-cas
               key: {{ secrets.split('=')[0] | lower }}
 {%   endfor %}
 {% endif %}
@@ -99,7 +99,7 @@ spec:
 {% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
         volumeMounts:
 {%   for volumes in item.value.deployment_overrides.volumes %}
-        - name: {{ settings.project_name }}-sas-casserver-worker-{{ volumes.split('=')[0] }}-volume
+        - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
 {%   endfor %}
 {% endif %}
@@ -107,7 +107,7 @@ spec:
 {% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
       volumes:
 {%   for volumes in item.value.deployment_overrides.volumes %}
-      - name: {{ settings.project_name }}-sas-casserver-worker-{{ volumes.split('=')[0] }}-volume
+      - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
 {%   endfor %}
 {% endif %}

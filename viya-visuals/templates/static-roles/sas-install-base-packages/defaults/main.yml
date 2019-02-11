@@ -1,0 +1,5 @@
+---
+# defaults file for sas-java
+
+platform: "{% if ansible_os_family == 'RedHat' %}redhat{% else %}suse{% endif %}"
+

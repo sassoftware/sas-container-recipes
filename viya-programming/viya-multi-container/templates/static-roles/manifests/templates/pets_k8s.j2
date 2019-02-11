@@ -2,10 +2,18 @@
 apiVersion: v1
 kind: Service
 metadata:
+{% if item.key == "sas-casserver-primary" %}
+  name: {{ settings.project_name }}-cas
+{% else %}
   name: {{ settings.project_name }}-{{ item.key }}
+{% endif %}
 spec:
   selector:
+{% if item.key == "sas-casserver-primary" %}
+    app: {{ settings.project_name }}-cas
+{% else %}
     app: {{ settings.project_name }}-{{ item.key }}
+{% endif %}
 {% if item.value.ports is defined and item.value.ports %}
   ports:
 {%   for ports in item.value.ports %}
@@ -21,18 +29,38 @@ spec:
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
+{% if item.key == "sas-casserver-primary" %}
+  name: {{ settings.project_name }}-cas
+{% else %}
   name: {{ settings.project_name }}-{{ item.key }}
+{% endif %}
 spec:
+{% if item.key == "sas-casserver-primary" %}
+  serviceName: "{{ settings.project_name }}-cas"
+{% else %}
   serviceName: "{{ settings.project_name }}-{{ item.key }}"
+{% endif %}
   replicas: 1
   template:
     metadata:
       labels:
+{% if item.key == "sas-casserver-primary" %}
+        app: {{ settings.project_name }}-cas
+{% else %}
         app: {{ settings.project_name }}-{{ item.key }}
+{% endif %}
     spec:
+{% if item.key == "sas-casserver-primary" %}
+      hostname: {{ settings.project_name }}-cas
+{% else %}
       hostname: {{ settings.project_name }}-{{ item.key }}
+{% endif %}
       containers:
+{% if item.key == "sas-casserver-primary" %}
+      - name: {{ settings.project_name }}-cas
+{% else %}
       - name: {{ settings.project_name }}-{{ item.key }}
+{% endif %}
 {% for regkey,regvalue in registries.items() %}
         image: {{ regvalue.url }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
 {% endfor %}
@@ -77,7 +105,11 @@ spec:
         - name: {{ environment.split('=')[0] }}
           valueFrom:
             configMapKeyRef:
+{%     if item.key == "sas-casserver-primary" %}
+              name: {{ settings.project_name }}-cas
+{%     else %}
               name: {{ settings.project_name }}-{{ item.key }}
+{%     endif %}
               key: {{ environment.split('=')[0] | lower }}
 {%   endfor %}
 {% endif %}
@@ -101,7 +133,11 @@ spec:
 {%     endif     %}
           valueFrom:
             secretKeyRef:
+{%     if item.key == "sas-casserver-primary" %}
+              name: {{ settings.project_name }}-cas
+{%     else %}
               name: {{ settings.project_name }}-{{ item.key | lower }}
+{%     endif %}
               key: {{ secrets.split('=')[0] | lower }}
 {%   endfor %}
 {% endif %}
@@ -117,7 +153,11 @@ spec:
 {% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
         volumeMounts:
 {%   for volumes in item.value.deployment_overrides.volumes %}
+{%     if item.key == "sas-casserver-primary" %}
+        - name: {{ settings.project_name }}-cas-{{ volumes.split('=')[0] }}-volume
+{%     else %}
         - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
+{%     endif %}
           mountPath: {{ volumes.split('=')[1] }}
 {%   endfor %}
 {% endif %}
@@ -125,7 +165,11 @@ spec:
 {% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
       volumes:
 {%   for volumes in item.value.deployment_overrides.volumes %}
+{%     if item.key == "sas-casserver-primary" %}
+      - name: {{ settings.project_name }}-cas-{{ volumes.split('=')[0] }}-volume
+{%     else %}
       - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
+{%     endif %}
         emptyDir: {}
 {%   endfor %}
 {% endif %}

@@ -39,26 +39,7 @@ USER root
 
 WORKDIR /tmp/sas
 
-#
-# One of the following lines must be enabled. By default, the SAS_Viya_deployment_data.zip
-# will be used to generate the playbook. However, if the playbook has been already been
-# generated, that could be used in the Docker build process.
-#
-
 COPY SAS_Viya_deployment_data.zip ./
-#COPY sas_viya_playbook/ sas_viya_playbook/
-
-#
-# Check and see if playbook is a programming only one
-#
-
-RUN set -e; \
-    if [ -d sas_viya_playbook ]; then \
-        if [ -d sas_viya_playbook/roles/vault_tokens ]; then \
-            echo; echo "####### [ERROR] : Provided playbook is not a programming only version"; echo; \
-            exit 4; \
-        fi; \
-    fi
 
 #
 # Install some of the expected packages in their own layer

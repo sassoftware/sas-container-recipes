@@ -2,6 +2,8 @@
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-prerequisites
+    - sas-install-base-packages
     - rabbitmq
     - cloud-config
     ports:

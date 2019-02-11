@@ -2,7 +2,10 @@
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-prerequisites
+    - sas-install-base-packages
     - sas-java
+    - sas-install-spre
     - ComputeServer
     - cloud-config
     ports:
