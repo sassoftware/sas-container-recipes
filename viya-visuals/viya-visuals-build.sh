@@ -60,7 +60,6 @@ function setup_logging() {
     echo -e "  Platform                        = ${PLATFORM}"
     echo -e "  HTTP Ingress endpoint           = ${CAS_VIRTUAL_HOST}"
     echo -e "  Deployment Data Zip             = ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
-    echo -e "  Playbook Location               = ${SAS_VIYA_PLAYBOOK_DIR}"
     echo -e "  Addons                          = ${ADDONS}"
     echo -e "  Docker registry URL             = ${DOCKER_REGISTRY_URL}"
     echo -e "  Docker registry namespace       = ${DOCKER_REGISTRY_NAMESPACE}"
@@ -123,11 +122,7 @@ function validate_input() {
 # tool to create the playbook. Any changes made to this playbook will get # overridden in the next build.
 #
 function get_playbook() {
-    if [[ -d ${SAS_VIYA_PLAYBOOK_DIR} ]]; then
-        # Playbook path given and it's valid
-        cp -v ${SAS_VIYA_PLAYBOOK_DIR} .
-
-    elif [[ ! -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
+    if [[ ! -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
         # SAS_Viya_deployment_data.zip given and it's valid
         SAS_ORCHESTRATION_LOCATION=${PWD}/../sas-orchestration
         if [[ ! -f ${SAS_ORCHESTRATION_LOCATION} ]]; then
@@ -150,7 +145,7 @@ function get_playbook() {
         cp -v sas_viya_playbook/*.pem .
 
     else
-        echo -e "[ERROR] : Could not find a zip file or playbook to use"
+        echo -e "[ERROR] : Could not find a zip file to use"
         echo -e ""
         exit 1
     fi
@@ -530,12 +525,6 @@ function make_manifest_yaml() {
 while [[ $# -gt 0 ]]; do
     key="$1"
     case ${key} in
-        -h|--help)
-            shift
-            echo "See top level readme for --help details"
-            echo
-            exit 0
-            ;;
         -i|--baseimage)
             shift # past argument
             BASEIMAGE="$1"
@@ -586,11 +575,6 @@ while [[ $# -gt 0 ]]; do
         -v|--virtual-host)
             shift # past argument
             CAS_VIRTUAL_HOST="$1"
-            shift # past value
-             ;;
-        -l|--playbook-dir)
-            shift # past argument
-            SAS_VIYA_PLAYBOOK_DIR="$1"
             shift # past value
              ;;
         -s|--sas-docker-tag)
