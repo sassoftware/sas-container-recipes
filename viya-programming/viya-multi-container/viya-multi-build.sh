@@ -267,7 +267,7 @@ if [[ "${SAS_CREATE_AC_VIRTUAL_ENV}" == "true" ]]; then
     elif [[ $PYTHON_MAJOR_VER -eq "3" ]]; then
         echo "WARN: Python3 support is experimental in ansible-container."
         echo "Updating requirements file for python3 compatibility..."
-        sed ${sed_i_option} '/ruamel.ordereddict==0.4.13/d' ./requirements.txt
+        sed ${sed_i_option} '/ruamel.ordereddict==0.4.13/d' ./templates/requirements.txt
         pip install --upgrade pip==9.0.3
         pip install --no-deps -e git+https://github.com/ansible/ansible-container.git@develop#egg=ansible-container[docker]
         echo "Updating the client timeout for the created virtual environment."
@@ -294,7 +294,7 @@ if [[ "${generate_playbook}" == "true" ]]; then
       --repository-warehouse ${SAS_RPM_REPO_URL} \
       --platform $PLATFORM \
       --deployment-type programming
-
+fi
 tar xvf ${PWD}/SAS_Viya_playbook.tgz
 
 SAS_VIYA_PLAYBOOK_DIR=${PWD}/sas_viya_playbook
