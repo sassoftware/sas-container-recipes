@@ -4,37 +4,6 @@
 # Functions
 #
 
-function usage()
-{
-    echo ""
-    echo "This is a simple utility to help build Docker images based on your SAS order."
-    echo ""
-    echo "  -i|--baseimage <value>          The Docker image from which the SAS images will build on top of"
-    echo "                                      Default: centos"
-    echo "  -t|--basetag <value>            The Docker tag for the base image that is being used"
-    echo "                                      Default: latest"
-    echo "  -n|--docker-namespace <value>   The namespace in the Docker registry where Docker images will be pushed to."
-    echo "  -r|--docker-registry-type <value>   The type od Docker registry where Docker images will be pushed to."
-    echo "                                      Valid options are default and ecr"
-    echo "  -u|--docker-url <value>         The URL of the Docker registry where Docker images will be pushed to."
-    echo "  -h|--help                       Prints out this message"
-    echo "  -m|--mirror-url <value>         (OPTIONAL) The location of the mirror URL."
-    echo "                                      See https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html"
-    echo "                                      for more information on setting up a mirror."
-    echo "  -p|--platform <value>           The type of operating system we are installing on top of"
-    echo "                                      Options: [ redhat | suse ]"
-    echo "                                      Default: redhat"
-    echo "  -l|--playbook-dir               The path to the playbook directory. If this is passed in along with the zip"
-    echo "                                      then this will take precedence."
-    echo "  -s|--sas-docker-tag             The tag to apply to the images before pushing to the Docker registry"
-    echo "  -d|--skip-docker-url-validation Skips validating the Docker registry URL"
-    echo "  -k|--skip-mirror-url-validation Skips validating the mirror URL"
-    echo "  -v|--virtual-host               The Kubernetes ingress path that defines the location of the HTTP endpoint"
-    echo "  -z|--zip <value>                The path to the SAS_Viya_deployment_data.zip file"
-    echo "                                      If both --playbook-dir and this option are provided, this will be ignored."
-    echo "                                      Format: /path/to/SAS_Viya_deployment_data.zip"
-}
-
 # Push built images to the specified docker registry
 function push_images() {
     # Sort the services so they are in alphabetical order
@@ -123,12 +92,6 @@ esac
 while [[ $# -gt 0 ]]; do
     key="$1"
     case ${key} in
-        -h|--help)
-            shift
-            usage
-            echo
-            exit 0
-            ;;
         -i|--baseimage)
             shift # past argument
             BASEIMAGE="$1"
@@ -179,11 +142,6 @@ while [[ $# -gt 0 ]]; do
             CAS_VIRTUAL_HOST="$1"
             shift # past value
             ;;
-        -l|--playbook-dir)
-            shift # past argument
-            SAS_VIYA_PLAYBOOK_DIR="$1"
-            shift # past value
-            ;;
         *)
             # Not used
             extra_params="${extra_params} $1"
@@ -203,7 +161,6 @@ echo "  Platform                        = ${PLATFORM}"
 echo "  Build System OS                 = ${OPERATING_SYSTEM}"
 echo "  Mirror URL                      = ${SAS_RPM_REPO_URL}"
 echo "  Deployment Data Zip             = ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
-echo "  Playbook Directory              = ${SAS_VIYA_PLAYBOOK_DIR}"
 echo "  Docker registry URL             = ${DOCKER_REGISTRY_URL}"
 echo "  Docker registry namespace       = ${DOCKER_REGISTRY_NAMESPACE}"
 echo "  Docker registry type            = ${DOCKER_REGISTRY_TYPE}"
@@ -224,9 +181,7 @@ echo ""
 # Default to indicate we will not run the orchestrationCLI
 generate_playbook=false
 
-if [[ -n ${SAS_VIYA_PLAYBOOK_DIR} && -d ${SAS_VIYA_PLAYBOOK_DIR} ]]; then
-    echo;echo "[INFO]  : Using playbook at '${SAS_VIYA_PLAYBOOK_DIR}'";echo
-elif [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
+if [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
     if [[ -f ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
         if [[ ! -f ${PWD}/sas-orchestration ]]; then
           if [[ "${OPERATING_SYSTEM}" == "darwin" ]]; then
@@ -249,7 +204,7 @@ elif [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
         exit 5
     fi
 else
-    echo;echo "[ERROR] : Could not find a zip file or playbook to use";echo
+    echo;echo "[ERROR] : Could not find a zip file to use";echo
     exit 5
 fi
 
@@ -340,10 +295,9 @@ if [[ "${generate_playbook}" == "true" ]]; then
       --platform $PLATFORM \
       --deployment-type programming
 
-    tar xvf ${PWD}/SAS_Viya_playbook.tgz
+tar xvf ${PWD}/SAS_Viya_playbook.tgz
 
-    SAS_VIYA_PLAYBOOK_DIR=${PWD}/sas_viya_playbook
-fi
+SAS_VIYA_PLAYBOOK_DIR=${PWD}/sas_viya_playbook
 
 echo
 echo "=========================================="

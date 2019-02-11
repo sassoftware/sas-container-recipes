@@ -42,9 +42,6 @@ if [[ "${OPERATING_SYSTEM}" != "darwin" ]]; then
     exec > >(tee -a "${PWD}"/build_sas_container.log) 2>&1
 fi
 
-
-### TODO: -r argument
-
 #
 # Functions
 #
@@ -174,13 +171,6 @@ function usage() {
 
             example: /path/to/SAS_Viya_deployment_data.zip
 
-        [ EITHER --zip OR --playbook-dir ]
-
-      -l|--playbook-dir <value>
-          Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
-          whereas new deployments utilize the above '--zip' argument. If this is passed in along with
-          the zip file then this playbook location will take precendence.
-
     Optional:
 
       -a|--addons \"[<value>] [<value>]\"
@@ -227,18 +217,17 @@ function usage() {
     "
 }
 
-function copy_deployment_data_zip()
-{
+function copy_deployment_data_zip() {
     local target_location=$1
     if [[ -n ${SAS_VIYA_PLAYBOOK_DIR} ]]; then
-        echo "[INFO]  : Copying ${SAS_VIYA_PLAYBOOK_DIR} to ${target_location}"
-        cp -a "${SAS_VIYA_PLAYBOOK_DIR}" "${target_location}"
+        echo "[ERROR]  : Providing a playbook is no longer supported. Please provide the SAS_Viya_deployment_data.zip file."
+        exit 31
     elif [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
         echo "[INFO]  : Copying ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} to ${target_location}"
         cp -v "${SAS_VIYA_DEPLOYMENT_DATA_ZIP}" "${target_location}/SAS_Viya_deployment_data.zip"
     else
         if [[ ! -f ${target_location}/SAS_Viya_deployment_data.zip ]]; then
-            echo "[ERROR] : No SAS_Viya_deployment_data.zip at ${target_location}"
+            echo "[ERROR] : Cannot find SAS_Viya_deployment_data.zip at ${target_location}"
             exit 30
         else
             echo "[INFO]  : Using ${target_location}/SAS_Viya_deployment_data.zip"
@@ -515,11 +504,6 @@ while [[ $# -gt 0 ]]; do
         -v|--virtual-host)
             shift # past argument
             export CAS_VIRTUAL_HOST="$1"
-            shift # past value
-            ;;
-        -l|--playbook-dir)
-            shift # past argument
-            export SAS_VIYA_PLAYBOOK_DIR="$1"
             shift # past value
             ;;
         -s|--sas-docker-tag)
@@ -799,7 +783,7 @@ case ${SAS_RECIPE_TYPE} in
         python --version || missing_dependencies python
         pip    --version || missing_dependencies pip
 
-        # Copy the zip or the playbook to project
+        # Copy the zip to the project
         copy_deployment_data_zip viya-programming/viya-multi-container
 
         pushd viya-programming/viya-multi-container
@@ -838,7 +822,7 @@ case ${SAS_RECIPE_TYPE} in
     full)
         echo_experimental
 
-        # Copy the zip or the playbook to project
+        # Copy the zip to the project
         copy_deployment_data_zip viya-visuals
 
         pushd viya-visuals
