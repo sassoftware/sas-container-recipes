@@ -58,7 +58,6 @@ function push_images() {
     fi
 }
 
->>>>>>> adb35113466ff384a8a2f97d0c097992ea1a63c2
 #
 # Set some defaults
 #
