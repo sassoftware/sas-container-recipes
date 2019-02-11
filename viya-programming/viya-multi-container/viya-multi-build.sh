@@ -294,7 +294,7 @@ if [[ "${generate_playbook}" == "true" ]]; then
       --repository-warehouse ${SAS_RPM_REPO_URL} \
       --platform $PLATFORM \
       --deployment-type programming
-
+fi
 tar xvf ${PWD}/SAS_Viya_playbook.tgz
 
 SAS_VIYA_PLAYBOOK_DIR=${PWD}/sas_viya_playbook
