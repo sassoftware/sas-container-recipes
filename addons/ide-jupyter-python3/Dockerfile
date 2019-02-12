@@ -59,26 +59,29 @@ RUN set -e; \
         yum erase --assumeyes epel-release; \
     elif [ "$PLATFORM" = "suse" ]; then \
         rpm --rebuilddb; \
-        zypper ar -f -c https://download.opensuse.org/repositories/devel:/languages:/python:/Factory/openSUSE_Leap_42.3/ 'openSUSE BuildService - devel:languages:python'; \
-        set +e; zypper install --no-confirm python3 python3-devel curl gcc-c++; set -e; \
+        export LD_LIBRARY_PATH='/usr/lib:/usr/local/lib'; \
+        set +e; zypper install --no-confirm curl gcc gcc-c++ gcc-fortran make automake cpp48 gcc48 gcc48-c++ gcc48-fortran python3-base python3-devel; set -e; \
         rm --verbose --recursive --force /var/cache/zypp; \
         curl --silent --remote-name https://bootstrap.pypa.io/get-pip.py; \
         python3 get-pip.py; \
         rm --verbose --force get-pip.py; \
-        zypper clean ; \
+        pip install --upgrade pip==9.0.1; \
+        zypper clean; \
     else \
         echo; echo "####### [ERROR] : Unknown platform of \"$PLATFORM\" passed in"; echo; \
         exit 1; \
     fi; \
     sed -i "s/@PLATFORM@/$PLATFORM/" /tmp/jpy3_post_deploy.sh; \
     pip3 --no-cache-dir install \
+      Cython \
       jupyter \
       saspy \
-      sas_kernel \
-      https://github.com/sassoftware/python-swat/releases/download/v${SASPYTHONSWAT}/python-swat-${SASPYTHONSWAT}-linux64.tar.gz \
+      numpy \
+      pandas \
       matplotlib \
       scikit-learn \
-      pandas; \
+      sas_kernel \
+      https://github.com/sassoftware/python-swat/releases/download/v${SASPYTHONSWAT}/python-swat-${SASPYTHONSWAT}-linux64.tar.gz; \
     jupyter nbextension install --py sas_kernel.showSASLog; \
     jupyter nbextension enable sas_kernel.showSASLog --py; \
     jupyter nbextension install --py sas_kernel.theme; \
