@@ -52,6 +52,7 @@ spec:
 {% endif %}
         domain: {{ settings.project_name }}
     spec:
+      serviceAccountName: {{ settings.project_name }}-account
 {% if item.key == "sas-casserver-primary" %}
       hostname: {{ settings.project_name }}-cas
 {% else %}
@@ -75,11 +76,37 @@ spec:
 {%   endfor %}
 {% endif %}
         env:
+        - name: APP_NAME
+          value: "{{ item.key | lower }}"
+        - name: SERVICE_NAME
+          value: "{{ item.key | lower }}"
         - name: DEPLOYMENT_NAME
           value: "{{ settings.project_name }}"
 {% if services.consul is defined %}
         - name: CONSUL_SERVER_LIST
           value: "{{ settings.project_name }}-consul"
+        - name: CACERTS_CONFIGMAP
+          value: "{{ settings.project_name }}-cacerts-configmap"
+        - name: DISABLE_CONSUL_HTTP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: disable_consul_http_port
+        - name: SECURE_CONSUL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: secure_consul
+        - name: SAS_ANCHORS_DIR
+          valueFrom:
+              configMapKeyRef:
+                name: {{ settings.project_name }}-consul
+                key: sas_anchors_dir
+        - name: VAULT_TOKEN_DIR
+          valueFrom:
+              configMapKeyRef:
+                name: {{ settings.project_name }}-consul
+                key: vault_token_dir
 {% endif %}
 {% if item.key == "sas-casserver-primary" and cas_manifest_type == "smp" %}
         - name: CASCFG_MODE
@@ -134,7 +161,7 @@ spec:
 {% if item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets %}
 {%   for secrets in item.value.deployment_overrides.secrets %}
 {%     if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
-        - name: SETINIT_TEXT 
+        - name: SETINIT_TEXT
 {%     else      %}
         - name: {{ secrets.split('=')[0] }}
 {%     endif     %}
@@ -168,6 +195,10 @@ spec:
           mountPath: {{ volumes.split('=')[1] }}
 {%   endfor %}
 {% endif %}
+        - name: anchors
+          mountPath: /anchors
+        - name: tokens
+          mountPath: /tokens
 
 {% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
       volumes:
@@ -179,5 +210,11 @@ spec:
 {%     endif %}
         emptyDir: {}
 {%   endfor %}
+      - name: tokens
+        configMap:
+          name: consul-tokens-configmap
+      - name: anchors
+        configMap:
+          name: {{ settings.project_name }}-cacerts-configmap
 {% endif %}
 ...

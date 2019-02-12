@@ -10,6 +10,10 @@
   include_role:
     name: sas-install
 
+- name: Add cloud configuration files
+  include_role:
+    name: cloud-config
+
 - name: Copy over entrypoint script
   template:
     src: entrypoint
@@ -18,3 +22,58 @@
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
 
+- name: Create /anchors/ directory
+  file:
+    path: /anchors/
+    state: directory
+    mode: 0755
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+
+- name: Create /tokens/ directory
+  file:
+    path: /tokens/
+    state: directory
+    mode: 0755
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+
+- name: Create /consul/ directory
+  file:
+    path: /consul/
+    state: directory
+    mode: 0755
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+
+- name: Create /consul/config directory
+  file:
+    path: /consul/config/
+    state: directory
+    mode: 0755
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+
+- name: Create /consul/data directory
+  file:
+    path: /consul/data/
+    state: directory
+    mode: 0755
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+
+- name: Copy files to image
+  copy:
+    src: "{{ item.name }}"
+    dest: "{{ SASHOME }}/{{ item.path }}/{{ item.name }}"
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+    mode: "{{ item.mode }}"
+  with_items:
+  - { name: consul_generate_cert.sh, path: "bin", mode: "0755" }
+  - { name: consul-utils.sh, path: "bin", mode: "0755" }
+  - { name: kill_consul_helper.sh, path: "bin", mode: "0755" }
+  - { name: localconsul_generate_vault_cert.sh, path: "bin", mode: "0755" }
+  - { name: sas-consul, path: "bin", mode: "0755" }
+  - { name: vault-setup, path: "bin", mode: "0755" }
+  - { name: vault-utils.sh, path: "bin", mode: "0755" }

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Exit out if any process returns a non zero return code
-set -e
+#set -e
 
 # Enable debugging if SAS_DEBUG is set
 [[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
@@ -28,6 +28,7 @@ fi
 [[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
 [[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
 [[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
+[[ -z ${SECURE_CONSUL} ]]       && export SECURE_CONSUL=false
 
 # The following are used in sas-start-functions
 servicename=${SASSERVICENAME}
@@ -36,105 +37,286 @@ servicecontext=${SASSERVICECONTEXT}
 # Set of functions for supporting docker containers
 source ${SASHOME}/lib/envesntl/docker-functions
 
+# Set Docker mode
+export RUNNING_IN_DOCKER="true"
+
+
 ###############################################################################
-# Functions
+# Consul Functions
 ###############################################################################
 
 # Call function to setup Consul server or agent
 docker_setup_consul()
 {
-    mkdir -p ${CONSUL_DATA_DIR}
+    echo_line "Setting up Consul..."
+    mkdir -p "${CONSUL_DATA_DIR}"
     [[ -z ${CONSUL_SERVER_FLAG+x} ]] && export CONSUL_SERVER_FLAG=false
 
-    if [ "${CONSUL_SERVER_FLAG}" = "false" ]; then
+    if [[ "${CONSUL_SERVER_FLAG}" = "false" ]]; then
 
-        if [ -z "${CONSUL_SERVER_LIST}" ]; then
+        if [[ -z "${CONSUL_SERVER_LIST}" ]]; then
           export CONSUL_SERVER_LIST=consul-${DEPLOYMENT_NAME}
         fi
 
         #export CONSUL_OPTIONS="${CONSUL_OPTIONS} -join ${CONSUL_SERVER_LIST}"
 
         # Trying with removing these files...not sure that they are needed
-        if [ -e ${SASCONFIG}/etc/consul.d/config-consulwatches.json ]; then
+        if [[ -e ${SASCONFIG}/etc/consul.d/config-consulwatches.json ]]; then
           rm -v ${SASCONFIG}/etc/consul.d/config-consulwatches.json
         fi
 
         # Drop existing peers because Docker reassigns new IP addresses for each container start
-        if [ -f ${CONSUL_DATA_DIR}/raft/peers.json ]
-        then
-          rm -v ${CONSUL_DATA_DIR}/raft/peers.json
+        if [[ -f "${CONSUL_DATA_DIR}"/raft/peers.json ]]; then
+            rm -v "${CONSUL_DATA_DIR}"/raft/peers.json
         fi
     else
         _sitedefault=${SASCONFIG}/etc/consul.d/default/sitedefault.yml
         # Trying with removing these files...not sure that they are needed
-        if [ -e ${_sitedefault} ]; then
+        if [[ -e ${_sitedefault} ]]; then
             rm -v ${_sitedefault}
         fi
 
         [[ -z ${CONSUL_BOOTSTRAP_EXPECT+x} ]] && export CONSUL_BOOTSTRAP_EXPECT=1
-        [[ ! -z ${CONSUL_KEY_VALUE_DATA+x} ]] && echo "${CONSUL_KEY_VALUE_DATA}" > ${_sitedefault}
-        [[ ! -z ${CONSUL_KEY_VALUE_DATA_ENC+x} ]] && echo ${CONSUL_KEY_VALUE_DATA_ENC} | base64 -di > ${_sitedefault}
+        [[ -n ${CONSUL_KEY_VALUE_DATA+x} ]] && echo "${CONSUL_KEY_VALUE_DATA}" > ${_sitedefault}
+        [[ -n ${CONSUL_KEY_VALUE_DATA_ENC+x} ]] && echo "${CONSUL_KEY_VALUE_DATA_ENC}" | base64 -di > ${_sitedefault}
+        echo_line "DEBUG: CONSUL_KEY_VALUE_DATA_ENC: $CONSUL_KEY_VALUE_DATA_ENC"
 
         _consul_server_list=''
 
         if [ ${CONSUL_BOOTSTRAP_EXPECT} -gt 1 ]; then
-            index=0
-            while [ ${index} -lt ${CONSUL_BOOTSTRAP_EXPECT} ]; do
-                if [ -z ${CONSUL_SERVER_LIST} ]; then
-                    _consul_server_list=$(hostname -f | sed "s/[0-9]/$index/")
-                else
-                    _consul_server_list=${_consul_server_list},$(hostname -f | sed "s/[0-9]/$index/")
-                fi
-
-                let index=index+1
-            done
-
-            export CONSUL_SERVER_LIST="${_consul_server_list}"
+            if [[ -z ${CONSUL_SERVER_LIST} ]]; then
+               index=0
+               while [ ${index} -lt ${CONSUL_BOOTSTRAP_EXPECT} ]; do
+                   if [[ -z ${CONSUL_SERVER_LIST} ]]; then
+                       _hostname=$(echo $HOSTNAME|sed "s#\(.*-\)\([0-9]*$\)#\\1#")
+                       _consul_server_list=$(hostname -f | sed "s#$_hostname[0-9]*\.#$_hostname$index\.#")
+                       export CONSUL_SERVER_LIST="${_consul_server_list}"
+                   else
+                       _hostname=$(echo $HOSTNAME|sed "s#\(.*-\)\([0-9]*$\)#\\1#")
+                       _consul_server_list=${_consul_server_list},$(hostname -f | sed "s#$_hostname[0-9]*\.#$_hostname$index\.#")
+                       export CONSUL_SERVER_LIST="${_consul_server_list}"
+                   fi
+                   let index=index+1
+               done
+            fi
+            echo "CONSUL_SERVER_LIST=${CONSUL_SERVER_LIST}"
         else
-            export CONSUL_SERVER_LIST="$(hostname -f)"
+            unset CONSUL_SERVER_LIST
         fi
+
+        /opt/sas/viya/home/bin/consul_generate_cert.sh
+        source /opt/sas/viya/home/bin/consul-utils.sh && rebuild_local_sas_truststore
     fi
+    echo_line "Consul configuration complete."
 }
 
 # Call function to start Consul server or agent
 docker_start_consul()
 {
-    [[ -z ${CONSUL_SERVER_FLAG+x} ]] && export CONSUL_SERVER_FLAG=false
-
-    if [ $CONSUL_SERVER_FLAG == "true" ]; then
+    if [[ $CONSUL_SERVER_FLAG == "true" ]]; then
         echo_line "Starting ${SASSERVICENAME}..."
     else
-        echo_line "Check to see if the Consul leader is ready"
-        consul_leader=$(${SASHOME}/bin/sas-bootstrap-config status leader --wait 2>/dev/null)
+        while true; do
+            status=$(curl --cacert /opt/sas/viya/config/etc/SASSecurityCertificateFramework/cacerts/trustedcerts.pem -s -o /dev/null -i -w "%{http_code}" ${CONSUL_HTTP_ADDR}/v1/status/leader)
+            echo_line "Received $status status from Consul server at ${CONSUL_HTTP_ADDR}"
+            if [ "${status}" -eq 200 ]; then
+                break
+            else
+                echo_line "Waiting for Remote Consul Server Before Starting local Consul Agent.."
+                copy_certs_from_configmap "${SAS_ANCHORS_DIR}"
+                source /opt/sas/viya/home/bin/consul-utils.sh && rebuild_local_sas_truststore
+                sleep 30
+            fi
+         done
 
         echo_line "Remote Consul Server running..."
+        if [ "${SECURE_CONSUL}" == "true" ]; then
+            echo_line "Generating local Consul Agent server certificate..."
+            ln -s /opt/sas/viya/config/etc/SASSecurityCertificateFramework/tokens/localconsul/default/vault.token /opt/sas/viya/config/etc/SASSecurityCertificateFramework/tokens/consul/default/vault.token  # weirdly, I have to do this...not sure why yet
+            /opt/sas/viya/home/bin/localconsul_generate_vault_cert.sh
+        fi
+
         echo_line "Starting local Consul Agent.."
     fi
 
-    consul_pid="/var/run/sas/sas-${SASDEPLOYID}-consul-${SASINSTANCE}.pid"
-    touch "${consul_pid}"
-    chmod 0744 "${consul_pid}"
-    chown sas:sas "${consul_pid}"
+    docker_create_pid_file
 
     # Start Consul
-    exec ${SASHOME}/bin/${SASSERVICENAME} -p "${consul_pid}" &
+    exec ${SASHOME}/bin/${SASSERVICENAME} -p "${DOCKERPIDFILE}" &
 
     docker_wait_for_consul_leader
+
 }
 
 ###############################################################################
-# Shutdown
+# Vault Functions
 ###############################################################################
 
-trap docker_shutdown_sas_services SIGTERM
-trap docker_shutdown_sas_services SIGINT
+function generate_service_token() {
+    echo_line "Generating Vault service token..."
+    if [ $# -ne 1 ]; then
+        echo "Function generate_service_token requires a service name as a parameter."
+        return 1
+    fi
 
+    if [[ -z ${VAULT_TOKENS_CONFIGMAP} ]]; then
+        echo "Function generate_service_token requires that VAULT_TOKENS_CONFIGMAP environment variable be specified."
+        return 1
+    fi
+
+    ${SASHOME}/SASSecurityCertificateFramework/bin/sas-crypto-management \
+        new-sec-token \
+            --appName $1 \
+            --out-file ${SASCONFIG}/etc/vault/${SASINSTANCE}/$1_vault.token \
+            --root-token ${VAULT_SHARED_SECRETS_DIR}/root_token \
+            --service-root-token ${SASCONFIG}/etc/vault/${SASINSTANCE}/service_root_token \
+            --vault-cafile ${SASCONFIG}/etc/SASSecurityCertificateFramework/cacerts/trustedcerts.pem
+    if [ $? -ne 0 ]; then
+        echo "Encountered an error creating the vault token for $1"
+        return 1
+    fi
+
+    post_key_value_to_configmap "${VAULT_TOKENS_CONFIGMAP}" "$1_vault.token" "$(cat ${SASCONFIG}/etc/vault/${SASINSTANCE}/$1_vault.token)"
+    if [ $? -ne 0 ]; then
+        echo "Encountered an error posting to ConfigMap ${VAULT_TOKENS_CONFIGMAP}"
+        return 1
+    fi
+
+    echo "Successfully created a vault token for $1 and posted to ConfigMap ${VAULT_TOKENS_CONFIGMAP}"
+}
+
+function vault_config() {
+    echo_line "Configure Vault service..."
+    # Save current consul environ
+    CURRENT_SERVICENAME=${SASSERVICENAME}
+    CURRENT_SASSERVICECONTEXT=${SASSERVICECONTEXT}
+    CURRENT_SAS_VAULT_CONFIG_DIR=${SAS_VAULT_CONFIG_DIR}
+    # Configure environ for vault
+    export SASSERVICENAME="sas-vault"
+    export SASSERVICECONTEXT=${SASSERVICENAME#sas-}
+    export SAS_VAULT_CONFIG_DIR=${SASCONFIG}/etc/${SASSERVICECONTEXT}/${SASINSTANCE}
+    [[ -z ${SAS_VAULT_CONFIG_DIR} ]] && export SAS_VAULT_CONFIG_DIR=${SASCONFIG}/etc/${SASSERVICECONTEXT}/${SASINSTANCE}
+
+    if [[ -n "$VAULT_SHARED_SECRETS_DIR" ]] && [[ -d "$VAULT_SHARED_SECRETS_DIR" ]]; then
+        for target in $(ls $VAULT_SHARED_SECRETS_DIR); do
+            if [[ -e $SAS_VAULT_CONFIG_DIR/$target ]]; then
+                echo "$SAS_VAULT_CONFIG_DIR/$target value provided in environment, not using shared volume"
+            else
+                echo "creating symlink $SAS_VAULT_CONFIG_DIR/$target -> $VAULT_SHARED_SECRETS_DIR/$target"
+                ln -s $VAULT_SHARED_SECRETS_DIR/$target $SAS_VAULT_CONFIG_DIR/$target
+            fi
+        done
+    fi
+
+    echo "Changing vault.hcl file."
+    ${SASHOME}/bin/fix_vault_hcl_file_to_correct_format.sh ${SASCONFIG} ${SECURE_CONSUL}
+    sed -i -e "s/@CONSUL_TOKEN@/${CONSUL_TOKENS_CLIENT}/g" $SAS_VAULT_CONFIG_DIR/vault.hcl
+
+    if [[ $SASINITDEBUG == "true" ]]; then
+        cat ${SAS_VAULT_CONFIG_DIR}/vault.hcl
+    fi
+
+    # Build the sas trust store - required if running consul & vault from one container
+    if [[ -n "$SAS_ANCHORS_DIR" ]] && [[ -d "$SAS_ANCHORS_DIR" ]]; then
+        if [[ -f $SAS_ANCHORS_DIR/vault-ca.crt ]] && [[ $(ls ${SAS_ANCHORS_DIR} | grep -e ".*\.crt" | wc -l) -eq 1 ]]; then
+            echo "The Vault Root CA is present and no Consul certs are present"
+            echo "This is the contents of the ${SAS_ANCHORS_DIR} directory"
+            echo "$(ls ${SAS_ANCHORS_DIR})"
+            echo "Copying the root CA over."
+            cp -v $SAS_ANCHORS_DIR/vault-ca.crt ${SASCONFIG}/etc/SASSecurityCertificateFramework/cacerts
+        else
+            if [ "${SECURE_CONSUL}" == "true" ]; then
+                while [ $(find ${SAS_ANCHORS_DIR} -maxdepth 1 -name "consul*crt" -exec basename {} \; | wc -w) -lt $CONSUL_BOOTSTRAP_EXPECT  ]; do
+                    echo "Contents of the ${SAS_ANCHORS_DIR} directory:"
+                    echo "$(ls ${SAS_ANCHORS_DIR})"
+                    echo "Waiting until $CONSUL_BOOTSTRAP_EXPECT consul certs present in ${SAS_ANCHORS_DIR}"
+                    sleep 5s
+                done
+                echo "Contents of the ${SAS_ANCHORS_DIR} directory:"
+                echo "$(ls ${SAS_ANCHORS_DIR})"
+                echo "Found ${CONSUL_BOOTSTRAP_EXPECT} consul certs in ${SAS_ANCHORS_DIR}."
+                if [[ -n ${CACERTS_CONFIGMAP} ]]; then
+                  copy_certs_from_configmap "$SAS_ANCHORS_DIR"
+                else
+                  cp -v $SAS_ANCHORS_DIR/*.crt ${SASCONFIG}/etc/SASSecurityCertificateFramework/cacerts ##Dont copy the root token into the cacerts path.
+                fi
+            fi
+        fi
+    fi
+    ${SASHOME}/SASSecurityCertificateFramework/bin/sas-merge-certificates.sh ${SASHOME} ${SASCONFIG} consul:$CONSUL_HTTP_ADDR/cacerts
+
+    # Start Vault
+    # docker_create_pid_file
+    # exec ${SASHOME}/bin/${SASSERVICENAME}.start -p "${DOCKERPIDFILE}" &
+    # echo_line "DEBUG: DOCKERPIDFILE: $DOCKERPIDFILE"
+
+    export SAS_SERVICE_PID_DIR=${SASCONFIG}/var/run/${SASSERVICECONTEXT}
+    export SAS_SERVICE_PID=${SAS_SERVICE_PID_DIR}/${SASSERVICENAME}.pid
+    mkdir -pv ${SAS_SERVICE_PID_DIR}
+    touch ${SAS_SERVICE_PID}
+    ${SASHOME}/bin/${SASSERVICENAME}.start -p ${SAS_SERVICE_PID}
+
+
+    # Make Vault compatible with docker-functions
+    # echo_line "DEBUG: ${SASCONFIG}/var/run/${SASSERVICECONTEXT}/$SASSERVICENAME.pid"
+    # mkdir -pv ${SASCONFIG}/var/run/${SASSERVICECONTEXT}
+    ln -s ${SAS_SERVICE_PID} /var/run/sas/$SASSERVICENAME.pid
+
+    VAULT_SETUP_LOCK_FILE=${SASCONFIG}/etc/vault/default/vault_setup_running.lock
+    touch ${VAULT_SETUP_LOCK_FILE}
+    echo "Running Vault setup"
+    ${SASHOME}/bin/vault-setup
+    rm ${VAULT_SETUP_LOCK_FILE}
+
+
+    while [ true ]; do
+       response=$(curl -s -k1 https://127.0.0.1:8200/v1/sys/leader)
+       echo "Vault leader inquiry responded with: $response"
+       read is_self leader_address <<< $(echo "$response" | python -c "import sys, json; data = json.load(sys.stdin); print (data['is_self']);print (data['leader_address'])")
+       echo "Parsed the leader address to be: $leader_address"
+       echo "Parsed the is_self parameter to be: $is_self"
+       if [ "$leader_address" == "" ]; then
+          echo "No leader found at this time. Sleeping."
+          sleep 5s
+       else
+          echo "Leader found."
+          break
+       fi
+    done
+
+    if [[ "$is_self" == "True" ]]; then
+       echo "This Vault server is the leader."
+       echo "Generating service tokens. List is: ${VAULT_TOKEN_SERVICE_LIST}"
+       OIFS=${IFS}
+       IFS=','
+       for token in ${VAULT_TOKEN_SERVICE_LIST}; do
+          generate_service_token $token
+       done
+       IFS=${OIFS}
+    else
+       echo "This Vault server is a follower. No tokens will be generated."
+    fi
+    echo "Vault configuration complete..."
+    #Reset consul environ
+    #export SASSERVICENAME=${CURRENT_SERVICENAME}
+    #export SASSERVICECONTEXT=${CURRENT_SASSERVICECONTEXT}
+}
+
+update_vault_token_list(){
+    for token in ${SASSERVICES_CONFIGMAP}; do
+        #grep VAULT_TOKEN_SERVICE_LIST for existing token
+        # if it doesn't exist create it
+        if [[ -z $(grep  -R "$token" "${VAULT_TOKEN_SERVICE_LIST}") ]]; then
+            generate_service_token "$token"
+        fi
+    done
+}
 ###############################################################################
 # Setup Consul
 ###############################################################################
 
-# [[ -z ${CONSUL_DATA_DIR+x} ]]  && export CONSUL_DATA_DIR="${SASCONFIG}/data/${SASSERVICECONTEXT}"
-[[ -z ${CONSUL_DATA_DIR+x} ]]  && export CONSUL_DATA_DIR="/consul/data"
+[[ -z ${CONSUL_DATA_DIR+x} ]]  && export CONSUL_DATA_DIR="${SASCONFIG}/data/${SASSERVICECONTEXT}"
+#[[ -z ${CONSUL_DATA_DIR+x} ]]  && export CONSUL_DATA_DIR="/consul/data"
 
 docker_define_consul_environment
 
@@ -159,23 +341,69 @@ cat > ${SASCONFIG}/etc/consul.d/config-docker-kv-bulkload-sitedefault.json << WA
 }
 WATCH
 
+
 ###############################################################################
-# Run Consul
+# Run Consul and Vault
 ###############################################################################
 
-[[ -z ${CONSUL_DATACENTER_NAME+x} ]] && export CONSUL_DATACENTER_NAME="viya"
+
+
+echo " _____                       _ "
+echo "/  __ \                     | |"
+echo "| /  \/ ___  _ __  ___ _   _| |"
+echo "| |    / _ \| '_ \/ __| | | | |"
+echo "| \__/\ (_) | | | \__ \ |_| | |"
+echo " \____/\___/|_| |_|___/\__,_|_|"
+
+
+[[ -z ${CONSUL_DATACENTER_NAME+x} ]] && export CONSUL_DATACENTER_NAME="sas"
 [[ -z ${CONSUL_CONFIGURE_DNS+x} ]]   && export CONSUL_CONFIGURE_DNS="false"
+
+mkdir -p /opt/sas/viya/config/etc/vault/default
+chown -R sas:sas /opt/sas/viya/config/etc/vault
 
 docker_setup_consul
 docker_start_consul
 
-# Start and continually check the ops-agent process.
-${SASHOME}/lib/envesntl/docker-ops-agent &
+echo " _   _             _ _   "
+echo "| | | |           | | |  "
+echo "| | | | __ _ _   _| | |_ "
+echo "| | | |/ _\` | | | | | __|"
+echo "\ \_/ / (_| | |_| | | |_ "
+echo " \___/ \__,_|\__,_|_|\__|"
 
-docker_run_sas_services
+vault_config
 
-###############################################################################
-# Keep the container alive until it is killed
-###############################################################################
+# Using service management docker-functions for vault causes issues
+# with Vault setup
+function docker_check_services()
+{
+    while :; do
+        sleep 3
+        if [[ "$SECURE_CONSUL" == "true" ]] && [[ "$is_self" == "True" ]]; then
+            update_vault_token_list
+        fi
+        for _pidf in $(ls -1 /var/run/sas/*.pid); do
+            if [[ "${_pidf}" != *"${SASDEPLOYID}-all-services"* ]]; then
+                if [[ -f ${_pidf} ]]; then
+                    SERVICE_PID=$(cat ${_pidf})
+                    set +e
+                    ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
+                    process_check_rc=$?
+                    set -e
+                    if (( ${process_check_rc} != 0 )); then
+                        echo;
+                        echo "Process is not running..."
+                        echo "    File = ${_pidf}";
+                        echo "    PID = ${SERVICE_PID}";
+                    fi
+                else
+                    echo; echo "PID file not found: $_pidf"; echo
+                fi
+            fi
+        done
+    done
+}
 
-docker_check_sas_services
+echo "Checking services..."
+docker_check_services

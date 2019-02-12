@@ -30,6 +30,7 @@ spec:
         app: {{ settings.project_name }}-{{ item.key }}
         domain: {{ settings.project_name }}
     spec:
+      serviceAccountName: {{ settings.project_name }}-account
       hostname: {{ settings.project_name }}-{{ item.key }}
       subdomain: {{ settings.project_name }}-subdomain
       containers:
@@ -47,6 +48,29 @@ spec:
         env:
         - name: DEPLOYMENT_NAME
           value: "{{ settings.project_name }}"
+        - name: CACERTS_CONFIGMAP
+          value: "{{ settings.project_name }}-cacerts-configmap"
+        - name: VAULT_TOKENS_CONFIGMAP
+          value: consul-tokens-configmap
+        - name: VAULT_TOKEN_SERVICE_LIST
+          value: ""
+        - name: CONSUL_HTTP_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: sas-viya-consul
+              key: consul_http_addr
+        - name: SAS_ANCHORS_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: sas-viya-consul
+              key: sas_anchors_dir
+        - name: VAULT_TOKEN_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: sas-viya-consul
+              key: vault_token_dir
+        - name: CONSUL_SERVICE_NAME
+          value: {{ settings.project_name }}-{{ item.key }}
 {% if item.value.deployment_overrides.environment is defined and item.value.deployment_overrides.environment %}
 {%   for environment in item.value.deployment_overrides.environment %}
         - name: {{ environment.split('=')[0] }}
@@ -80,6 +104,23 @@ spec:
         - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
 {%   endfor %}
+{% if SECURE_CONSUL %}
+        # Required for TLS configurations comment out existing empty dir volumeMount
+        - name: consul-persistent-storage
+          mountPath: /consul/config
+        - name: consul-persistent-storage
+          mountPath: /consul/data
+{% else %}
+        # Required for TLS configurations
+        #- name: consul-persistent-storage
+        #  mountPath: /consul/config
+        #- name: consul-persistent-storage
+        #  mountPath: /consul/data
+{% endif %}
+        - name: anchors
+          mountPath: /anchors
+        - name: tokens
+          mountPath: /tokens
 {% endif %}
 
 {% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
@@ -88,5 +129,23 @@ spec:
       - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
 {%   endfor %}
+      # Needed for TLS configurations
+      - name: tokens
+        configMap:
+          name: consul-tokens-configmap
+      - name: anchors
+        configMap:
+          name: {{ settings.project_name }}-cacerts-configmap
 {% endif %}
+  # Persistent storage required for TLS configurations
+  # volumeClaimTemplates:
+  # - metadata:
+  #       name: consul-persistent-storage
+  #   spec:
+  #     accessModes:
+  #     - ReadWriteOnce
+  #     resources:
+  #       requests:
+  #         storage: 1Gi
+  #     storageClassName: managed-nfs-storage
 ...
