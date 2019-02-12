@@ -12,10 +12,19 @@
     state: directory
   with_items:
   - "kubernetes"
+  - "kubernetes/accounts"
   - "kubernetes/deployments-smp"
   - "kubernetes/deployments-mpp"
   - "kubernetes/configmaps"
   - "kubernetes/secrets"
+
+
+- name: Create k8s accounts manifest
+  template:
+    src: "k8s_accounts.j2"
+    dest: "{{ playbook_dir }}/manifests/kubernetes/accounts/accounts.yml"
+  when: item.key == 'consul'
+  with_dict: '{{ services }}'
 
 - name: Create k8s configmaps
   template:
@@ -77,7 +86,7 @@
   when: item.key == 'consul'
   with_dict: '{{ services }}'
 
-- name: Create pets k8s manifest 
+- name: Create pets k8s manifest
   template:
     src: "pets_k8s.j2"
     dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/cas.yml{% else %}{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/{{ item.key }}.yml{% endif %}"

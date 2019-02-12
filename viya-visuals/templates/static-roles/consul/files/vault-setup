@@ -1,0 +1,826 @@
+#!/bin/bash
+
+# source SAS function functions
+. /opt/sas/viya/home/lib/envesntl/sas-init-functions
+
+# make vault a short command.
+if [[ "" == "${SASHOME}" ]];then
+  SASHOME=/opt/sas/viya/home
+fi
+
+export PATH=${SASHOME}/bin:$PATH
+SAS_CRYPTO_MANAGEMENT=${SASHOME}/SASSecurityCertificateFramework/bin/sas-crypto-management
+SAS_BOOTSTRAP_CONFIG=${SASHOME}/bin/sas-bootstrap-config
+SAS_CONFIGURATION_CLI=${SASHOME}/libexec/admin-plugins/sas-configuration-cli
+
+# Make vault use sas truststore
+if [[ "" == "${SASCONFIG}" ]];then
+  SASCONFIG=/opt/sas/viya/config
+fi
+
+CERTFRAME_CACERTS=${SASCONFIG}/etc/SASSecurityCertificateFramework/cacerts
+export VAULT_CACERT=${CERTFRAME_CACERTS}/trustedcerts.pem
+[[ -z $SAS_ANCHORS_DIR ]] && SAS_ANCHORS_DIR=${CERTFRAME_CACERTS}
+SAS_CRT=${SAS_ANCHORS_DIR}/vault-ca.crt
+CONSUL_CONFIG_DIR=${SASCONFIG}/etc/consul.d/
+VAULT_CONFIG_DIR=${SASCONFIG}/etc/vault/default
+CONSUL_TOKEN_FILE=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token
+. ${SASHOME}/bin/vault-utils.sh
+
+# source SAS Docker functions
+[ -f ${SASHOME}/lib/envesntl/docker-functions ] && source ${SASHOME}/lib/envesntl/docker-functions
+
+if [[ -z ${CONSUL_HTTP_ADDR} ]]; then
+  if [[ -f /opt/sas/viya/config/consul.conf ]]; then
+    . ${SASCONFIG}/consul.conf
+  else
+    echo "NO CONSUL_HTTP_ADDR set and no consul.conf to source."
+    exit 1
+  fi
+fi
+log_msg "CONSUL_HTTP_ADDR=$CONSUL_HTTP_ADDR"
+export CONSUL_HTTP_ADDR
+
+[[ -z ${VAULT_SERVICE_NAME} ]] && VAULT_SERVICE_NAME="vault"  #in docker, service name is needed for san-dns
+# allow local vault configuration files to go to a separate directory from global files.
+[[ -z "${VAULT_SHARED_SECRETS_DIR}" ]] && VAULT_SHARED_SECRETS_DIR=$VAULT_CONFIG_DIR
+
+# for logging.
+MYNAME=$(basename $0)
+dte=$(date +%Y-%m-%d_%H-%M-%S)
+export MY_LOG_FILE=${SASCONFIG}/var/log/vault/default/vault-setup_stdout-${dte}.log
+
+if [[ -z "$1" ]];then
+  vault_addr=127.0.0.1:8200
+else
+  vault_addr=$1
+fi
+log_msg "default vault_addr=$vault_addr"
+
+
+SASGROUP=sas
+SASUSER=sas
+
+log_msg "CONSUL_TOKEN_FILE=$CONSUL_TOKEN_FILE"
+[ -f $CONSUL_TOKEN_FILE ] || log_msg "CONSUL_TOKEN_FILE not present on disk"
+#Vault configuration settings -- read from Consul.
+
+root_ca_desc=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/root_ca/root_ca_desc)
+root_ca_max_ttl=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/root_ca/root_ca_max_ttl)
+root_ca_common_name=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/root_ca/root_ca_common_name)
+root_ca_key_bits=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/root_ca/root_ca_key_bits)
+root_ca_ttl=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/root_ca/root_ca_ttl)
+intermediate_ca_desc=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/intermediate_ca/intermediate_ca_desc)
+intermediate_ca_max_ttl=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/intermediate_ca/intermediate_ca_max_ttl)
+intermediate_ca_common_name=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/intermediate_ca/intermediate_ca_common_name)
+intermediate_ca_key_bits=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/intermediate_ca/intermediate_ca_key_bits)
+intermediate_ca_ttl=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/intermediate_ca/intermediate_ca_ttl)
+certificate_role_key_bits=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/certificate_role/certificate_role_key_bits)
+certificate_role_key_type=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/certificate_role/certificate_role_key_type)
+certificate_role_key_usage=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/certificate_role/certificate_role_key_usage)
+certificate_role_max_ttl=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/certificate_role/certificate_role_max_ttl)
+certificate_role_ttl=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/certificate_role/certificate_role_ttl)
+certificate_role_allow_any_name=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/certificate_role/certificate_role_allow_any_name)
+vault_token_default_lease_ttl=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/tokens/vault_token_default_lease_ttl)
+system_max_lease_ttl=$($SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv read config/vault/sas.vault/system/system_max_lease_ttl)
+# any values not set in consul, set to default.
+from_consul_list=( )
+default_list=( )
+
+check_set_default () {
+  if [[ "${!1}" == "" ]];then
+    export "${1}=${2}";
+    default_list=( ${default_list[@]} $1 );
+  else
+    from_consul_list=( ${from_consul_list[@]} $1 );
+  fi
+}
+
+check_set_default root_ca_desc "SAS VIYA Root CA"
+check_set_default root_ca_max_ttl 87600h
+check_set_default root_ca_common_name "SAS VIYA Root CA"
+check_set_default root_ca_key_bits 4096
+check_set_default root_ca_ttl 87600h
+check_set_default intermediate_ca_desc "SAS VIYA Intermediate CA"
+check_set_default intermediate_ca_max_ttl 61320h
+check_set_default intermediate_ca_common_name "SAS VIYA Intermediate CA"
+check_set_default intermediate_ca_key_bits 4096
+check_set_default intermediate_ca_ttl 61320h
+check_set_default certificate_role_key_bits 2048
+check_set_default certificate_role_key_type "rsa"
+check_set_default certificate_role_key_usage "DigitalSignature,KeyAgreement,KeyEncipherment"
+check_set_default certificate_role_max_ttl 61318h
+check_set_default certificate_role_ttl 8760h
+check_set_default certificate_role_allow_any_name true
+check_set_default vault_token_default_lease_ttl 61320h
+check_set_default system_max_lease_ttl 175200h
+
+#DEBUG: Gives lint errs commenting out
+#log_msg "using consul values for: ${from_consul_list[@]}"
+#log_msg "using default values for: ${default_list[@]}"
+
+
+find_leader() {
+  read leader_ip leader_port <<< $(${SASHOME}/bin/sas-bootstrap-config --output json catalog service --tag active vault | awk '/"serviceAddress"/||/"servicePort"/{print $2}')
+  #Remove the quotes (if any) and commas (if any)
+  local leader_ip=$(echo ${leader_ip} | tr -d ,\" )
+  local leader_port=$(echo ${leader_port} | tr -d ,\" )
+  err_msg "Consul service catalog lists Vault leader ip to be: $leader_ip"
+
+  local count=0
+  while [ "" == "$leader_ip" -a $count -le 300 ]
+  do
+    sleep 1
+    read leader_ip leader_port <<< $(${SASHOME}/bin/sas-bootstrap-config catalog service --tag active vault | awk '/"serviceAddress"/||/"servicePort"/{print $2}')
+    #Remove the quotes (if any) and commas (if any)
+    leader_ip=$(echo ${leader_ip} | tr -d ,\" )
+    leader_port=$(echo ${leader_port} | tr -d ,\" )
+    err_msg Consul service catalog lists Vault leader ip to be: $leader_ip
+
+    let "count=count+1"
+  done
+
+  if [ $count -ge 300 ]
+  then
+    err_msg Time out waiting for leader.
+    return 1
+  fi
+  echo $leader_ip
+  return 0
+}
+
+update_vault_settings_in_consul() {
+  log_msg "CONSUL_HTTP_ADDR=${CONSUL_HTTP_ADDR}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/certificate_role/certificate_role_key_bits "${certificate_role_key_bits}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/certificate_role/certificate_role_key_type "${certificate_role_key_type}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/certificate_role/certificate_role_key_usage "${certificate_role_key_usage}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/certificate_role/certificate_role_max_ttl "${certificate_role_max_ttl}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/certificate_role/certificate_role_ttl "${certificate_role_ttl}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/certificate_role/certificate_role_allow_any_name "${certificate_role_allow_any_name}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/intermediate_ca/intermediate_ca_desc "${intermediate_ca_desc}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/intermediate_ca/intermediate_ca_max_ttl "${intermediate_ca_max_ttl}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/intermediate_ca/intermediate_ca_common_name "${intermediate_ca_common_name}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/intermediate_ca/intermediate_ca_key_bits "${intermediate_ca_key_bits}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/intermediate_ca/intermediate_ca_ttl "${intermediate_ca_ttl}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/root_ca/root_ca_desc "${root_ca_desc}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/root_ca/root_ca_max_ttl "${root_ca_max_ttl}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/root_ca/root_ca_common_name "${root_ca_common_name}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/root_ca/root_ca_key_bits "${root_ca_key_bits}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/root_ca/root_ca_ttl "${root_ca_ttl}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/tokens/vault_token_default_lease_ttl "${vault_token_default_lease_ttl}"
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default config/vault/sas.vault/system/system_max_lease_ttl "${system_max_lease_ttl}"
+  return 0
+}
+
+update_vault_settings_file() {
+  #Run consul template. #store in vault_current
+  if [[ -f "${VAULT_CONFIG_DIR}/vaultconfig.ctmpl" ]]; then
+    HTTP_SCHEME=$(echo ${CONSUL_HTTP_ADDR} | awk '{split($0,a,"://")} END{print a[1]}')
+    CONSUL_ADDR_NO_SCHEME=$(echo ${CONSUL_HTTP_ADDR} | awk '{split($0,a,"://")} END{print a[2]}')
+    log_msg "In update_vault_settings_file: CONSUL_HTTP_ADDR is ${CONSUL_HTTP_ADDR}"
+    export CONSUL_TOKEN=$(cat ${CONSUL_TOKEN_FILE})
+    if [ "${HTTP_SCHEME}" == "https" ]; then #set token as environment variable so it is not in plain text on disk.
+      /opt/sas/viya/home/bin/consul-template -consul-addr ${CONSUL_ADDR_NO_SCHEME} -consul-ssl -consul-ssl-ca-cert ${SASCONFIG}/etc/SASSecurityCertificateFramework/cacerts/trustedcerts.pem -template "${VAULT_CONFIG_DIR}/vaultconfig.ctmpl:${VAULT_CONFIG_DIR}/vault_current" -once
+    else #No security enabled.
+      /opt/sas/viya/home/bin/consul-template -consul-addr ${CONSUL_ADDR_NO_SCHEME} -template "${VAULT_CONFIG_DIR}/vaultconfig.ctmpl:${VAULT_CONFIG_DIR}/vault_current" -once
+    fi
+    if [[ -f ${VAULT_CONFIG_DIR}/vault_current ]]; then
+    chown sas:sas ${VAULT_CONFIG_DIR}/vault_current
+    return 0
+    fi
+  fi
+}
+
+# local helper function,
+# because there are a lot of places this script aborts.
+clean_exit() {
+  exit $1
+}
+
+# unseal and authenticate to vault.
+vault_unseal () {
+  local output
+  vault unseal $(cat ${VAULT_SHARED_SECRETS_DIR}/unseal_key)
+  local rc=$?
+  if [ $rc -ne 0 ]
+  then
+    log_msg "$0: error: vault unseal failed"
+    clean_exit 1
+  fi
+  wait_vault_unsealed
+  local seconds=0
+  while [[ ${seconds} -lt 120 ]];
+  do
+    output=$(vault auth "$(cat ${VAULT_SHARED_SECRETS_DIR}/root_token)" 2>&1)
+    rc=$?
+    if [[ $rc -eq 0 ]]; then
+      break
+    fi
+    log_msg "${FUNCNAME[0]}: vault auth (attempt ${seconds} of 120) unsuccessfull with message:"
+    log_msg "$output"
+    sleep 2
+    let "seconds=seconds+1"
+  done
+  if [ $rc -ne 0 ]
+  then
+    err_msg "${FUNCNAME[0]}: Vault auth failed for 120 seconds. Aborting Vault configuration."
+    clean_exit 1
+  fi
+  log_msg "Vault auth successful after ${seconds} seconds."
+}
+
+# Configure Root CA
+create_root_ca () {
+  #Variables set at top.
+
+  vault mount -description="${root_ca_desc}" -path="viya" -max-lease-ttl=${root_ca_max_ttl} pki
+  rc=$?
+  if [ $rc != 0 ]
+  then
+    log_msg "error: vault mount failed"
+    clean_exit 1
+  fi
+
+  issue_new_root_ca
+} # FINISHED: configure Root CA
+
+issue_new_root_ca() {
+  vault write viya/root/generate/internal \
+  common_name="${root_ca_common_name}" \
+  ttl=${root_ca_ttl} \
+  key_bits=${root_ca_key_bits} \
+  exclude_cn_from_sans=true
+  rc=$?
+  if [ $rc -ne 0 ]
+  then
+    log_msg "error: vault - generate root ca failed"
+    clean_exit 1
+  fi
+
+  # If using ConfigMaps, wait until the intermediate is created, then post both to the ConfigMap
+  if [ -z ${CACERTS_CONFIGMAP} ]; then
+    local root_ca=$(curl -s1 $VAULT_ADDR/v1/viya/ca/pem)
+    echo $root_ca > $SAS_CRT
+  fi
+
+  vault write viya/config/urls issuing_certificates="https://vault.service.consul:8200/v1/viya"
+}
+
+# Configure Intermediate CA
+create_inter_ca () {
+  #Variables set at top
+
+  vault mount -path=viya_inter -description="${intermediate_ca_desc}" -max-lease-ttl=${intermediate_ca_max_ttl} pki
+  issue_new_inter_ca
+} # FINISHED configure intermediate certificate
+#TODO: find out if the issuing_certificates for the root ca is incorrect, it is different from the intermediate path.
+
+issue_new_inter_ca() {
+  Return=$(vault write viya_inter/intermediate/generate/internal \
+  common_name="${intermediate_ca_common_name}"
+  ttl=${intermediate_ca_ttl} \
+  key_bits=${intermediate_ca_key_bits} \
+  exclude_cn_from_sans=true )
+    if [ $? -ne 0 ]
+    then
+      log_msg "error, vault generate intermediate CA failed"
+      clean_exit 1
+    fi
+
+    parse_for "$Return" csr > ${VAULT_CONFIG_DIR}/inter.csr
+    unset Return
+    chown ${SASUSER}:${SASGROUP} ${VAULT_CONFIG_DIR}/inter.csr
+
+    Return=$(vault write viya/root/sign-intermediate \
+  csr=@${VAULT_CONFIG_DIR}/inter.csr \
+  common_name="${intermediate_ca_common_name}" \
+  exclude_cn_from_sans=true \
+  ttl=${intermediate_ca_ttl} )
+    if [ $? -ne 0 ]
+    then
+      log_msg "error, vault sign intermediate csr failed"
+      clean_exit 1
+    fi
+
+    parse_for "$Return" certificate > ${VAULT_CONFIG_DIR}/inter.crt
+    chown ${SASUSER}:${SASGROUP} ${VAULT_CONFIG_DIR}/inter.crt
+
+    # TEMPORARY add intermediate cert to sas root ca file so rabbitMQ can build it's chain.
+    if [[ -n ${CACERTS_CONFIGMAP} ]]; then
+      log_msg "Detected Kubernetes ConfigMap usage. Posting Vault root CA cert to ${CACERTS_CONFIGMAP}"
+
+      local tempfile=$(mktemp)
+      curl -s1 $VAULT_ADDR/v1/viya/ca/pem > $tempfile
+      cat ${VAULT_CONFIG_DIR}/inter.crt >> ${tempfile}
+
+      post_file_contents_to_configmap "${CACERTS_CONFIGMAP}" "vault-ca.crt" "$tempfile"
+      if [ $? -ne 0 ]; then
+        log_msg "ERROR: Failed to post the Vault root CA to ${CACERTS_CONFIGMAP}. Exiting."
+        clean_exit 1
+      fi
+
+      while [ ! -f $SAS_CRT ]; do
+        sleep 1s
+      done
+
+      log_msg "Vault root CA cert successfully posted to ConfigMap"
+      rm -f $tempfile
+    else
+      cat ${VAULT_CONFIG_DIR}/inter.crt >> ${SAS_CRT}
+    fi
+
+    chown ${SASUSER}:${SASGROUP} ${SAS_CRT}
+
+    ## add root cert and intermediate cert to Consul, this will also include them in all trust stores.
+    #sas-bootstrap-config --token-file /opt/sas/viya/config/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token kv write cacerts/vault-ca.crt ",$(cat ${SAS_CRT} )"
+    #sas-bootstrap-config --token-file /opt/sas/viya/config/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token kv write cacerts/vault-inter.crt ",$(cat ${VAULT_CONFIG_DIR}/inter.crt)"
+    unset Return
+
+    vault write viya_inter/intermediate/set-signed \
+    certificate=@${VAULT_CONFIG_DIR}/inter.crt
+    if [ $? -ne 0 ]
+    then
+    log_msg "error, vault set-signed intermediate cert failed"
+    clean_exit 1
+    fi
+
+    curl -s1 $VAULT_ADDR/v1/viya_inter/ca/pem > ${VAULT_CONFIG_DIR}/viya_inter.crt
+    chown ${SASUSER}:${SASGROUP} ${VAULT_CONFIG_DIR}/viya_inter.crt
+
+    vault write viya_inter/config/urls \
+    issuing_certificates="http://vault.service.consul/v1/viya_inter/ca" \
+    crl_distribution_points=""
+}
+
+# Setup role for server certificates.
+create_role () {
+  if [ $# -ne 7 ]
+  then
+    log_msg "USAGE: create_role ROLE_NAME KEY_BITS MAX_TTL TTL KEY_TYPE KEY_USAGE ALLOW_ANY_NAME"
+    return 2
+  fi
+  #TODO: remove "allow_any_name=true" and make it work.
+  vault write viya_inter/roles/$1 \
+  key_bits=$2 \
+  max_ttl=$3 \
+  ttl=$4 \
+  key_type=$5 \
+  key_usage=$6 \
+  allow_any_name=$7 &> /dev/null
+
+  if [ $? -ne 0 ]
+  then
+    log_msg "write leaf certificate role failed"
+    return 1
+  fi
+  return 0
+} # FINISHED create role for server certificates.
+
+
+update_token () {
+  if [ $# -ne 1 ]; then
+    log_msg "USAGE: update_token TOKEN_DEFAULT_LEASE_TTL"
+    return 2
+  fi
+
+  vault mount-tune -default-lease-ttl=$1 auth/token
+  if [ $? -ne 0 ]; then
+    log_msg "Failed to set token TTL"
+    return 2
+  fi
+  return 0
+
+}
+
+load_json_to_configuration () {
+  if [ $# -ne 1 ]; then
+    log_msg "USAGE: load_json_to_configuration FILE"
+    return 2
+  fi
+
+  $SAS_CONFIGURATION_CLI --sas-endpoint=https://$(hostname -f) -k bootstrap --retry="-1" --consul-token-file=$CONSUL_TOKEN_FILE --definitions-file=$1 &
+}
+
+create_new_vault_server_cert() {
+  issue_vault_cert ${SASHOME} "${VAULT_SHARED_SECRETS_DIR}/" ${VAULT_CONFIG_DIR} ${SAS_CRT} ${VAULT_SERVICE_NAME}
+  if [ $? -ne 0 ]
+  then
+    return 1
+  fi
+
+  chown -R ${SASUSER}:${SASGROUP} ${VAULT_SHARED_SECRETS_DIR} $VAULT_CONFIG_DIR
+  # FINISHED generate new private key, and certificate for vault.
+
+  if [[ -n ${CACERTS_CONFIGMAP} ]]; then
+    log_msg "Detected Kubernetes ConfigMap usage. Building trust store with Vault CA from ${CACERTS_CONFIGMAP}"
+    cat ${SAS_CRT} | base64 -di > ${CERTFRAME_CACERTS}/$(basename ${SAS_CRT})
+    $SAS_CRYPTO_MANAGEMENT managetrust --bundle "${VAULT_CACERT}" --bundle-form pem add --cert ${CERTFRAME_CACERTS}/$(basename ${SAS_CRT})
+  else
+    #add vault root cert to sas trust store.
+    $SAS_CRYPTO_MANAGEMENT managetrust --bundle "${VAULT_CACERT}" --bundle-form pem add --cert "${SAS_CRT}"
+  fi
+}
+
+restart_vault(){
+  if [[ -n $RUNNING_IN_DOCKER ]];then
+    kill -2 $(pidof vault)
+    sas_stop_pid -p /opt/sas/viya/config/var/run/vault/sas-vault.pid
+    deregister_vault
+    /opt/sas/viya/home/bin/sas-vault.start -p /opt/sas/viya/config/var/run/vault/sas-vault.pid
+  else
+    # from sas-viya-all-serices
+    local SYSTYPE=$(ps -p 1 | grep -v PID | awk '{ print $4 }')
+
+    if [[ "${SYSTYPE}" == "systemd" ]];then
+      systemctl restart sas-viya-vault-default
+    else
+      service sas-viya-vault-default restart
+    fi
+  fi
+}
+self_secure () {
+  create_new_vault_server_cert
+  CONSUL_HTTP_ADDR_NO_HTTPS=${CONSUL_HTTP_ADDR#https://}
+  CONSUL_HTTP_ADDR_NO_HTTP=${CONSUL_HTTP_ADDR#http://}
+  if [[ ${CONSUL_HTTP_ADDR} != ${CONSUL_HTTP_ADDR_NO_HTTPS} ]]; then
+    #was https
+    CONSUL_ADDR_NO_SCHEME=${CONSUL_HTTP_ADDR_NO_HTTPS}
+    CONSUL_SCHEME="https"
+
+  elif [[ ${CONSUL_HTTP_ADDR} != ${CONSUL_HTTP_ADDR_NO_HTTP} ]]; then
+    #was http
+    CONSUL_ADDR_NO_SCHEME=${CONSUL_HTTP_ADDR_NO_HTTP}
+    CONSUL_SCHEME="http"
+  fi
+
+  cp ${VAULT_CONFIG_DIR}/vault.hcl ${VAULT_CONFIG_DIR}/vault.hcl.bak
+  cat << EOF > ${VAULT_CONFIG_DIR}/vault.hcl
+backend "consul" {
+  address = "${CONSUL_ADDR_NO_SCHEME}"
+  scheme = "${CONSUL_SCHEME}"
+  advertise_addr = "https://$(hostname -f):8200/"
+  path = "vault/"
+  token = "$(cat $CONSUL_TOKEN_FILE)"
+  service_tags = "https"
+  tls_ca_file = "${VAULT_CACERT}"
+}
+
+listener "tcp" {
+ address = "0.0.0.0:8200"
+// tls_disable = 1
+ tls_cert_file="${VAULT_CONFIG_DIR}/vault-bundle.crt"
+ tls_key_file="${VAULT_CONFIG_DIR}/vault.key"
+}
+
+max_lease_ttl = "${system_max_lease_ttl}"
+disable_mlock = true
+
+EOF
+
+  chown ${SASUSER}:${SASGROUP} ${VAULT_CONFIG_DIR}/vault.hcl
+
+  curl -s --cacert ${VAULT_CACERT} -K- -X PUT ${VAULT_ADDR}/v1/sys/step-down <<< "header=\"X-Vault-Token: $(cat ${VAULT_SHARED_SECRETS_DIR}/root_token)\""
+  # tell vault executable to use tls connection
+  export VAULT_ADDR=https://127.0.0.1:8200
+  restart_vault
+  return 0
+}
+
+renew() {
+  local output
+  local leader_ip
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write config/vault/sas.vault/renewal true
+  export VAULT_ADDR=https://127.0.0.1:8200
+  output=$(vault auth "$(cat ${VAULT_SHARED_SECRETS_DIR}/root_token)" 2>&1)
+  if [ $? -eq 0 ]; then
+    log_msg "${FUNCNAME[0]}: Vault auth successful."
+  else
+    err_msg "${FUNCNAME[0]}: vault auth failed with message:"
+    err_msg "$output"
+  fi
+
+  leader_ip=$(find_leader)
+  local rc=$?
+  if [ $rc -ne 0 ]; then
+    log_msg "Error finding leader.";
+    clean_exit 1;
+  fi
+  local is_leader="false"
+  local addresses="$(${SASHOME}/bin/sas-bootstrap-config network addresses --ipv4) $(hostname -f)"
+  for address in $addresses; do
+    if [ "$address" == "$leader_ip" ]; then
+      is_leader="true"
+    fi
+  done
+
+  if [ "$is_leader" == "true" ]; then
+    log_msg "This node is the Vault leader. Re-issuing CAs."
+    issue_new_root_ca
+    issue_new_inter_ca
+    log_msg "CAs have completed renewal. Re-issuing server cert."
+  else
+    log_msg "This node is not a Vault leader. Waiting for the leader to re-issue the CAs."
+    local count=0
+    while [ 1 -eq 1 ]; do
+      if [ $count -eq 61 ]; then
+        log_msg "Timeout waiting for leader to re-issue CAs. Exiting."
+        clean_exit 1
+      fi
+      $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv exists config/vault/sas.vault/renewal
+      rc=$?
+      if [ $rc -ne 0 ]; then
+        curl -s1 ${VAULT_ADDR}/v1/viya_inter/ca/pem > ${VAULT_SHARED_SECRETS_DIR}/inter.crt
+        curl -s1 ${VAULT_ADDR}/v1/viya/ca/pem > ${SAS_CRT}
+        cat ${VAULT_SHARED_SECRETS_DIR}/inter.crt >> ${SAS_CRT}
+
+        chown ${SASUSER}:${SASGROUP} ${VAULT_SHARED_SECRETS_DIR}/inter.crt ${SAS_CRT}
+        log_msg "Leader has completed re-issuing CAs. Re-issuing server cert."
+        break;
+      else
+        log_msg "Leader hasn't finished re-issuing CAs. Sleeping..."
+        let "count=count+1"
+        sleep 5s;
+      fi
+    done
+  fi
+
+  create_new_vault_server_cert
+  log_msg "Stepping down before restarting."
+  curl -s --cacert ${VAULT_CACERT} -K- -X PUT ${VAULT_ADDR}/v1/sys/step-down <<< "header=\"X-Vault-Token: $(cat ${VAULT_SHARED_SECRETS_DIR}/root_token)\""
+  restart_vault
+  rm -f ${VAULT_SHARED_SECRETS_DIR}/unseal_key_orig
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv delete config/vault/sas.vault/renewal
+}
+
+
+if [[ -f ${VAULT_SHARED_SECRETS_DIR}/unseal_key_orig ]]; then
+  log_msg "Detected renewal scenario. Entering renewal path."
+  renew
+  log_msg "Renewal complete. Exiting."
+  clean_exit 0;
+fi
+
+
+set +e
+vault status &>/dev/null
+RC=$?
+if [[ "$RC" -eq 0 ]]; then
+  log_msg "VAULT already configured and secured."
+  update_vault_settings_file
+  clean_exit 0
+fi
+
+
+# MAIN ROUTINE
+if [ ! -d ${VAULT_SHARED_SECRETS_DIR}/ ]; then
+ log_msg Creating Vault config dir @ ${VAULT_SHARED_SECRETS_DIR}/
+ mkdir -p ${VAULT_SHARED_SECRETS_DIR}/
+ chown -R ${SASUSER}:${SASGROUP} ${VAULT_SHARED_SECRETS_DIR}/
+else
+ log_msg "WARN: Vault config dir already present"
+ ls ${VAULT_SHARED_SECRETS_DIR}
+fi
+
+if [ ! -d ${VAULT_CONFIG_DIR} ]; then
+  log_msg Creating instance specific log dir @ ${VAULT_CONFIG_DIR}/
+  mkdir -p ${VAULT_CONFIG_DIR}
+  chown -R ${SASUSER}:${SASGROUP} ${VAULT_CONFIG_DIR}
+fi
+
+#allow command line tool to connect to unsecure (local only) vault
+export VAULT_ADDR=http://127.0.0.1:8200
+export CONSUL_HTTP_TOKEN=$(cat ${CONSUL_TOKEN_FILE})
+
+count=0
+threshold=5
+while [ 1 -eq 1 ]
+do
+  Return=$(vault init -key-shares=1 -key-threshold=1 2>&1)
+  rc=$?
+  # TODO: following line is not internationalization friendly!!!!!!
+  echo "$Return" | grep " Vault is already initialized" &>/dev/null
+  if [ $? -eq 0 -o $rc -eq 0 ]
+  then
+      break
+  fi
+  log_msg "$0: Unexpected return code ($rc) encountered while running vault init. Will retry"
+  log_msg "$0: Process output is \"$Return\""
+  sleep ${count}s
+  let "count=count+1"
+  if [ $count -eq $threshold ]
+  then
+    let "threshold=threshold+threshold"
+    log_msg "$0: Trouble initializing Vault instance. Restarting Vault."
+    log_msg "Stepping down before restarting."
+    curl -s --cacert ${VAULT_CACERT} -K- -X PUT ${VAULT_ADDR}/v1/sys/step-down <<< "header=\"X-Vault-Token: $(cat ${VAULT_SHARED_SECRETS_DIR}/root_token)\""
+    restart_vault
+    if [ $? -ne 0 ]; then
+      log_msg "$0: Failed to restart Vault."
+      clean_exit 1
+    fi
+  fi
+  if [ $count -gt 20 ]
+  then
+    log_msg "Timeout waiting for vault to init."
+    clean_exit 1
+  fi
+done
+
+
+if [ $rc -eq 1 ] # this is what is returned when init reports that we are a follower. Hopefully other "errors" well have another return code(s).
+then
+  log_msg "$0: INFO: Vault init command returned that this machine is not the leader."
+  log_msg "$0: INFO: Vault init stdout=\"$Return\""
+  # wait for consul to reveal who won the init call
+
+  leader_ip=$(find_leader)
+  rc=$?
+  if [ $rc -ne 0 ];
+  then
+    log_msg "$0: error finding leader.";
+    clean_exit 1;
+  else
+    log_msg "$0: Found Vault leader at: $leader_ip"
+  fi
+  if [[ -n ${RUNNING_IN_DOCKER} ]]; then
+    log_msg "$0: INFO: We are running in Docker and not leader. Waiting for unseal_key and root_token to be shared from leader"
+    while [ ! -f ${VAULT_SHARED_SECRETS_DIR}/unseal_key ] || [ ! -f ${VAULT_SHARED_SECRETS_DIR}/root_token ];  do
+      sleep 1s
+    done
+    log_msg "$0: INFO: Using root token and unseal key values from leader."
+  fi
+  if [ -f ${VAULT_SHARED_SECRETS_DIR}/unseal_key ] && [ -f ${VAULT_SHARED_SECRETS_DIR}/root_token ];
+  then
+    log_msg "$0: INFO: Using root token and unseal key values which are already present."
+  else
+    log_msg "$0: INFO: Unseal artifacts will be retrieved from the leader."
+    # copy the unseal artifacts from the leader to local.
+    su - ${SASUSER} -c "scp -i ~${SASUSER}/.ssh/sas_key $leader_ip:${VAULT_SHARED_SECRETS_DIR}/root_token $leader_ip:${VAULT_SHARED_SECRETS_DIR}/unseal_key ${VAULT_SHARED_SECRETS_DIR}/"
+    chown ${SASUSER}:${SASGROUP} ${VAULT_SHARED_SECRETS_DIR}/root_token
+  fi
+  vault_unseal
+  if [ $? -ne 0 ]; then
+    log_msg "Vault, non-leader, setup failed: Error unsealing";
+    clean_exit 1;
+  fi
+
+  # wait until leader has created all artifacts needed (root/intermediate certs, and the role for issuing server certs):
+  if [[ -n ${CACERTS_CONFIGMAP} ]]; then
+    log_msg "Detected Kubernetes ConfigMap usage. Waiting for the Vault root CA cert to be present in the mounted ConfigMap ${CACERTS_CONFIGMAP}."
+    while [ ! -f ${SAS_CRT} ]; do
+      sleep 1s
+    done
+    log_msg "Vault root CA now present in the mounted ConfigMap ${CACERTS_CONFIGMAP}. Continuing."
+  else
+    vault read viya_inter/roles/test_web_server &> /dev/null
+    rc=$?
+    count=0
+    while [ $count -le 60 -a $rc -ne 0 ]
+    do
+      log_msg "INFO: Waiting for leader to create role"
+      sleep 5s
+      vault read viya_inter/roles/test_web_server &> /dev/null
+      rc=$?
+      let "count=count+1"
+    done
+    if [ $count -eq 61 ]; then
+      log_msg "ERROR: 5 minutes passed before leader finished configuring"
+      clean_exit 1
+    fi
+  fi
+
+  # copy the unseal artifacts (root cert and intermediate cert) from leader to local:
+  # could use vault command to retrieve these when we upgrade to new version of Vault. (currently there is a bug)
+  if [ -f ${SAS_CRT} ]; then
+    log_msg Using vault-ca.crt values which are already present.
+  else
+    su - ${SASUSER} -c "scp -i ~${SASUSER}/.ssh/sas_key $leader_ip:${VAULT_SHARED_SECRETS_DIR}/"
+    su - ${SASUSER} -c "scp -i ~${SASUSER}/.ssh/sas_key $leader_ip:${SAS_CRT} ${SAS_CRT}"
+    chown ${SASUSER}:${SASGROUP} ${VAULT_SHARED_SECRETS_DIR}/inter.crt ${SAS_CRT}
+  fi
+  count=0
+  self_secure
+  rc=$?
+  while [ $count -le 14 -a $rc -ne 0 ]
+  do
+    self_secure
+    rc=$?
+    let "count=count+1"
+  done
+  if [ $rc -ne 0 ]
+  then
+    err_msg "Timeout trying to secure local vault server instance"
+    clean_exit 1
+  fi
+  log_msg "Vault, non-leader, setup succeeded"
+elif [ $rc -eq 0 ]; then
+  log_msg "Vault init succeeded, configuring the leader:"
+  #parse the output of the command
+  while read -r line
+  do
+   if [ "$(grep "Key 1:" <<< $line)" ] ; then unseal_key=$(sed "s/.*Key 1: \([^ ]*\).*/\\1/" <<< $line); fi
+   if [ "$(grep Root <<< $line)" ] ; then root_token=$(sed "s/.*Initial Root Token: \([^ ]*\).*/\\1/" <<< $line); fi
+  done <<< "$Return"
+  # clear useless copy of secrets from ram
+  unset Return
+  # store the secrets (if lost we can never open vault again)
+  UMASK=$(umask)
+  umask 177
+
+  if [[ -n ${VAULT_TOKENS_CONFIGMAP} ]]; then
+    log_msg "Detected Kubernetes ConfigMap usage. Posting unseal key and root token to ${VAULT_TOKENS_CONFIGMAP}"
+
+    post_key_value_to_configmap "${VAULT_TOKENS_CONFIGMAP}" "unseal_key" "$unseal_key"
+    if [ $? -ne 0 ]; then
+      log_msg "ERROR: Failed to post the unseal key to ${VAULT_TOKENS_CONFIGMAP}. Exiting."
+      clean_exit 1
+    fi
+
+    post_key_value_to_configmap "${VAULT_TOKENS_CONFIGMAP}" "root_token" "$root_token"
+    if [ $? -ne 0 ]; then
+      log_msg "ERROR: Failed to post the root token to ${VAULT_TOKENS_CONFIGMAP}. Exiting."
+      clean_exit 1
+    fi
+
+    while [ ! -f ${VAULT_SHARED_SECRETS_DIR}/unseal_key ];  do
+      sleep 1s
+    done
+    log_msg "Vault unseal key successfully posted to ConfigMap"
+    while [ ! -f ${VAULT_SHARED_SECRETS_DIR}/root_token ];  do
+      sleep 1s
+    done
+    log_msg "Vault root token successfully posted to ConfigMap"
+  else
+    echo -n $unseal_key > ${VAULT_SHARED_SECRETS_DIR}/unseal_key
+    echo -n $root_token > ${VAULT_SHARED_SECRETS_DIR}/root_token
+  fi
+
+#  if [[ -n ${SAS_ANCHORS_DIR} ]] && [[ ${SAS_ANCHORS_DIR} != ${CERTFRAME_CACERTS} ]]; then
+#    echo -n $root_token > ${SAS_ANCHORS_DIR}/root_token
+#  fi
+
+  chown ${SASUSER}:${SASGROUP} ${VAULT_SHARED_SECRETS_DIR}/unseal_key
+  chown ${SASUSER}:${SASGROUP} ${VAULT_SHARED_SECRETS_DIR}/root_token
+
+  umask $UMASK
+
+  vault_unseal
+
+  create_root_ca
+  create_inter_ca
+
+  #Role variables set at top.
+  ROLE_NAME=test_web_server
+  KEY_BITS=${certificate_role_key_bits}
+  MAX_TTL=${certificate_role_max_ttl}
+  TTL=${certificate_role_ttl}
+  KEY_TYPE=${certificate_role_key_type}
+  KEY_USAGE=${certificate_role_key_usage}
+  ALLOW_ANY_NAME=${certificate_role_allow_any_name}
+  create_role $ROLE_NAME $KEY_BITS $MAX_TTL $TTL $KEY_TYPE $KEY_USAGE $ALLOW_ANY_NAME
+
+
+  #Store variables into consul and create base file for vault certificate comparison
+  log_msg "$0: INFO: Loading TLS information into Consul"
+  update_vault_settings_in_consul
+  update_vault_settings_file
+
+  self_secure
+
+
+  if [ $? -ne 0 ]
+  then
+    log_msg "$0: ERROR: Error securing vault leader"
+    clean_exit 1
+  fi
+
+  # Load the Consul defaults for TLS
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default --global spring.cloud.vault.enabled true
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default --global sas.security/network.web.enabled true
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default --global sas.security/network.databaseTraffic.enabled true
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default --global sas.security/network.sasData.enabled true
+  $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv write --site-default --global sas.security/network.serverControl.enabled true
+
+
+
+
+  #loads settings into EV using SAS-CONFIGURATION-CLI
+  nohup ${SASHOME}/bin/bootstrap-vault-settings.sh >> ${SASCONFIG}/var/log/vault/default/vault_setup_stderr.log &
+
+  #Make sure that the tokens backend updates
+  VAULT_RESPONSE=$(vault mount-tune -default-lease-ttl=${vault_token_default_lease_ttl} auth/token)
+  if [[ $VAULT_RESPONSE == *"Successfully tuned mount"* ]]; then
+    :
+  else
+    log_msg "WARN: Failed to successfully set the default token lease."
+    log_msg $VAULT_RESPONSE
+    log_msg "WARN: Expected to see. 'Successfully tuned mount'"
+  fi
+
+  log_msg "Vault, leader, setup succeeded"
+else # this is what happens when an unexpected return code is detected:
+  log_msg "ERROR: Vault init returned unexpected return code $rc."
+  log_msg "vault init stdout was \"$Return\""
+  clean_exit 1
+fi
+
