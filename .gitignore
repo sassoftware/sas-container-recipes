@@ -18,3 +18,5 @@ sas-orchestration
 *~
 *.swo
 *.swp
+*.zip*
+*.rpm

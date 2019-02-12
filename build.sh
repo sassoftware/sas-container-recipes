@@ -31,15 +31,16 @@ esac
 #
 
 if [[ "${OPERATING_SYSTEM}" != "darwin" ]]; then
-    if [ -f "${PWD}/build_sas_container.log" ]; then
-        echo
+    if [[ ! -d "${PWD}/logs" ]]; then
         mkdir -vp ${PWD}/logs
+    fi
+    if [ -f "${PWD}/logs/build_sas_container.log" ]; then
         # shellcheck disable=SC2086
-        mv -v ${PWD}/build_sas_container.log ${PWD}/logs/build_sas_container_${sas_datetime}.log
+        mv -v ${PWD}/logs/build_sas_container.log ${PWD}/logs/build_sas_container_${sas_datetime}.log
         echo
     fi
 
-    exec > >(tee -a "${PWD}"/build_sas_container.log) 2>&1
+    exec > >(tee -a "${PWD}"/logs/build_sas_container.log) 2>&1
 fi
 
 #
