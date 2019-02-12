@@ -59,7 +59,7 @@ RUN set -e; \
         yum erase --assumeyes epel-release; \
     elif [ "$PLATFORM" = "suse" ]; then \
         rpm --rebuilddb; \
-        export LD_LIBRARY_PATH='/user/lib:/usr/local/lib'; \
+        export LD_LIBRARY_PATH='/usr/lib:/usr/local/lib'; \
         set +e; zypper install --no-confirm curl gcc gcc-c++ gcc-fortran make automake cpp48 gcc48 gcc48-c++ gcc48-fortran python3-base python3-devel; set -e; \
         rm --verbose --recursive --force /var/cache/zypp; \
         curl --silent --remote-name https://bootstrap.pypa.io/get-pip.py; \
