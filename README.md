@@ -233,7 +233,7 @@ Choose between Symmetric Multi Processing (SMP) or Massively Parallel Processing
 `kubectl create --file` or `kubectl replace --file` on the manifests inside the kubernetes directory.
 - Note: If you are running the build process process multiple times then use `kubectl replace` to add your new manifests instead of `kubectl create`.
 
-Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other services using `kubectl edit ingress`.
+Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other services using `kubectl edit ingress`. In the following example, `sas-viya-http.<mycompany>.com` represents the _ingress-path_.
 
 ```
 
@@ -252,19 +252,11 @@ Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other ser
         - backend:
             serviceName: sas-viya-httpproxy
             servicePort: 80
-          
-    - host: sas-viya-cas.<mycompany>.com
-      http:
-        paths:
-        - backend:
-            serviceName: sas-viya-sas-casserver-primary
-            servicePort: 5570
-
 
 ```
 For more details on Ingress Controllers see [the official Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/).
 
-Finally, go to the host address that's defined in your Kubernetes Ingress to view your SAS product(s). 
+Finally, go to the host address that's defined in your Kubernetes Ingress to view your SAS product(s). Using the example Ingress configuration above, the URL is http://sas-viya-http.<mycompany>.com.
 If there is no response from the host, then check the status of the containers by running `kubectl get pods`.
 There should be one or more `sas-viya-<service>` pods, depending on your software order. It may take several
 minutes to see a login screen, even with all pods showing a "Running" status.
