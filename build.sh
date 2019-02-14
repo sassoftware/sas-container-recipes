@@ -30,6 +30,9 @@ esac
 # Setup logging
 #
 
+# Setting sas_datetime here as it is used in the logging configuration.
+sas_datetime=$(date "+%Y%m%d%H%M%S")
+
 if [[ "${OPERATING_SYSTEM}" != "darwin" ]]; then
     if [[ ! -d "${PWD}/logs" ]]; then
         mkdir -vp ${PWD}/logs
@@ -415,7 +418,6 @@ trap sas_container_recipes_shutdown SIGINT
 #
 
 export SAS_RECIPE_VERSION=$(cat docs/VERSION)
-sas_datetime=$(date "+%Y%m%d%H%M%S")
 sas_sha1=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
 
 [[ -z ${OPERATING_SYSTEM+x} ]]   && OPERATING_SYSTEM=linux
