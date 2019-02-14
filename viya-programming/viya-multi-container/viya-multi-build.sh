@@ -75,7 +75,6 @@ esac
 [[ -z ${BASEIMAGE+x} ]]                    && BASEIMAGE=centos
 [[ -z ${BASETAG+x} ]]                      && BASETAG=latest
 [[ -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP+x} ]] && SAS_VIYA_DEPLOYMENT_DATA_ZIP=${PWD}/SAS_Viya_deployment_data.zip
-[[ -z ${SAS_VIYA_PLAYBOOK_DIR+x} ]]        && SAS_VIYA_PLAYBOOK_DIR=${PWD}/sas_viya_playbook
 [[ -z ${PLATFORM+x} ]]                     && PLATFORM=redhat
 [[ -z ${OPERATING_SYSTEM+x} ]]             && OPERATING_SYSTEM=linux
 [[ -z ${SAS_RPM_REPO_URL+x} ]]             && SAS_RPM_REPO_URL=https://ses.sas.download/ses/
@@ -181,31 +180,37 @@ echo ""
 # Default to indicate we will not run the orchestrationCLI
 generate_playbook=false
 
-if [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
-    if [[ -f ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
-        if [[ ! -f ${PWD}/sas-orchestration ]]; then
-          if [[ "${OPERATING_SYSTEM}" == "darwin" ]]; then
-              echo "[INFO]  : Get orchestrationCLI Mac";echo
-              curl --silent --remote-name https://support.sas.com/installation/viya/34/sas-orchestration-cli/mac/sas-orchestration-osx.tgz
-              tar xvf sas-orchestration-osx.tgz
-              rm sas-orchestration-osx.tgz
-          else
-            echo "[INFO]  : Get orchestrationCLI";echo
-            curl --silent --remote-name https://support.sas.com/installation/viya/34/sas-orchestration-cli/lax/sas-orchestration-linux.tgz
-            tar xvf sas-orchestration-linux.tgz
-            rm sas-orchestration-linux.tgz
-          fi
-        fi
+if [[ -z ${SAS_VIYA_PLAYBOOK_DIR} ]]; then
+    if [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
+        if [[ -f ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
+            if [[ ! -f ${PWD}/sas-orchestration ]]; then
+              if [[ "${OPERATING_SYSTEM}" == "darwin" ]]; then
+                  echo "[INFO]  : Get orchestrationCLI Mac";echo
+                  curl --silent --remote-name https://support.sas.com/installation/viya/34/sas-orchestration-cli/mac/sas-orchestration-osx.tgz
+                  tar xvf sas-orchestration-osx.tgz
+                  rm sas-orchestration-osx.tgz
+              else
+                echo "[INFO]  : Get orchestrationCLI";echo
+                curl --silent --remote-name https://support.sas.com/installation/viya/34/sas-orchestration-cli/lax/sas-orchestration-linux.tgz
+                tar xvf sas-orchestration-linux.tgz
+                rm sas-orchestration-linux.tgz
+              fi
+            else
+                echo "[INFO]  : Using available SAS Orchestration CLI version: $(./sas-orchestration --version)"
+            fi
 
-        # Used later to run the orchestrationCLI
-        generate_playbook=true
+            # Used later to run the orchestrationCLI
+            generate_playbook=true
+        else
+            echo;echo "[ERROR] : Could not find the zip file to use";echo
+            exit 5
+        fi
     else
-        echo;echo "[ERROR] : Could not find the zip file to use";echo
+        echo;echo "[ERROR] : Could not find a zip file to use";echo
         exit 5
     fi
 else
-    echo;echo "[ERROR] : Could not find a zip file to use";echo
-    exit 5
+    echo;echo "[WARN]  : Using deprecated method of providing the playbook directory";echo
 fi
 
 echo
@@ -294,10 +299,10 @@ if [[ "${generate_playbook}" == "true" ]]; then
       --repository-warehouse ${SAS_RPM_REPO_URL} \
       --platform $PLATFORM \
       --deployment-type programming
-fi
-tar xvf ${PWD}/SAS_Viya_playbook.tgz
 
-SAS_VIYA_PLAYBOOK_DIR=${PWD}/sas_viya_playbook
+    tar xvf ${PWD}/SAS_Viya_playbook.tgz
+    SAS_VIYA_PLAYBOOK_DIR=${PWD}/sas_viya_playbook
+fi
 
 echo
 echo "=========================================="
@@ -474,7 +479,7 @@ sed ${sed_i_option} "s|{{ PROJECT_NAME }}|${PROJECT_NAME}|" container.yml
 # Remove the playbook directory
 #
 
-rm -rf ${SAS_VIYA_PLAYBOOK_DIR}
+#rm -rf ${SAS_VIYA_PLAYBOOK_DIR}
 
 #
 # Run ansible-container
