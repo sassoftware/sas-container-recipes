@@ -25,5 +25,5 @@ ARG PROJECT_NAME=sas-viya
 USER root
 
 COPY override/ /opt/sas/viya/config/data/esp/whitelabel/override/
-COPY whitelabel.conf /opt/sas/viya/config/etc/sysconfig/espvm.conf
+COPY whitelabel.conf /opt/sas/viya/config/etc/sysconfig/espstrmvwr.conf
 COPY config.yml /opt/sas/viya/home/share/esp/whitelabel/config.yml
