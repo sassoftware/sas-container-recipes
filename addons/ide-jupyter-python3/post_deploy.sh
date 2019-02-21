@@ -30,7 +30,7 @@ if [[ -z ${RUN_USER+x} ]]; then
 fi
 
 echo "[INFO] : RUN_USER set to ${RUN_USER}"
-if [[ "${RUN_USER}" == "cas" ]]; then 
+if [[ "${RUN_USER}" == "cas" ]] && [[ -z $(grep "cas" /etc/passwd) ]]; then
     echo "[INFO] : Created ${RUN_USER}"
     useradd cas -s /sbin/nologin
 fi
@@ -39,12 +39,19 @@ if [[ -z ${JUPYTER_TOKEN+x} ]]; then
     echo "[WARNING] : JUPYTER_TOKEN is not provided so blank will be used."
 fi
 
+# When CASENV_ADMIN_USER defined use sas group
+if [[ -z RUN_USER_GROUP ]]; then
+    RUN_USER_GROUP="sas"
+else
+    RUN_USER_GROUP=${RUN_USER}
+fi
+
 RUN_USER_HOME=$(getent passwd ${RUN_USER} | cut -d: -f6)
 if [ ! -d "${RUN_USER_HOME}" ]; then
     echo
     echo "[INFO] : Creating ${RUN_USER}'s home directory of ${RUN_USER_HOME}"
     mkdir --verbose --parents ${RUN_USER_HOME}
-    chown --verbose ${RUN_USER} ${RUN_USER_HOME}
+    chown --verbose -R ${RUN_USER}:${RUN_USER_GROUP} ${RUN_USER_HOME}
     chmod --verbose 0700 ${RUN_USER_HOME}
     echo
 else
@@ -79,11 +86,25 @@ else
     exit 3
 fi
 
+# Handle previous pids on container restarts
 _jupyterpid="/var/run/jupyter.pid"
-touch ${_jupyterpid}
+if [[ -f $_jupyterpid ]];then
+    echo "[INFO] Jupyter pid exists. Removing..."
+    echo "[DEBUG] previous pid: $(cat $_jupyterpid)"
+    instance_restart="true"
+    rm -f $_jupyterpid
+else
+    touch ${_jupyterpid}
+    instance_restart="false"
+fi
 
-runuser --shell "/bin/sh" --login ${RUN_USER} \
+# Prevent jupyter directory creation if this is a container restart
+if [[ $instance_restart == "true" ]];then
+    runuser --shell "/bin/sh" --login ${RUN_USER}
+else
+    runuser --shell "/bin/sh" --login ${RUN_USER} \
     --command "mkdir -p --verbose ~/jupyter"
+fi
 
 # In the following, the echo was added after switching to Python 3.6
 # http://forums.fast.ai/t/jupyter-notebook-fails-to-start/8370/5
