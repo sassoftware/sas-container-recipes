@@ -40,7 +40,7 @@ if [[ -z ${JUPYTER_TOKEN+x} ]]; then
 fi
 
 # When CASENV_ADMIN_USER defined use sas group
-if [[ -z RUN_USER_GROUP ]]; then
+if [[ -z ${RUN_USER_GROUP} ]]; then
     RUN_USER_GROUP="sas"
 else
     RUN_USER_GROUP=${RUN_USER}
