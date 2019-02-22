@@ -785,7 +785,7 @@ if ! ${SAS_LOGS_TO_DISK}; then
       </layout> \
    </appender>\
 ' /opt/sas/viya/config/etc/spawner/default/logconfig.xml
-   
+
     sed -i -e 's#<appender-ref ref="TimeBasedRollingFile"/>#<appender-ref ref="Console"/>#g' -e '/<appender class="RollingFileAppender"/,/appender>/d' /opt/sas/viya/config/etc/spawner/default/logconfig.xml
 
     # Setup workspace server to log to stdout
@@ -902,7 +902,7 @@ if [[ -n "$1" ]]; then
             echo;echo;echo "===== [INFO] : CAS http port gave a response of '${return_code}' =====";echo;echo
             sleep 2
         done
-        
+
         if (( ${return_code} != 200 )); then
             echo;echo;echo "===== [WARNING] : CAS http port is not giving a 200 response after a minute =====";echo;echo
         fi
@@ -1022,7 +1022,7 @@ else
     else
         pidfiles="/var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
     fi
-    
+
     while :; do
         sleep 3
         for _pidf in ${pidfiles}; do
