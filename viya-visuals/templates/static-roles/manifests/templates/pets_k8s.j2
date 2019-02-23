@@ -52,7 +52,11 @@ spec:
 {% endif %}
         domain: {{ settings.project_name }}
     spec:
+{% if SECURE_CONSUL %}
       serviceAccountName: {{ settings.project_name }}-account
+{% else %}
+      #serviceAccountName: {{ settings.project_name }}-account
+{% endif %}
 {% if item.key == "sas-casserver-primary" %}
       hostname: {{ settings.project_name }}-cas
 {% else %}
@@ -118,10 +122,6 @@ spec:
 {% if item.key == "sas-casserver-primary" %}
         - name: SERVICE_NAME
           value: "cascontroller"
-{% endif %}
-{% if SECURE_CONSUL %}
-        - name: SECURE_CONSUL
-          value: "true"
 {% endif %}
 {% if services.consul is defined %}
 {%   for environment in services.consul.deployment_overrides.environment %}
