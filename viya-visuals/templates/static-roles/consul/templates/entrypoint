@@ -365,14 +365,16 @@ chown -R sas:sas /opt/sas/viya/config/etc/vault
 docker_setup_consul
 docker_start_consul
 
-echo " _   _             _ _   "
-echo "| | | |           | | |  "
-echo "| | | | __ _ _   _| | |_ "
-echo "| | | |/ _\` | | | | | __|"
-echo "\ \_/ / (_| | |_| | | |_ "
-echo " \___/ \__,_|\__,_|_|\__|"
+if [[ "$SECURE_CONSUL" == "true" ]]; then
+    echo " _   _             _ _   "
+    echo "| | | |           | | |  "
+    echo "| | | | __ _ _   _| | |_ "
+    echo "| | | |/ _\` | | | | | __|"
+    echo "\ \_/ / (_| | |_| | | |_ "
+    echo " \___/ \__,_|\__,_|_|\__|"
 
-vault_config
+    vault_config
+fi
 
 # Using service management docker-functions for vault causes issues
 # with Vault setup

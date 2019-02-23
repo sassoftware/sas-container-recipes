@@ -106,7 +106,7 @@ fi
 if [ ! -d ${PG_VOLUME} ]; then
     echo "Creating ${PG_VOLUME}"
     mkdir -vp ${PG_VOLUME}
-    chown -vR postgres:postgres "$(dirname "${PG_VOLUME}")"
+    chown -vR sas:sas "$(dirname "${PG_VOLUME}")"
 fi
 
 if [ -e ${_sasuuid} ]; then
