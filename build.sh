@@ -30,6 +30,9 @@ esac
 # Setup logging
 #
 
+# Setting sas_datetime here as it is used in the logging configuration.
+sas_datetime=$(date "+%Y%m%d%H%M%S")
+
 if [[ "${OPERATING_SYSTEM}" != "darwin" ]]; then
     if [[ ! -d "${PWD}/logs" ]]; then
         mkdir -vp ${PWD}/logs
@@ -221,8 +224,7 @@ function usage() {
 function copy_deployment_data_zip() {
     local target_location=$1
     if [[ -n ${SAS_VIYA_PLAYBOOK_DIR} ]]; then
-        echo "[ERROR]  : Providing a playbook is no longer supported. Please provide the SAS_Viya_deployment_data.zip file."
-        exit 31
+        echo "[WARN]  : Providing a playbook is deprecated. Please provide the SAS_Viya_deployment_data.zip file."
     elif [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
         echo "[INFO]  : Copying ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} to ${target_location}"
         cp -v "${SAS_VIYA_DEPLOYMENT_DATA_ZIP}" "${target_location}/SAS_Viya_deployment_data.zip"
@@ -257,9 +259,9 @@ function add_layers()
             docker push "${docker_reg_location}"/"${sas_image}:${SAS_DOCKER_TAG}-base"
             set +x
             for str_image in ${ADDONS}; do
-                if [[( "${str_image}" == *"ide"* && "${sas_image}" == "${PROJECT_NAME}-programming" ) || \
-                     ( "${str_image}" == *"access"* && "${sas_image}" != "${PROJECT_NAME}-httpproxy" ) || \
-                     ( "${str_image}" == *"auth"* && "${sas_image}" != "${PROJECT_NAME}-httpproxy" ) ]]; then
+                if [[ ( "${str_image}" == *"ide"* && "${sas_image}" == "${PROJECT_NAME}-programming" ) || \
+                      ( "${str_image}" == *"access"* && "${sas_image}" != "${PROJECT_NAME}-httpproxy" ) || \
+                      ( "${str_image}" == *"auth"* && "${sas_image}" != "${PROJECT_NAME}-httpproxy" ) ]]; then
 
                     echo "[INFO]  : Adding '${str_image}' to '${sas_image}'"
                     pushd "${str_image}"
@@ -416,7 +418,6 @@ trap sas_container_recipes_shutdown SIGINT
 #
 
 export SAS_RECIPE_VERSION=$(cat docs/VERSION)
-sas_datetime=$(date "+%Y%m%d%H%M%S")
 sas_sha1=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
 
 [[ -z ${OPERATING_SYSTEM+x} ]]   && OPERATING_SYSTEM=linux

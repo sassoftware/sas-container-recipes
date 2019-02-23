@@ -11,7 +11,11 @@ spec:
         app: {{ settings.project_name }}-{{ item.key | lower }}
         domain: {{ settings.project_name }}
     spec:
+{% if SECURE_CONSUL %}
       serviceAccountName: {{ settings.project_name }}-account
+{% else %}
+      #serviceAccountName: {{ settings.project_name }}-account
+{% endif %}
       hostname: {{ settings.project_name }}-{{ item.key | lower }}
       subdomain: {{ settings.project_name }}-subdomain
       containers:
