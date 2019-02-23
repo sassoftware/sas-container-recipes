@@ -71,8 +71,8 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -z ${SASLOGDIR+x} ]]            && export SASLOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICENAME}"
 [[ -z ${SASCONSULDIR+x} ]]         && export SASCONSULDIR="${SASHOME}"
 [[ -z ${SASPOSTGRESPORT+x} ]]      && export SASPOSTGRESPORT=5432
-[[ -z ${SASPOSTGRESOWNER+x} ]]     && export SASPOSTGRESOWNER="postgres"
-[[ -z ${SASPOSTGRESGROUP+x} ]]     && export SASPOSTGRESGROUP="postgres"
+[[ -z ${SASPOSTGRESOWNER+x} ]]     && export SASPOSTGRESOWNER="sas"
+[[ -z ${SASPOSTGRESGROUP+x} ]]     && export SASPOSTGRESGROUP="sas"
 [[ -z ${SAS_DBNAME+x} ]]           && export SAS_DBNAME="SharedServices"
 [[ -z ${SAS_DEFAULT_PGUSER+x} ]]   && export SAS_DEFAULT_PGUSER="dbmsowner"
 is_password_empty SAS_DEFAULT_PGPWD
