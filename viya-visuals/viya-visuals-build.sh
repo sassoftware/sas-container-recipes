@@ -430,7 +430,9 @@ EOL
     sed -i 's|^ENTITLEMENT_PATH|#ENTITLEMENT_PATH|' everything.yml
     sed -i 's|^SAS_CERT_PATH|#SAS_CERT_PATH|' everything.yml
     sed -i 's|^SECURE_CONSUL:.*|SECURE_CONSUL: false|' everything.yml
-    sed -i "s|#CAS_VIRTUAL_HOST:.*|CAS_VIRTUAL_HOST: '${CAS_VIRTUAL_HOST}'|" everything.yml
+    if [[ -n ${CAS_VIRTUAL_HOST} ]]; then 
+        sed -i "s|#CAS_VIRTUAL_HOST:.*|CAS_VIRTUAL_HOST: '${CAS_VIRTUAL_HOST}'|" everything.yml
+    fi
 
     #
     # Update Container yaml
