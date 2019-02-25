@@ -331,6 +331,9 @@ RUN set -e; \
     echo; echo "####### Remove the content in the WORKDIR"; echo; \
     rm --verbose --recursive --force SAS_Viya_deployment_data.zip SAS_Viya_playbook.tgz sas_viya_playbook;
 
+COPY replace_httpd_default_cert.sh /opt/sas/viya/home/bin/replace_httpd_default_cert.sh
+RUN chmod +x /opt/sas/viya/home/bin/replace_httpd_default_cert.sh
+
 COPY entrypoint /opt/sas/viya/home/bin/entrypoint
 RUN chmod +x /opt/sas/viya/home/bin/entrypoint
 
