@@ -162,6 +162,8 @@ function setup_defaults() {
     [[ -z ${SETUP_VIRTUAL_ENVIRONMENT+x} ]]    && SETUP_VIRTUAL_ENVIRONMENT=true
     [[ -z ${SAS_DOCKER_TAG+x} ]]               && SAS_DOCKER_TAG=${SAS_RECIPE_VERSION}-${sas_datetime}-${sas_sha1}
     [[ -z ${PROJECT_NAME+x} ]]                 && PROJECT_NAME=sas-viya
+    [[ -z ${SAS_K8S_NAMESPACE+x} ]]            && SAS_K8S_NAMESPACE="${PROJECT_NAME}"
+    [[ -z ${SAS_K8S_INGRESS_PATH+x} ]]         && SAS_K8S_INGRESS_PATH="${PROJECT_NAME}.company.com"
     [[ -z ${BASEIMAGE+x} ]]                    && BASEIMAGE=centos
     [[ -z ${BASETAG+x} ]]                      && BASETAG="7"
     [[ -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP+x} ]] && SAS_VIYA_DEPLOYMENT_DATA_ZIP=${PWD}/SAS_Viya_deployment_data.zip
@@ -252,10 +254,18 @@ function setup_environment() {
     mkdir ${PROJECT_DIRECTORY}
     cp -v templates/container.yml ${PROJECT_DIRECTORY}/
     cp -v templates/generate_manifests.yml ${PROJECT_DIRECTORY}/
+    # Copy over the default. This is a place holder. Users should provide their
+    # own copy and put it in the sas-container-recipes/viya-visuals direcotry
+    cp -v templates/vars_usermods.yml ${PROJECT_DIRECTORY}/
 
     # The sitedefault file can be used to seed the Consul key/value store
     if [[ -f sitedefault.yml ]]; then
         cp -v sitedefault.yml ${PROJECT_DIRECTORY}/
+    fi
+
+    # See if the user provided their own copy of vars_usermods
+    if [[ -f vars_usermods.yml ]]; then
+        cp -v vars_usermods.yml ${PROJECT_DIRECTORY}/
     fi
 }
 
@@ -388,6 +398,15 @@ EOL
             # Copy the role's vars directory if it exists
             if [ -d roles/${role}/vars ]; then
                 cp -v sas_viya_playbook/group_vars/${role} roles/${role}/vars/
+                chmod 0744 roles/${role}/vars/${role} 
+            fi
+            
+            if [[ "${role}" == "espServer" ]]; then
+                echo "    localconsul:" >> roles/${role}/vars/${role}
+                echo "      SERVICE_APP_NAME: localconsul" >> roles/${role}/vars/${role}
+                echo "      SERVICE_MEMORY_NEEDED: 12000" >> roles/${role}/vars/${role}
+                echo "      SERVICE_PRODUCT_NAME: localconsul" >> roles/${role}/vars/${role}
+                echo "      SERVICE_YUM_PACKAGE: sas-localconsul" >> roles/${role}/vars/${role}
             fi
         fi
     done
@@ -397,6 +416,8 @@ EOL
     # adjusts the 'everything' yml file to make sure variables are in the correct order
     echo
     echo "PROJECT_NAME: ${PROJECT_NAME}" > everything.yml
+    echo "SAS_K8S_NAMESPACE: ${SAS_K8S_NAMESPACE}" >> everything.yml
+    echo "SAS_K8S_INGRESS_PATH: ${SAS_K8S_INGRESS_PATH}" >> everything.yml
     echo "BASEIMAGE: ${BASEIMAGE}" >> everything.yml
     echo "BASETAG: ${BASETAG}" >> everything.yml
     echo "PLATFORM: ${PLATFORM}" >> everything.yml
@@ -445,19 +466,24 @@ EOL
     sed -i "s|{{ DOCKER_REGISTRY_URL }}|${DOCKER_REGISTRY_URL}|" container.yml
     sed -i "s|{{ DOCKER_REGISTRY_NAMESPACE }}|${DOCKER_REGISTRY_NAMESPACE}|" container.yml
     sed -i "s|{{ PROJECT_NAME }}|${PROJECT_NAME}|" container.yml
+    sed -i "s|{{ SAS_K8S_NAMESPACE }}|${SAS_K8S_NAMESPACE}|" container.yml
     if [[ -n ${CAS_VIRTUAL_HOST} ]]; then
         sed -i "s|{{ CAS_VIRTUAL_HOST }}|${CAS_VIRTUAL_HOST}|" container.yml
     else
         sed -i "s|{{ CAS_VIRTUAL_HOST }}|sas-viya|" container.yml
     fi
-
 }
 
 # Generate the Kubernetes resources
 function make_deployments() {
     # Force Ansible to show the colored output
     ANSIBLE_FORCE_COLOR=true
-    ansible-playbook generate_manifests.yml -e "docker_tag=${SAS_DOCKER_TAG}" -e 'ansible_python_interpreter=/usr/bin/python'
+    ansible-playbook \
+        --connection=local \
+        --inventory 127.0.0.1, \
+        generate_manifests.yml \
+        -e "docker_tag=${SAS_DOCKER_TAG}" \
+        -e 'ansible_python_interpreter=/usr/bin/python'
 }
 
 # Push built images to the specified docker registry

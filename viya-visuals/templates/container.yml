@@ -47,7 +47,7 @@ settings:
   # If not set, the project name will be used. For openshift, the namespace maps to a project,
   # and description and display_name are supported.
   k8s_namespace:
-   name: tls-u18
+   name: "{{ SAS_K8S_NAMESPACE }}"
   #  description:
   #  display_name:
 

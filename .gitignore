@@ -8,7 +8,6 @@
 ac/
 venv/
 env/
-*test*/
 .DS_Store
 *.log
 **/working/

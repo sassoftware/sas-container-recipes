@@ -28,17 +28,14 @@
 
 - name: Copy files to remote host
   copy:
-    src: sas-espserver 
-    dest: "{{ SASHOME }}/bin/sas-espserver"
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
     mode: 0755
-
-- name: Copy the init script to the init daemon directory
-  copy:
-    src: sas-viya-espserver-default
-    dest: /etc/init.d/sas-viya-espserver-default
-    owner: "{{ INSTALL_USER }}"
-    group: "{{ INSTALL_GROUP }}"
-    mode: 0755
+  with_items:
+  - { src: sas-espserver, dest: "{{ SASHOME }}/bin/sas-espserver" }
+  - { src: register_esp.sh, dest: "{{ SASHOME }}/bin/register_esp.sh" }
+  - { src: unregister_esp.sh, dest: "{{ SASHOME }}/bin/unregister_esp.sh" }
+  - { src: sas-viya-espserver-default, dest: "/etc/init.d/sas-viya-espserver-default" }
 

@@ -14,6 +14,7 @@ spec:
 {% if SECURE_CONSUL %}
       serviceAccountName: {{ settings.project_name }}-account
 {% else %}
+      # Required for TLS configurations
       #serviceAccountName: {{ settings.project_name }}-account
 {% endif %}
       hostname: {{ settings.project_name }}-{{ item.key | lower }}
@@ -68,11 +69,13 @@ spec:
 {% endfor %}
 {% if item.value.deployment_overrides.environment is defined and item.value.deployment_overrides.environment %}
 {%   for environment in item.value.deployment_overrides.environment %}
+{%     if 'ESPENV' not in environment %}
         - name: {{ environment.split('=')[0] }}
           valueFrom:
             configMapKeyRef:
               name: {{ settings.project_name }}-{{ item.key | lower }}
               key: {{ environment.split('=')[0] | lower }}
+{%     endif %}
 {%   endfor %}
 {% endif %}
 {% for secrets in services.consul.deployment_overrides.secrets %}
@@ -106,11 +109,22 @@ spec:
 {%     endfor %}
 {%   endfor %}
 {% endif %}
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
         volumeMounts:
+{% if item.key == 'espserver' %}
+        - name: {{ settings.project_name }}-{{ item.key }}-sysconfig
+          mountPath: {{ SAS_CONFIG_ROOT }}/etc/sysconfig/SASEventStreamProcessingEngine
+{% endif %}
+{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
         - name: {{ settings.project_name }}-{{ item.key | lower }}-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
+{%   endfor %}
+{% endif %}
+{% if custom_volume_mounts is defined and custom_volume_mounts %}
+{%   for mount_key,mount_value in custom_volume_mounts.items() %}
+{%     if mount_key == item.key %}
+        {{ mount_value | indent(8) }}
+{%     endif %}
 {%   endfor %}
 {% endif %}
         - name: anchors
@@ -118,11 +132,26 @@ spec:
         - name: tokens
           mountPath: /tokens
 
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
       volumes:
+{% if item.key == 'espserver' %}
+      - name: {{ settings.project_name }}-{{ item.key }}-sysconfig
+        configMap:
+          name: {{ settings.project_name }}-{{ item.key }}
+          items:
+          - key: espenv
+            path: sas-esp
+{% endif %}
+{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
       - name: {{ settings.project_name }}-{{ item.key | lower }}-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
+{%   endfor %}
+{% endif %}
+{% if custom_volumes is defined and custom_volumes %}
+{%   for vol_key,vol_value in custom_volumes.items() %}
+{%     if vol_key == item.key %}
+      {{ vol_value | indent(6) }}
+{%-    endif %}
 {%   endfor %}
 {% endif %}
       - name: tokens
@@ -130,5 +159,5 @@ spec:
           name: consul-tokens-configmap
       - name: anchors
         configMap:
-          name: sas-viya-cacerts-configmap
+          name: {{ settings.project_name }}-cacerts-configmap
 ...
