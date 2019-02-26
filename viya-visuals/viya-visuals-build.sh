@@ -430,7 +430,6 @@ EOL
     sed -i 's|^ENTITLEMENT_PATH|#ENTITLEMENT_PATH|' everything.yml
     sed -i 's|^SAS_CERT_PATH|#SAS_CERT_PATH|' everything.yml
     sed -i 's|^SECURE_CONSUL:.*|SECURE_CONSUL: false|' everything.yml
-    sed -i "s|#CAS_VIRTUAL_HOST:.*|CAS_VIRTUAL_HOST: '${CAS_VIRTUAL_HOST}'|" everything.yml
 
     #
     # Update Container yaml
@@ -446,6 +445,12 @@ EOL
     sed -i "s|{{ DOCKER_REGISTRY_URL }}|${DOCKER_REGISTRY_URL}|" container.yml
     sed -i "s|{{ DOCKER_REGISTRY_NAMESPACE }}|${DOCKER_REGISTRY_NAMESPACE}|" container.yml
     sed -i "s|{{ PROJECT_NAME }}|${PROJECT_NAME}|" container.yml
+    if [[ -n ${CAS_VIRTUAL_HOST} ]]; then
+        sed -i "s|{{ CAS_VIRTUAL_HOST }}|${CAS_VIRTUAL_HOST}|" container.yml
+    else
+        sed -i "s|{{ CAS_VIRTUAL_HOST }}|sas-viya|" container.yml
+    fi
+
 }
 
 # Generate the Kubernetes resources

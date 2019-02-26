@@ -20,6 +20,7 @@
       environment:
         - "CASENV_ADMIN_USER=sasdemo"
         - "CASENV_CAS_VIRTUAL_PROTO=http"
+        - "CASENV_CAS_VIRTUAL_HOST={{ CAS_VIRTUAL_HOST }}"
         - "CASENV_CASDATADIR=/cas/data"
         - "CASENV_CASPERMSTORE=/cas/permstore"
       resources:
