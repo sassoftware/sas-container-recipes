@@ -11,7 +11,7 @@ This wiki contains an in-depth guide about the recipe process, tips, troubleshoo
 - [Post-run Tasks](Post-run-Tasks)
 - [Validating](validating)
 - [Removing Software](Removing-Software)
-- [Appendix: Under the Hood](https://github.sas.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood)
+- [Appendix: Under the Hood](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood)
 - [Related Resources](Related-Resources)
 
 ## FAQs
