@@ -2,20 +2,20 @@ This wiki contains an in-depth guide about the recipe process, tips, troubleshoo
 
 ## A Guide for Building and Running SAS Viya
 
-- [Introduction](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/Introduction)
-- [System Requirements](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/System-Requirements)
-- [Pre-build Tasks](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/Pre-build-Tasks)
+- [Introduction](Introduction)
+- [System Requirements](System-Requirements)
+- [Pre-build Tasks](Pre-build-Tasks)
 - Build and Run Images
   - [Build and Run SAS Viya Single Container](/Build-and-Run-SAS-Viya-Single-Container)
   - [Build and Run SAS Viya Multiple Containers](/Build-and-Run-SAS-Viya-Multiple-Containers)
-- [Post-run Tasks](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/Post-run-Tasks)
-- [Validating](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/validating)
-- [Removing Software](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/Removing-Software)
-- [Appendix: Under the Hood](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/Appendix:-Under-the-Hood)
-- [Related Resources](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/Related-Resources)
+- [Post-run Tasks](Post-run-Tasks)
+- [Validating](validating)
+- [Removing Software](Removing-Software)
+- [Appendix: Under the Hood](https://github.sas.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood)
+- [Related Resources](Related-Resources)
 
 ## FAQs
 
- - [The Basics](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/The-Basics)
- - [Multiple Containers](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/Multiple-Containers)
- - [Something's Not Working](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/Something's-Not-Working)
+ - [The Basics](The-Basics)
+ - [Multiple Containers](Multiple-Containers)
+ - [Something's Not Working](Something's-Not-Working)
