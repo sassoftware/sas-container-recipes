@@ -820,6 +820,9 @@ fi
 # Configure HTTP
 #
 
+echo "[INFO]  : Replacing default SSL certificate."
+${SASHOME}/bin/replace_httpd_default_cert.sh
+
 cat > $APACHE_CONF_D/proxy.conf << HTTPD
 RedirectMatch "^/$" /SASStudio
 
