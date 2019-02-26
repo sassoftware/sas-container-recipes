@@ -1,80 +1,216 @@
-#!/bin/bash
+#!/bin/bash -e
+# Copyright (c) 2017, SAS Institute Inc., Cary, NC, USA, All Rights Reserved
+#
+# Service: espserver
+# Context: espserver
+# DO NOT MODIFY THIS SCRIPT ABOVE THIS LINE
 
-DATA_PATH=/data
-ESP_PATH=/opt/sas/viya/home/SASEventStreamProcessingEngine/current
-ESP_CONFIG_PATH=/opt/sas/viya/config/etc/SASEventStreamProcessingEngine/default
-DFESP_HOME=${ESP_PATH}
-SASEXE=/opt/sas/viya/home/SASFoundation/sasexe
-LD_LIBRARY_PATH=${ESP_PATH}/lib:${ESP_PATH}/lib/plugins:${SASEXE}:${ESP_PATH}/lib/tk:${LD_LIBRARY_PATH}
-PATH=${PATH}:${ESP_PATH}/BIN
+# shellcheck disable=SC2034
+servicename=espserver
+shortname=espserver
+# shellcheck disable=SC2034
+servicecontext=espserver
 
-HTTP_PORT=8080
-PUB_SUB_PORT=5000
-HTTP_PUB_SUB_PORT=8082
-HOSTNAME=`hostname`
+# SASDEPLOYID, SASINSTANCE and pidfile are typically specified by command arguments,
+# but may be also be specified by environment variable.  If neither is specified, these
+# default values are used.
+[[ -z ${SASDEPLOYID+x} ]] && SASDEPLOYID=viya
+[[ -z ${SASINSTANCE+x} ]] && SASINSTANCE=default
+[[ -z ${pidfile+x} ]] && pidfile=/var/run/sas/sas-${SASDEPLOYID}-${shortname}-${SASINSTANCE}.pid
 
-export ESP_PATH
-export DFESP_HOME
-export LD_LIBRARY_PATH
-export PATH
+# Uncomment the set -x to run in debug mode
+# set -x
 
-if [ -n "${ESM_FRIENDLY_NAME}" ]
-then
-  export FRIENDLY_NAME=${ESM_FRIENDLY_NAME}
+excessargs=()
+
+while [ -n "$1" ]
+do
+  case "$1" in
+    -p)
+      shift
+      pidfile="$1"
+      ;;
+
+    -r)
+      shift
+      echo "[WARN] -r rootdir option is deprecated and ignored"
+      ;;
+
+    -l)
+      shift
+      echo "[WARN] -l logdir option is deprecated and ignored"
+      ;;
+
+    -d)
+      shift
+      SASDEPLOYID="$1"
+      ;;
+
+    -i)
+      shift
+      SASINSTANCE="$1"
+      ;;
+
+     *)
+# if we don't recognize argument as expected opt, accumulate and let something else consume those
+      excessargs+=("$1")
+      ;;
+  esac
+  shift  # next value
+done
+
+# look for an optional sasenv.conf for this SASDEPLOYID
+[[ -f /etc/sysconfig/sas/$SASDEPLOYID/sasenv.conf ]] && source "/etc/sysconfig/sas/${SASDEPLOYID}/sasenv.conf"
+
+# set standard environment if not already set
+[[ -z ${SASHOME+x} ]] && SASHOME=/opt/sas/$SASDEPLOYID/home
+
+source "$SASHOME/lib/envesntl/sas-start-functions"
+
+sas_set_service_env || sas_fail 1 "Unable to set up service environment"
+
+# shellcheck disable=SC2046
+# shellcheck disable=SC2086
+[[ -n $ESPVERSION ]] ||                 export ESPVERSION="$(basename $(readlink -f $SASHOME/SASEventStreamProcessingEngine/current))"
+[[ -n $SAS_CONFIG ]] ||                 export SAS_CONFIG=/opt/sas/$SASDEPLOYID/config
+[[ -n $DFESP_CONFIG ]] ||               export DFESP_CONFIG=$SAS_CONFIG/etc/SASEventStreamProcessingEngine/default
+[[ -n $DFESP_HOME ]] ||                 export DFESP_HOME=$SASHOME/SASEventStreamProcessingEngine/$ESPVERSION
+[[ -n $ESP_AUTHENTICATION_STRING ]] ||  export ESP_AUTHENTICATION_STRING=""
+[[ -n $ESP_LOGLEVEL_STRING ]] ||        export ESP_LOGLEVEL_STRING=""
+[[ -n $ESP_MODEL_STRING ]] ||           export ESP_MODEL_STRING=""
+[[ -n $ESP_HTTP_PORT ]] ||              export ESP_HTTP_PORT=31415
+[[ -n $ESP_PUBSUB_PORT ]] ||            export ESP_PUBSUB_PORT=31416
+[[ -z $SASLOGON_SERVERPORT ]] ||        export ESP_AUTHENTICATION_STRING="-auth saslogon://$SASLOGON_SERVERPORT"
+[[ -z $ESP_LOGGING_LEVEL ]] ||          export ESP_LOGLEVEL_STRING="-loglevel ${ESP_LOGGING_LEVEL}"
+[[ -z $ESP_MODEL_PATH ]] ||             export ESP_MODEL_STRING="-model ${ESP_MODEL_PATH}"
+[[ -z $ESPENV ]] ||                     export ESPENV=""
+[[ -z $SASTENANT ]] ||                  export SASTENANT="shared"
+
+export LD_LIBRARY_PATH=$DFESP_HOME/lib:$SASHOME/SASFoundation/sasexe
+
+[[ -f $SAS_CONFIG/etc/sysconfig/SASEventStreamProcessingEngine/sas-esp ]] && source "$SAS_CONFIG/etc/sysconfig/SASEventStreamProcessingEngine/sas-esp"
+
+# check for security policy
+[[ -n $DFESP_SEC_YAML ]] && cp "$DFESP_SEC_YAML" "$DFESP_CONFIG/security-properties.yml" && cp "$ESP_SERVER_CERT" "$DFESP_CONFIG" && cp "$ESP_CLIENT_CACERT" "$SAS_CONFIG/etc/SASSecurityCertificateFramework/cacerts/"
+
+[[ -d /data ]] && cd /data
+
+# Generate the key and cert
+ESP_VAULT_TOKEN_FILE_NAME="$SAS_CONFIG/etc/SASSecurityCertificateFramework/tokens/espserver/$SASTENANT/$SASINSTANCE/vault.token"
+if [[ -e $ESP_VAULT_TOKEN_FILE_NAME ]]; then
+    #
+    # Export of LC_ALL seems to be needed for sas-crypto-management and
+    # sas-bootstrap-config.
+    # Reference What does LC_ALL=c do
+    # https://unix.stackexchange.com/questions/87745/what-does-lc-all-c-do
+    #
+    if [[ -z ${LC_ALL+x} ]]; then  # Bash syntax to check if a variable is set.
+        echo "[WARN]  : LC_ALL is unset, exporting LC_ALL=C"
+        export LC_ALL=C
+    fi
+
+    #
+    # TXDX: Put the freshly created security artifacts in the right place.
+    #
+    # Certs should be placed in:
+    # /opt/sas/viya/config/etc/SASSecurityCertificateFramework/tls/certs/<serviceName>/<tenant>/<instance>/sas.crt
+    #
+    # Keys (including encryption key) should be placed in:
+    # /opt/sas/viya/config/etc/SASSecurityCertificateFramework/private/<serviceName>/<tenant>/<instance>/sas.key
+    #
+
+    ESP_CRT_PLAIN_FILE_NAME="sas_encrypted.crt"
+    ESP_CRT_DIRECTORY_NAME="$SAS_CONFIG/etc/SASSecurityCertificateFramework/tls/certs/espserver/$SASTENANT/$SASINSTANCE"
+    ESP_CRT_FULL_FILE_NAME="$ESP_CRT_DIRECTORY_NAME/$ESP_CRT_PLAIN_FILE_NAME"
+    
+    mkdir -vp --mode=0755 "$SAS_CONFIG/etc/SASSecurityCertificateFramework/tls/certs/espserver"
+    mkdir -vp --mode=0755 "$SAS_CONFIG/etc/SASSecurityCertificateFramework/tls/certs/espserver/$SASTENANT"
+    mkdir -vp --mode=0755 "$SAS_CONFIG/etc/SASSecurityCertificateFramework/tls/certs/espserver/$SASTENANT/$SASINSTANCE"
+    chown -vR sas:sas "$SAS_CONFIG/etc/SASSecurityCertificateFramework/tls/certs/espserver"
+
+    ESP_KEY_PLAIN_FILE_NAME="sas_encrypted.key"
+    ESP_KEY_DIRECTORY_NAME="$SAS_CONFIG/etc/SASSecurityCertificateFramework/private/espserver/$SASTENANT/$SASINSTANCE"
+    ESP_KEY_FULL_FILE_NAME="$ESP_KEY_DIRECTORY_NAME/$ESP_KEY_PLAIN_FILE_NAME"
+
+    mkdir -vp --mode=0755 "$SAS_CONFIG/etc/SASSecurityCertificateFramework/private/espserver"
+    mkdir -vp --mode=0755 "$SAS_CONFIG/etc/SASSecurityCertificateFramework/private/espserver/$SASTENANT"
+    mkdir -vp --mode=0755 "$SAS_CONFIG/etc/SASSecurityCertificateFramework/private/espserver/$SASTENANT/$SASINSTANCE"
+    chown -vR sas:sas "$SAS_CONFIG/etc/SASSecurityCertificateFramework/private/espserver"
+
+    #
+    # Gather some info to be used in TLS cert generation.
+    #
+    CERT_HOSTNAME_PLAIN=$(hostname)
+    CERT_HOSTNAME_FQDN=$(hostname -f)
+    CERT_HOSTNAME_SHORT_NAME=$(hostname -s)
+
+    #
+    # Use sas-bootstrap-config and its 'network addresses' command to obtain a string
+    # consisting of a comma delimited list of IP addresses found on this machine.
+    #
+    # shellcheck disable=SC2086
+    CERT_IPADDRESS_LIST=$($SASHOME/bin/sas-bootstrap-config network addresses | tr '[:space:]' ',' | sed 's/.$//' )
+    echo "[INFO]  : CERT_IPADDRESS_LIST $CERT_IPADDRESS_LIST"
+
+    #
+    # Run sas-crypto-management to generate a new certificate file and private key file.
+    #
+    echo "[INFO]  : Printing sas-crypto-management CLI parameters for upcoming call."
+    echo "[INFO]  : vault-token $ESP_VAULT_TOKEN_FILE_NAME"
+    echo "[INFO]  : common-name $CERT_HOSTNAME_FQDN"
+    echo "[INFO]  : out-crt $ESP_CRT_FULL_FILE_NAME"
+    echo "[INFO]  : out-key $ESP_KEY_FULL_FILE_NAME"
+    echo "[INFO]  : san-dns localhost"
+    echo "[INFO]  : san-dns $CERT_HOSTNAME_FQDN"
+    echo "[INFO]  : san-dns $CERT_HOSTNAME_PLAIN"
+    echo "[INFO]  : san-dns $CERT_HOSTNAME_SHORT_NAME"
+    echo "[INFO]  : san-ip 127.0.0.1"
+    echo "[INFO]  : san-ip $CERT_IPADDRESS_LIST"
+    echo "[INFO]  : vault-cafile $SAS_CONFIG/etc/SASSecurityCertificateFramework/cacerts/trustedcerts.pem"
+
+    echo "[INFO]  : Running sas-crypto-management to generate a new certificate file and private key file."
+
+    # shellcheck disable=SC2086
+    $SASHOME/SASSecurityCertificateFramework/bin/sas-crypto-management \
+      req-vault-cert \
+        --common-name $CERT_HOSTNAME_FQDN \
+        --out-crt $ESP_CRT_FULL_FILE_NAME \
+        --out-key $ESP_KEY_FULL_FILE_NAME \
+        --san-dns localhost \
+        --san-dns $CERT_HOSTNAME_FQDN \
+        --san-dns $CERT_HOSTNAME_PLAIN \
+        --san-dns $CERT_HOSTNAME_SHORT_NAME \
+        --san-ip 127.0.0.1 \
+        --san-ip $CERT_IPADDRESS_LIST \
+        --vault-token $ESP_VAULT_TOKEN_FILE_NAME \
+        --vault-cafile $SAS_CONFIG/etc/SASSecurityCertificateFramework/cacerts/trustedcerts.pem  2>&1  # 1>> $CONST_LOG_FILE_NAME 2>&1
+
+    SAS_CRYPTO_MANAGEMENT_RESULT=$?
+    echo "[INFO]  : sas-crypto-management req-vault-cert SAS_CRYPTO_MANAGEMENT_RESULT $SAS_CRYPTO_MANAGEMENT_RESULT"
+    if [ $SAS_CRYPTO_MANAGEMENT_RESULT -ne 0 ]; then
+        echo "[ERROR] : sas-crypto-management req-vault-cert failed with exit code $SAS_CRYPTO_MANAGEMENT_RESULT."
+        return $SAS_CRYPTO_MANAGEMENT_RESULT
+    fi
+fi
+
+# Register the ESP server in Consul
+# using source to pick up already defined environment variables
+if [[ -f $SAS_CONFIG/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token ]]; then
+    source "${SASHOME}/bin/register_esp.sh"
+fi
+
+if [[ -z $ESPENV ]]; then
+    # shellcheck disable=SC2086
+    $DFESP_HOME/bin/dfesp_xml_server -http "$ESP_HTTP_PORT" -pubsub "$ESP_PUBSUB_PORT" "$ESP_AUTHENTICATION_STRING" "$ESP_MODEL_STRING" "$ESP_LOGLEVEL_STRING" &
 else
-  export FRIENDLY_NAME=${HOSTNAME}
+    echo "[INFO]  : Running with ESPENV"
+    # shellcheck disable=SC2086
+    $DFESP_HOME/bin/dfesp_xml_server &
 fi
 
-if [ -n "${SAS_ESP_HTTP_ADMIN_PORT}" ]
-then
-  export HTTP_PORT=${SAS_ESP_HTTP_ADMIN_PORT}
+pid=$!  # Bash get process ID of the most recently executed background (asynchronous) command
+if [ -n "${pidfile}" ]; then
+    # The variable pidfile is non-empty.
+    echo "${pid}" > "${pidfile}"
 fi
 
-if [ -n "${SAS_ESP_HTTP_PUBSUB_PORT}" ]
-then
-  export HTTP_PUB_SUB_PORT=${SAS_ESP_HTTP_PUBSUB_PORT}
-fi
-
-export LD_LIBRARY_PATH=${DFESP_HOME}/lib:${DFESP_HOME}/lib/tk:${SASEXE}:${LD_LIBRARY_PATH}
-export TKPATH=/opt/sas/viya/home/SASFoundation/sasexe
-
-if [ -f "${DATA_PATH}/twitterpublisher.properties" ]
-then
-   cp "${DATA_PATH}/twitterpublisher.properties" "${DFESP_HOME}/etc/"
-fi
-
-# Write a file with the current timestamp in to indicate when this server started.
-echo `date +%s` > ${ESP_PATH}/startup.timestamp
-
-if [ -n "${SAS_ESP_SSL_HOST}" ]
-then
-  export DFESP_SSLPATH=${DFESP_HOME}/lib
-  cp /data/ca.pem ${DFESP_HOME}/etc/
-  cp /data/ca.pem ${ESP_CONFIG_PATH}
-  
-  # Compile to openssl properties file.
-  while IFS='' read -r line || [[ -n "$line" ]]; do
-    eval "echo \"$line\"" >> "${DFESP_HOME}/openssl.conf"
-  done < "${DFESP_HOME}/openssl.conf.template"
-  IPCOUNTER=1
-  for IP in `hostname -I`
-  do
-    echo "IP.${IPCOUNTER} = ${IP}" >> ${DFESP_HOME}/openssl.conf
-	let IPCOUNTER=IPCOUNTER+1
-  done
-  openssl req -sha256 -key /data/ca.key -new -out server.csr -subj "/C=US/ST=NC/L=Cary/O=SAS Institute/CN=${SAS_ESP_SSL_HOST}/emailAddress=GBR_RD_Scotland_ESP_Team@wnt.sas.com" -config ${DFESP_HOME}/openssl.conf
-  openssl x509 -sha256 -req -in server.csr -CA /data/ca.pem -CAkey /data/ca.key -CAcreateserial -out server.crt -days 365 -extensions v3_req -extfile ${DFESP_HOME}/openssl.conf
-  cat server.crt /data/ca.key > ${ESP_CONFIG_PATH}/server.pem
-  keytool -importcert -keystore /etc/pki/java/cacerts -file /data/ca.pem -storepass changeit -noprompt -alias sasrds
-  export HTTP_PUB_SUB_PORT=${HTTP_PUB_SUB_PORT}s
-  export HTTP_PORT=${HTTP_PORT}s
-fi
-
-ESP_ARGS="-pubsub ${PUB_SUB_PORT} -http ${HTTP_PORT} -plugindir ${SASEXE} -engine ${FRIENDLY_NAME}"
-
-if [ -n "${SAS_ESP_OAUTH_CLIENT}" ]
-then
-    ESP_ARGS="${ESP_ARGS} -auth ${SAS_ESP_OAUTH_CLIENT}"
-fi
-
-${DFESP_HOME}/bin/dfesp_xml_server ${ESP_ARGS}
