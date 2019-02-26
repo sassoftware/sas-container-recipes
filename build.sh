@@ -375,17 +375,12 @@ function echo_footer()
     echo "One should review the settings of the yaml files in $1/manifests/kubernetes/configmaps/"
     echo "to make sure they contain the desired configuration"
     echo ""
-    echo "To deploy a Symmetric Multiple Processor (SMP) environment, run the following"
+    echo "To deploy the SAS Viya environment, run the following"
     echo ""
-    echo "kubectl create -f $1/working/manifests/kubernetes/configmaps/"
-    echo "kubectl create -f $1/working/manifests/kubernetes/secrets/"
-    echo "kubectl create -f $1/working/manifests/kubernetes/deployments-smp/"
-    echo ""
-    echo "To deploy a Massively Parallel Processing (MPP)environment, run the following"
-    echo ""
-    echo "kubectl create -f $1/working/manifests/kubernetes/configmaps/"
-    echo "kubectl create -f $1/working/manifests/kubernetes/secrets/"
-    echo "kubectl create -f $1/working/manifests/kubernetes/deployments-mpp/"
+    [[ -z ${PROJECT_DIRECTORY+x} ]]         && PROJECT_DIRECTORY=working
+    [[ -z ${SAS_MANIFEST_DIR+x} ]]          && SAS_MANIFEST_DIR=manifests
+    [[ -z ${SAS_DEPLOY_MANIFEST_TYPE+x} ]]  && SAS_DEPLOY_MANIFEST_TYPE=kubernetes
+    ls -1dtr $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/* | awk '{ print "kubectl create -f " $1 }'
     echo ""
     kubectl version > /dev/null 2>&1 || echo -e "*** Kubernetes (kubectl) is required for the deployment step. See https://kubernetes.io/docs/tasks/tools/install-kubectl/"
 }

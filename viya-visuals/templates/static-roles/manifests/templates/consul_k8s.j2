@@ -1,22 +1,4 @@
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ settings.project_name }}-{{ item.key }}
-spec:
-  selector:
-    app: {{ settings.project_name }}-{{ item.key }}
-{% if item.value.ports is defined and item.value.ports %}
-  ports:
-{%   for ports in item.value.ports %}
-    - name: "{{ ports.split(':')[0] }}"
-      protocol: TCP
-      port: {{ ports.split(':')[0] }}
-      targetPort: {{ ports.split(':')[0] }}
-{%   endfor %}
-{% endif %}
-  clusterIP: None
----
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
@@ -33,6 +15,7 @@ spec:
 {% if SECURE_CONSUL %}
       serviceAccountName: {{ settings.project_name }}-account
 {% else %}
+      # Required for TLS configurations
       #serviceAccountName: {{ settings.project_name }}-account
 {% endif %}
       hostname: {{ settings.project_name }}-{{ item.key }}
@@ -56,22 +39,27 @@ spec:
           value: "{{ settings.project_name }}-cacerts-configmap"
         - name: VAULT_TOKENS_CONFIGMAP
           value: consul-tokens-configmap
+{% if SECURE_CONSUL == 'true' %}
         - name: VAULT_TOKEN_SERVICE_LIST
           value: "sasdatasvrc,localconsul,sas-viya-consul-default,sas-viya-httpproxy,rabbitmq,sas-viya-sas-casserver-primary,sas-viya-rabbitmq,sas-viya-pgpoolc,sas-viya-adminservices,sas-viya-advancedanalytics,sas-viya-casservices,sas-viya-cognitivecomputingservices,sas-viya-computeserver,sas-viya-computeservices,sas-viya-configuratn,sas-viya-coreservices,sas-viya-datamining,sas-viya-dataservices,sas-viya-graphbuilderservices,sas-viya-homeservices,sas-viya-modelservices,sas-viya-operations,sas-viya-programming,sas-viya-reportservices,sas-viya-reportviewerservices,sas-viya-sas-casserver-worker,sas-viya-sasdatasvrc,sas-viya-scoringservices,sas-viya-studioviya,sas-viya-themeservices,postgres,pgpool,httpproxy"
+{% else %}
+        #- name: VAULT_TOKEN_SERVICE_LIST
+        #  value: ""
+{% endif %}
         - name: CONSUL_HTTP_ADDR
           valueFrom:
             configMapKeyRef:
-              name: sas-viya-consul
+              name: {{ settings.project_name }}-consul
               key: consul_http_addr
         - name: SAS_ANCHORS_DIR
           valueFrom:
             configMapKeyRef:
-              name: sas-viya-consul
+              name: {{ settings.project_name }}-consul
               key: sas_anchors_dir
         - name: VAULT_TOKEN_DIR
           valueFrom:
             configMapKeyRef:
-              name: sas-viya-consul
+              name: {{ settings.project_name }}-consul
               key: vault_token_dir
         - name: CONSUL_SERVICE_NAME
           value: {{ settings.project_name }}-{{ item.key }}
@@ -102,12 +90,20 @@ spec:
 {%     endfor %}
 {%   endfor %}
 {% endif %}
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
         volumeMounts:
+{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
         - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
 {%   endfor %}
+{% endif %}
+{% if custom_volume_mounts is defined and custom_volume_mounts %}
+{%   for mount_key,mount_value in custom_volume_mounts.items() %}
+{%     if mount_key == item.key %}
+        {{ mount_value | indent(8) }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
 {% if SECURE_CONSUL %}
         # Required for TLS configurations comment out existing empty dir volumeMount
         - name: consul-persistent-storage
@@ -125,14 +121,21 @@ spec:
           mountPath: /anchors
         - name: tokens
           mountPath: /tokens
-{% endif %}
 
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
       volumes:
+{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
       - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
 {%   endfor %}
+{% endif %}
+{% if custom_volumes is defined and custom_volumes %}
+{%   for vol_key,vol_value in custom_volumes.items() %}
+{%     if vol_key == item.key %}
+      {{ vol_value | indent(6) }}
+{%-    endif %}
+{%   endfor %}
+{% endif %}
       # Needed for TLS configurations
       - name: tokens
         configMap:
@@ -140,7 +143,6 @@ spec:
       - name: anchors
         configMap:
           name: {{ settings.project_name }}-cacerts-configmap
-{% endif %}
   # Persistent storage required for TLS configurations
   # volumeClaimTemplates:
   # - metadata:

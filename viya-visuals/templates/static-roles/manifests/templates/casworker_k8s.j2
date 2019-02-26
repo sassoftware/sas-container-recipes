@@ -3,7 +3,11 @@ kind: Deployment
 metadata:
   name: {{ settings.project_name }}-cas-worker
 spec:
-  replicas: 1
+{%   if sas_cas_mode == 'smp' %}
+  replicas: 0
+{% else %}
+  replicas: 3
+{% endif %}
   template:
     metadata:
       labels:
@@ -13,6 +17,7 @@ spec:
 {% if SECURE_CONSUL %}
       serviceAccountName: {{ settings.project_name }}-account
 {% else %}
+      # Required for TLS configurations
       #serviceAccountName: {{ settings.project_name }}-account
 {% endif %}
       hostname: {{ settings.project_name }}-cas-worker
@@ -39,15 +44,14 @@ spec:
           value: "{{ settings.project_name }}-consul"
 {% endif %}
         - name: CASCFG_MODE
-          value: "mpp"
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-cas
+              key: cascfg_mode
         - name: SERVICE_NAME
           value: "casworker"
         - name: CASCONTROLLERHOST
-          value: "{{ settings.project_name }}-cas" 
-{% if SECURE_CONSUL %}
-        - name: SECURE_CONSUL
-          value: "true"
-{% endif %}
+          value: "{{ settings.project_name }}-cas"
 {% if services.consul is defined %}
 {%   for environment in services.consul.deployment_overrides.environment %}
 {%     if environment.split('=')[0] == 'CONSUL_DATACENTER_NAME' %}
@@ -97,7 +101,7 @@ spec:
         - name: CONSUL_DATACENTER_NAME
           valueFrom:
             configMapKeyRef:
-              name: sas-viya-consul
+              name: {{ settings.project_name }}-consul
               key: consul_datacenter_name
         - name: SECURE_CONSUL
           valueFrom:
@@ -133,11 +137,18 @@ spec:
 {%     endfor %}
 {%   endfor %}
 {% endif %}
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
         volumeMounts:
+{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
         - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
+{%   endfor %}
+{% endif %}
+{% if custom_volume_mounts is defined and custom_volume_mounts %}
+{%   for mount_key,mount_value in custom_volume_mounts.items() %}
+{%     if mount_key == item.key %}
+        {{ mount_value | indent(8) }}
+{%     endif %}
 {%   endfor %}
 {% endif %}
         - name: anchors
@@ -145,11 +156,18 @@ spec:
         - name: tokens
           mountPath: /tokens
 
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
       volumes:
+{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
       - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
+{%   endfor %}
+{% endif %}
+{% if custom_volumes is defined and custom_volumes %}
+{%   for vol_key,vol_value in custom_volumes.items() %}
+{%     if vol_key == item.key %}
+      {{ vol_value | indent(6) }}
+{%-    endif %}
 {%   endfor %}
 {% endif %}
       - name: tokens
@@ -157,5 +175,5 @@ spec:
           name: consul-tokens-configmap
       - name: anchors
         configMap:
-          name: sas-viya-cacerts-configmap
+          name: {{ settings.project_name }}-cacerts-configmap
 ...

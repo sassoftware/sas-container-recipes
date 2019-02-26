@@ -125,6 +125,10 @@ fi
 unset SASINSTANCE
 export SASINSTANCE="default"
 
+# Opening up permissions to support writing pid file as the postgres user.
+# chmod -v 0757 /var/run/sas/
+
+#FIXME: Removing backup-agent for now
 if [[ -f /etc/init.d/sas-viya-backup-agent-default ]]; then
     rm -v /etc/init.d/sas-viya-backup-agent-default
 fi
