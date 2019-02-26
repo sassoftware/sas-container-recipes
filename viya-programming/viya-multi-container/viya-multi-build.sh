@@ -430,9 +430,6 @@ sed ${sed_i_option} 's|^METAREPO_CERT_SOURCE|#METAREPO_CERT_SOURCE|' everything.
 sed ${sed_i_option} 's|^ENTITLEMENT_PATH|#ENTITLEMENT_PATH|' everything.yml
 sed ${sed_i_option} 's|^SAS_CERT_PATH|#SAS_CERT_PATH|' everything.yml
 sed ${sed_i_option} 's|^SECURE_CONSUL:.*|SECURE_CONSUL: false|' everything.yml
-if [[ -n ${CAS_VIRTUAL_HOST} ]]; then
-    sed -i "s|#CAS_VIRTUAL_HOST:.*|CAS_VIRTUAL_HOST: '${CAS_VIRTUAL_HOST}'|" everything.yml
-fi
 
 #
 # Copy over the certificates that will be needed to do the install
@@ -476,6 +473,11 @@ sed ${sed_i_option} "s|SETINIT_TEXT_ENC=|SETINIT_TEXT_ENC=${setinit_enc}|g" cont
 sed ${sed_i_option} "s|{{ DOCKER_REGISTRY_URL }}|${DOCKER_REGISTRY_URL}|" container.yml
 sed ${sed_i_option} "s|{{ DOCKER_REGISTRY_NAMESPACE }}|${DOCKER_REGISTRY_NAMESPACE}|" container.yml
 sed ${sed_i_option} "s|{{ PROJECT_NAME }}|${PROJECT_NAME}|" container.yml
+if [[ -n ${CAS_VIRTUAL_HOST} ]]; then
+    sed ${sed_i_option} "s|{{ CAS_VIRTUAL_HOST }}|${CAS_VIRTUAL_HOST}|" container.yml
+else
+    sed ${sed_i_option} "s|{{ CAS_VIRTUAL_HOST }}|sas-viya|" container.yml
+fi
 
 #
 # Remove the playbook directory
