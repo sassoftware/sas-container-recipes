@@ -10,6 +10,10 @@
   include_role:
     name: sas-install
 
+- name: Install java
+  include_role:
+    name: sas-java
+
 - name: Copy files to remote host
   copy:
     src: "{{ item.name }}"
