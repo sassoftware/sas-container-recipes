@@ -161,13 +161,6 @@ function usage() {
           URL of the Docker registry where Docker images will be pushed to.
             example: 10.12.13.14:5000 or my-registry.docker.com
 
-      -v|--virtual-host
-          The Kubernetes Ingress path that defines the location of the HTTP endpoint.
-          For more details on Ingress see the official Kubernetes documentation at
-          https://kubernetes.io/docs/concepts/services-networking/ingress/
-
-            example: user-myproject.mylocal.com
-
       -z|--zip <value>
           Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
           If you do not know if your organization has a SAS license then contact
@@ -195,6 +188,13 @@ function usage() {
       -m|--mirror-url <value>
           The location of the mirror URL.See the Mirror Manager guide at
           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
+
+      -v|--virtual-host <value>
+          The Kubernetes Ingress path that defines the location of the HTTP endpoint.
+          For more details on Ingress see the official Kubernetes documentation at
+          https://kubernetes.io/docs/concepts/services-networking/ingress/
+
+            example: user-myproject.mylocal.com
 
       -p|--platform <value>
           The type of distribution of the image defined by the \"baseimage\" option.
@@ -375,17 +375,12 @@ function echo_footer()
     echo "One should review the settings of the yaml files in $1/manifests/kubernetes/configmaps/"
     echo "to make sure they contain the desired configuration"
     echo ""
-    echo "To deploy a Symmetric Multiple Processor (SMP) environment, run the following"
+    echo "To deploy the SAS Viya environment, run the following"
     echo ""
-    echo "kubectl create -f $1/working/manifests/kubernetes/configmaps/"
-    echo "kubectl create -f $1/working/manifests/kubernetes/secrets/"
-    echo "kubectl create -f $1/working/manifests/kubernetes/deployments-smp/"
-    echo ""
-    echo "To deploy a Massively Parallel Processing (MPP)environment, run the following"
-    echo ""
-    echo "kubectl create -f $1/working/manifests/kubernetes/configmaps/"
-    echo "kubectl create -f $1/working/manifests/kubernetes/secrets/"
-    echo "kubectl create -f $1/working/manifests/kubernetes/deployments-mpp/"
+    [[ -z ${PROJECT_DIRECTORY+x} ]]         && PROJECT_DIRECTORY=working
+    [[ -z ${SAS_MANIFEST_DIR+x} ]]          && SAS_MANIFEST_DIR=manifests
+    [[ -z ${SAS_DEPLOY_MANIFEST_TYPE+x} ]]  && SAS_DEPLOY_MANIFEST_TYPE=kubernetes
+    ls -1dtr $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/* | awk '{ print "kubectl create -f " $1 }'
     echo ""
     kubectl version > /dev/null 2>&1 || echo -e "*** Kubernetes (kubectl) is required for the deployment step. See https://kubernetes.io/docs/tasks/tools/install-kubectl/"
 }
@@ -631,11 +626,6 @@ if [[ "${SAS_RECIPE_TYPE}" != "single" ]]; then
         echo "[INFO]  : Bypassing validation of Docker registry URL: ${DOCKER_REGISTRY_URL}"
     fi
 
-    if [[ -z ${CAS_VIRTUAL_HOST+x} ]]; then
-        echo "[ERROR] : The HTTP ingress path was not passed in. Exiting."
-        exit 6
-    fi
-
     if [[ -z ${DOCKER_REGISTRY_URL+x} || -z ${DOCKER_REGISTRY_NAMESPACE+x} ]]; then
         echo "[ERROR] : Trying to use a type of '${SAS_RECIPE_TYPE}' without giving the Docker registry URL or name space"
         exit 7
@@ -795,6 +785,7 @@ case ${SAS_RECIPE_TYPE} in
         # export the values so that they are picked up by the lower level scipt.
         # We will not pass the CHECK_*_URL values here as they are not used in the lower level script
         [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
+        [[ ! -z ${CAS_VIRTUAL_HOST} ]] && export CAS_VIRTUAL_HOST
 
         set +e
         ./viya-multi-build.sh \
@@ -804,8 +795,7 @@ case ${SAS_RECIPE_TYPE} in
           --docker-url "${DOCKER_REGISTRY_URL}" \
           --docker-registry-type "${DOCKER_REGISTRY_TYPE}" \
           --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
-          --sas-docker-tag "${SAS_DOCKER_TAG}" \
-          --virtual-host "${CAS_VIRTUAL_HOST}"
+          --sas-docker-tag "${SAS_DOCKER_TAG}" 
 
         multi_build_rc=$?
         set -e
@@ -838,6 +828,7 @@ case ${SAS_RECIPE_TYPE} in
         [[ ! -z ${CHECK_MIRROR_URL} ]] && export CHECK_MIRROR_URL
         [[ ! -z ${CHECK_DOCKER_URL} ]] && export CHECK_DOCKER_URL
         [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
+        [[ ! -z ${CAS_VIRTUAL_HOST} ]] && export CAS_VIRTUAL_HOST
 
         set +e
         ./viya-visuals-build.sh \
@@ -846,8 +837,7 @@ case ${SAS_RECIPE_TYPE} in
           --platform "${PLATFORM}" \
           --docker-url "${DOCKER_REGISTRY_URL}" \
           --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
-          --sas-docker-tag "${SAS_DOCKER_TAG}" \
-          --virtual-host "${CAS_VIRTUAL_HOST}"
+          --sas-docker-tag "${SAS_DOCKER_TAG}" 
 
         visuals_build_rc=$?
         set -e
