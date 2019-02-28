@@ -27,6 +27,37 @@ function is_password_empty() {
 [[ -z ${SAS_CURRENT_HOST+x} ]] && export SAS_CURRENT_HOST=$(hostname -f)
 [[ -z ${PG_VOLUME+x} ]]        && export PG_VOLUME="${SASCONFIG}/data/sasdatasvrc/${SASSERVICENAME}"
 
+# This is being defined in support of Vault tokens. Used in docker-functions
+# docker-functions just needs to find the value. To preserve functionality before
+# this change, we will capture whatever the value was prior and then reset it post.
+# This is an area where improvement can be made.
+tmp_servicecontext=$servicecontext
+servicecontext=sasdatasvrc
+servicecontext=$tmp_servicecontext
+
+excessargs=()
+
+while [ -n "$1" ]
+do
+  case "$1" in
+    -p)
+      shift
+      SASPOSTGRESPIDFILE="$1"
+      ;;
+
+    -d)
+      shift
+      SASDEPLOYID="$1"
+      ;;
+
+     *)
+# if we don't recognize argument as expected opt, accumulate and let something else consume those
+      excessargs+=("$1")
+      ;;
+  esac
+  shift  # next value
+done
+
 source ${SASHOME}/lib/envesntl/docker-functions
 
 # In the case of Docker, we need to load up what the instance value is.
@@ -65,8 +96,8 @@ is_password_empty SAS_DATAMINING_PASSWORD
 [[ -z ${SASPOSTGRESREPLUSER+x} ]]    && export SASPOSTGRESREPLUSER="replication"
 is_password_empty SASPOSTGRESREPLPWD
 [[ -z ${SASPOSTGRESRUNDIR+x} ]]      && export SASPOSTGRESRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
-[[ -z ${SASPOSTGRESOWNER+x} ]]       && export SASPOSTGRESOWNER="postgres"
-[[ -z ${SASPOSTGRESGROUP+x} ]]       && export SASPOSTGRESGROUP="postgres"
+[[ -z ${SASPOSTGRESOWNER+x} ]]       && export SASPOSTGRESOWNER="sas"
+[[ -z ${SASPOSTGRESGROUP+x} ]]       && export SASPOSTGRESGROUP="sas"
 
 _LOGFILENAME=${SASLOGDIR}/${SASSERVICENAME}_${SASINSTANCE}_start.log
 
@@ -141,7 +172,7 @@ fi
 
 # Start postgres via pg_ctl => This will create the PIDFILE
 echo_line "[postgresql] Starting postgres via pg_ctl..."
-su - -c "${SASHOME}/bin/pg_ctl -o '-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf' -D ${PG_DATADIR} -w -t 30 start" ${SASPOSTGRESOWNER}
+su - -s /bin/bash -c "${SASHOME}/bin/pg_ctl -o '-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf' -D ${PG_DATADIR} -w -t 30 start" ${SASPOSTGRESOWNER}
 
 if [ $? = 0 ]; then
   echo_line "[postgresql] PostgreSQL started successfully"
@@ -155,7 +186,7 @@ if [ $? = 0 ]; then
 
   _consul_tags="--tags postgres"
   if [ "${_network_databaseTraffic_enabled}" = "true" ] || [ "${_network_databaseTraffic_enabled}" = "TRUE" ] ; then
-    _consul_tags=$_consul_tags "--tags ssl"
+    _consul_tags="$_consul_tags --tags ssl"
   fi
 
 

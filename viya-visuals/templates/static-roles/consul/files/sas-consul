@@ -1,0 +1,1131 @@
+#!/bin/bash
+#
+#
+# Copyright (c) 2017-2018, SAS Institute Inc., Cary, NC, USA, All Rights Reserved
+#
+# sas-consul     Start the consul agent
+#
+#
+
+# Uncomment the set -x to run in debug mode
+# set -x
+
+# output debugging script messages
+# SASINITDEBUG=true
+
+mypath=$(readlink -nf $0)
+prodname=$(basename $mypath | cut -d\. -f1)
+
+# deployment ID
+deployid=
+
+# instance ID
+instance=
+
+# product ID
+productid="consul"
+
+# root directory
+rootdir=
+
+# log directory
+logdir=
+
+# executable
+exec=
+
+# sas_debug_msg
+. /opt/sas/viya/home/lib/envesntl/sas-init-functions
+
+#############################################################################
+# Searches for the passed IP address in the output of
+# sas-bootstrap-config network addresses using grep and returns a found value
+# by setting local_consul_ip to the value.
+#
+# Arguments
+# 1 : IP address to search for
+#############################################################################
+function find_ip_on_machine {
+    ${sas_bootstrap_config_cli} network addresses | grep -F $1 &>/dev/null
+    [[ $? -eq 0 ]] && local_consul_ip=$1
+}
+
+#############################################################################
+# Appends an IPv4 address option (e.g. "-bind 10.122.32.219",
+# "-advertise 10.122.33.219") to the options specified by the
+# CONSUL_OPTIONS variable if the IP variable is defined.
+#
+# Arguments
+# 1 : Name of a Consul agent option that will be set to an IPv4
+#     address (e.g. "advertise", "bind")
+# 2 : Name of a variable that is set to either a network interface name or
+#     an IPv4 address (e.g. "eth0", "10.122.32.219", etc.)
+#############################################################################
+function append_ip_option_to_consul_options {
+  if [[ $# -ne 2 ]]; then
+    sas_debug_msg "Function $0 requires arguments that specify a Consul command option name and the name of a variable whose value is an IPv4 address or a network interface name that has an IPv4 address."
+    return 1
+  else
+    local ip_option_name=$1
+    local ip_var_name=$2
+    local ip_var_value=${!ip_var_name}
+    if [ ! -z ${ip_option_name} ] && [ ! -z ${ip_var_value} ]; then
+      local ip_option_value
+      if ip addr show ${ip_var_value} > /dev/null 2>&1 ; then
+        # get the IP associated with the interface name
+        ip_option_value=$(ip addr show "${ip_var_value}" | grep 'inet ' | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])' | head -n 1)
+      else
+        # IP
+        ip_option_value=${ip_var_value}
+      fi
+      if [ ! -z ${ip_option_value} ]; then
+        export CONSUL_OPTIONS="${CONSUL_OPTIONS} -${ip_option_name} ${ip_option_value}"
+        sas_debug_msg "CONSUL_OPTIONS has been updated to add: -${ip_option_name} ${ip_option_value}"
+        sas_debug_msg "CONSUL_OPTIONS=${CONSUL_OPTIONS}"
+      fi
+    fi
+  fi
+}
+
+
+#
+# If "-l logdir" is not defined, logging is written to stdout
+#
+
+excessargs=""
+
+while [ -n "$1" ]
+do
+  case "$1" in
+    -p)
+      shift
+      pidfile="$1"
+      ;;
+
+    -r)
+      shift
+      rootdir="$1" # presently unused in template script
+      ;;
+
+    -l)
+      shift
+      logdir="$1"
+      ;;
+
+    -d)
+      shift
+      deployid="$1" # presently unused in template script
+      ;;
+
+    -i)
+      shift
+      instance="$1" # presently unused in template script
+      ;;
+
+     *)
+      # if we don't recognize argument as expected opt, accumulate and let something else consume those
+      excessargs="${excessargs} $1"
+      ;;
+  esac
+  shift  # next value
+done
+
+date_time=`date +%F_%H-%M-%S`
+
+if [ -z "${deployid}" ]; then
+  # default if unset
+  deployid="viya"
+  sas_debug_msg "Defaulting deployid=${deployid}"
+fi
+
+if [ -z "${rootdir}" ]; then
+  # default if unset
+  rootdir="/opt/sas/${deployid}"
+  sas_debug_msg "Defaulting rootdir=${rootdir}"
+fi
+
+if [ -z "${instance}" ]; then
+  # default if unset
+  instance="default"
+  sas_debug_msg "Defaulting instance=${instance}"
+fi
+
+if [ -z "${logdir}" ]; then
+  # default if unset
+  logdir="/opt/sas/${deployid}/config/var/log/${productid}/${instance}"
+  sas_debug_msg "Defaulting logdir=${logdir}"
+fi
+
+if [ -z "${exec}" ]; then
+  # default if unset
+  exec="${rootdir}/home/bin/${productid}"
+  sas_debug_msg "Defaulting exec=${exec}"
+fi
+
+[ -d "$logdir" ] && logfile="${logdir}/${prodname}_$date_time.log"
+
+# Set up locale
+if [ -f /etc/profile.d/lang.sh ];  then
+    . /etc/profile.d/lang.sh
+fi
+
+# Invoke the product command
+# Log messages from the command are assumed to go to STDOUT/STDERR. If a -l
+# logdir option was passed to this script, route STDOUT/STDERR to a file.
+
+# Start consul
+#########
+
+configdir="${rootdir}/config"
+
+[[ -n $CONSUL_DATA_DIR ]] || CONSUL_DATA_DIR=${configdir}/data/$productid
+sas_debug_msg "sas-consul.start $LINENO: CONSUL_DATA_DIR=$CONSUL_DATA_DIR"
+confdir="${configdir}/etc/consul.d"
+datadir="$CONSUL_DATA_DIR"
+
+consulsysconfig=${configdir}/etc/sysconfig/${productid}/${instance}/sas-consul
+
+SASUSER=sas
+SASGROUP=sas
+
+# Ensure CONSUL_HTTP_ADDR is defined
+[ -r ${configdir}/consul.conf ] && . ${configdir}/consul.conf
+
+##############################################################################
+# Changes the ownership of the file to ${SASUSER}:${SASGROUP}.
+##############################################################################
+# Inputs:
+#
+# file
+# The file whose ownership is to be changed to ${SASUSER}:${SASGROUP}
+#
+# octalMode
+# Optional argument that is used to change the octal mode (e.g. 600) of a file
+#
+##############################################################################
+chown_file() {
+  RETVAL=1
+  if [[ $# -ge 1 ]]; then
+    local file=$1
+    if [ -f ${file} ]; then
+      local username="$(stat -c %U ${file})"
+      local groupname="$(stat -c %G ${file})"
+      if [ "${username}" = "${SASUSER}" ] && [ "${groupname}" = "${SASGROUP}" ]; then
+          RETVAL=0
+      else
+          sas_debug_msg "changing ownership of ${file} from ${username}:${groupname} to ${SASUSER}:${SASGROUP}"
+          chown ${SASUSER}:${SASGROUP} ${file}
+          RETVAL=$?
+          if [ ${RETVAL} -eq 0 ]; then
+              sas_debug_msg "changed ownership of ${file} from ${username}:${groupname} to ${SASUSER}:${SASGROUP}"
+          fi
+      fi
+      if [[ $# -eq 2 ]]; then
+          local octalModeNew=$2
+          local octalMode="$(stat -c %a ${file})"
+          if [[ $octalMode -ne $octalModeNew ]]; then
+              sas_debug_msg "changing octal mode of ${file} from ${octalMode} to ${octalModeNew}"
+              chmod ${octalModeNew} ${file}
+              RETVALCHMOD=$?
+              if [ ${RETVALCHMOD} -eq 0 ]; then
+                  sas_debug_msg "changed octal mode of ${file} from ${octalMode} to ${octalModeNew}"
+              else
+                  RETVAL=${RETVALCHMOD}
+              fi
+          fi
+      fi
+    fi
+  fi
+  return $RETVAL
+}
+
+
+
+##############################################################################
+# Gets the value of the property from a file that contains name=value
+# pairs.
+##############################################################################
+# Inputs:
+#   Argument 1 : the absolute path to a .properties file.
+#   Argument 2 : the name of the property (e.g. "name=value") whose value is desired.
+# Returns the value of the property
+##############################################################################
+get_property() {
+  grep "${2}" "${1}" | cut -d'=' -f2
+}
+
+
+
+##############################################################################
+# Generates a Consul configuration file to define the ACL configuration
+# for a server node that has a management ACL token.
+##############################################################################
+# Inputs:
+#
+# acl_client_token_file
+# Absolute path to the file that contains the Consul ACL client token.
+#
+# config_acl_file
+# JSON output file that will be generated to configure Consul for ACL.
+# This file needs to be generated in Consul's configuration directory
+# (e.g. the -config-dir DIR) unless configuring using -config-file FILE.
+#
+# acl_master_token_file
+# Absolute path to the file that contains the Consul ACL master token.
+#
+##############################################################################
+create_config_acl() {
+  RETVAL=1
+
+  sas_debug_msg "\n${FUNCNAME[0]}"
+
+  if [ -z ${acl_master_token_file+x} ]; then
+    sas_log_failure_msg "Cannot configure ACL since 'acl_master_token_file' does not specify a file that contains the ACL master token."
+    RETVAL=1
+  else
+
+    sas_debug_msg "${FUNCNAME[0]}:\n  config_acl_file=${config_acl_file}\n  acl_master_token_file=${acl_master_token_file}\n  acl_data_center=${acl_datacenter}\n  acl_default_policy=${acl_default_policy}\n  acl_down_policy=${acl_down_policy}\n  acl_agent_token=***\n  acl_master_token=***"
+    sas_debug_msg "${FUNCNAME[0]}: Creating Consul configuration ${config_acl_file} to specify the ACL configuration"
+
+    cat <<-EOF > ${config_acl_file}
+		{
+		    "acl_datacenter": "${acl_datacenter}",
+		    "acl_default_policy": "${acl_default_policy}",
+		    "acl_down_policy": "${acl_down_policy}",
+		    "acl_master_token": "$(cat "${acl_master_token_file}")",
+		    "acl_agent_token": "$(cat "${acl_client_token_file}")",
+		    "acl_token": "anonymous",
+		    "acl_ttl": "${acl_ttl}"
+		}
+
+EOF
+    RETVAL=$?
+    if [ $RETVAL -eq 0 ]; then
+        chown_file ${config_acl_file} 600
+        RETVAL=$?
+    fi
+  fi
+
+  sas_debug_msg "${FUNCNAME[0]}: [RETVAL=${RETVAL}]"
+
+  return $RETVAL
+}
+
+
+
+##############################################################################
+# Generates a Consul configuration file to define the ACL configuration for
+# a non-server node that does not have a management ACL token.
+##############################################################################
+# Inputs:
+#
+# acl_client_token_file
+# Absolute path to the file that contains the Consul ACL client token.
+#
+# config_acl_file
+# JSON output file that will be generated to configure Consul for ACL.
+# This file needs to be generated in Consul's configuration directory
+# (e.g. the -config-dir DIR) unless configuring using -config-file FILE.
+##############################################################################
+create_config_acl_client() {
+  RETVAL=1
+
+  sas_debug_msg "\n${FUNCNAME[0]}"
+
+  if [ -z ${acl_client_token_file+x} ]; then
+    sas_log_failure_msg "Cannot configure ACL since 'acl_client_token_file' does not specify a file that contains the ACL client token."
+    RETVAL=1
+  else
+
+    sas_debug_msg "${FUNCNAME[0]}:\n  config_acl_file=${config_acl_file}\n  acl_data_center=${acl_datacenter}\n  acl_default_policy=${acl_default_policy}\n  acl_down_policy=${acl_down_policy}\n  acl_agent_token=***"
+    sas_debug_msg "${FUNCNAME[0]}: Creating Consul configuration ${config_acl_file} to specify the ACL configuration"
+
+    cat <<-EOF > ${config_acl_file}
+		{
+		    "acl_datacenter": "${acl_datacenter}",
+		    "acl_default_policy": "${acl_default_policy}",
+		    "acl_down_policy": "${acl_down_policy}",
+		    "acl_agent_token": "$(cat "${acl_client_token_file}")",
+		    "acl_token": "anonymous",
+		    "acl_ttl": "${acl_ttl}"
+		}
+
+EOF
+    RETVAL=$?
+    if [ $RETVAL -eq 0 ]; then
+        chown_file ${config_acl_file} 600
+        RETVAL=$?
+    fi
+  fi
+
+  sas_debug_msg "${FUNCNAME[0]}: [RETVAL=${RETVAL}]"
+
+  return $RETVAL
+}
+
+
+##############################################################################
+# Creates the client ACL.
+##############################################################################
+# Arguments:
+#
+# managementTokenFile
+# Absolute path to the file that contains a Consul ACL management token.
+#
+# tokenFile
+# Absolute path to the file that contains the Consul client ACL token.
+#
+# rulesFile
+# Text file that contains ACL rules. Each rule is specified on a separate line
+# using the syntax TYPE:PATH:POLICY where
+#   TYPE
+#     One of [agent|event|key|query|node|service|session]
+#   PATH
+#     Path of the resource to which the rule applies.
+#     If no value is specified, then the path will apply to all paths.
+#     e.g. The rule key::read allows read access to all keys
+#   POLICY
+#     One of [deny|read|write]
+##############################################################################
+create_acl_client() {
+  RETVAL=1
+
+  if (($# != 3)); then
+    sas_log_failure_msg "Illegal arguments. Supported arguments are: MANAGEMENTTOKENFILE TOKENFILE [RULESFILE]"
+    return $RETVAL
+  fi
+
+  managementTokenFile=$1
+  tokenFile=$2
+  rulesFile=$3
+
+  sas_debug_msg "\n${FUNCNAME[0]}"
+
+  if [ -z ${managementTokenFile+x} ]; then
+      # a Consul management token is required to create ACLs
+      sas_log_failure_msg "A file that contains a Consul management token must be specified in order to create ACLs."
+      RETVAL=1
+  else
+    aclID=$(cat "${tokenFile}")
+    aclName="client"
+    aclType="client"
+    aclRulesOption=""
+    aclRulesFile=""
+
+    if [ -r ${rulesFile} ]; then
+      aclRulesOption="--acl-rules-file"
+      aclRulesFile="${rulesFile}"
+      acl_create_client_log_option=""
+      acl_create_client_log_option_file=""
+      if [ -d "$logdir" ]; then
+        acl_create_client_log_file="${logdir}/${prodname}_acl_create_client.log"
+        rm -f $acl_create_client_log_file
+        if [ -n "$SASINITDEBUG" ]; then
+          touch $acl_create_client_log_file
+          chown_file $acl_create_client_log_file 600
+          acl_create_client_log_option='&>>'
+          acl_create_client_log_option_file="${acl_create_client_log_file}"
+        fi
+      fi
+
+      sas_debug_msg "${FUNCNAME[0]}:\n  tokenFile=${tokenFile}\n  aclName=${aclName}\n  aclType=${aclType}"
+      sas_debug_msg "${FUNCNAME[0]}: Creating Consul watch configuration ${config_acl_create_client_file} that will be used to create the client ACL"
+
+      cat <<-EOF > ${config_acl_create_client_file}
+{
+  "watches": [
+    {
+      "type": "service",
+      "service": "consul",
+      "args": [
+        "bash", "-c", "export CONSUL_HTTP_ADDR=${CONSUL_HTTP_ADDR} && ${sas_bootstrap_config_cli}  ${cli_global_option_verbose}  --token-file  ${managementTokenFile}  acl  create  --acl-id  ${aclID}  --acl-name  ${aclName}  --acl-type  ${aclType}  ${aclRulesOption}  ${aclRulesFile}  ${acl_create_client_log_option}  ${acl_create_client_log_option_file}"
+      ]
+    }
+  ]
+}
+
+EOF
+      RETVAL=$?
+      if [ $RETVAL -eq 0 ]; then
+        chown_file ${config_acl_create_client_file} 600
+        RETVAL=$?
+      fi
+    elif [ -f $rulesFile ]; then
+      sas_log_failure_msg "ACL rules cannot be created since ${rulesFile} is not readable"
+      RETVAL=2
+    else
+      sas_log_failure_msg "ACL rules will not be created since ${rulesFile} does not exist"
+      RETVAL=3
+    fi
+  fi
+
+  sas_debug_msg "${FUNCNAME[0]}: [RETVAL=${RETVAL}]"
+
+  return $RETVAL
+}
+
+
+
+##############################################################################
+# Updates the anonymous ACL to use the specified rules.
+##############################################################################
+# Arguments:
+#
+# managementTokenFile
+# Absolute path to the file that contains a Consul ACL management token.
+#
+# rulesFile
+# Text file that contains ACL rules. Each rule is specified on a separate line
+# using the syntax TYPE:PATH:POLICY where
+#   TYPE
+#     One of [agent|event|key|query|node|service|session]
+#   PATH
+#     Path of the resource to which the rule applies.
+#     If no value is specified, then the path will apply to all paths.
+#     e.g. The rule key::read allows read access to all keys
+#   POLICY
+#     One of [deny|read|write]
+##############################################################################
+update_acl_anonymous() {
+  RETVAL=1
+
+  if (($# != 2)); then
+    sas_log_failure_msg "Illegal arguments. Supported arguments are: MANAGEMENTTOKENFILE RULESFILE"
+    return $RETVAL
+  fi
+
+  managementTokenFile=$1
+  rulesFile=$2
+
+  sas_debug_msg "\n${FUNCNAME[0]}"
+
+  if [ -z ${managementTokenFile+x} ]; then
+    # a Consul management token is required to update ACLs
+    sas_log_failure_msg "A file that contains a Consul management token must be specified in order to update ACLs."
+    RETVAL=1
+  elif [ -r ${rulesFile} ]; then
+    update_acl_anonymous_log_option=""
+    update_acl_anonymous_log_option_file=""
+    if [ -d "$logdir" ]; then
+      update_acl_anonymous_log_file="${logdir}/${prodname}_acl_update_anonymous.log"
+      rm -f $update_acl_anonymous_log_file
+      if [ -n "$SASINITDEBUG" ]; then
+        touch $update_acl_anonymous_log_file
+        chown_file $update_acl_anonymous_log_file 600
+        update_acl_anonymous_log_option='>'
+        update_acl_anonymous_log_option_file="${update_acl_anonymous_log_file}"
+      fi
+    fi
+
+    cat <<-EOF > ${config_acl_update_anonymous_file}
+{
+  "watches": [
+    {
+      "type": "service",
+      "service": "consul",
+      "args": [
+        "bash", "-c", "export CONSUL_HTTP_ADDR=${CONSUL_HTTP_ADDR} && ${sas_bootstrap_config_cli}  ${cli_global_option_verbose}  --token-file  ${managementTokenFile}  acl  update  --acl-id  anonymous  --acl-rules-file  ${rulesFile}  ${update_acl_anonymous_log_option}  ${update_acl_anonymous_log_option_file}"
+      ]
+    }
+  ]
+}
+
+EOF
+    RETVAL=$?
+    if [ $RETVAL -eq 0 ]; then
+      chown_file ${config_acl_update_anonymous_file} 600
+      RETVAL=$?
+    fi
+  elif [ -f $rulesFile ]; then
+    sas_log_failure_msg "ACL rules cannot be updated since ${rulesFile} is not readable"
+    RETVAL=2
+  else
+    sas_log_failure_msg "ACL rules will not be updated since ${rulesFile} does not exist"
+    RETVAL=3
+  fi
+
+  sas_debug_msg "${FUNCNAME[0]}: [RETVAL=${RETVAL}]"
+
+  return $RETVAL
+}
+
+
+
+##############################################################################
+# Generates a Consul configuration file that specifies the shared secret
+# that is used to secure gossip.
+##############################################################################
+# Inputs:
+#
+# config_gossip_file
+# JSON output file that will be generated to configure Consul to use a
+# shared secret to secure gossip. This file needs to
+# be generated in Consul's configuration directory (e.g. the -config-dir DIR)
+# unless configuring using -config-file FILE.
+#
+# gossip_token_file
+# Absolute path to the file that contains the shared secret
+# (16 byte base64 encoded value) that will be used to secure gossip.
+#
+##############################################################################
+create_config_gossip() {
+  RETVAL=1
+
+  sas_debug_msg "\n${FUNCNAME[0]}\n"
+  sas_debug_msg "${FUNCNAME[0]}: Options\n  config_gossip_file=${config_gossip_file}\n  gossip_token_file=${gossip_token_file}"
+
+  if [ -z ${gossip_token_file+x} ]; then
+    rm -f ${config_gossip_file}
+    sas_log_failure_msg "Consul will not secure gossip since gossip token file ${gossip_token_file} does not specify a file that contains the gossip token."
+    RETVAL=0
+  elif [ ! -z ${config_gossip_file+x} ]; then
+    sas_debug_msg "${FUNCNAME[0]}:\n  config_gossip_file=${config_gossip_file}\n  gossip_token_file=${gossip_token_file}"
+    sas_debug_msg "${FUNCNAME[0]}: Creating Consul configuration ${config_gossip_file} to secure gossip using a token obtained from ${gossip_token_file}"
+    cat <<-EOF > ${config_gossip_file}
+		{
+			    "encrypt": "$(cat $gossip_token_file)"
+		}
+
+EOF
+    RETVAL=$?
+    if [ $RETVAL -eq 0 ]; then
+      chown_file ${config_gossip_file} 600
+      RETVAL=$?
+    fi
+    RETVAL=$?
+  else
+    sas_log_warning_msg "Consul will not secure gossip since ${config_gossip_file} is not defined."
+    RETVAL=0
+  fi
+
+  sas_debug_msg "${FUNCNAME[0]}: [RETVAL=${RETVAL}]"
+
+  return $RETVAL
+}
+
+
+
+##############################################################################
+# Generates a Consul configuration file that waits until consul has started
+# and then invokes the sas-bootstrap-config binary to load the site default
+# properties into the Consul KV store.
+##############################################################################
+# Inputs:
+#
+# sas_bootstrap_config_cli
+# The absolute file path to the sas-bootstrap-config binary
+# (/opt/sas/viya/home/bin/sas-bootstrap-config).
+#
+# sitedefault_yaml_file
+# YAML file that specifies the site default properties that are to be
+# loaded into the Consul KV store
+#
+# config_sitedefault_file
+# JSON file that will be generated to create a Consul watch configuration
+# that will invoke the sas-bootstrap-config binary to load the site default
+# tproperties into the Consul KV store. This file needs to be generated in
+# Consul's configuration directory (e.g. the -config-dir DIR).
+#
+# acl_master_token_file
+# Absolute path to the file that contains the Consul master ACL token.
+#
+##############################################################################
+create_config_sitedefaults() {
+  RETVAL=1
+
+  sas_debug_msg "\n${FUNCNAME[0]}"
+
+  if [ -r ${sitedefault_yaml_file} ]; then
+
+    consulTokenOption=""
+    consulTokenOptionFile=""
+    if [ ! -z ${acl_master_token_file+x} ]; then
+      # specify a "--token-file FILE" option since a token is available
+      consulTokenOption="--token-file"
+      consulTokenOptionFile="${acl_master_token_file}"
+    fi
+
+    sas_debug_msg "${FUNCNAME[0]}:\n  sitedefault_yaml_file=${sitedefault_yaml_file}\n  config_sitedefault_file=${config_sitedefault_file}\n  sas-bootstrap-cfg=${sas_bootstrap_config_cli}"
+    sas_debug_msg "Creating Consul watch configuration ${config_sitedefault_file} to load properties into the Consul KV store from  ${sitedefault_yaml_file}"
+
+    bulkload_sitedefault_log=""
+    if [ -d "$logdir" ]; then
+      bulkload_sitedefault_log_file="${logdir}/${prodname}_bulkload_sitedefault.log"
+      rm -f $bulkload_sitedefault_log_file
+      if [ -n "$SASINITDEBUG" ] && [ -d "$logdir" ]; then
+        touch $bulkload_sitedefault_log_file
+        chown_file ${bulkload_sitedefault_log_file} 600
+        bulkload_sitedefault_log_option='>'
+        bulkload_sitedefault_log_option_file="${bulkload_sitedefault_log_file}"
+      fi
+    fi
+
+    cat <<-EOF > ${config_sitedefault_file}
+{
+  "watches": [
+    {
+      "type": "service",
+      "service": "consul",
+      "args": [
+        "bash", "-c", "export CONSUL_HTTP_ADDR=${CONSUL_HTTP_ADDR} &&  ${sas_bootstrap_config_cli}  ${cli_global_option_verbose}  ${consulTokenOption} ${consulTokenOptionFile}  kv bulkload --site-default --yaml  ${sitedefault_yaml_file} ${bulkload_sitedefault_log_option} ${bulkload_sitedefault_log_option_file}"
+      ]
+    }
+  ]
+}
+
+EOF
+    RETVAL=$?
+    if [ $RETVAL -eq 0 ]; then
+      chown_file ${config_sitedefault_file} 600
+      RETVAL=$?
+    fi
+  elif [ -f $sitedefault_yaml_file ]; then
+    sas_log_warning_msg "Site default properties cannot be loaded since ${sitedefault_yaml_file} is not readable" 
+    RETVAL=1
+  else
+    sas_log_warning_msg "Site default properties will not be loaded since ${sitedefault_yaml_file} does not exist" 
+    RETVAL=0
+  fi
+
+  sas_debug_msg "${FUNCNAME[0]}: [RETVAL=${RETVAL}]"
+
+  return $RETVAL
+}
+
+
+##############################################################################
+# Generates a properties file that contains name=value pairs
+# to support UIP.
+#
+# For example,
+# consul_version=0.8.5
+# consul_version_major=0
+# consul_version_minor=8
+# consul_version_minor=5
+##############################################################################
+create_uip_properties_file() {
+  RETVAL=1
+  consul_binary="${rootdir}/home/bin/consul"
+  if [[ -x "${consul_binary}" ]]; then
+    consul_version_output=$(${consul_binary} --version)
+    consul_version=$(echo ${consul_version_output} | awk '{print $2}')
+    if [[ "$consul_version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      sas_debug_msg "consul_version=${consul_version}"
+      consul_version=$(echo ${consul_version} | awk '{print substr($1,2); }')
+      consul_version_major=$(echo "${consul_version}" | awk -F '.' '{print $1}')
+      consul_version_minor=$(echo "${consul_version}" | awk -F '.' '{print $2}')
+      consul_version_micro=$(echo "${consul_version}" | awk -F '.' '{print $3}')
+      sas_debug_msg "consul_version_major=${consul_version_major}"
+      sas_debug_msg "consul_version_minor=${consul_version_minor}"
+      sas_debug_msg "consul_version_micro=${consul_version_micro}"
+      # File that contains properties that can provide data useful during UIP
+      cat <<-EOF > ${consul_uip_properties_file}
+consul_version=${consul_version}
+consul_version_major=${consul_version_major}
+consul_version_minor=${consul_version_minor}
+consul_version_micro=${consul_version_micro}
+
+EOF
+    RETVAL=$?
+    if [ $RETVAL -eq 0 ]; then
+      sas_debug_msg "UIP properties file: ${consul_uip_properties_file}"
+      chown_file ${consul_uip_properties_file} 600
+      RETVAL=$?
+    fi
+    fi
+  fi
+  return $RETVAL
+}
+
+
+
+##############################################################################
+# Generate the raft recovery peers.json file if it is required for UIP. This
+# may be a no-op if we already did a UIP (upgrade in place).
+##############################################################################
+function generate_raft_recovery_file() {
+    # if we already cut a version file, we did our migration (or tried)
+    if [ -f ${consul_uip_properties_file} ]; then
+        sas_debug_msg "${consul_uip_properties_file} exists indicating UIP already performed."
+        return 0
+    fi
+    consul_node_id_file="${datadir}/node-id"
+    if [ ! -f ${consul_node_id_file} ]; then
+        # create a node-id file since we're doing an UIP from a source system
+        # that does not provide a node-id file. Consul 0.7.4 and later creates
+        # a node-id file, so this is needed when doing an UIP from before 17w47.
+        nodeUUID=$(${sas_bootstrap_config_cli} node id)
+        RETVAL=$?
+        if [ $RETVAL -ne 0 ]; then
+          return $RETVAL
+        fi
+        cat <<-EOF > ${consul_node_id_file}
+${nodeUUID}
+EOF
+        RETVAL=$?
+        if [ $RETVAL -ne 0 ]; then
+          return $RETVAL
+        fi
+        chown_file ${consul_node_id_file} 600
+        sas_debug_msg "Created Consul node-id file ${consul_node_id_file} since it does not exist."
+    fi
+    local_consul_node_id=$(cat ${consul_node_id_file})
+    sas_debug_msg "Local consul node id is ${local_consul_node_id}."
+
+    # use CONSUL_ADVERTISE_INTERNAL then CONSUL_BIND_EXTERNAL if either
+    # of these are set. If not, read the server list and see which one
+    # matches our local IP address.
+    IFS=', ' read -r -a consul_servers <<< "$CONSUL_SERVER_LIST"
+    if [[ -n "${CONSUL_ADVERTISE_INTERNAL// }" ]]; then
+        local_consul_ip=$CONSUL_ADVERTISE_INTERNAL
+    elif [[ -n "${CONSUL_BIND_EXTERNAL// }" ]]; then
+        local_consul_ip=$CONSUL_BIND_EXTERNAL
+    elif [[ ${#consul_servers[@]} -eq 1 ]]; then
+        local_consul_ip=$consul_servers
+    else
+        for consul_server_member in "${consul_servers[@]}"
+        do
+            find_ip_on_machine ${consul_server_member}
+            [[ -n "${local_consul_ip// }" ]] && break
+        done
+    fi
+    sas_debug_msg "Local consul ip is ${local_consul_ip}."
+
+    if [[ -z "${local_consul_ip// }" ]]; then
+        echo "Could not determine local IP address for Consul upgrade. Please specify this machine's IP address in ${consulsysconfig} using the CONSUL_ADVERTISE_INTERNAL or CONSUL_BIND_EXTERNAL variable."
+        exit 1
+    fi
+
+    sas_debug_msg "Writing raft recovery file ${consul_peers_file}"
+    cat <<-EOF > ${consul_peers_file}
+[
+  {
+    "id": "${local_consul_node_id}",
+    "address": "${local_consul_ip}:8300"
+  }
+]
+EOF
+
+    sas_debug_msg "Successfully created raft recovery file ${consul_peers_file}"
+
+    if [ ! -f ${consul_peers_info_file} ]; then
+        sas_debug_msg "Writing raft peers info file ${consul_peers_info_file}"
+        cat <<-EOF > ${consul_peers_info_file}
+As of Consul 0.7.0, the peers.json file is only used for recovery
+after an outage. The format of this file depends on what the server has
+configured for its Raft protocol version. Please see the agent configuration
+page at https://www.consul.io/docs/agent/options.html#_raft_protocol for more
+details about this parameter.
+
+For Raft protocol version 2 and earlier, this should be formatted as a JSON
+array containing the address and port of each Consul server in the cluster, like
+this:
+
+[
+  "10.1.0.1:8300",
+  "10.1.0.2:8300",
+  "10.1.0.3:8300"
+]
+
+For Raft protocol version 3 and later, this should be formatted as a JSON
+array containing the node ID, address:port, and suffrage information of each
+Consul server in the cluster, like this:
+
+[
+  {
+    "id": "adf4238a-882b-9ddc-4a9d-5b6758e4159e",
+    "address": "10.1.0.1:8300",
+    "non_voter": false
+  },
+  {
+    "id": "8b6dda82-3103-11e7-93ae-92361f002671",
+    "address": "10.1.0.2:8300",
+    "non_voter": false
+  },
+  {
+    "id": "97e17742-3103-11e7-93ae-92361f002671",
+    "address": "10.1.0.3:8300",
+    "non_voter": false
+  }
+]
+
+The "id" field is the node ID of the server. This can be found in the logs when
+the server starts up, or in the "node-id" file inside the server's data
+directory.
+
+The "address" field is the address and port of the server.
+
+The "non_voter" field controls whether the server is a non-voter, which is used
+in some advanced Autopilot configurations, please see
+https://www.consul.io/docs/guides/autopilot.html for more information. If
+"non_voter" is omitted it will default to false, which is typical for most
+clusters.
+
+Under normal operation, the peers.json file will not be present.
+
+When Consul starts for the first time, it will create this peers.info file and
+delete any existing peers.json file so that recovery doesn't occur on the first
+startup.
+
+Once this peers.info file is present, any peers.json file will be ingested at
+startup, and will set the Raft peer configuration manually to recover from an
+outage. It's crucial that all servers in the cluster are shut down before
+creating the peers.json file, and that all servers receive the same
+configuration. Once the peers.json file is successfully ingested and applied, it
+will be deleted.
+
+Please see https://www.consul.io/docs/guides/outage.html for more information.
+EOF
+      chown_file ${consul_peers_info_file} 600
+      sas_debug_msg "Successfully created raft peers info file ${consul_peers_info_file}"
+    fi
+}
+
+
+# pull in sysconfig settings
+[ -e ${consulsysconfig} ] && . ${consulsysconfig}
+
+[ -d "$datadir" ] || sas_debug_msg "$datadir does not exist"
+
+if [ ! -z "$CONSUL_CONFIG_DIR" ] && [ -e ${CONSUL_CONFIG_DIR} ]; then
+    ACTUAL_CONFIG_DIR="-config-dir $CONSUL_CONFIG_DIR -data-dir $datadir"
+else
+    ACTUAL_CONFIG_DIR="-config-dir $confdir -data-dir $datadir"
+fi
+
+if [ -e ${confdir}/config-consul-ports.json ]; then
+  port=`grep '"http"' ${confdir}/config-consul-ports.json |awk '{print $3}'|sed -e 's/,//'`
+  if [[ ! -z "${port}" ]]  && [[ "${port}" != "-1" ]]; then
+    export CONSUL_HTTP_ADDR="http://localhost:$port"
+  else
+    port=`grep '"https"' ${confdir}/config-consul-ports.json |awk '{print $3}'|sed -e 's/,//'`
+    if [[ ! -z "${port}" ]] && [[ "${port}" != "-1" ]]; then
+      export CONSUL_HTTP_ADDR="https://localhost:$port"
+      export CONSUL_CACERT="${configdir}/etc/SASSecurityCertificateFramework/cacerts/trustedcerts.pem"
+      export CONSUL_HTTP_SSL=true
+      export SSL_CERT_FILE="${CONSUL_CACERT}"
+    fi
+  fi
+else
+  #Default to localhost:8500 because nothing present to make consul listen on a different port.
+  export CONSUL_HTTP_ADDR="http://localhost:8500"
+fi
+
+export CONSUL_OPTIONS="$CONSUL_OPTIONS $ACTUAL_CONFIG_DIR"
+
+export GOMAXPROCS=${GOMAXPROCS:-$(nproc)}
+
+
+if [ ! -z "$CONSUL_BOOTSTRAP_EXPECT" ]; then
+  export CONSUL_OPTIONS="$CONSUL_OPTIONS -bootstrap-expect $CONSUL_BOOTSTRAP_EXPECT"
+fi
+
+# append CONSUL_OPTIONS with " -bind ${CONSUL_BIND_EXTERNAL}" if set
+append_ip_option_to_consul_options bind CONSUL_BIND_EXTERNAL
+
+# append CONSUL_OPTIONS with " -advertise ${CONSUL_ADVERTISE_INTERNAL}" if set
+append_ip_option_to_consul_options advertise CONSUL_ADVERTISE_INTERNAL
+
+if [ -z "$CONSUL_BIND_EXTERNAL" ] && [ -z "$CONSUL_ADVERTISE_INTERNAL" ]; then
+  ifaceCount=$(${rootdir}/home/bin/sas-bootstrap-config network addresscount --private --ipv4)
+  if [ $ifaceCount -gt 1 ]; then
+    sas_log_warning_msg "Detected multiple private IP addresses. Consul is unlikely to start."
+    sas_log_warning_msg "Specify a network adapter or IP address using CONSUL_BIND_EXTERNAL or CONSUL_ADVERTISE_INTERNAL in your consul sysconfig file."
+  fi
+fi
+
+
+
+if [ ! -z "$CONSUL_DATACENTER_NAME" ]; then
+    export CONSUL_OPTIONS="$CONSUL_OPTIONS -datacenter $CONSUL_DATACENTER_NAME"
+fi
+
+if [ ! -z "$CONSUL_SERVER_LIST" ]; then
+    OLD_IFS=$IFS
+    IFS=','
+    theServerList=""
+
+    for listItem in $CONSUL_SERVER_LIST
+    do
+        theServerList="$theServerList -retry-join $listItem"
+    done
+    IFS=$OLD_IFS
+
+    export CONSUL_OPTIONS="$CONSUL_OPTIONS $theServerList"
+fi
+
+if [ ! -z "$CONSUL_NODE_NAME" ]; then
+    export CONSUL_OPTIONS="$CONSUL_OPTIONS -node $CONSUL_NODE_NAME"
+fi
+
+if [ ! -z "$CONSUL_CLIENT_ADDRESS" ]; then
+    export CONSUL_OPTIONS="$CONSUL_OPTIONS -client $CONSUL_CLIENT_ADDRESS"
+fi
+
+if [ ! -z "$CONSUL_UI_FLAG" ]; then
+    export CONSUL_OPTIONS="$CONSUL_OPTIONS -ui"
+fi
+
+[ -x $exec ] || exit 5
+[ -d "$confdir" ] || exit 6
+
+# SASSecurityCertificateFramework provides tokens
+sas_certframe_tokens_consul_dir="${configdir}/etc/SASSecurityCertificateFramework/tokens/consul/${instance}"
+
+# File that contains the Consul ACL client token
+# e.g.
+# /opt/sas/viya/config/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token
+acl_client_token_file="${sas_certframe_tokens_consul_dir}/client.token"
+
+# File that contains the gossip shared secret
+# e.g.
+# /opt/sas/viya/config/etc/SASSecurityCertificateFramework/tokens/consul/default/encryption.token
+gossip_token_file="${sas_certframe_tokens_consul_dir}/encryption.token"
+
+# Consul configuration file that defines the gossip shared secret.
+# All nodes within a Consul cluster must share the same encryption key in
+# order to send and receive cluster information.
+#
+# The config-gossip.json file is generated each time this script starts
+# consul using the encryption key that is read from the
+# ${gossip_token_file} provided by the SASSecurityCertificateFramework.
+#
+# Consul caches the initial encryption key on initial bootstrap. Making
+# changes to this file after the initial bootstrap, even if the same change
+# is made on all Consul nodes, will have no effect.
+config_gossip_file="${confdir}/config-gossip.json"
+
+# create Consul configuration file that specifies the gossip shared
+# secret using the "encrypt" configuration key
+create_config_gossip || exit 10
+
+# ACL data center
+acl_datacenter="${CONSUL_DATACENTER_NAME}"
+
+# If the default policy is to deny all actions, then token rules can be set
+# to white list specific actions. In the inverse, the allow all default
+# behavior is a black list where rules are used to prohibit actions.
+acl_default_policy=deny
+
+# The acl_down_policy is used to accommodate for an outage of the
+# acl_datacenter or networking issues preventing access to it. It is possible
+# to deny or allow all actions or to ignore cache TTLs and enter a fail-safe
+# mode. The default is to ignore cache TTLs for any previously resolved
+# tokens and to deny any uncached tokens.
+acl_down_policy=deny
+
+# ACL time to live
+acl_ttl=30s
+
+# File that specifies data used for UIP such as Consul's version
+consul_uip_properties_file=${configdir}/etc/sas-consul/${instance}/consul_uip.properties
+
+# Consul configuration file used to configure the ACL system
+config_acl_file="${confdir}/config-acl.json"
+
+# sas-bootstrap-config CLI binary
+sas_bootstrap_config_cli="${rootdir}/home/bin/sas-bootstrap-config"
+
+if [ ! -z "$CONSUL_SERVER_FLAG" ] && [ $CONSUL_SERVER_FLAG == "true" ]; then
+    # Set the option used to start Consul in server mode
+    export CONSUL_OPTIONS="$CONSUL_OPTIONS -server"
+
+        cli_global_option_verbose=""
+        if [ -n "${SASINITDEBUG}" ]; then
+                cli_global_option_verbose='--verbose'
+        fi
+
+    # File that contains the Consul ACL master management token
+    # e.g.
+    # /opt/sas/viya/config/etc/SASSecurityCertificateFramework/tokens/consul/default/management.token
+    acl_master_token_file="${sas_certframe_tokens_consul_dir}/management.token"
+
+    # File that specifies the rules for the client ACL
+    acl_client_rules_file="${configdir}/etc/sas-consul/${instance}/v1-consul-acl-rules-client.txt"
+
+    # File that specifies the rules for the anonymous ACL
+    acl_anonymous_rules_file="${configdir}/etc/sas-consul/${instance}/v1-consul-acl-rules-anonymous.txt"
+
+    # Consul configuration file that defines a watch to create the client ACL
+    config_acl_create_client_file="${confdir}/config-acl-create-client.json"
+
+    # Consul configuration file that defines a watch to update the anonymous ACL
+    config_acl_update_anonymous_file="${confdir}/config-acl-update-anonymous.json"
+
+    # Consul configuration file that defines a watch to load the site defaults
+    config_sitedefault_file="${confdir}/config-kv-bulkload-sitedefault.json"
+
+    # The sitedefault.yml file
+    sitedefault_yaml_file="${confdir}/${instance}/sitedefault.yml"
+
+    # create Consul watch configuration that will be used to load the site
+    # default properties
+    create_config_sitedefaults || exit 11
+
+    # create Consul configuration file that specifies the ACL settings
+    create_config_acl || exit 12
+
+    # create Consul configuration watch to update the anonymous ACL's rules
+    update_acl_anonymous $acl_master_token_file $acl_anonymous_rules_file || exit 13
+
+    # create Consul configuration watch to create the client ACL
+    create_acl_client $acl_master_token_file $acl_client_token_file $acl_client_rules_file || exit 14
+
+    # generate our recovery file if we are doing a UIP, this must be done before creating the UIP properties file
+    if [[ ${RUNNING_IN_DOCKER} != "true" ]]; then
+        consul_peers_file="${datadir}/raft/peers.json"
+        consul_peers_info_file="${datadir}/raft/peers.info"
+        generate_raft_recovery_file || exit 14
+    fi
+elif [ -r ${acl_client_token_file} ]; then
+    # create Consul configuration file that specifies the ACL settings
+    create_config_acl_client || exit 13
+fi
+
+rm -f "${confdir}/config-update-acl-anonymous.json"
+rm -f "${confdir}/config-create-acl-client.json"
+
+umask 077
+
+# Create a properties file that can be used to support a future UIP
+create_uip_properties_file || exit 15
+
+if [ -n "$logfile" ]; then
+    touch $logfile
+    chown ${SASUSER}:${SASGROUP} $logfile
+fi
+
+pidfileoption=""
+if [ -n "$pidfile" ]; then
+    touch $pidfile
+    chown ${SASUSER}:${SASGROUP} $pidfile
+    # so 'service sas-viya-consul-default status' works as a non-root user
+    chmod 644 $pidfile
+    pidfileoption="-pid-file=$pidfile"
+fi
+
+sas_debug_msg "Starting consul kill helper"
+if [[ -d $logdir ]]; then
+  ${rootdir}/home/bin/kill_consul_helper.sh &> ${logdir}/kill_consul_helper_$date_time.log &
+else
+  ${rootdir}/home/bin/kill_consul_helper.sh & # log to stdout
+fi
+
+if [ -n "$logfile" ]; then
+    $exec agent $pidfileoption $CONSUL_OPTIONS >> $logfile 2>&1 &
+else
+    #TODO: Fix this
+    $exec agent $pidfileoption $CONSUL_OPTIONS
+fi
+
+RETVAL=$?
+
+# Save the PID if they specified a -p pidfile option
+consul_pid=$!
+
+if [ -n "$pidfile" ]; then
+    echo "${consul_pid}" > ${pidfile}
+fi
+
+exit ${RETVAL}
+

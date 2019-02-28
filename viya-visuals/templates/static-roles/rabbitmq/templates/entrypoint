@@ -44,10 +44,11 @@ source ${SASHOME}/lib/envesntl/docker-functions
 docker_define_consul_environment
 
 # start local consul
-/etc/init.d/sas-viya-consul-default start
+#/etc/init.d/sas-viya-consul-default start
+docker_run_local_consul
 
 # Wait for Consul to be up
-docker_wait_for_consul_leader
+#docker_wait_for_consul_leader
 
 
 ###############################################################################
@@ -98,7 +99,7 @@ if [ ! -d ${RABBITMQ_DATA_DIR} ]; then
   chown -v sasrabbitmq:sas ${RABBITMQ_DATA_DIR}
   chmod -v 0755 ${RABBITMQ_DATA_DIR}
   echo ""
-fi  
+fi
 chown -vR sasrabbitmq:sas "$(dirname "${RABBITMQ_DATA_DIR}")"
 
 if [[ -e ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/rabbitmq/default/erlang.cookie ]];then
@@ -107,14 +108,18 @@ if [[ -e ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/rabbitmq/defaul
   chmod 600 ${SASCONFIG}/var/lib/rabbitmq-server/sasrabbitmq/.erlang.cookie
 fi
 
+if [[ "${SECURE_CONSUL}" == "true" ]]; then
+  copy_token_from_configmap "${VAULT_TOKEN_DIR}" "${APP_NAME}" "${APP_NAME}"
+fi
+
 echo_line "Starting ${SASSERVICENAME}..."
 
 ${SASHOME}/bin/${SASSERVICENAME} -r ${SASROOT}/${SASDEPLOYID} -m ${RABBITMQ_DATA_DIR} -p ${DOCKERPIDFILE}
 
 # I am seeing consistent issues when we start everything at once.
-# We will do one more check to see if Consul has a leader and then we will 
+# We will do one more check to see if Consul has a leader and then we will
 # try the kv write.
-docker_wait_for_consul_leader
+#docker_wait_for_consul_leader
 
 # if in k8s, set up HA
 if [ $(env|grep KUBERNETES_|wc -l) -gt 0 ]; then

@@ -27,6 +27,39 @@ function is_password_empty() {
 [[ -z ${PG_VOLUME+x} ]]        && export PG_VOLUME="${SASCONFIG}/data/sasdatasvrc/${SASSERVICENAME}"
 [[ -z ${SAS_CURRENT_HOST+x} ]] && export SAS_CURRENT_HOST=$(hostname -f)
 
+# This is being defined in support of Vault tokens. Used in docker-functions
+# docker-functions just needs to find the value. To preserve functionality before
+# this change, we will capture whatever the value was prior and then reset it post.
+# This is an area where improvement can be made.
+tmp_servicecontext=$servicecontext
+servicecontext=pgpoolc
+servicecontext=$tmp_servicecontext
+
+excessargs=()
+
+while [ -n "$1" ]
+do
+  case "$1" in
+    -p)
+      shift
+      SASPGPOOLPIDFILE="$1"
+      ;;
+
+    -d)
+      shift
+      SASDEPLOYID="$1"
+      ;;
+
+     *)
+# if we don't recognize argument as expected opt, accumulate and let something else consume those
+      excessargs+=("$1")
+      ;;
+  esac
+  shift  # next value
+done
+
+source ${SASHOME}/lib/envesntl/docker-functions
+
 # In the case of Docker, we need to load up what the instance value is.
 # The instance was saved by the docker_entrypoint.sh so it can be used
 # by multiple scripts
@@ -92,6 +125,13 @@ PGPOOLPCP_CONF_SECTIONS=""
 [[ -z ${SAS_DATASERVER_POOL_COMMON_WATCHDOGENABLE_USE_WATCHDOG+x} ]] && export SAS_DATASERVER_POOL_COMMON_WATCHDOGENABLE_USE_WATCHDOG=off
 [[ -z ${SAS_DATASERVER_PCP_COMMON_PCP_01+x} ]] && export SAS_DATASERVER_PCP_COMMON_PCP_01="${SAS_PCPUSER}:$(${SASHOME}/bin/pg_md5 ${SAS_PCPPWD})"
 [[ -z ${SAS_DATASERVER_POOL_COMMON_FILELOCATIONS_LOGDIR+x} ]] && export SAS_DATASERVER_POOL_COMMON_FILELOCATIONS_LOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICENAME}"
+
+if [[ "${SECURE_CONSUL}" == "true" ]]; then
+    [[ -z ${SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_CERT+x} ]]        && export SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_CERT="${SASCONFIG}/etc/SASSecurityCertificateFramework/tls/certs/sasdatasvrc/postgres/${SASINSTANCE}/sascert.pem"
+    [[ -z ${SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_KEY+x} ]]         && export SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_KEY="${SASCONFIG}/etc/SASSecurityCertificateFramework/private/sasdatasvrc/postgres/${SASINSTANCE}/saskey.pem"
+    [[ -z ${SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_CA_CERT+x} ]]     && export SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_CA_CERT="${SASCONFIG}/etc/SASSecurityCertificateFramework/cacerts/trustedcerts.pem"
+    [[ -z ${SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_CA_CERT_DIR+x} ]] && export SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_CA_CERT_DIR="${SASCONFIG}/etc/SASSecurityCertificateFramework/cacerts"
+fi
 
 _LOGFILENAME=${SASLOGDIR}/${SASSERVICENAME}_${SASINSTANCE}_start.log
 
@@ -266,6 +306,53 @@ if [ -z "$consul_status" ]; then
 fi
 
 export SASINSTANCE=${_tmpinstance}
+
+##############################################################################
+# Generate the key and cert for TLS
+##############################################################################
+
+if [[ "${SECURE_CONSUL}" == "true" ]]; then
+    #
+    # Make the directories for the cert and key
+    #
+    mkdir -p $(dirname $SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_CERT)
+    mkdir -p $(dirname $SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_KEY)
+    chown -R ${SASPGPOOLOWNER}:${SASPGPOOLGROUP} ${SASCONFIG}/etc/SASSecurityCertificateFramework/tls/certs/sasdatasvrc
+    chown -R ${SASPGPOOLOWNER}:${SASPGPOOLGROUP} ${SASCONFIG}/etc/SASSecurityCertificateFramework/private/sasdatasvrc
+
+    #
+    # Use sas-bootstrap-config and its 'network addresses' command to obtain a string
+    # consisting of a comma delimited list of IP addresses found on this machine.
+    #
+    CERT_IPADDRESS_LIST=$(${_bootstrap_config} network addresses | tr '[:space:]' ',' | sed 's/.$//' )
+
+    #
+    # Gather some info to be used in TLS cert generation.
+    #
+    CERT_HOSTNAME_PLAIN=$(hostname)
+    CERT_HOSTNAME_FQDN=$(hostname -f)
+    CERT_HOSTNAME_SHORT_NAME=$(hostname -s)
+
+    #
+    # Run sas-crypto-management to generate a new certificate file.
+    #
+    $SASHOME/SASSecurityCertificateFramework/bin/sas-crypto-management \
+        req-vault-cert \
+        --common-name $CERT_HOSTNAME_FQDN \
+        --out-crt $SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_CERT \
+        --out-key $SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_KEY \
+        --san-dns localhost \
+        --san-dns $CERT_HOSTNAME_FQDN \
+        --san-dns $CERT_HOSTNAME_PLAIN \
+        --san-dns $CERT_HOSTNAME_SHORT_NAME \
+        --san-ip 127.0.0.1 \
+        --san-ip $CERT_IPADDRESS_LIST \
+        --vault-token $SASCONFIG/etc/SASSecurityCertificateFramework/tokens/pgpoolc/default/vault.token \
+        --vault-cafile $SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_CA_CERT
+
+    chown ${SASPGPOOLOWNER}:${SASPGPOOLGROUP} $SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_CERT
+    chown ${SASPGPOOLOWNER}:${SASPGPOOLGROUP} $SAS_DATASERVER_POOL_COMMON_SSLCONNECTION_SSL_KEY
+fi
 
 ###############################################################################
 # Register with haproxy
@@ -504,7 +591,7 @@ fi
 
 _consul_tags="--tags pgpool:${SASSERVICENAME} --tags pgpool --tags public"
 if [ "${_network_databaseTraffic_enabled}" = "true" ] || [ "${_network_databaseTraffic_enabled}" = "TRUE" ] ; then
-    _consul_tags=$_consul_tags "--tags ssl"
+    _consul_tags="$_consul_tags --tags ssl"
 fi
 
 # ${_bootstrap_config} agent service register --json ${JOB_DIR}/consul/service_node_registration.json pgpool

@@ -33,8 +33,8 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -z ${SASLOGROOT+x} ]]           && export SASLOGROOT="${SASCONFIG}/var/log"
 [[ -z ${SASLOGDIR+x} ]]            && export SASLOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICENAME}"
 [[ -z ${SASCONSULDIR+x} ]]         && export SASCONSULDIR="${SASHOME}"
-[[ -z ${SASPOSTGRESOWNER+x} ]]     && export SASPOSTGRESOWNER="postgres"
-[[ -z ${SASPOSTGRESGROUP+x} ]]     && export SASPOSTGRESGROUP="postgres"
+[[ -z ${SASPOSTGRESOWNER+x} ]]     && export SASPOSTGRESOWNER="sas"
+[[ -z ${SASPOSTGRESGROUP+x} ]]     && export SASPOSTGRESGROUP="sas"
 [[ -z ${SASPOSTGRESCONFIGDIR+x} ]] && export SASPOSTGRESCONFIGDIR="${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}"
 [[ -z ${PG_DATADIR+x} ]]           && export PG_DATADIR="${PG_VOLUME}/${SASINSTANCE}"
 
@@ -116,7 +116,7 @@ export SASINSTANCE=${_tmpinstance}
 # Stop postgres via pg_ctl => This will create the PIDFILE
 echo_line "[postgresql] Stopping postgres via pg_ctl..."
 set -x
-su - -c "${SASHOME}/bin/pg_ctl -o '-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf' -D ${PG_DATADIR} -w -t 30 stop" ${SASPOSTGRESOWNER}
+su - -s /bin/bash -c "${SASHOME}/bin/pg_ctl -o '-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf' -D ${PG_DATADIR} -w -t 30 stop" ${SASPOSTGRESOWNER}
 set +x
 
 ###############################################################################
