@@ -3,9 +3,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ settings.project_name }}-account
-{% if settings.k8s_namespace is defined and settings.k8s_namespace.name %}
-  namespace: {{ settings.k8s_namespace.name }}
-{% endif %}
+  namespace: {{ sas_k8s_namespace }}
 ...
 
 ---
@@ -13,9 +11,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ settings.project_name }}-account-role
-{% if settings.k8s_namespace is defined and settings.k8s_namespace.name %}
-  namespace: {{ settings.k8s_namespace.name }}
-{% endif %}
+  namespace: {{ sas_k8s_namespace }}
 rules:
 - apiGroups: ["*"]
   resources: ["*"]
@@ -27,17 +23,13 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ settings.project_name }}-account-role-binding
-{% if settings.k8s_namespace is defined and settings.k8s_namespace.name %}
-  namespace: {{ settings.k8s_namespace.name }}
-{% endif %}
+  namespace: {{ sas_k8s_namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: {{ settings.project_name }}-account-role
 subjects:
 - kind: ServiceAccount
-{% if settings.k8s_namespace is defined and settings.k8s_namespace.name %}
-  namespace: {{ settings.k8s_namespace.name }}
-{% endif %}
+  namespace: {{ sas_k8s_namespace }}
   name: {{ settings.project_name }}-account
 ...

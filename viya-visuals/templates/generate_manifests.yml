@@ -4,8 +4,9 @@
   connection: local
 
   vars:
-    sas_manifest_dir: "{{ manifest_dir | default('manifests') }}"
-    sas_cas_mode: "{{ cas_mode | default('smp') }}"
+    sas_manifest_dir: manifests
+    sas_k8s_namespace: sas-viya
+    sas_k8s_ingress_path: sas-viya.company.com
     
   vars_files:
   - manifest.yml
