@@ -17,6 +17,8 @@
   - [Ingress Configuration](#ingress-configuration)
   - [Persistence](#persistence)
   - [Data Import](#data-import)
+  - [Bulk Loading of Configuration Values](#bulk-loading-of-configuration-values)
+  - [Kubernetes Manifest Inputs](#kubernetes-manifest-inputs)
 
 ## Obtain the Required Files
 
@@ -257,3 +259,47 @@ To change the Ingress controller settings, globally or for the specific Ingress 
 SAS has tested using the `nginx.ingress.kubernetes.io/proxy-body-size` annotation as documented for `Custom max body size`. For more information, see [Custom max body size](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#custom-max-body-size).
 
 If you know the size of files to be imported, then set _Custom max body size_ to a value that will allow the files to be loaded. If a value of zero (0) is used, then checking of the file size is ignored, and no file size restrictions will be imposed by Kubernetes.
+
+### Bulk Loading of Configuration Values
+
+For the _viya-visuals_ deployment, you can create a `viya-visuals/sitedefault.yml` file for bulk loading of configuration values for multiple services. After the initial deployment, you cannot simply modify sitedefault.yml to change an existing value and deploy the software again. You can modify sitedefault.yml only to set property values that have not already been set. Therefore, SAS recommends that you do not use sitedefault.yml for the initial deployment of your SAS Viya software, except where specifically described in this document.
+
+When _sitedefault.yml_ is present in the _viya-visuals_ directory, the build process will base64 encode the file and put it into the `viya-visuals/working/manifests/kubernetes/configmaps/consul.yml` file in the `consul_key_value_data_enc` variable. When the `consul` container starts, the key-value pairs in `consul_key_value_data_enc` are bulk loaded into the SAS configuration store.
+
+To set configuration values using sitedefault.yml, follow these steps:
+
+1. Sign on your Ansible controller with administrator privileges, and locate the file, _viya-visuals/templates/sitedefault_sample.yml_.
+1. Make a copy of _sitedefault_sample.yml_ and name the copy, _sitedefault.yml_.
+1. Using a text editor, open _sitedefault.yml_ and add values that are valid for your site.
+
+    For information about the LDAP properties used in sitedefault.yml, see [sas.identities.providers.ldap](https://go.documentation.sas.com/?cdcId=calcdc&cdcVersion=3.4&docsetId=calconfig&docsetTarget=n08000sasconfiguration0admin.htm&locale=en#n08044sasconfiguration0admin).
+
+    For information about the all the properties that can be used in sitedefault.yml, see Configuration Properties: Reference (Services).
+
+    **CAUTION:**
+  
+    __Some properties require passwords.__<br/>
+    If properties with passwords are specified in sitedefault.yml, you must secure the file appropriately. If you chose not to supply the properties in sitedefault.yml, then you can enter them using SAS Environment Manager. (Sign in to SAS Environment Manager as sasboot, and follow the instructions in Configure the Connection to Your Identity Provider in SAS Viya for Linux: Deployment Guide.)
+
+1. When you are finished, save sitedefault.yml and make sure that it resides in the **viya-visuals/templates/** directory of the playbook.
+When the build script is run, the data from the **viya-visuals/templates/sitedefault.yml** file will get added to the **viya-visuals/working/manifests/kubernetes/configmaps/consul.yml** file. On startup of the *consul* container, the content will get loaded into the SAS configuration store. See the post-run [(Optional) Verify Bulk Loaded Configuration](post-run-tasks#optional-verify-bulk-loaded-configuration) task for confirming the values provided were loaded.
+
+### Kubernetes Manifest Inputs
+
+To help with managing changes to the generated manifests, you can provide customizations that will be used when creating the Kubernetes manifests. Copy the  `viya-visuals/templates/vars_usermods.yml` to `viya-visuals/vars_usermods.yml`. Then edit the file. You can enter any of the following values and override the defaults:
+
+```
+# The directory where manifests will be created. Default is "manifest"
+#sas_manifest_dir: manifest
+
+# The Kubernetes namespace that we are deploying into. Default is "sas-viya"
+#sas_k8s_namespace: sas-viya
+
+# The Ingress path for the httpproxy environment. Default is "sas-viya.company.com"
+#sas_k8s_ingress_path: sas-viya.company.com
+
+# Defines if inter-communication between services is TLS enabled. Default is "false"
+#SECURE_CONSUL: false
+```
+
+If this is not done prior to running the build process, you can modify this file post build and then regenerate the manifests. See the post-build [(Optional) Regenerating Manifests](post-run-tasks#optional-regenerating-manifests) task for more information.

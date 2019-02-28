@@ -2,6 +2,8 @@
 
 - [Configure Your Environment with SAS Environment Manager](#configure-your-environment-with-sas-environment-manager)
 - [Verify That Licenses Are Applied](#verify-that-licenses-are-applied)
+- [(Optional) Verify Bulk Loaded Configuration](#optional-verify-bulk-loaded-configuration)
+- [(Optional) Regenerating Manifests](#optional-regenerating-manifests)
 - [(Optional) Create a Local Copy of Documentation](#optional-create-a-local-copy-of-documentation)
 
 ## Configure Your Environment with SAS Environment Manager
@@ -191,6 +193,33 @@ During deployment, a license is applied to both the CAS in-memory compute engine
 For more information, see [Licensing: How To (SAS Studio)](https://go.documentation.sas.com/?cdcId=calcdc&cdcVersion=3.4&docsetId=callicense&docsetTarget=n03028saslicensing00000admin.htm) in _SAS Viya Administration_.
 
 If the licenses were not applied, use the instructions to apply the licenses.
+
+## (Optional) Regenerating Manifests
+
+If the deployment manifests that were generated in the *working/manifests* directory did not contain everything that is needed, or need to be updated, you can regenerate the manifests post build. Here are the steps:
+
+1. Change to the *sas-container-recipes/viya-visuals/working/* directory.
+1. If you need to provide custom configuration, edit the *vars_usermods.yml* file in the *working* directory. See the pre-build [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) task for more information.
+1. Get the Docker tag for the images that were built.
+    ```
+    SAS_DOCKER_TAG=$(grep "image:" manifests/kubernetes/deployments/consul.yml | awk -F':' '{ print $3 }')
+    ```
+1. From the *working* directory, run the following from the command prompt
+    ```
+    source ../env/bin/activate
+    ansible-playbook \
+        --connection=local \
+        --inventory 127.0.0.1, \
+        generate_manifests.yml \
+        -e "docker_tag=${SAS_DOCKER_TAG}" \
+        -e 'ansible_python_interpreter=/usr/bin/python'
+    ```
+1. New manifests will be generated.
+
+## (Optional) Verify Bulk Loaded Configuration
+
+For a *viya-visuals* deployment, if you used the pre-build task of [Bulk Loading of Configuration Values](Pre-build-Tasks#bulk-loading-of-configuration-values), you will want to make sure that the key-value pairs were loaded correctly. To do this view the configuration properties for a configuration definition such as, SAS Logon Manager, in SAS Environment Manager to verify that the specified values are present. For more information, follow the first five steps in [Edit Configuration Instances](https://go.documentation.sas.com/?cdcId=calcdc&cdcVersion=3.4&docsetId=calconfig&docsetTarget=n03000sasconfiguration0admin.htm&locale=en#n03007sasconfiguration0admin).
+
 
 ## (Optional) Create a Local Copy of Documentation
 

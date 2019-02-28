@@ -259,6 +259,11 @@ function setup_environment() {
     cp -v templates/vars_usermods.yml ${PROJECT_DIRECTORY}/
 
     # The sitedefault file can be used to seed the Consul key/value store
+    if [[ -f templates/sitedefault.yml ]]; then
+        cp -v templates/sitedefault.yml ${PROJECT_DIRECTORY}/
+    fi
+
+    # The sitedefault file can be used to seed the Consul key/value store
     if [[ -f sitedefault.yml ]]; then
         cp -v sitedefault.yml ${PROJECT_DIRECTORY}/
     fi
