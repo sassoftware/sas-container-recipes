@@ -23,10 +23,14 @@
 
 # Parse script name - assume it is of the form sas-$SASDEPLOYID-$SASPRODNAME-$SASINSTANCE
 # where $SASPRODNAME may include dashes.  No spaces allowed.
+# shellcheck disable=SC2046
+# shellcheck disable=SC2086
 SASINITBASE=$(basename $(readlink -nf $0))
 baseparts=(${SASINITBASE//-/ })
+# shellcheck disable=SC2071
 [[ ${baseparts[0]} != "sas" || ${#baseparts[@]} < 4 ]] && echo >&2 "Unexpected init script name: $SASINITBASE" && exit 1
 SASDEPLOYID=${baseparts[1]}
+# shellcheck disable=SC2124
 SASPRODNAME=${baseparts[@]:2:${#baseparts[@]}-3}
 SASPRODNAME=${SASPRODNAME// /-}
 SASINSTANCE=${baseparts[${#baseparts[@]}-1]}
@@ -46,10 +50,10 @@ SASINSTANCE=${baseparts[${#baseparts[@]}-1]}
 #
 #SASINITDEBUG=true  # output some extra debugging script debugging messages
 
-sas_debug_msg SASINITBASE=$SASINITBASE
-sas_debug_msg SASDEPLOYID=$SASDEPLOYID
-sas_debug_msg SASPRODNAME=$SASPRODNAME
-sas_debug_msg SASINSTANCE=$SASINSTANCE
+sas_debug_msg SASINITBASE="$SASINITBASE"
+sas_debug_msg SASDEPLOYID="$SASDEPLOYID"
+sas_debug_msg SASPRODNAME="$SASPRODNAME"
+sas_debug_msg SASINSTANCE="$SASINSTANCE"
 
 #
 # Command script name - this is invoked by this init script to start/stop the service.
@@ -83,17 +87,17 @@ daemon_lockfile="${SASLOCKROOT}/${SASINITBASE}"
 # Custom overrides for symbols defined above
 #
 
-[ -f /etc/sysconfig/sas/${SASINITBASE} ] && . /etc/sysconfig/sas/${SASINITBASE}
+[[ -f /etc/sysconfig/sas/${SASINITBASE} ]] && source "/etc/sysconfig/sas/${SASINITBASE}"
 
-sas_debug_msg daemon_pidfiledir=$daemon_pidfiledir
-sas_debug_msg daemon_pidfile=$daemon_pidfile
-sas_debug_msg daemon_logfiledir=$daemon_logfiledir
-sas_debug_msg daemon_exec=$daemon_exec
-sas_debug_msg daemon_args=$daemon_args
-sas_debug_msg daemon_name=$daemon_name
-sas_debug_msg daemon_user=$daemon_user
-sas_debug_msg daemon_group=$daemon_group
-sas_debug_msg daemon_lockfile=$daemon_lockfile
+sas_debug_msg daemon_pidfiledir="$daemon_pidfiledir"
+sas_debug_msg daemon_pidfile="$daemon_pidfile"
+sas_debug_msg daemon_logfiledir="$daemon_logfiledir"
+sas_debug_msg daemon_exec="$daemon_exec"
+sas_debug_msg daemon_args="$daemon_args"
+sas_debug_msg daemon_name="$daemon_name"
+sas_debug_msg daemon_user="$daemon_user"
+sas_debug_msg daemon_group="$daemon_group"
+sas_debug_msg daemon_lockfile="$daemon_lockfile"
 
 # Check that networking is up.
 [ "${NETWORKING}" = "no" ] && exit 0
@@ -112,34 +116,36 @@ do_start()
     if [ ! -d ${daemon_logfiledir} ]; then
         # Make sure the root SAS log dir exists too
         if [ ! -d ${SASLOGROOT} ]; then
-sas_debug_msg "creating SAS root log dir ${SASLOGROOT}"
+          sas_debug_msg "creating SAS root log dir ${SASLOGROOT}"
           mkdir ${SASLOGROOT}
           chown ${SASUSER}:${SASGROUP} ${SASLOGROOT}
         fi
-sas_debug_msg "creating product instance log dir ${daemon_logfiledir}"
+      sas_debug_msg "creating product instance log dir ${daemon_logfiledir}"
       mkdir -p ${daemon_logfiledir}
       chown ${daemon_user}:${daemon_group} ${daemon_logfiledir}
-# The mkdir -p might have had to create the parent product dir, so chown that too
+      # The mkdir -p might have had to create the parent product dir, so chown that too
       chown ${daemon_user}:${daemon_group} ${daemon_logfiledir}/..
     fi
 
     # Make sure the pid file dir is created and the service account has access
     if [ ! -d ${daemon_pidfiledir} ]; then
-sas_debug_msg "creating product pidfile dir ${daemon_pidfiledir}"
+      sas_debug_msg "creating product pidfile dir ${daemon_pidfiledir}"
       mkdir -p ${daemon_pidfiledir}
       chown ${daemon_user}:${daemon_group} ${daemon_pidfiledir}
     fi
 
     # Start the daemon
 
-sas_debug_msg "invoking start_daemon"
-sas_debug_msg sas_start_service ${daemon_user} ${daemon_exec} ${daemon_args}
+    sas_debug_msg "invoking start_daemon"
+    # shellcheck disable=SC2086
+    sas_debug_msg sas_start_service ${daemon_user} ${daemon_exec} ${daemon_args}
+    # shellcheck disable=SC2086
     sas_start_service ${daemon_user} ${daemon_exec} ${daemon_args}
     do_status
     result=$?
   fi
 
-  [ $result -eq 0 ] && touch $daemon_lockfile
+  [ $result -eq 0 ] && touch "$daemon_lockfile"
   return $result
 }
 
@@ -157,10 +163,16 @@ do_stop()
     sas_log_success_msg "${daemon_name} is stopped"
     result=0
   else
+    # Remove ESP from Consul
+    set -x
+    if [[ -f $SASCONFIG/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token ]]; then
+        sas_start_service ${daemon_user} ${SASHOME}/bin/unregister_esp.sh ""
+    fi
+    set +x
     sas_stop_pid -p "${daemon_pidfile}"
     result=$?
     if [ $result -eq 0 ]; then
-      rm -f $daemon_lockfile
+      rm -f "$daemon_lockfile"
       sas_log_success_msg "${daemon_name} is stopped"
     else
       sas_log_failure_msg "${daemon_name} could not be stopped"

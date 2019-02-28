@@ -15,5 +15,12 @@
 # limitations under the License.
 #
 
-/usr/sbin/sssd --config /etc/sssd/sssd.conf
-
+sssd_pid_file="/var/run/sssd.pid"
+if [[ -f $sssd_pid_file ]];then
+    echo "[INFO] sssd already running."
+    sssd_pid=$(cat $sssd_pid_file)
+    rm -f $sssd_pid
+    set +e;/usr/sbin/sssd -g --config /etc/sssd/sssd.conf;set -e
+else
+    /usr/sbin/sssd --config /etc/sssd/sssd.conf
+fi

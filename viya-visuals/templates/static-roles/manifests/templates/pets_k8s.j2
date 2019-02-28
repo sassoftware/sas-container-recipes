@@ -1,32 +1,4 @@
 ---
-apiVersion: v1
-kind: Service
-metadata:
-{% if item.key == "sas-casserver-primary" %}
-  name: {{ settings.project_name }}-cas
-{% else %}
-  name: {{ settings.project_name }}-{{ item.key }}
-{% endif %}
-
-spec:
-  selector:
-{% if item.key == "sas-casserver-primary" %}
-    app: {{ settings.project_name }}-cas
-{% else %}
-    app: {{ settings.project_name }}-{{ item.key }}
-{% endif %}
-{% if item.value.ports is defined and item.value.ports %}
-  ports:
-{%   for ports in item.value.ports %}
-    - name: "{{ ports.split(':')[0] }}"
-      protocol: TCP
-      port: {{ ports.split(':')[0] }}
-      targetPort: {{ ports.split(':')[0] }}
-{%   endfor %}
-{% endif %}
-  sessionAffinity: None
-  clusterIP: None
----
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
@@ -52,6 +24,12 @@ spec:
 {% endif %}
         domain: {{ settings.project_name }}
     spec:
+{% if SECURE_CONSUL %}
+      serviceAccountName: {{ settings.project_name }}-account
+{% else %}
+      # Required for TLS configurations
+      #serviceAccountName: {{ settings.project_name }}-account
+{% endif %}
 {% if item.key == "sas-casserver-primary" %}
       hostname: {{ settings.project_name }}-cas
 {% else %}
@@ -75,26 +53,46 @@ spec:
 {%   endfor %}
 {% endif %}
         env:
+        - name: APP_NAME
+          value: "{{ item.key | lower }}"
         - name: DEPLOYMENT_NAME
           value: "{{ settings.project_name }}"
 {% if services.consul is defined %}
         - name: CONSUL_SERVER_LIST
           value: "{{ settings.project_name }}-consul"
-{% endif %}
-{% if item.key == "sas-casserver-primary" and cas_manifest_type == "smp" %}
-        - name: CASCFG_MODE
-          value: "smp"
-{% elif item.key == "sas-casserver-primary" and cas_manifest_type == "mpp" %}
-        - name: CASCFG_MODE
-          value: "mpp"
+        - name: CACERTS_CONFIGMAP
+          value: "{{ settings.project_name }}-cacerts-configmap"
+        - name: DISABLE_CONSUL_HTTP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: disable_consul_http_port
+        - name: SECURE_CONSUL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: secure_consul
+        - name: SAS_ANCHORS_DIR
+          valueFrom:
+              configMapKeyRef:
+                name: {{ settings.project_name }}-consul
+                key: sas_anchors_dir
+        - name: VAULT_TOKEN_DIR
+          valueFrom:
+              configMapKeyRef:
+                name: {{ settings.project_name }}-consul
+                key: vault_token_dir
 {% endif %}
 {% if item.key == "sas-casserver-primary" %}
         - name: SERVICE_NAME
           value: "cascontroller"
 {% endif %}
-{% if SECURE_CONSUL %}
-        - name: SECURE_CONSUL
-          value: "true"
+{% if item.key == "sas-casserver-primary" %}
+        - name: CASCFG_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-cas
+              key: cascfg_mode
 {% endif %}
 {% if services.consul is defined %}
 {%   for environment in services.consul.deployment_overrides.environment %}
@@ -134,7 +132,7 @@ spec:
 {% if item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets %}
 {%   for secrets in item.value.deployment_overrides.secrets %}
 {%     if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
-        - name: SETINIT_TEXT 
+        - name: SETINIT_TEXT
 {%     else      %}
         - name: {{ secrets.split('=')[0] }}
 {%     endif     %}
@@ -168,9 +166,20 @@ spec:
           mountPath: {{ volumes.split('=')[1] }}
 {%   endfor %}
 {% endif %}
+{% if custom_volume_mounts is defined and custom_volume_mounts %}
+{%   for mount_key,mount_value in custom_volume_mounts.items() %}
+{%     if mount_key == item.key %}
+        {{ mount_value | indent(8) }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+        - name: anchors
+          mountPath: /anchors
+        - name: tokens
+          mountPath: /tokens
 
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
       volumes:
+{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
 {%     if item.key == "sas-casserver-primary" %}
       - name: {{ settings.project_name }}-cas-{{ volumes.split('=')[0] }}-volume
@@ -180,4 +189,17 @@ spec:
         emptyDir: {}
 {%   endfor %}
 {% endif %}
+{% if custom_volumes is defined and custom_volumes %}
+{%   for vol_key,vol_value in custom_volumes.items() %}
+{%     if vol_key == item.key %}
+      {{ vol_value | indent(6) }}
+{%-    endif %}
+{%   endfor %}
+{% endif %}
+      - name: tokens
+        configMap:
+          name: consul-tokens-configmap
+      - name: anchors
+        configMap:
+          name: {{ settings.project_name }}-cacerts-configmap
 ...

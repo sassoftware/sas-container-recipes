@@ -33,8 +33,8 @@ _sasuuid=${PG_VOLUME}/${_sasuuidname}
 [[ -z ${SASLOGROOT+x} ]]           && export SASLOGROOT="${SASCONFIG}/var/log"
 [[ -z ${SASLOGDIR+x} ]]            && export SASLOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICENAME}"
 [[ -z ${SASCONSULDIR+x} ]]         && export SASCONSULDIR="${SASHOME}"
-[[ -z ${SASPOSTGRESOWNER+x} ]]     && export SASPOSTGRESOWNER="postgres"
-[[ -z ${SASPOSTGRESGROUP+x} ]]     && export SASPOSTGRESGROUP="postgres"
+[[ -z ${SASPOSTGRESOWNER+x} ]]     && export SASPOSTGRESOWNER="sas"
+[[ -z ${SASPOSTGRESGROUP+x} ]]     && export SASPOSTGRESGROUP="sas"
 [[ -z ${SASPOSTGRESCONFIGDIR+x} ]] && export SASPOSTGRESCONFIGDIR="${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}"
 [[ -z ${SASPOSTGRESRUNDIR+x} ]]    && export SASPOSTGRESRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
 
