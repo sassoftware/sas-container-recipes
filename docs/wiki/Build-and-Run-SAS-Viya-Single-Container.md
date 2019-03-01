@@ -14,6 +14,7 @@
   - [Errors During Build](#errors-during-build)
 - [How to Run](#how-to-run)
   - [Docker](#docker)
+  - [Enabling SSL/TLS](#enabling-ssltls)
   - [SAS Batch Server](#sas-batch-server)
   - [Kubernetes](#kubernetes)
 
@@ -313,7 +314,7 @@ sas-services completed in 00:00:00
 
 At this point both `http://docker-host:8081` and `https://docker-host:8443` are reachable.
 
-### Enabling SSL/TLS
+#### Enabling SSL/TLS
 A certificate and key can be passed into the Docker image to encrypt traffic between the single container and the client.
 
 Example:
