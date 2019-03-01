@@ -333,11 +333,11 @@ docker run --interactice --tty \
 viya-single-container:latest
 ```
 
-The `SSL_CERT_NAME` must be the file name of your certificate signed by the Certificate Authority.
-The `SSL_KEY_NAME` must be the file name of your key.
-The file provided by `--volume /my/path/to/casigned.cer` is placed inside the container at /etc/pki/tls/certs/ so it can be used by the httpd ssl config.
-The file provided by `--volume /my/path/to/servertls.key` is placed inside the container at /etc/pki/tls/private/ so it can be used by the httpd ssl config.
-Port 443 is published by using the `--publish 443:443` argument, the default HTTPS port.
+- `SSL_CERT_NAME` must be the file name of your certificate signed by the Certificate Authority.
+- `SSL_KEY_NAME` must be the file name of your key.
+- The file provided by `--volume /my/path/to/casigned.cer` is placed inside the container in the /etc/pki/tls/certs/ directory so that it can be used by the HTTPD SSL configuration.
+- The file provided by `--volume /my/path/to/servertls.key` is placed inside the container in the /etc/pki/tls/private/ directory so that it can be used by the HTTPD SSL configuration.
+- Port 443 is published by using the `--publish 443:443` argument, which is the default HTTPS port.
 
 ### SAS Batch Server
 
