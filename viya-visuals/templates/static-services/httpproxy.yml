@@ -22,8 +22,8 @@
     deployment_overrides:
       resources:
         limits:
-        - "memory=512Mi"
+        - "memory=1024Mi"
         requests:
-        - "memory=10Mi"
+        - "memory=250Mi"
       volumes:
         - "log=/opt/sas/viya/config/var/log"
