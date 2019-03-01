@@ -8,7 +8,6 @@
 ac/
 venv/
 env/
-*test*/
 .DS_Store
 *.log
 **/working/
@@ -18,3 +17,5 @@ sas-orchestration
 *~
 *.swo
 *.swp
+*.zip*
+*.rpm

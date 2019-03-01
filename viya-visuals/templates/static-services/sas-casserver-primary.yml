@@ -2,10 +2,12 @@
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-prerequisites
+    - sas-install-base-packages
     - sas-java
     - sas-casserver-primary
-    - casserver-config
     - cloud-config
+    - casserver-config
     ports:
     - "5570:5570"
     - "5571:5571"
@@ -18,8 +20,10 @@
       environment:
         - "CASENV_ADMIN_USER=sasdemo"
         - "CASENV_CAS_VIRTUAL_PROTO=http"
+        - "CASENV_CAS_VIRTUAL_HOST={{ CAS_VIRTUAL_HOST }}"
         - "CASENV_CASDATADIR=/cas/data"
         - "CASENV_CASPERMSTORE=/cas/permstore"
+        - "CASCFG_MODE=smp"
       resources:
         limits:
         - "memory=12000Mi"

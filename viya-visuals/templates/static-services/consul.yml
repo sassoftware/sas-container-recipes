@@ -2,17 +2,21 @@
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-prerequisites
+    - sas-install-base-packages
     - sas-java
     - consul
     - cloud-config
     ports:
+    - "8200:8200"
+    - "8201:8201"
+    - "8300:8300"
+    - "8301:8301"
+    - "8302:8302"
+    - "8400:8400"
     - "8500:8500"
     - "8501:8501"
     - "8600:8600"
-    - "8400:8400"
-    - "8301:8301"
-    - "8302:8302"
-    - "8300:8300"
     entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/consul-entrypoint.sh"]
     labels:
       sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
@@ -26,11 +30,19 @@
       environment:
         - "CONSUL_BOOTSTRAP_EXPECT=1"
         - "CONSUL_CLIENT_ADDRESS=0.0.0.0"
+        - "CONSUL_CONFIG_DIR=/consul/config"
         - "CONSUL_DATA_DIR=/consul/data"
         - "CONSUL_DATACENTER_NAME={{ DEPLOYMENT_LABEL }}"
         - "CONSUL_KEY_VALUE_DATA_ENC="
+        - "CONSUL_SECRETS_DIR=/consul/config"
         - "CONSUL_SERVER_FLAG=true"
         - "CONSUL_UI_FLAG=false"
+        - "DISABLE_CONSUL_HTTP_PORT={{ DISABLE_CONSUL_HTTP_PORT }}"
+        - "SAS_DEBUG=0"
+        - "SASINITDEBUG=false"
+        - "SECURE_CONSUL={{ SECURE_CONSUL | lower}}"
+        - "VAULT_ROOT_TOKEN_DIR=/tokens"
+        - "VAULT_SHARED_SECRETS_DIR=/tokens"
       resources:
         limits:
           - "memory=4000Mi"
@@ -42,4 +54,4 @@
         - "CONSUL_TOKENS_MANAGEMENT=tobeusedfordemosonlymgmt"
       volumes:
         - "data=/consul"
-        - "log=/opt/sas/viya/config/var/log"
+        - "log=/opt/sas/viya/config/var/log/consul"

@@ -2,6 +2,7 @@ backports.ssl-match-hostname==3.5.0.1
 certifi==2018.8.13
 chardet==3.0.4
 colorama==0.3.9
+cryptography==2.5
 dictdiffer==0.7.1
 docker==2.7.0
 docker-pycreds==0.3.0
