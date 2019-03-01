@@ -74,8 +74,10 @@
 
   - name: Install the SAS Java configuration
     yum:
-      name: sas-javaesntl
+      name: "{{ item }}"
       state: latest
+    with_items:
+    - sas-javaesntl
 
   - name: Uninstall the SAS repository definitions
     shell: |
@@ -97,6 +99,8 @@
       yum erase --assumeyes sas-meta-repo*
       yum clean all
       rm --recursive --force /root/.cache /var/cache/yum
+
+      rm --verbose {{ METAREPO_CERT_HOME }}/{{ METAREPO_CERT_CLIENT }}
     when: (METAREPO_INSTALL | bool == true)
 
   when:

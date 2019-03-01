@@ -43,44 +43,13 @@
   # Install repo definitions
   - name: Shell script to install repository definitions
     shell: |
-      REPOSITORIES=$(curl --silent --location --cert {{ METAREPO_CERT_DIR }}/{{ METAREPO_CERT_CLIENT }} --cacert {{ METAREPO_CERT_DIR }}/{{ METAREPO_CERT_CA }} {{ REPOSITORY_WAREHOUSE }}/entitlements.json | \
-        grep repoPath | \
-        grep sasmd | \
-        sort --unique | \
-        cut --delimiter : --fields 2 | \
-        cut --delimiter \" --fields 2 | \
-        grep {{ platform }})
-
-      repo_rpm_list=""
-      for repo in ${REPOSITORIES} ; do
-        repo_rpm=sas-$(echo ${repo} | cut -d "/" -f 5 | sed 's|yumsasmd|yum|')
-        repo_rpm_list="${repo_rpm_list} ${repo_rpm}"
-      done
-
       # Download and install the SAS meta repo, containing all sub-repositories for software orders
       curl --silent --location --cert {{ METAREPO_CERT_DIR }}/{{ METAREPO_CERT_CLIENT }} --cacert {{ METAREPO_CERT_DIR }}/{{ METAREPO_CERT_CA }} {{ METAREPO_URL }}{{ METAREPO_RPM }} --output {{ METAREPO_CERT_DIR }}/{{ METAREPO_RPM }}
       yum install --assumeyes {{ METAREPO_CERT_DIR }}/{{ METAREPO_RPM }}
       cp --verbose {{ METAREPO_CERT_DIR }}/{{ METAREPO_CERT_CLIENT }} {{ METAREPO_CERT_HOME }}/{{ METAREPO_CERT_CLIENT }}
 
-      if [[ ! -z ${repo_rpm_list+x} ]]; then
-        yum install -y ${repo_rpm_list}
-      fi
+      yum install -y {{ METAREPO_SOE_ORDERABLE }}
     when: ( METAREPO_INSTALL | bool ) == true
-
-  - name: Install required packages
-    yum:
-      name: "{{ item }}"
-      state: "present"
-    with_items:
-    - initscripts
-    - which
-    - acl
-    - libpng12
-    - libXp
-    - libXmu
-    - net-tools
-    - xterm
-    - numactl # ESM
 
   #
   # Parse the file and get all the things to install: rpms and groups
@@ -130,21 +99,7 @@
 
   - name: Uninstall the SAS repository definitions
     shell: |
-      REPOSITORIES=$(curl --silent --location --cert {{ METAREPO_CERT_DIR }}/{{ METAREPO_CERT_CLIENT }} --cacert {{ METAREPO_CERT_DIR }}/{{ METAREPO_CERT_CA }} {{ REPOSITORY_WAREHOUSE }}/entitlements.json | \
-        grep repoPath | \
-        grep sasmd | \
-        sort --unique | \
-        cut --delimiter : --fields 2 | \
-        cut --delimiter \" --fields 2 | \
-        grep {{ platform }})
-
-      repo_rpm_list=""
-      for repo in ${REPOSITORIES} ; do
-        repo_rpm=sas-$(echo ${repo} | cut --delimiter "/" --fields 5 | sed 's|yumsasmd|yum|')
-        repo_rpm_list="${repo_rpm_list} ${repo_rpm}"
-      done
-
-      yum erase --assumeyes ${repo_rpm_list}
+      yum erase --assumeyes {{ METAREPO_SOE_ORDERABLE }}
       yum erase --assumeyes sas-meta-repo*
       yum clean all
       rm --recursive --force /root/.cache /var/cache/yum
@@ -156,22 +111,6 @@
   - ansible_os_family == 'RedHat'
 
 - block:
-
-  - name: Install required packages
-    zypper:
-      name: "{{ item }}"
-      state: "present"
-      disable_gpg_check: yes
-    with_items:
-    - initscripts
-    - which
-    - acl
-    - libpng12
-    - libXp
-    - libXmu
-    - net-tools
-    - xterm
-    - numactl # ESM
 
   - name: Collect rpms
     set_fact:
@@ -208,8 +147,3 @@
     path: "{{ METAREPO_CERT_DIR }}"
     state: absent
   when: ( METAREPO_INSTALL | bool ) == true
-
-- name: Remove nproc file
-  file:
-    path: /etc/security/limits.d/20-nproc.conf
-    state: absent

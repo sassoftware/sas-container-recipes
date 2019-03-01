@@ -46,9 +46,11 @@ or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
 3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
-    a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in a [SAS programming-only deployment running on a Single Container](https://github.com/sassoftware/sas-container-recipes#for-a-single-user-sas-viya-programming-only-deployment-running-on-a-single-container).
+    a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in a [SAS programming-only deployment running on a Single Container](https://github.com/sassoftware/sas-container-recipes#for-a-single-user---sas-viya-programming-only-deployment-running-on-a-single-container).
 
-    b. If you would like an environment suitable for collaborative data science work, then you may be interested in a SAS programming-only deployment or a SAS Viya full [deployment on Multiple Containers](https://github.com/sassoftware/sas-container-recipes#for-one-or-more-users-sas-viya-programming-only-or-sas-viya-full-deployment-running-on-multiple-containers).
+    b. If you would like an environment suitable for collaborative data science work, then you may be interested in a SAS programming-only deployment or a SAS Viya full [deployment on Multiple Containers](https://github.com/sassoftware/sas-container-recipes#for-one-or-more-users---sas-viya-programming-only-or-sas-viya-full-deployment-running-on-multiple-containers).
+
+    c. For either single or multiple containers, addons found in the [`addons/` directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) can enhance the base SAS Viya images with SAS/ACCESS, LDAP configuration, and more. For each addon, review the [Appendix](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#addons) for important information and any possible prerequisite requirements.
 
 
 ### Other Resources
@@ -79,19 +81,13 @@ which provides in-memory analytics for Symmetric Multi Processing (SMP).
 **A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce (community edition)](https://docs.docker.com/install/linux/docker-ce/centos/) is required.**
 
 
-### Build the Container
+### Build the Image
 Run the following to create a user 'sasdemo' with the password 'sasdemo' for product evaluation.
 A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
 is recommended for all build commands.
 ```
   ./build.sh --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
-```
-
-You can use addons found in the [`addons/` directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) 
-to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more. 
-For each addon that will be included with the build, review the readme associated 
-with the addon for important information and any possible prerequisite requirements.
-                         
+```                         
 
 ### Run the Container
 
@@ -136,7 +132,7 @@ your users with the features that they require.
 
 
 ### Prerequisites
-- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux must be installed on the build machine
+- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux or Mac must be installed on the build machine
 - Python2 with python-pip2 and virtualenv or Python3 and python-pip3 must be installed on the build machine
 - `java-1.8.0-openjdk` or another Java Runtime Environment (1.8.x) must be installed on the build machine
 - **Access to a Docker registry:** The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
@@ -149,10 +145,10 @@ A non-root user is recommended for all build commands.
 ```    
 
         SAS Viya Programming example:
-            ./build.sh --type multiple --zip /path/to/SAS_Viya_deployment_data.zip --docker-registry-namespace myuniquename --docker-registry-url myregistry.myhost.com --addons "addons/auth-demo"
+            ./build.sh --type multiple --zip /path/to/SAS_Viya_deployment_data.zip --docker-registry-namespace myuniquename --docker-registry-url myregistry.myhost.com --virtual-host ingress-path --addons "addons/auth-demo"
 
         SAS Viya Full example: 
-            ./build.sh --type full --docker-registry-namespace myuniquename --docker-registry-url myregistry.myhost.com --zip /my/path/to/SAS_Viya_deployment_data.zip
+            ./build.sh --type full --zip /path/to/SAS_Viya_deployment_data.zip --docker-registry-namespace myuniquename --docker-registry-url myregistry.myhost.com --virtual-host ingress-path --addons "addons/auth-sssd"
         
 
   -y|--type [ multiple | full ] 
@@ -185,16 +181,7 @@ A non-root user is recommended for all build commands.
                             SAS License Assistance: https://support.sas.com/en/technical-support/license-assistance.html
                             SAS Software Purchase: https://www.sas.com/en_us/software/how-to-buy.html
                             SAS Software Trial: https://www.sas.com/en_us/trials.html
-                        
-                            
-   ** [ EITHER --zip OR --playbook-dir ]  **
-
-  -l|--playbook-dir <value>
-                          Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
-                          whereas new deployments utilize the above '--zip' argument. If this is passed in along with
-                          the zip file then this playbook location will take precendence.
-    
-                               
+                      
 ```
 
 ### Optional `build.sh` Arguments
@@ -202,8 +189,10 @@ A non-root user is recommended for all build commands.
 
   -a|--addons "[<value>] [<value>]"
                           A space separated list of layers to add on to the main SAS image.
-                          See the 'addons' directory for more details on adding access engines and other tools.
-                            example: --addons "addons/auth-sssd addons/access-postgres"
+                          See the 'Appendix: Under the Hood' section in the wiki for details
+                          on adding access engines and other tools.
+                          https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
+                            example: --addons \"addons/auth-sssd addons/access-postgres\"
 
   -i|--baseimage <value>
                           The Docker image from which the SAS images will build on top of
@@ -244,7 +233,7 @@ Choose between Symmetric Multi Processing (SMP) or Massively Parallel Processing
 `kubectl create --file` or `kubectl replace --file` on the manifests inside the kubernetes directory.
 - Note: If you are running the build process process multiple times then use `kubectl replace` to add your new manifests instead of `kubectl create`.
 
-Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other services using `kubectl edit ingress`.
+Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other services using `kubectl edit ingress`. In the following example, `sas-viya-http.<mycompany>.com` represents the _ingress-path_.
 
 ```
 
@@ -263,19 +252,11 @@ Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other ser
         - backend:
             serviceName: sas-viya-httpproxy
             servicePort: 80
-          
-    - host: sas-viya-cas.<mycompany>.com
-      http:
-        paths:
-        - backend:
-            serviceName: sas-viya-sas-casserver-primary
-            servicePort: 5570
-
 
 ```
 For more details on Ingress Controllers see [the official Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/).
 
-Finally, go to the host address that's defined in your Kubernetes Ingress to view your SAS product(s). 
+Finally, go to the host address that's defined in your Kubernetes Ingress to view your SAS product(s). Using the example Ingress configuration above, the URL is http://sas-viya-http.<mycompany>.com.
 If there is no response from the host, then check the status of the containers by running `kubectl get pods`.
 There should be one or more `sas-viya-<service>` pods, depending on your software order. It may take several
 minutes to see a login screen, even with all pods showing a "Running" status.

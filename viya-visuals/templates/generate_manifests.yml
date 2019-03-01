@@ -3,9 +3,14 @@
   hosts: 127.0.0.1
   connection: local
 
+  vars:
+    sas_manifest_dir: "{{ manifest_dir | default('manifests') }}"
+    sas_cas_mode: "{{ cas_mode | default('smp') }}"
+    
   vars_files:
   - manifest.yml
   - everything.yml
+  - vars_usermods.yml
 
   roles:
   - manifests

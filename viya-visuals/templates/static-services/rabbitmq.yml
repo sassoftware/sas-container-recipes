@@ -2,6 +2,8 @@
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-prerequisites
+    - sas-install-base-packages
     - rabbitmq
     - cloud-config
     ports:
@@ -15,7 +17,9 @@
     - static-content:/rabbitmq
     dev_overrides:
       environment:
-        - "SAS_DEBUG=1"
+        - "SAS_DEBUG=0"
+        - "APP_NAME=rabbitmq"
+        - "SERVICE_NAME=abbitmq"
     deployment_overrides:
       resources:
         limits:

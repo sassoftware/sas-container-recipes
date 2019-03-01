@@ -17,7 +17,7 @@
 # BUILD:
 #   docker build --file Dockerfile --build-arg BASEIMAGE=centos --build-arg BASETAG=7 --build-arg PLATFORM=redhat . --tag viya-single-container
 #   docker build --file Dockerfile --build-arg BASEIMAGE=opensuse/leap --build-arg BASETAG=42 --build-arg PLATFORM=suse . --tag viya-single-container
-# 
+#
 # RUN:
 #   docker run --detach --rm --publish-all --name viya-single-container --hostname viya-single-container viya-single-container
 #
@@ -39,26 +39,7 @@ USER root
 
 WORKDIR /tmp/sas
 
-#
-# One of the following lines must be enabled. By default, the SAS_Viya_deployment_data.zip
-# will be used to generate the playbook. However, if the playbook has been already been
-# generated, that could be used in the Docker build process.
-#
-
 COPY SAS_Viya_deployment_data.zip ./
-#COPY sas_viya_playbook/ sas_viya_playbook/
-
-#
-# Check and see if playbook is a programming only one
-#
-
-RUN set -e; \
-    if [ -d sas_viya_playbook ]; then \
-        if [ -d sas_viya_playbook/roles/vault_tokens ]; then \
-            echo; echo "####### [ERROR] : Provided playbook is not a programming only version"; echo; \
-            exit 4; \
-        fi; \
-    fi
 
 #
 # Install some of the expected packages in their own layer
@@ -93,7 +74,7 @@ RUN set -e; \
         rm --verbose --recursive --force /root/.cache /var/cache/yum; \
     elif [ "$PLATFORM" = "suse" ]; then \
         zypper install -y curl ; \
-        #Package is unsigned, zypper instead. 
+        #Package is unsigned, zypper instead.
         curl --silent --output ${TINI_RPM_NAME} --location ${TINI_URL}/${TINI_RPM_NAME}; \
         rpm -i ${TINI_RPM_NAME}; \
         rm --verbose ${TINI_RPM_NAME}; \
@@ -134,7 +115,7 @@ RUN set -e; \
         zypper remove -y python-cryptography ; \
         pip install ansible==${ANSIBLE_VERSION}; \
     fi;
-    
+
 #
 # Get the SAS orchestrationCLI to generate the playbook then modify it so it will run
 #
@@ -270,7 +251,7 @@ RUN set -e; \
 
 #
 # Add text analytic languages back in
-# 
+#
 
 RUN set -e; \
     echo; echo "####### Create the Text Analytics languages layer"; echo; \
@@ -308,7 +289,7 @@ RUN set -e; \
 
 #
 # Add those packages that are hefty in size back into their own layer
-# 
+#
 
 RUN set -e; \
     echo; echo "####### Create the layer for some of the bigger packages"; echo; \
@@ -349,6 +330,9 @@ RUN set -e; \
     rm --verbose --recursive --force /etc/pki/sas; \
     echo; echo "####### Remove the content in the WORKDIR"; echo; \
     rm --verbose --recursive --force SAS_Viya_deployment_data.zip SAS_Viya_playbook.tgz sas_viya_playbook;
+
+COPY replace_httpd_default_cert.sh /opt/sas/viya/home/bin/replace_httpd_default_cert.sh
+RUN chmod +x /opt/sas/viya/home/bin/replace_httpd_default_cert.sh
 
 COPY entrypoint /opt/sas/viya/home/bin/entrypoint
 RUN chmod +x /opt/sas/viya/home/bin/entrypoint

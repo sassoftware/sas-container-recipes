@@ -11,6 +11,12 @@ spec:
         app: {{ settings.project_name }}-{{ item.key | lower }}
         domain: {{ settings.project_name }}
     spec:
+{% if SECURE_CONSUL %}
+      serviceAccountName: {{ settings.project_name }}-account
+{% else %}
+      # Required for TLS configurations
+      #serviceAccountName: {{ settings.project_name }}-account
+{% endif %}
       hostname: {{ settings.project_name }}-{{ item.key | lower }}
       subdomain: {{ settings.project_name }}-subdomain
       containers:
@@ -26,14 +32,32 @@ spec:
 {%   endfor %}
 {% endif %}
         env:
+        - name: APP_NAME
+          value: "{{ item.key | lower }}"
         - name: DEPLOYMENT_NAME
           value: "{{ settings.project_name }}"
         - name: CONSUL_SERVER_LIST
           value: "{{ settings.project_name }}-consul"
-{% if SECURE_CONSUL %}
         - name: SECURE_CONSUL
-          value: "true"
-{% endif %}
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: secure_consul
+        - name: DISABLE_CONSUL_HTTP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: disable_consul_http_port
+        - name: SAS_ANCHORS_DIR
+          valueFrom:
+              configMapKeyRef:
+                name: {{ settings.project_name }}-consul
+                key: sas_anchors_dir
+        - name: VAULT_TOKEN_DIR
+          valueFrom:
+              configMapKeyRef:
+                name: {{ settings.project_name }}-consul
+                key: vault_token_dir
 {% for environment in services.consul.deployment_overrides.environment %}
 {%   if environment.split('=')[0] == 'CONSUL_DATACENTER_NAME' %}
         - name: {{ environment.split('=')[0] }}
@@ -85,19 +109,29 @@ spec:
 {%     endfor %}
 {%   endfor %}
 {% endif %}
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
         volumeMounts:
 {% if item.key == 'espserver' %}
         - name: {{ settings.project_name }}-{{ item.key }}-sysconfig
           mountPath: {{ SAS_CONFIG_ROOT }}/etc/sysconfig/SASEventStreamProcessingEngine
 {% endif %}
+{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
         - name: {{ settings.project_name }}-{{ item.key | lower }}-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
 {%   endfor %}
 {% endif %}
+{% if custom_volume_mounts is defined and custom_volume_mounts %}
+{%   for mount_key,mount_value in custom_volume_mounts.items() %}
+{%     if mount_key == item.key %}
+        {{ mount_value | indent(8) }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+        - name: anchors
+          mountPath: /anchors
+        - name: tokens
+          mountPath: /tokens
 
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
       volumes:
 {% if item.key == 'espserver' %}
       - name: {{ settings.project_name }}-{{ item.key }}-sysconfig
@@ -107,9 +141,23 @@ spec:
           - key: espenv
             path: sas-esp
 {% endif %}
+{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
       - name: {{ settings.project_name }}-{{ item.key | lower }}-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
 {%   endfor %}
 {% endif %}
+{% if custom_volumes is defined and custom_volumes %}
+{%   for vol_key,vol_value in custom_volumes.items() %}
+{%     if vol_key == item.key %}
+      {{ vol_value | indent(6) }}
+{%-    endif %}
+{%   endfor %}
+{% endif %}
+      - name: tokens
+        configMap:
+          name: consul-tokens-configmap
+      - name: anchors
+        configMap:
+          name: {{ settings.project_name }}-cacerts-configmap
 ...
