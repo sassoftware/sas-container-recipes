@@ -1,0 +1,28 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+{% if item.key == "sas-casserver-primary" %}
+  name: {{ settings.project_name }}-cas
+{% else %}
+  name: {{ settings.project_name }}-{{ item.key }}
+{% endif %}
+
+spec:
+  selector:
+{% if item.key == "sas-casserver-primary" %}
+    app: {{ settings.project_name }}-cas
+{% else %}
+    app: {{ settings.project_name }}-{{ item.key }}
+{% endif %}
+{% if item.value.ports is defined and item.value.ports %}
+  ports:
+{%   for ports in item.value.ports %}
+    - name: "{{ ports.split(':')[0] }}"
+      protocol: TCP
+      port: {{ ports.split(':')[0] }}
+      targetPort: {{ ports.split(':')[0] }}
+{%   endfor %}
+{% endif %}
+  sessionAffinity: None
+  clusterIP: None

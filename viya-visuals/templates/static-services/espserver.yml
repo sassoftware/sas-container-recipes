@@ -2,12 +2,14 @@
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-prerequisites
+    - sas-install-base-packages
     - sas-java
     - espServer
     - cloud-config
     ports:
-    - "31413:31413"
-    - "31414:31414"
+    - "31415:31415"
+    - "31416:31416"
     entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/espserver-entrypoint.sh"]
     labels:
       sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
@@ -26,6 +28,6 @@
         - "log=/opt/sas/viya/config/var/log"
       resources:
         limits:
-        - "memory=10Gi"
+        - "memory=5Gi"
         requests:
-        - "memory=2Gi"
+        - "memory=1Gi"

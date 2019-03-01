@@ -193,7 +193,7 @@ debug_level = 0
 # FILE LOCATIONS
 #------------------------------------------------------------------------------
 
-pid_file_name = 'SASPGPOOLRUNDIR/SASPGPOOLPIDFILE'
+pid_file_name = 'SASPGPOOLPIDFILE'
                             # PID file name
                             # (change requires restart)
 logdir = ''

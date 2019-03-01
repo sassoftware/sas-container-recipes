@@ -2,11 +2,13 @@
     from: "{{ BASEIMAGE }}:{{ BASETAG }}"
     roles:
     - tini
+    - sas-prerequisites
+    - sas-install-base-packages
     - sas-java
     - MicroAnalyticService
     - cloud-config
     ports: {}
-    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/microanalytics-entrypoint.sh"]
+    entrypoint: ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/microanalyticservice-entrypoint.sh"]
     labels:
       sas.recipe.version: "{{ SAS_RECIPE_VERSION }}"
       sas.layer.operations: "true"

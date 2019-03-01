@@ -30,8 +30,8 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -z ${SASLOGROOT+x} ]] && export SASLOGROOT="${SASCONFIG}/var/log"
 [[ -z ${SASLOGDIR+x} ]] && export SASLOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICENAME}"
 [[ -z ${SASCONSULDIR+x} ]] && export SASCONSULDIR="${SASHOME}"
-[[ -z ${SASPOSTGRESOWNER+x} ]] && export SASPOSTGRESOWNER="postgres"
-[[ -z ${SASPOSTGRESGROUP+x} ]] && export SASPOSTGRESGROUP="postgres"
+[[ -z ${SASPOSTGRESOWNER+x} ]] && export SASPOSTGRESOWNER="sas"
+[[ -z ${SASPOSTGRESGROUP+x} ]] && export SASPOSTGRESGROUP="sas"
 [[ -z ${SAS_CURRENT_HOST+x} ]]   && export SAS_CURRENT_HOST=$(hostname -f)
 
 _LOGFILENAME=${SASLOGDIR}/${SASSERVICENAME}_${SASINSTANCE}_healthcheck.log

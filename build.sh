@@ -30,24 +30,59 @@ esac
 # Setup logging
 #
 
+# Setting sas_datetime here as it is used in the logging configuration.
+sas_datetime=$(date "+%Y%m%d%H%M%S")
+
 if [[ "${OPERATING_SYSTEM}" != "darwin" ]]; then
-    if [ -f "${PWD}/build_sas_container.log" ]; then
-        echo
+    if [[ ! -d "${PWD}/logs" ]]; then
         mkdir -vp ${PWD}/logs
+    fi
+    if [ -f "${PWD}/logs/build_sas_container.log" ]; then
         # shellcheck disable=SC2086
-        mv -v ${PWD}/build_sas_container.log ${PWD}/logs/build_sas_container_${sas_datetime}.log
+        mv -v ${PWD}/logs/build_sas_container.log ${PWD}/logs/build_sas_container_${sas_datetime}.log
         echo
     fi
 
-    exec > >(tee -a "${PWD}"/build_sas_container.log) 2>&1
+    exec > >(tee -a "${PWD}"/logs/build_sas_container.log) 2>&1
 fi
-
-
-### TODO: -r argument
 
 #
 # Functions
 #
+
+function sas_container_recipes_shutdown()
+{
+    echo
+    echo "================================"
+    echo "Shutting down SAS recipe process"
+    echo "================================"
+    echo
+
+    case "${SAS_RECIPE_TYPE}" in
+        multiple)
+            if [[ -f ${PWD}/viya-programming/viya-multi-container/working/sas_ansible_container.pid ]]; then
+                echo "[INFO]  : Shutting ansible-container process '$(cat ${PWD}/viya-programming/viya-multi-container/working/sas_ansible_container.pid)'"
+                kill -TERM $(cat ${PWD}/viya-programming/viya-multi-container/working/sas_ansible_container.pid)
+            fi
+            ;;
+        full)
+            if [[ -f ${PWD}/viya-visuals/working/sas_ansible_container.pid ]]; then
+                echo "[INFO]  : Shutting ansible-container process '$(cat ${PWD}/viya-visuals/working/sas_ansible_container.pid)'"
+                kill -TERM $(cat ${PWD}/viya-visuals/working/sas_ansible_container.pid)
+            fi
+            ;;
+    esac
+
+    # See if Docker still has any containers that are of type ${PROJECT_NAME}_*
+    echo "[INFO]  : Stopping and removing any Docker containers of type '${PROJECT_NAME}_*'"
+    set +e
+    docker stop $(docker container ls -q --filter "name=${PROJECT_NAME}_*")
+    docker rm $(docker container ls -aq --filter "name=${PROJECT_NAME}_*")
+    set -e
+
+    exit 1
+}
+
 function usage() {
     echo -e "
     Framework to build SAS Viya Docker images and create deployments using Kubernetes.
@@ -70,7 +105,9 @@ function usage() {
 
       -a|--addons \"[<value>] [<value>]\"
           A space separated list of layers to add on to the main SAS image.
-          See the 'addons' directory for more details on adding access engines and other tools.
+          See the 'Appendix: Under the Hood' section in the wiki for details
+          on adding access engines and other tools.
+          https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
             example: --addons \"addons/auth-sssd addons/access-postgres\"
 
       -i|--baseimage <value>
@@ -124,13 +161,6 @@ function usage() {
           URL of the Docker registry where Docker images will be pushed to.
             example: 10.12.13.14:5000 or my-registry.docker.com
 
-      -v|--virtual-host
-          The Kubernetes Ingress path that defines the location of the HTTP endpoint.
-          For more details on Ingress see the official Kubernetes documentation at
-          https://kubernetes.io/docs/concepts/services-networking/ingress/
-
-            example: user-myproject.mylocal.com
-
       -z|--zip <value>
           Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
           If you do not know if your organization has a SAS license then contact
@@ -138,18 +168,13 @@ function usage() {
 
             example: /path/to/SAS_Viya_deployment_data.zip
 
-        [ EITHER --zip OR --playbook-dir ]
-
-      -l|--playbook-dir <value>
-          Path to the sas_viya_playbook directory. A playbook is used for existing BAREOS deployments
-          whereas new deployments utilize the above '--zip' argument. If this is passed in along with
-          the zip file then this playbook location will take precendence.
-
     Optional:
 
       -a|--addons \"[<value>] [<value>]\"
           A space separated list of layers to add on to the main SAS image.
-          See the 'addons' directory for more details on adding access engines and other tools.
+          See the 'Appendix: Under the Hood' section in the wiki for details
+          on adding access engines and other tools.
+          https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
             example: --addons \"addons/auth-sssd addons/access-postgres\"
 
       -i|--baseimage <value>
@@ -163,6 +188,13 @@ function usage() {
       -m|--mirror-url <value>
           The location of the mirror URL.See the Mirror Manager guide at
           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
+
+      -v|--virtual-host <value>
+          The Kubernetes Ingress path that defines the location of the HTTP endpoint.
+          For more details on Ingress see the official Kubernetes documentation at
+          https://kubernetes.io/docs/concepts/services-networking/ingress/
+
+            example: user-myproject.mylocal.com
 
       -p|--platform <value>
           The type of distribution of the image defined by the \"baseimage\" option.
@@ -189,18 +221,16 @@ function usage() {
     "
 }
 
-function copy_deployment_data_zip()
-{
+function copy_deployment_data_zip() {
     local target_location=$1
     if [[ -n ${SAS_VIYA_PLAYBOOK_DIR} ]]; then
-        echo "[INFO]  : Copying ${SAS_VIYA_PLAYBOOK_DIR} to ${target_location}"
-        cp -a "${SAS_VIYA_PLAYBOOK_DIR}" "${target_location}"
+        echo "[WARN]  : Providing a playbook is deprecated. Please provide the SAS_Viya_deployment_data.zip file."
     elif [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
         echo "[INFO]  : Copying ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} to ${target_location}"
         cp -v "${SAS_VIYA_DEPLOYMENT_DATA_ZIP}" "${target_location}/SAS_Viya_deployment_data.zip"
     else
         if [[ ! -f ${target_location}/SAS_Viya_deployment_data.zip ]]; then
-            echo "[ERROR] : No SAS_Viya_deployment_data.zip at ${target_location}"
+            echo "[ERROR] : Cannot find SAS_Viya_deployment_data.zip at ${target_location}"
             exit 30
         else
             echo "[INFO]  : Using ${target_location}/SAS_Viya_deployment_data.zip"
@@ -490,17 +520,12 @@ function echo_footer()
     echo "One should review the settings of the yaml files in $1/manifests/kubernetes/configmaps/"
     echo "to make sure they contain the desired configuration"
     echo ""
-    echo "To deploy a Symmetric Multiple Processor (SMP) environment, run the following"
+    echo "To deploy the SAS Viya environment, run the following"
     echo ""
-    echo "kubectl create -f $1/working/manifests/kubernetes/configmaps/"
-    echo "kubectl create -f $1/working/manifests/kubernetes/secrets/"
-    echo "kubectl create -f $1/working/manifests/kubernetes/deployments-smp/"
-    echo ""
-    echo "To deploy a Massively Parallel Processing (MPP)environment, run the following"
-    echo ""
-    echo "kubectl create -f $1/working/manifests/kubernetes/configmaps/"
-    echo "kubectl create -f $1/working/manifests/kubernetes/secrets/"
-    echo "kubectl create -f $1/working/manifests/kubernetes/deployments-mpp/"
+    [[ -z ${PROJECT_DIRECTORY+x} ]]         && PROJECT_DIRECTORY=working
+    [[ -z ${SAS_MANIFEST_DIR+x} ]]          && SAS_MANIFEST_DIR=manifests
+    [[ -z ${SAS_DEPLOY_MANIFEST_TYPE+x} ]]  && SAS_DEPLOY_MANIFEST_TYPE=kubernetes
+    ls -1dtr $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/* | awk '{ print "kubectl create -f " $1 }'
     echo ""
     kubectl version > /dev/null 2>&1 || echo -e "*** Kubernetes (kubectl) is required for the deployment step. See https://kubernetes.io/docs/tasks/tools/install-kubectl/"
 }
@@ -521,12 +546,18 @@ function echo_experimental()
     echo
 }
 
+###############################################################################
+# Shutdown
+###############################################################################
+
+trap sas_container_recipes_shutdown SIGTERM
+trap sas_container_recipes_shutdown SIGINT
+
 #
 # Set some defaults
 #
 
 export SAS_RECIPE_VERSION=$(cat docs/VERSION)
-sas_datetime=$(date "+%Y%m%d%H%M%S")
 sas_sha1=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
 
 [[ -z ${OPERATING_SYSTEM+x} ]]   && OPERATING_SYSTEM=linux
@@ -615,11 +646,6 @@ while [[ $# -gt 0 ]]; do
         -v|--virtual-host)
             shift # past argument
             export CAS_VIRTUAL_HOST="$1"
-            shift # past value
-            ;;
-        -l|--playbook-dir)
-            shift # past argument
-            export SAS_VIYA_PLAYBOOK_DIR="$1"
             shift # past value
             ;;
         -s|--sas-docker-tag)
@@ -743,11 +769,6 @@ if [[ "${SAS_RECIPE_TYPE}" != "single" ]]; then
         fi
     else
         echo "[INFO]  : Bypassing validation of Docker registry URL: ${DOCKER_REGISTRY_URL}"
-    fi
-
-    if [[ -z ${CAS_VIRTUAL_HOST+x} ]]; then
-        echo "[ERROR] : The HTTP ingress path was not passed in. Exiting."
-        exit 6
     fi
 
     if [[ -z ${DOCKER_REGISTRY_URL+x} || -z ${DOCKER_REGISTRY_NAMESPACE+x} ]]; then
@@ -893,35 +914,40 @@ case ${SAS_RECIPE_TYPE} in
         echo
         ;;
     multiple)
-        if [[ -z ${SKIP_SAS_BASE_IMAGES_BUILD} ]]; then
-            # Check for required dependencies
-            docker --version || missing_dependencies docker
-            python --version || missing_dependencies python
-            pip    --version || missing_dependencies pip
+        # Check for required dependencies
+        docker --version || missing_dependencies docker
+        python --version || missing_dependencies python
+        pip    --version || missing_dependencies pip
 
-            # Copy the zip or the playbook to project
-            copy_deployment_data_zip viya-programming/viya-multi-container
+        # Copy the zip to the project
+        copy_deployment_data_zip viya-programming/viya-multi-container
 
-            pushd viya-programming/viya-multi-container
+        pushd viya-programming/viya-multi-container
 
-            # Call to build and push images and generate deployment manifests
+        # Call to build and push images and generate deployment manifests
 
-            # export the values so that they are picked up by the lower level scipt.
-            # We will not pass the CHECK_*_URL values here as they are not used in the lower level script
-            [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
+        # export the values so that they are picked up by the lower level scipt.
+        # We will not pass the CHECK_*_URL values here as they are not used in the lower level script
+        [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
+        [[ ! -z ${CAS_VIRTUAL_HOST} ]] && export CAS_VIRTUAL_HOST
 
-            ./viya-multi-build.sh \
-              --baseimage "${BASEIMAGE}" \
-              --basetag "${BASETAG}" \
-              --platform "${PLATFORM}" \
-              --docker-url "${DOCKER_REGISTRY_URL}" \
-              --docker-registry-type "${DOCKER_REGISTRY_TYPE}" \
-              --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
-              --sas-docker-tag "${SAS_DOCKER_TAG}" \
-              --virtual-host "${CAS_VIRTUAL_HOST}"
+        set +e
+        ./viya-multi-build.sh \
+          --baseimage "${BASEIMAGE}" \
+          --basetag "${BASETAG}" \
+          --platform "${PLATFORM}" \
+          --docker-url "${DOCKER_REGISTRY_URL}" \
+          --docker-registry-type "${DOCKER_REGISTRY_TYPE}" \
+          --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
+          --sas-docker-tag "${SAS_DOCKER_TAG}" 
 
-            popd
+        multi_build_rc=$?
+        set -e
+        if (( ${multi_build_rc} > 0 )); then
+            echo "[ERROR] : The viya-multi-build.sh has exited with a non zero return code."
+            sas_container_recipes_shutdown
         fi
+        popd
 
         # Add more layers to the programming and CAS containers
         add_layers
@@ -930,35 +956,41 @@ case ${SAS_RECIPE_TYPE} in
         echo_footer viya-programming/viya-multi-container
         ;;
     full)
-        if [[ -z ${SKIP_SAS_BASE_IMAGES_BUILD} ]]; then
-            echo_experimental
+        echo_experimental
 
-            # Copy the zip or the playbook to project
-            copy_deployment_data_zip viya-visuals
+        # Copy the zip to the project
+        copy_deployment_data_zip viya-visuals
 
-            pushd viya-visuals
+        pushd viya-visuals
 
-            # Check for required dependencies
-            docker --version || missing_dependencies docker
-            python --version || missing_dependencies python
-            pip    --version || missing_dependencies pip
+        # Check for required dependencies
+        docker --version || missing_dependencies docker
+        python --version || missing_dependencies python
+        pip    --version || missing_dependencies pip
 
-            # export the values so that they are picked up by the lower level scipt.
-            [[ ! -z ${CHECK_MIRROR_URL} ]] && export CHECK_MIRROR_URL
-            [[ ! -z ${CHECK_DOCKER_URL} ]] && export CHECK_DOCKER_URL
-            [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
+        # export the values so that they are picked up by the lower level scipt.
+        [[ ! -z ${CHECK_MIRROR_URL} ]] && export CHECK_MIRROR_URL
+        [[ ! -z ${CHECK_DOCKER_URL} ]] && export CHECK_DOCKER_URL
+        [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
+        [[ ! -z ${CAS_VIRTUAL_HOST} ]] && export CAS_VIRTUAL_HOST
 
-            ./viya-visuals-build.sh \
-              --baseimage "${BASEIMAGE}" \
-              --basetag "${BASETAG}" \
-              --platform "${PLATFORM}" \
-              --docker-url "${DOCKER_REGISTRY_URL}" \
-              --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
-              --sas-docker-tag "${SAS_DOCKER_TAG}" \
-              --virtual-host "${CAS_VIRTUAL_HOST}"
+        set +e
+        ./viya-visuals-build.sh \
+          --baseimage "${BASEIMAGE}" \
+          --basetag "${BASETAG}" \
+          --platform "${PLATFORM}" \
+          --docker-url "${DOCKER_REGISTRY_URL}" \
+          --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
+          --sas-docker-tag "${SAS_DOCKER_TAG}" 
 
-            popd
+        visuals_build_rc=$?
+        set -e
+        if (( ${visuals_build_rc} > 0 )); then
+            echo "[ERROR] : The viya-visuals-build.sh has exited with a non zero return code."
+            sas_container_recipes_shutdown
         fi
+
+        popd
 
         add_layers
         add_esp_layers
