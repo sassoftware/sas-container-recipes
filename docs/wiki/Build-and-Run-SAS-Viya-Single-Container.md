@@ -311,7 +311,32 @@ docker exec --interactive --tty sas-programming /etc/init.d/sas-viya-all-service
 sas-services completed in 00:00:00
 ```
 
-At this point both `http://docker-host:8081` and `https://docker-host:8443` are reachable. We will use the `https` URL going forward for examples but `http` should also work.
+At this point both `http://docker-host:8081` and `https://docker-host:8443` are reachable.
+
+### Enabling SSL/TLS
+A certificate and key can be passed into the Docker image to encrypt traffic between the single container and the client.
+
+Example:
+```
+docker run --interactice --tty \
+--volume /my/path/to/casigned.cer:/etc/pki/tls/certs/casigned.cer \
+--volume /my/path/to/servertls.key:/etc/pki/tls/private/servertls.key \
+--env SSL_CERT_NAME=casigned.cer \
+--env SSL_KEY_NAME=servertls.key \
+--env CASENV_CAS_VIRTUAL_HOST=myhostname \
+--env CASENV_CAS_VIRTUAL_PORT=8081 \
+--hostname sas-viya-programming \
+--publish 443:443 \
+--publish 8081:80 \
+--name viya-single-container \
+viya-single-container:latest
+```
+
+The `SSL_CERT_NAME` must be the file name of your certificate signed by the Certificate Authority.
+The `SSL_KEY_NAME` must be the file name of your key.
+The file provided by `--volume /my/path/to/casigned.cer` is placed inside the container at /etc/pki/tls/certs/ so it can be used by the httpd ssl config.
+The file provided by `--volume /my/path/to/servertls.key` is placed inside the container at /etc/pki/tls/private/ so it can be used by the httpd ssl config.
+Port 443 is published by using the `--publish 443:443` argument, the default HTTPS port.
 
 ### SAS Batch Server
 
@@ -500,27 +525,3 @@ sas-services completed in 00:00:00
 
 Depending on how ingress has been configured, either `http://ingress-path` or `https://ingress-path` are reachable. We will use the `https` URL going forward but if you did not configure the ingress for https, substitute http in the provided examples.
 
-### Enabling SSL/TLS
-A certificate and key can be passed into the Docker image to encrypt traffic between the single container and the client.
-
-Example:
-```
-docker run --interactice --tty \
---volume /my/path/to/casigned.cer:/etc/pki/tls/certs/casigned.cer \
---volume /my/path/to/servertls.key:/etc/pki/tls/private/servertls.key \
---env SSL_CERT_NAME=casigned.cer \
---env SSL_KEY_NAME=servertls.key \
---env CASENV_CAS_VIRTUAL_HOST=myhostname \
---env CASENV_CAS_VIRTUAL_PORT=8081 \
---hostname sas-viya-programming \
---publish 443:443 \
---publish 8081:80 \
---name viya-single-container \
-viya-single-container:latest
-```
-
-The `SSL_CERT_NAME` must be the file name of your certificate signed by the Certificate Authority.
-The `SSL_KEY_NAME` must be the file name of your key.
-The file provided by `--volume /my/path/to/casigned.cer` is placed inside the container at /etc/pki/tls/certs/ so it can be used by the httpd ssl config.
-The file provided by `--volume /my/path/to/servertls.key` is placed inside the container at /etc/pki/tls/private/ so it can be used by the httpd ssl config.
-Port 443 is published by using the `--publish 443:443` argument, the default HTTPS port.
