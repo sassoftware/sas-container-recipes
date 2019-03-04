@@ -39,13 +39,16 @@ spec:
           value: "{{ settings.project_name }}-cacerts-configmap"
         - name: VAULT_TOKENS_CONFIGMAP
           value: consul-tokens-configmap
-{% if SECURE_CONSUL == 'true' %}
-        - name: VAULT_TOKEN_SERVICE_LIST
-          value: "sasdatasvrc,localconsul,sas-viya-consul-default,sas-viya-httpproxy,rabbitmq,sas-viya-sas-casserver-primary,sas-viya-rabbitmq,sas-viya-pgpoolc,sas-viya-adminservices,sas-viya-advancedanalytics,sas-viya-casservices,sas-viya-cognitivecomputingservices,sas-viya-computeserver,sas-viya-computeservices,sas-viya-configuratn,sas-viya-coreservices,sas-viya-datamining,sas-viya-dataservices,sas-viya-graphbuilderservices,sas-viya-homeservices,sas-viya-modelservices,sas-viya-operations,sas-viya-programming,sas-viya-reportservices,sas-viya-reportviewerservices,sas-viya-sas-casserver-worker,sas-viya-sasdatasvrc,sas-viya-scoringservices,sas-viya-studioviya,sas-viya-themeservices,postgres,pgpool,httpproxy"
-{% else %}
-        #- name: VAULT_TOKEN_SERVICE_LIST
-        #  value: ""
-{% endif %}
+        - name: VAULT_SERVICES_CONFIGMAP
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: vault_services_configmap
+        - name: SASSERVICES_CONFIGMAP
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: sas_services_configmap
         - name: CONSUL_HTTP_ADDR
           valueFrom:
             configMapKeyRef:

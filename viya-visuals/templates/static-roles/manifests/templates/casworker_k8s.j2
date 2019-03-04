@@ -35,8 +35,6 @@ spec:
 {%   endfor %}
 {% endif %}
         env:
-        - name: APP_NAME
-          value: "casworker"
         - name: DEPLOYMENT_NAME
           value: "{{ settings.project_name }}"
 {% if services.consul is defined %}
@@ -123,11 +121,11 @@ spec:
               configMapKeyRef:
                 name: {{ settings.project_name }}-consul
                 key: sas_anchors_dir
-        # - name: SASSERVICES_CONFIGMAP
-        #   valueFrom:
-        #     configMapKeyRef:
-        #       name: {{ settings.project_name }}-consul
-        #       key: sasservices_configmap
+        - name: SASSERVICES_CONFIGMAP
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: sas_services_configmap
 {% if item.value.deployment_overrides.resources is defined and item.value.deployment_overrides.resources %}
         resources:
 {%   for key,value in item.value.deployment_overrides.resources.items() %}
@@ -137,18 +135,11 @@ spec:
 {%     endfor %}
 {%   endfor %}
 {% endif %}
-        volumeMounts:
 {% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
+        volumeMounts:
 {%   for volumes in item.value.deployment_overrides.volumes %}
         - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
-{%   endfor %}
-{% endif %}
-{% if custom_volume_mounts is defined and custom_volume_mounts %}
-{%   for mount_key,mount_value in custom_volume_mounts.items() %}
-{%     if mount_key == item.key %}
-        {{ mount_value | indent(8) }}
-{%     endif %}
 {%   endfor %}
 {% endif %}
         - name: anchors
@@ -156,23 +147,16 @@ spec:
         - name: tokens
           mountPath: /tokens
 
-      volumes:
 {% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
+      volumes:
 {%   for volumes in item.value.deployment_overrides.volumes %}
       - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
 {%   endfor %}
 {% endif %}
-{% if custom_volumes is defined and custom_volumes %}
-{%   for vol_key,vol_value in custom_volumes.items() %}
-{%     if vol_key == item.key %}
-      {{ vol_value | indent(6) }}
-{%-    endif %}
-{%   endfor %}
-{% endif %}
       - name: tokens
         configMap:
-          name: consul-tokens-configmap
+          name: {{ settings.project_name }}-consul-tokens-configmap
       - name: anchors
         configMap:
           name: {{ settings.project_name }}-cacerts-configmap

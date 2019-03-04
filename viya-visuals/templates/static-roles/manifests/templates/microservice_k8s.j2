@@ -32,8 +32,6 @@ spec:
 {%   endfor %}
 {% endif %}
         env:
-        - name: APP_NAME
-          value: "{{ item.key | lower }}"
         - name: DEPLOYMENT_NAME
           value: "{{ settings.project_name }}"
         - name: CONSUL_SERVER_LIST
@@ -58,6 +56,11 @@ spec:
               configMapKeyRef:
                 name: {{ settings.project_name }}-consul
                 key: vault_token_dir
+        - name: SASSERVICES_CONFIGMAP
+          valueFrom:
+              configMapKeyRef:
+                name: {{ settings.project_name }}-consul
+                key: sas_services_configmap
 {% for environment in services.consul.deployment_overrides.environment %}
 {%   if environment.split('=')[0] == 'CONSUL_DATACENTER_NAME' %}
         - name: {{ environment.split('=')[0] }}
