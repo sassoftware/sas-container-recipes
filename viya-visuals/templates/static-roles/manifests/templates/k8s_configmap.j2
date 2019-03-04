@@ -80,7 +80,7 @@ data:
 {%     endfor %}
 {%   endif %}
 {% endif %}
-{% if "consul" == item.key and SECURE_CONSUL == true %}
+{% if "consul" == item.key and SECURE_CONSUL %}
   vault_token_dir: "/tokens"
   sas_anchors_dir: "/anchors"
   sas_services_configmap: "{{ settings.project_name }}-sasservices-configmap"
