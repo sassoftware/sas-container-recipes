@@ -113,11 +113,6 @@ export SASINSTANCE="default"
 
 chmod -v 0775 /var/run/sas/
 
-#FIXME: Removing backup-agent for now
-if [[ -f /etc/init.d/sas-viya-backup-agent-default ]]; then
-    rm -v /etc/init.d/sas-viya-backup-agent-default
-fi
-
 echo "Starting SAS Services..."
 docker_run_sas_services
 
