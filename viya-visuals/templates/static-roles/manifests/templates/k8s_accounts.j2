@@ -9,7 +9,7 @@ metadata:
 ...
 
 ---
-kind: ClusterRole
+kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ settings.project_name }}-account-role
@@ -18,7 +18,7 @@ metadata:
 {% endif %}
 rules:
 - apiGroups: ["*"]
-  resources: ["*"]
+  resources: ["configmaps"]
   verbs: ["*"]
 ...
 
@@ -32,7 +32,7 @@ metadata:
 {% endif %}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: {{ settings.project_name }}-account-role
 subjects:
 - kind: ServiceAccount

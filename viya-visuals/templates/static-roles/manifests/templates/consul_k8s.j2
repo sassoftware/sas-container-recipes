@@ -108,13 +108,7 @@ spec:
 {%   endfor %}
 {% endif %}
 {% if SECURE_CONSUL %}
-        # Required for TLS configurations comment out existing empty dir volumeMount
-        - name: consul-persistent-storage
-          mountPath: /consul/config
-        - name: consul-persistent-storage
-          mountPath: /consul/data
-{% else %}
-        # Required for TLS configurations
+        # Required for TLS HA configurations comment out existing empty dir volumeMount
         #- name: consul-persistent-storage
         #  mountPath: /consul/config
         #- name: consul-persistent-storage
@@ -124,7 +118,6 @@ spec:
           mountPath: /anchors
         - name: tokens
           mountPath: /tokens
-
       volumes:
 {% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
@@ -146,7 +139,7 @@ spec:
       - name: anchors
         configMap:
           name: {{ settings.project_name }}-cacerts-configmap
-  # Persistent storage required for TLS configurations
+  # Persistent storage required for TLS HA configurations
   # volumeClaimTemplates:
   # - metadata:
   #       name: consul-persistent-storage
