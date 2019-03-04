@@ -26,8 +26,6 @@ fi
 [[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
 [[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
 
-# export APP_NAME="{{ role_name }}"
-
 # The following are used in sas-start-functions
 servicename=${SASSERVICENAME}
 servicecontext=${SASSERVICECONTEXT}

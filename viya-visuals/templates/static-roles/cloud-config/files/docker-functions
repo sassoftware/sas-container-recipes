@@ -49,8 +49,6 @@ function post_key_value_to_configmap()
         return 1
     fi
 
-    echo ================= post_key_value_to_configmap called with $1 $2
-
     export KUBE_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
     export KUBE_NAMESPACE=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
     export KUBE_CACERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
