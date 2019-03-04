@@ -30,11 +30,13 @@
 
 ## Create a Mirror
 
-A local mirror repository can save you time each time you run a build, and it protects you from download limits.
+A local mirror repository can save you time whenever you run a build, and it protects against download limits.
 
-Each time that you build an image of the SAS Viya software, the required RPM files must be accessed. Setting up a local mirror repository for the RPM files can save time because you access the RPM files locally each time that you build or rebuild an image. If you do create a local mirror repository, then the RPM files are downloaded from servers that are hosted by SAS, which can take longer. Also, there is a limit to how many times that you can download a SAS Viya software order from the SAS servers.
+- Each time that you build an image of the SAS Viya software, the required RPM files must be accessed.
+- Setting up a local mirror repository for the RPM files can save time because you access the RPM files locally each time that you build or rebuild an image. If you do create a local mirror repository, then the RPM files are downloaded from servers that are hosted by SAS, which can take longer.
+- There is a limit to how many times that you can download a SAS Viya software order from the SAS servers.
 
-For more information about creating a local mirror repository, see [Create a Mirror Repository](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&amp;docsetTarget=p1ilrw734naazfn119i2rqik91r0.htm&amp;docsetVersion=3.4) in the _SAS Viya for Linux: Deployment Guide_.
+For more information about creating a local mirror repository, see [Create a Mirror Repository](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&amp;docsetTarget=p1ilrw734naazfn119i2rqik91r0.htm&amp;docsetVersion=3.4) in _SAS Viya for Linux: Deployment Guide_.
 
 ## Use a Docker Registry
 
@@ -42,15 +44,15 @@ For more information about creating a local mirror repository, see [Create a Mir
 
 A registry is a storage and content delivery system that contains Docker images, which are available in different versions, with each image having its own tag. Self-hosting a registry makes it easy to share images internally. For more information about the Docker registry, see [https://docs.docker.com/registry/introduction/](https://docs.docker.com/registry/introduction/).
 
-The build process will use ansible-container to push the built images to the Docker registry provided. To do this, the `$HOME/.docker/config.json` file must contain the Docker registry URL and an auth value. These settings allow ansible-container to connect to the Docker registry.
+The build process will use ansible-container to push the built images to the provided Docker registry. To do this, the $HOME/.docker/config.json file must contain the Docker registry URL and an authentication value. These settings allow ansible-container to connect to the Docker registry.
 
-To update the `$HOME/.docker/config.json` file, run the following command: 
+To update the $HOME/.docker/config.json file, run the following command: 
 
-`docker login <docker registry>`
+<code>docker login <i>docker-registry</i></code>
 
-After you run the command, validate that the `$HOME/.docker/config.json` file contains the expected Docker registry URL and auth value. 
+After you run the command, validate that the $HOME/.docker/config.json file contains the expected Docker registry URL and authentication value. 
 
-Here is an example that shows the settings:
+Here is an example of the config.json file settings:
 
 ```
 docker login docker-registry.company.com
@@ -69,19 +71,19 @@ cat $HOME/.docker/config.json
 
 ## Addons
 
-You can use addons to include extra components in your SAS Viya images. There are addons for authentication, data sources, and integrated development environments (IDE). Only the addons that require pre-build tasks are listed in this section. You can find the addons in this directory: 
-
-`sas-container-recipes/addons`
+You can use addons to include extra components in your SAS Viya images. There are addons for authentication, data sources, and integrated development environments (IDE). Only the addons that require pre-build tasks are listed in this section. You can find the addons in sas-container-recipes/addons directory.
 
 For more information, see [Addons](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/Appendix:-Under-the-Hood#addons).
 
 ### Host Authentication
 
-Some SAS Viya containers require host level authentication: the single programming-only container and the multiple containers programming-only Compute Server and CAS containers. Use the addons prefixed with _auth_ to set up host authentication.
+Some SAS Viya containers require host-level authentication: the single programming-only container and the multiple containers, programming-only Compute Server and CAS containers. Use the addons whose names are preceded by the _auth_ prefix to set up host authentication.
 
 #### sssd Authentication
 
-Copy the `sas-container-recipes/addons/example_sssd.conf` file to a file named _sssd.conf_. Then edit the sssd.conf file and fill in the desired configuration. If a SSL cert is needed, provide it as a file named _sssd.cert_.
+You will use commands to copy the sas-container-recipes/addons/example_sssd.con file to a file named sssd.conf. Next, edit the sssd.conf file to set the appropriate configuration values. If an SSL certificate is needed, provide the certificate as a file named sssd.cert.
+
+Here are the commands:
 
 ```
 cp sas-container-recipes/addons/auth-sssd/example_sssd.conf sas-container-recipes/addons/auth-sssd/sssd.conf
@@ -94,7 +96,12 @@ This section provides pre-build tasks for some of the access addons that provide
 
 #### Greenplum
 
-Before you can use the access-greenplum addon, confirm that the environment variables in the _greenplum_saserver.sh_ will represent where ODBC configurations will live. The default configuration expects that ODBC configuration files will be available in the directory `/sasinside`. For single containers running on Docker, this directory is mapped automatically directly to the running container from the Docker host. If running on kubernetes, `/sasinside`, or a preferred directory used should be mapped to the _sas-viya-programming_, _sas-viya-computeserver_ and _sas-viya-sas-casserver-primary_ pods. 
+Before you can use the access-greenplum addon, confirm that the environment variables in the greenplum_saserver.sh file specify the locations of the ODBC configurations. The default locations for the ODBC configuration files are in the /sasinside directory.
+
+- For single containers running on Docker, this directory is mapped automatically to the running container from the Docker host.
+- For containers running on Kubernetes, the /sasinside directory (or a preferred directory) should be mapped to the sas-viya-programming, sas-viya-computeserver and sas-viya-sas-casserver-primary pods.
+
+Here are the commands that specify the locations of the ODBC configurations:
 
 ```
 export ODBCSYSINI=/sasinside/odbc
@@ -103,15 +110,13 @@ export ODBCINSTINI=${ODBCSYSINI}/odbcinst.ini
 export LD_LIBRARY_PATH=${ODBCSYSINI}/lib:$LD_LIBRARY_PATH
 ```
 
-If this location needs to change, make sure to update _greenplum_saserver.sh_ before building the images.
+If you need to change locations, make sure to update the greenplum_saserver.sh file before you build the images.
 
 #### Hadoop
 
-Before you can use the access-hadoop addon, collect the Hadoop configuration files (/config) and JAR files (/jars), and add them to this directory: 
+Before you can use the access-hadoop addon, collect the Hadoop configuration files (/config) and JAR files (/jars), and add them to the sas-container-recipes/addons/access-hadoop/hadoop directory.
 
-`sas-container-recipes/addons/access-hadoop/hadoop`
-
-When the Hadoop configuration and JAR files are in this directory, the files are added to a /hadoop directory in an image that includes the access-hadoop addon.
+After you have included the Hadoop configuration and JAR files are in this directory, the files are added to a /hadoop directory in an image that includes the access-hadoop addon.
 
 Here is an example of the directory structure:
 
@@ -122,7 +127,12 @@ sas-container-recipes/addons/access-hadoop/hadoop/jars
 
 #### ODBC
 
-Before you can use the access-odbc addon, confirm that the environment variables in the _odbc_cas.settings_ and _odbc_saserver.sh_ will represent where ODBC configurations will live. The default configuration expects that ODBC configuration files will be available in the directory `/sasinside`. For single containers running on Docker, this directory is mapped automatically directly to the running container from the Docker host. If running on kubernetes, `/sasinside`, or a preferred directory used should be mapped to the _sas-viya-programming_, _sas-viya-computeserver_ and _sas-viya-sas-casserver-primary_ pods.
+Before you can use the access-odbc addon, confirm that the environment variables in the odbc_cas.settings and odbc_saserver.sh files specify the locations of the ODBC configurations. The default locations for the ODBC configuration files are in the /sasinside directory.
+
+- For single containers running on Docker, this directory is mapped automatically to the running container from the Docker host.
+- If running on Kubernetes,  the /sasinside directory (or a preferred directory) should be mapped to the sas-viya-programming, sas-viya-computeserver and sas-viya-sas-casserver-primary pods.
+
+Here are the commands that specify the locations of the ODBC configurations:
 
 ```
 export ODBCSYSINI=/sasinside/odbc
@@ -131,21 +141,24 @@ export ODBCINSTINI=${ODBCSYSINI}/odbcinst.ini
 export LD_LIBRARY_PATH=${ODBCSYSINI}/lib:$LD_LIBRARY_PATH
 ```
 
-If this location needs to change, make sure to update _odbc_cas.settings_ and _odbc_saserver.sh_ before building the images.
+If you need to change locations, make sure to update the odbc_cas.settings and odbc_saserver.sh files before you build the images.
 
 #### Oracle
 
-Before you can use the access-oracle addon, add the Oracle client library RPMs and a file named tnsnames.ora in the following directory:
+Before you can use the access-oracle addon, add the Oracle client library RPMs and a file named tnsnames.ora to the sas-container-recipes/addons/access-oracle directory.
 
-`sas-container-recipes/addons/access-oracle`
-
-Confirm that the environment variables in the _oracle_cas.settings_ and _oracle_saserver.sh_ represent where the Oracle configuration exists. If not, update these files. The default configuration expects that Oracle files will be available from within the image.
+Confirm that the environment variables in the oracle_cas.settings and oracle_saserver.sh represent the locations of the Oracle configuration. The default configuration expects that Oracle files will be available from within the image.
 
 **Note:** The Dockerfile will attempt to install any RPMs in this directory.
 
 #### Redshift
 
-Before you can use the access-redshift addon, confirm that the environment variables in the _redshift_cas.settings_ and _redshift_saserver.sh_ will represent where ODBC configurations will live. The default configuration expects that ODBC configuration files will be available in the directory `/sasinside`. For single containers running on Docker, this directory is mapped automatically directly to the running container from the Docker host. If running on kubernetes, `/sasinside`, or a preferred directory used should be mapped to the _sas-viya-programming_, _sas-viya-computeserver_ and _sas-viya-sas-casserver-primary_ pods. 
+Before you can use the access-redshift addon, confirm that the environment variables in the redshift_cas.settings and redshift_saserver.sh files specify the locations of the ODBC configurations. The default locations for the ODBC configuration files are in the /sasinside directory.
+
+- For single containers running on Docker, this directory is mapped automatically to the running container from the Docker host.
+- If running on Kubernetes, the /sasinside directory (or a preferred directory) should be mapped to the sas-viya-programming, sas-viya-computeserver and sas-viya-sas-casserver-primary pods. 
+
+Here are the commands that specify the locations of the ODBC configurations:
 
 ```
 export ODBCSYSINI=/sasinside/odbc
@@ -154,11 +167,13 @@ export ODBCINSTINI=${ODBCSYSINI}/odbcinst.ini
 export LD_LIBRARY_PATH=${ODBCSYSINI}/lib:$LD_LIBRARY_PATH
 ```
 
-If this location needs to change, make sure to update _redshift_cas.settings_ and _redshift_saserver.sh_ before building the images.
+If you need to change locations, make sure to update the redshift_cas.settings and redshift_saserver.sh files before you build the images.
 
 #### Teradata
 
-Before you can use the access-teradata addon you need to get the compressed zip file that contains the Teradata Tools and Utilities. Once you have this file, rename it to _teradata.tgz_ and place it in `sas-container-recipes/addons/access-teradata/`. The Dockerfile expects that the teradata.tgz file is in the current directory and has the following structure:
+Before you can use the access-teradata addon you need to get the compressed ZIP file that contains the Teradata Tools and Utilities. After you have this file, rename it to teradata.tgz and place it in sas-container-recipes/addons/access-teradata/ directory.
+
+The Dockerfile expects that the teradata.tgz file is in the current directory and has the following structure:
 
 ```
 |__TeradataToolsAndUtilitiesBase
@@ -177,9 +192,9 @@ The Dockerfile looks for the Teradata gzip file and runs the setup.bat script to
 
 ## Kubernetes 
 ### Ingress Configuration
-In order to access SAS, we need to expose endpoints that allow things outside the Kubernetes environment to talk to the correct endpoints inside the Kubernetes environment. While this can be done different ways, the trend is to use an Ingress Controller. We will not cover how to set up the Ingress Controller but will provide how to setup a specific Ingress configuration to expose the proper endpoints for the SAS containers. We are doing this now as it is an expected value when running the build utility. 
+To access SAS, you must identify endpoints that allow things outside the Kubernetes environment to talk to the correct endpoints inside the Kubernetes environment. Although this can be done different ways, the trend is to use an Ingress Controller. This document does not explain how to set up the Ingress Controller but it will explain how to set up a specific Ingress configuration to identify the proper endpoints for the SAS containers.
 
-In the _samples_ directory we have the following structure:
+Here is the structure of the /samples directory:
 
 ```
 samples
@@ -193,7 +208,7 @@ samples
     └── example_ingress.yml
 ```
 
-Find the _*_ingress.yml_ file that matches your deployment type, copy and edit:
+Find the example_ingress.yml file in the directory that matches your deployment type. Then, copy and edit it, as follows:
 
 ```
 mkdir ${PWD}/run
@@ -201,7 +216,7 @@ cp samples/viya-visuals/example_ingress.yml ${PWD}/run/visuals_ingress.yml
 vi ${PWD}/run/visuals_ingress.yml
 ```
 
-In the copy, _visuals_ingress.yml_, find all occurrences of _@REPLACE_ME_WITH_YOUR_K8S_NAMESPACE@_ and _@REPLACE_ME_WITH_YOUR_DOMAIN@_ with appropriate values. Here is an example
+In the copied file, find and replace all instances of @REPLACE_ME_WITH_YOUR_K8S_NAMESPACE@ and @REPLACE_ME_WITH_YOUR_DOMAIN@ with appropriate values. Here is an example:
 
 ```
 apiVersion: extensions/v1beta1
@@ -225,7 +240,9 @@ spec:
 #    secretName: @REPLACE_ME_WITH_YOUR_CERT@
 ```
 
-TLS is setup by configuring the Ingress definition. For more information, see [TLS](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls). You will need to create a key and cert and store it in a Kubernetes secret. For the purpose of the example, we will call the secret _sas-tls-secret_. Once that is in place, update `${PWD}/run/visuals_ingress.yml` and change the `tls` section so that it looks like
+TLS is set up by configuring the Ingress definition. For more information, see [TLS](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls).
+
+You will need to create a key and certificate, and then store it in a Kubernetes secret. In the following example, the tls section in the ${PWD}/run/visuals_ingress.yml file is updated to include the Kubernetes secret, which is named sas-tls-secret.
 
 ```
   tls:
@@ -240,20 +257,23 @@ Load the configuration:
 kubectl -n sasviya apply -f samples/viya-visuals/visuals_ingress.yml
 ```
 
-If you are not in a position to set this up yet, you can continue on with the deployment process, but the ingress will need to be configured in order to access the environment.
+If you cannot set this up yet, you can continue on the deployment process. However, the ingress must be configured to access the environment.
 
-In later documentation, the term _ingress-path_ will refer to the _host_ value in your Ingress configuration. From the example above this would be _sas-viya.company.com_. 
+Later in this documentation, the term _ingress-path_ refers to the host value in your Ingress configuration. In the preceding example, sas-viya.company.com is the ingress path.
 
 ### Persistence
 
-Several of the SAS Viya containers will need persistence storage configured in order to make sure the environment can shutdown and start up with out losing data. Take this time to decide if persistence storage is something that needs to be setup or if you want to run with a default of no persistence. The default is useful if you are evaluating SAS Viya containers, otherwise you will probably want to make sure your Kuberenetes environment is configured for container persistence. For more information, see [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/). 
+Several SAS Viya containers will need configured persistence storage in order to make sure that the environment can shut down and start up without losing data.
+
+- Decide whether to set up persistence storage.
+- No persistance is the default condition. The default is useful if you are evaluating SAS Viya containers. Otherwise you will probably want to make sure that your Kuberenetes environment is configured for container persistence. For more information, see [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/). 
 
 ### Data Import
 
-When importing data into SAS Viya, the import might fail without displaying an error or having written an error to CAS logs. This failure to import data can happen if the size of the file being imported exceeds the maximum size allowed by the Kubernetes Ingress Controller. 
+When importing data into SAS Viya, the import might fail without displaying an error or writing an error to CAS logs. This failure to import data can happen if the size of the file being imported exceeds the maximum size allowed by the Kubernetes Ingress Controller. 
 
-To change the Ingress controller settings, globally or for the specific Ingress rule, see [NGINX Configuration](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/).
+To change the Ingress Controller settings, globally or for the specific Ingress rule, see [NGINX Configuration](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/).
 
-SAS has tested using the `nginx.ingress.kubernetes.io/proxy-body-size` annotation as documented for `Custom max body size`. For more information, see [Custom max body size](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#custom-max-body-size).
+SAS has tested using the nginx.ingress.kubernetes.io/proxy-body-size annotation as documented for **Custom max body size**. For more information, see [Custom max body size](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#custom-max-body-size).
 
-If you know the size of files to be imported, then set _Custom max body size_ to a value that will allow the files to be loaded. If a value of zero (0) is used, then checking of the file size is ignored, and no file size restrictions will be imposed by Kubernetes.
+If you know the size of files to be imported, then set **Custom max body size** to a value that will allow the files to be loaded. If a value of zero (0) is used, then checking of the file size is ignored, and no file size restrictions will be imposed by Kubernetes.
