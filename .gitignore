@@ -19,4 +19,3 @@ sas-orchestration
 *.swp
 *.zip*
 *.rpm
-vars_usermods.yml
