@@ -27,6 +27,8 @@ fi
 [[ -z ${SASCASINSTANCE+x} ]]    && export SASCASINSTANCE="${SASINSTANCE}"
 [[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
 
+# export APP_NAME="{{ role_name }}"
+
 _deployid=${SASDEPLOYID}
 export SAS_CAS_CONFIG="${SASROOT}/${_deployid}/config"
 

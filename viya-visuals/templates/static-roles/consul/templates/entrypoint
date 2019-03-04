@@ -30,6 +30,8 @@ fi
 [[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
 [[ -z ${SECURE_CONSUL} ]]       && export SECURE_CONSUL=false
 
+# export APP_NAME="{{ role_name }}"
+
 # The following are used in sas-start-functions
 servicename=${SASSERVICENAME}
 servicecontext=${SASSERVICECONTEXT}
@@ -181,6 +183,12 @@ function generate_service_token() {
         echo "Encountered an error posting to ConfigMap ${VAULT_TOKENS_CONFIGMAP}"
         return 1
     fi
+    post_key_value_to_configmap "${VAULT_SERVICES_CONFIGMAP}" "$1" "1"
+    # post_key_value_to_configmap "${VAULT_SERVICES_CONFIGMAP}" "sas-viya-$1-default" "1"
+    if [ $? -ne 0 ]; then
+        echo "Encountered an error posting to ConfigMap ${VAULT_SERVICES_CONFIGMAP}"
+        return 1
+    fi
 
     echo "Successfully created a vault token for $1 and posted to ConfigMap ${VAULT_TOKENS_CONFIGMAP}"
 }
@@ -270,31 +278,33 @@ function vault_config() {
 
 
     while [ true ]; do
-       response=$(curl -s -k1 https://127.0.0.1:8200/v1/sys/leader)
-       echo "Vault leader inquiry responded with: $response"
-       read is_self leader_address <<< $(echo "$response" | python -c "import sys, json; data = json.load(sys.stdin); print (data['is_self']);print (data['leader_address'])")
-       echo "Parsed the leader address to be: $leader_address"
-       echo "Parsed the is_self parameter to be: $is_self"
-       if [ "$leader_address" == "" ]; then
-          echo "No leader found at this time. Sleeping."
-          sleep 5s
-       else
-          echo "Leader found."
-          break
-       fi
+        response=$(curl -s -k1 https://127.0.0.1:8200/v1/sys/leader)
+        echo "Vault leader inquiry responded with: $response"
+        read is_self leader_address <<< $(echo "$response" | python -c "import sys, json; data = json.load(sys.stdin); print (data['is_self']);print (data['leader_address'])")
+        echo "Parsed the leader address to be: $leader_address"
+        echo "Parsed the is_self parameter to be: $is_self"
+        if [ "$leader_address" == "" ]; then
+            echo "No leader found at this time. Sleeping."
+            sleep 5s
+        else
+            echo "Leader found."
+            break
+        fi
     done
 
     if [[ "$is_self" == "True" ]]; then
-       echo "This Vault server is the leader."
-       echo "Generating service tokens. List is: ${VAULT_TOKEN_SERVICE_LIST}"
-       OIFS=${IFS}
-       IFS=','
-       for token in ${VAULT_TOKEN_SERVICE_LIST}; do
-          generate_service_token $token
-       done
-       IFS=${OIFS}
+        retrieve_keys_from_configmap ${VAULT_SERVICES_CONFIGMAP} vault_token_service_list
+        echo --------------- ${vault_token_service_list}
+        echo "This Vault server is the leader."
+        echo "Generating service tokens. List is: ${vault_token_service_list}"
+    #     OIFS=${IFS}
+    #     IFS=','
+        for token in ${vault_token_service_list}; do
+            generate_service_token $token
+        done
+    #     IFS=${OIFS}
     else
-       echo "This Vault server is a follower. No tokens will be generated."
+        echo "This Vault server is a follower. No tokens will be generated."
     fi
     echo "Vault configuration complete..."
     #Reset consul environ
@@ -303,10 +313,14 @@ function vault_config() {
 }
 
 update_vault_token_list(){
-    for token in ${SASSERVICES_CONFIGMAP}; do
+    retrieve_keys_from_configmap ${SASSERVICES_CONFIGMAP} services_list
+    retrieve_keys_from_configmap ${VAULT_SERVICES_CONFIGMAP} vault_token_service_list
+    echo "services_list: ${services_list}"
+    echo "vault_token_service_list: ${vault_token_service_list}"
+    for token in ${services_list}; do
         #grep VAULT_TOKEN_SERVICE_LIST for existing token
         # if it doesn't exist create it
-        if [[ -z $(grep  -R "$token" "${VAULT_TOKEN_SERVICE_LIST}") ]]; then
+        if [[ "${vault_token_service_list}" != *"${token}"* ]]; then
             generate_service_token "$token"
         fi
     done

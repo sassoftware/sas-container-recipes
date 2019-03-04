@@ -32,6 +32,8 @@ fi
 [[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
 [[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
 
+# export APP_NAME="{{ role_name }}"
+
 # The following are used in sas-start-functions
 servicename=${SASSERVICENAME}
 servicecontext=${SASSERVICECONTEXT}

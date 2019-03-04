@@ -83,6 +83,9 @@ data:
 {% if "consul" == item.key and SECURE_CONSUL == true %}
   vault_token_dir: "/tokens"
   sas_anchors_dir: "/anchors"
+  sas_anchors_dir: "/anchors"
+  sas_services_configmap: "{{ settings.project_name }}-sasservices-configmap"
+  vault_services_configmap: "{{ settings.project_name }}-vault-services-configmap"
   consul_http_addr: "https://localhost:8501"
 {% elif "consul" == item.key and SECURE_CONSUL != true %}
   # Secure Consul set to false
@@ -107,7 +110,15 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: sasservices-configmap
+  name: {{ settings.project_name }}-sasservices-configmap
+data:
+{% endif %}
+---
+{% if item.value.deployment_overrides.environment is defined %}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ settings.project_name }}-vault-services-configmap
 data:
 {% endif %}
 ...

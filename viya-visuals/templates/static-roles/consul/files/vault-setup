@@ -479,7 +479,7 @@ EOF
 
   chown ${SASUSER}:${SASGROUP} ${VAULT_CONFIG_DIR}/vault.hcl
 
-  curl -s --cacert ${VAULT_CACERT} -K- -X PUT ${VAULT_ADDR}/v1/sys/step-down <<< "header=\"X-Vault-Token: $(cat ${VAULT_SHARED_SECRETS_DIR}/root_token)\""
+  curl -s --cacert ${VAULT_CACERT} -K- -X PUT ${VAULT_ADDR}/v1/sys/step-down <<< "header='X-Vault-Token: $(cat ${VAULT_SHARED_SECRETS_DIR}/root_token)'"
   # tell vault executable to use tls connection
   export VAULT_ADDR=https://127.0.0.1:8200
   restart_vault
@@ -546,7 +546,7 @@ renew() {
 
   create_new_vault_server_cert
   log_msg "Stepping down before restarting."
-  curl -s --cacert ${VAULT_CACERT} -K- -X PUT ${VAULT_ADDR}/v1/sys/step-down <<< "header=\"X-Vault-Token: $(cat ${VAULT_SHARED_SECRETS_DIR}/root_token)\""
+  curl -s --cacert ${VAULT_CACERT} -K- -X PUT ${VAULT_ADDR}/v1/sys/step-down <<< "header='X-Vault-Token: $(cat ${VAULT_SHARED_SECRETS_DIR}/root_token)'"
   restart_vault
   rm -f ${VAULT_SHARED_SECRETS_DIR}/unseal_key_orig
   $SAS_BOOTSTRAP_CONFIG --token-file $CONSUL_TOKEN_FILE kv delete config/vault/sas.vault/renewal
@@ -612,7 +612,7 @@ do
     let "threshold=threshold+threshold"
     log_msg "$0: Trouble initializing Vault instance. Restarting Vault."
     log_msg "Stepping down before restarting."
-    curl -s --cacert ${VAULT_CACERT} -K- -X PUT ${VAULT_ADDR}/v1/sys/step-down <<< "header=\"X-Vault-Token: $(cat ${VAULT_SHARED_SECRETS_DIR}/root_token)\""
+    curl -s --cacert ${VAULT_CACERT} -K- -X PUT ${VAULT_ADDR}/v1/sys/step-down <<< "header='X-Vault-Token: $(cat ${VAULT_SHARED_SECRETS_DIR}/root_token)'"
     restart_vault
     if [ $? -ne 0 ]; then
       log_msg "$0: Failed to restart Vault."

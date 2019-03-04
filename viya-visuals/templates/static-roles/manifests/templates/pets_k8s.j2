@@ -53,7 +53,7 @@ spec:
 {%   endfor %}
 {% endif %}
         env:
-        - name: APP_NAME
+        - name: SERVICE_NAME
           value: "{{ item.key | lower }}"
         - name: DEPLOYMENT_NAME
           value: "{{ settings.project_name }}"
@@ -82,6 +82,11 @@ spec:
               configMapKeyRef:
                 name: {{ settings.project_name }}-consul
                 key: vault_token_dir
+        - name: SASSERVICES_CONFIGMAP
+          valueFrom:
+              configMapKeyRef:
+                name: {{ settings.project_name }}-consul
+                key: sas_services_configmap
 {% endif %}
 {% if item.key == "sas-casserver-primary" %}
         - name: SERVICE_NAME
