@@ -30,8 +30,6 @@ fi
 [[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
 [[ -z ${SECURE_CONSUL} ]]       && export SECURE_CONSUL=false
 
-# export APP_NAME="{{ role_name }}"
-
 # The following are used in sas-start-functions
 servicename=${SASSERVICENAME}
 servicecontext=${SASSERVICECONTEXT}

@@ -142,6 +142,13 @@ spec:
           mountPath: {{ volumes.split('=')[1] }}
 {%   endfor %}
 {% endif %}
+{% if custom_volume_mounts is defined and custom_volume_mounts %}
+{%   for mount_key,mount_value in custom_volume_mounts.items() %}
+{%     if mount_key == item.key %}
+        {{ mount_value | indent(8) }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
         - name: anchors
           mountPath: /anchors
         - name: tokens
@@ -152,6 +159,13 @@ spec:
 {%   for volumes in item.value.deployment_overrides.volumes %}
       - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
+{%   endfor %}
+{% endif %}
+{% if custom_volumes is defined and custom_volumes %}
+{%   for vol_key,vol_value in custom_volumes.items() %}
+{%     if vol_key == item.key %}
+      {{ vol_value | indent(6) }}
+{%-    endif %}
 {%   endfor %}
 {% endif %}
       - name: tokens

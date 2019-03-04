@@ -60,8 +60,6 @@ if [[ -n ${SAS_CA_CERT} ]]; then
     echo "${SAS_CA_CERT}" | base64 --decode --ignore-garbage > ${SASCONFIG}/etc/pki/private/SAS_CA_Certificate.pem
 fi
 
-# export APP_NAME="{{ role_name }}"
-
 # For the services that are defining CUSTOM_LD_LIBRARY_PATH, unset the LD_LIBRARY_PATH
 # The list of services looks to be
 # - /opt/sas/viya/home/bin/sas-importvaspk
