@@ -168,9 +168,14 @@ function write_services_to_configmap()
                 grep_command_line=$(grep "^SASPRODCMD=" $service)
                 if [[ -n ${grep_command_line} ]]; then
                     sas_command=$(echo ${grep_command_line##*=} | tr -d '"')
-                    if [[ -f  ${SASHOME}/bin/${sas_command} ]]; then
+                    executable="${SASHOME}/bin/${sas_command}"
+                    if [[ "${sas_command}" == 'appserver.sh' ]]; then
+                        executable="${SASHOME}/SASStudio/bin/${sas_command}"
+                    fi
+
+                    if [[ -f  ${executable} ]]; then
                         if [[ "${sas_command}" == "sas-runlauncher" ]]; then
-                            grep_appname=$(grep "^appname=" ${SASHOME}/bin/${sas_command})
+                            grep_appname=$(grep "^appname=" ${executable})
                             sas_token_name=$(echo ${grep_appname##*=} | tr -d '"')
                         elif [[ "${sas_command}" == "sas-alert-trackclt" ]]; then
                             sas_token_name=evmcltsv
@@ -180,10 +185,12 @@ function write_services_to_configmap()
                             sas_token_name=cas
                         elif [[ "${sas_command}" == "sas-consul" ]]; then
                             sas_token_name=consul
+                        elif [[ "${sas_command}" == "appserver.sh" ]]; then
+                            sas_token_name=programming
                         else
                             # has_svc_context=$(grep -P -c "^servicecontext" ${SASHOME}/bin/${sas_command} || true)
                             # if [ $has_svc_context -eq 1 ]; then
-                                grep_service_context=$(grep -P "^servicecontext" ${SASHOME}/bin/${sas_command} |head -n1|| true)
+                                grep_service_context=$(grep -P "^servicecontext" ${executable} |head -n1|| true)
                                 if [[ -n ${grep_service_context} ]]; then
                                     sas_token_name=${grep_service_context##*=}
                                     # sas_token_name=${sas_token_name//\"/}
@@ -472,14 +479,19 @@ function copy_vault_token_for_sas_service()
             set +e
             sas_command=$(echo ${grep_command_line##*=} | tr -d '"')
             set -e
-            if [[ -f  ${SASHOME}/bin/${sas_command} ]]; then
+            executable="${SASHOME}/bin/${sas_command}"
+            if [[ "${sas_command}" == 'appserver.sh' ]]; then
+                executable="${SASHOME}/SASStudio/bin/${sas_command}"
+            fi
+
+            if [[ -f  ${executable} ]]; then
                 set +e
-                grep_service_context=$(grep -m 1 "^servicecontext=" ${SASHOME}/bin/${sas_command})
+                grep_service_context=$(grep -m 1 "^servicecontext=" ${executable})
                 set -e
                 if [[ -n ${grep_service_context} ]]; then
                     sas_token_name=${grep_service_context##*=}
                 elif [[ "${sas_command}" == "sas-runlauncher" ]]; then
-                    grep_appname=$(grep "^appname=" ${SASHOME}/bin/${sas_command})
+                    grep_appname=$(grep "^appname=" ${executable})
                     sas_token_name=$(echo ${grep_appname##*=} | tr -d '"')
                 elif [[ "${sas_command}" == "sas-alert-trackclt" ]]; then
                     sas_token_name=evmcltsv
@@ -487,6 +499,8 @@ function copy_vault_token_for_sas_service()
                     sas_token_name=evmsvrops
                 elif [[ "${sas_command}" == "sas-cas.sh" ]]; then
                     sas_token_name=cas
+                elif [[ "${sas_command}" == "appserver.sh" ]]; then
+                    sas_token_name=programming
                 fi
             fi
             echo_line "[INFO]  : token name = ${sas_token_name}"
