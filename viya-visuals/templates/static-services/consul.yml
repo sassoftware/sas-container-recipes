@@ -53,5 +53,6 @@
         - "CONSUL_TOKENS_ENCRYPTION=9eV9uJXG0r8o3xTDH6+ykg=="
         - "CONSUL_TOKENS_MANAGEMENT=tobeusedfordemosonlymgmt"
       volumes:
-        - "data=/consul"
+        - "data=/consul/data"
+        - "config=/consul/config"
         - "log=/opt/sas/viya/config/var/log/consul"
