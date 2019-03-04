@@ -43,8 +43,6 @@ fi
 [[ -z ${SAS_CURRENT_HOST+x} ]]   && export SAS_CURRENT_HOST=$(hostname -f)
 [[ -z ${SAS_LOGS_TO_STDOUT+x} ]] && export SAS_LOGS_TO_STDOUT=true
 
-export APP_NAME="{{ role_name }}"
-
 # Some products expect the license to be in a non-standard location
 [[ -z ${SASLICENSEDIR+x} ]]     && export SASLICENSEDIR=${SASCONFIG}/etc/
 [[ -z ${SASLICENSEFILE+x} ]]    && export SASLICENSEFILE=setinit.txt

@@ -19,4 +19,4 @@ sas-orchestration
 *.swp
 *.zip*
 *.rpm
-viya-visuals/templates/vars_usermods.yml
+vars_usermods.yml

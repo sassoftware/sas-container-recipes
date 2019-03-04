@@ -142,5 +142,4 @@ export DOCKERPIDFILE=/var/run/sas/sas-viya-sasdatasvrc-default.pid
 ###############################################################################
 # Keep the container alive until it is killed
 ###############################################################################
-ls -la /var/run/sas
 docker_check_process
