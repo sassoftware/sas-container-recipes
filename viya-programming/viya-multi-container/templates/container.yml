@@ -87,6 +87,7 @@ services:
     deployment_overrides:
       environment:
         - "SERVICE_NAME=cascontroller"
+        - "CASCFG_MODE=smp"  
         - "CASENV_ADMIN_USER=sasdemo"
         - "CASENV_CAS_VIRTUAL_HOST={{ CAS_VIRTUAL_HOST }}"
         - "CASENV_CAS_VIRTUAL_PROTO=http"
