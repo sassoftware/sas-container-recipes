@@ -312,7 +312,7 @@ docker exec --interactive --tty sas-programming /etc/init.d/sas-viya-all-service
 sas-services completed in 00:00:00
 ```
 
-At this point both `http://docker-host:8081` and `https://docker-host:8443` are reachable.
+At this point both `http://docker-host` is reachable.
 
 #### Enabling SSL/TLS
 A certificate and key can be passed into the Docker image to encrypt traffic between the single container and the client.
