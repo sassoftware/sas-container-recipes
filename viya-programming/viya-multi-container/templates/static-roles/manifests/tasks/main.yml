@@ -5,24 +5,9 @@
     state: directory
   with_items:
   - "kubernetes"
-  - "kubernetes/deployments-smp"
-  - "kubernetes/deployments-mpp"
+  - "kubernetes/deployments"
   - "kubernetes/configmaps"
   - "kubernetes/secrets"
-
-#- name: Set the default
-#  set_fact:
-#    empty_virtual_host: false
-
-#- name: Check CASENV_CAS_VIRTUAL_HOST
-#  set_fact:
-#    empty_virtual_host: "{% for env in item.value.deployment_overrides.environment %}{% if env == 'CASENV_CAS_VIRTUAL_HOST=' %}true{% endif %}{% endfor %}"
-#  when: item.key == "sas-casserver-primary"
-#  with_dict: '{{ services }}'
-
-#- fail:
-#    msg: "CASENV_CAS_VIRTUAL_HOST is not defined. Please define CASENV_CAS_VIRTUAL_HOST in container.yml"
-#  when: empty_virtual_host is not defined or empty_virtual_host | bool == true
 
 - name: Create k8s configmaps
   template:
@@ -39,31 +24,16 @@
   when: item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets
   with_dict: '{{ services }}'
 
-- name: Define variable to indicate what type of manifest we are creating
-  set_fact:
-    cas_manifest_type: "smp"
-
-- name: Create pets k8s manifest for SMP deployments
+- name: Create pets k8s manifest 
   template:
     src: "pets_k8s.j2"
-    dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/manifests/kubernetes/deployments-smp/cas.yml{% else %}{{ playbook_dir }}/manifests/kubernetes/deployments-smp/{{ item.key }}.yml{% endif %}"
-  when: item.key in 'httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
-  with_dict: '{{ services }}'
-
-- name: Define variable to indicate what type of manifest we are creating
-  set_fact:
-    cas_manifest_type: "mpp"
-
-- name: Create pets k8s manifest for MPP deployments
-  template:
-    src: "pets_k8s.j2"
-    dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/cas.yml{% else %}{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/{{ item.key }}.yml{% endif %}"
+    dest: "{{ playbook_dir }}/manifests/kubernetes/deployments/{{ item.key }}.yml"
   when: item.key in 'httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 
 - name: Create CAS worker manifest
   template:
     src: "casworker_k8s.j2"
-    dest: "{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/cas-worker.yml"
+    dest: "{{ playbook_dir }}/manifests/kubernetes/deployments/cas-worker.yml"
   when: item.key in 'sas-casserver-primary'
   with_dict: '{{ services }}'
