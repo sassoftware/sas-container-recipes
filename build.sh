@@ -380,7 +380,11 @@ function echo_footer()
     [[ -z ${PROJECT_DIRECTORY+x} ]]         && PROJECT_DIRECTORY=working
     [[ -z ${SAS_MANIFEST_DIR+x} ]]          && SAS_MANIFEST_DIR=manifests
     [[ -z ${SAS_DEPLOY_MANIFEST_TYPE+x} ]]  && SAS_DEPLOY_MANIFEST_TYPE=kubernetes
-    ls -1dtr $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/* | awk '{ print "kubectl create -f " $1 }'
+    sas_kubernetes_namespace=sas-viya
+    if [[ -d $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/namespace ]]; then
+        sas_kubernetes_namespace=$(grep "name\": \"" $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/namespace/*.json | head -n 1 | awk -F "\"" '{ print $4 }')
+    fi
+    ls -1dtr $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/* | awk -v sas_kubernetes_namespace="$sas_kubernetes_namespace" '{ if ($1 ~ /namespace/) print "kubectl create -f " $1; else print "kubectl create -n " sas_kubernetes_namespace " -f " $1; }'
     echo ""
     kubectl version > /dev/null 2>&1 || echo -e "*** Kubernetes (kubectl) is required for the deployment step. See https://kubernetes.io/docs/tasks/tools/install-kubectl/"
 }
@@ -815,40 +819,40 @@ case ${SAS_RECIPE_TYPE} in
         echo_experimental
 
         # Copy the zip to the project
-        copy_deployment_data_zip viya-visuals
+        # copy_deployment_data_zip viya-visuals
 
-        pushd viya-visuals
+        # pushd viya-visuals
 
         # Check for required dependencies
-        docker --version || missing_dependencies docker
-        python --version || missing_dependencies python
-        pip    --version || missing_dependencies pip
+        # docker --version || missing_dependencies docker
+        # python --version || missing_dependencies python
+        # pip    --version || missing_dependencies pip
 
         # export the values so that they are picked up by the lower level scipt.
-        [[ ! -z ${CHECK_MIRROR_URL} ]] && export CHECK_MIRROR_URL
-        [[ ! -z ${CHECK_DOCKER_URL} ]] && export CHECK_DOCKER_URL
-        [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
-        [[ ! -z ${CAS_VIRTUAL_HOST} ]] && export CAS_VIRTUAL_HOST
+        # [[ ! -z ${CHECK_MIRROR_URL} ]] && export CHECK_MIRROR_URL
+        # [[ ! -z ${CHECK_DOCKER_URL} ]] && export CHECK_DOCKER_URL
+        # [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
+        # [[ ! -z ${CAS_VIRTUAL_HOST} ]] && export CAS_VIRTUAL_HOST
 
-        set +e
-        ./viya-visuals-build.sh \
-          --baseimage "${BASEIMAGE}" \
-          --basetag "${BASETAG}" \
-          --platform "${PLATFORM}" \
-          --docker-url "${DOCKER_REGISTRY_URL}" \
-          --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
-          --sas-docker-tag "${SAS_DOCKER_TAG}" 
+        # set +e
+        # ./viya-visuals-build.sh \
+          # --baseimage "${BASEIMAGE}" \
+          # --basetag "${BASETAG}" \
+          # --platform "${PLATFORM}" \
+          # --docker-url "${DOCKER_REGISTRY_URL}" \
+          # --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
+          # --sas-docker-tag "${SAS_DOCKER_TAG}" 
 
-        visuals_build_rc=$?
-        set -e
-        if (( ${visuals_build_rc} > 0 )); then
-            echo "[ERROR] : The viya-visuals-build.sh has exited with a non zero return code."
-            sas_container_recipes_shutdown
-        fi
+        # visuals_build_rc=$?
+        # set -e
+        # if (( ${visuals_build_rc} > 0 )); then
+            # echo "[ERROR] : The viya-visuals-build.sh has exited with a non zero return code."
+            # sas_container_recipes_shutdown
+        # fi
 
-        popd
+        # popd
 
-        add_layers
+        # add_layers
 
         echo_footer viya-visuals
         echo_experimental

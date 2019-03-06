@@ -4,9 +4,9 @@
   connection: local
 
   vars:
-    sas_manifest_dir: manifests
-    sas_k8s_namespace: sas-viya
-    sas_k8s_ingress_path: sas-viya.company.com
+    SAS_MANIFEST_DIR: manifests
+    SAS_K8S_NAMESPACE: sas-viya
+    SAS_K8S_INGRESS_PATH: sas-viya.company.com
     
   vars_files:
   - manifest.yml
