@@ -80,11 +80,11 @@ data:
 {%     endfor %}
 {%   endif %}
 {% endif %}
+  sas_services_configmap: "{{ settings.project_name }}-sasservices-configmap"
+  vault_services_configmap: "{{ settings.project_name }}-vault-services-configmap"
 {% if "consul" == item.key and SECURE_CONSUL %}
   vault_token_dir: "/tokens"
   sas_anchors_dir: "/anchors"
-  sas_services_configmap: "{{ settings.project_name }}-sasservices-configmap"
-  vault_services_configmap: "{{ settings.project_name }}-vault-services-configmap"
   consul_http_addr: "https://localhost:8501"
 {% elif "consul" == item.key and SECURE_CONSUL != true %}
   # Secure Consul set to false
