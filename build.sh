@@ -819,40 +819,40 @@ case ${SAS_RECIPE_TYPE} in
         echo_experimental
 
         # Copy the zip to the project
-        # copy_deployment_data_zip viya-visuals
+        copy_deployment_data_zip viya-visuals
 
-        # pushd viya-visuals
+        pushd viya-visuals
 
         # Check for required dependencies
-        # docker --version || missing_dependencies docker
-        # python --version || missing_dependencies python
-        # pip    --version || missing_dependencies pip
+        docker --version || missing_dependencies docker
+        python --version || missing_dependencies python
+        pip    --version || missing_dependencies pip
 
-        # export the values so that they are picked up by the lower level scipt.
-        # [[ ! -z ${CHECK_MIRROR_URL} ]] && export CHECK_MIRROR_URL
-        # [[ ! -z ${CHECK_DOCKER_URL} ]] && export CHECK_DOCKER_URL
-        # [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
-        # [[ ! -z ${CAS_VIRTUAL_HOST} ]] && export CAS_VIRTUAL_HOST
+        export the values so that they are picked up by the lower level scipt.
+        [[ ! -z ${CHECK_MIRROR_URL} ]] && export CHECK_MIRROR_URL
+        [[ ! -z ${CHECK_DOCKER_URL} ]] && export CHECK_DOCKER_URL
+        [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
+        [[ ! -z ${CAS_VIRTUAL_HOST} ]] && export CAS_VIRTUAL_HOST
 
-        # set +e
-        # ./viya-visuals-build.sh \
-          # --baseimage "${BASEIMAGE}" \
-          # --basetag "${BASETAG}" \
-          # --platform "${PLATFORM}" \
-          # --docker-url "${DOCKER_REGISTRY_URL}" \
-          # --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
-          # --sas-docker-tag "${SAS_DOCKER_TAG}" 
+        set +e
+        ./viya-visuals-build.sh \
+          --baseimage "${BASEIMAGE}" \
+          --basetag "${BASETAG}" \
+          --platform "${PLATFORM}" \
+          --docker-url "${DOCKER_REGISTRY_URL}" \
+          --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
+          --sas-docker-tag "${SAS_DOCKER_TAG}" 
 
-        # visuals_build_rc=$?
-        # set -e
-        # if (( ${visuals_build_rc} > 0 )); then
-            # echo "[ERROR] : The viya-visuals-build.sh has exited with a non zero return code."
-            # sas_container_recipes_shutdown
-        # fi
+        visuals_build_rc=$?
+        set -e
+        if (( ${visuals_build_rc} > 0 )); then
+            echo "[ERROR] : The viya-visuals-build.sh has exited with a non zero return code."
+            sas_container_recipes_shutdown
+        fi
 
-        # popd
+        popd
 
-        # add_layers
+        add_layers
 
         echo_footer viya-visuals
         echo_experimental
