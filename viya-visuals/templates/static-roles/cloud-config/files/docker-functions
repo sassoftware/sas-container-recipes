@@ -516,18 +516,21 @@ function docker_shutdown_sas_services()
            [[ "${viya_process}" != *"sas-${SASDEPLOYID}-vault"* ]] &&
            [[ "${viya_process}" != *"sas-${SASDEPLOYID}-consul-"* ]]; then
             echo "[INFO]  : Stopping ${viya_process}"
-            ${viya_process} stop
+            ${viya_process} stop &
         fi
     done
 
-    if ${SAS_LOGS_TO_STDOUT}; then
+    # Pause to give the services a moment to stop
+    sleep 5
+
+    if [[ ${SAS_LOGS_TO_STDOUT} == "true" ]]; then
         # Kill log tailing
         pkill -9 tail
     fi
 
     if [ -f "/etc/init.d/sas-viya-consul-default" ]; then
         echo_line "Stop local consul"
-        ${SASHOME}/bin/consul leave && sleep 5
+	${SASHOME}/bin/consul leave -token=$(cat ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token) && sleep 5
         /etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE} stop
     fi
 

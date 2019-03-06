@@ -7,14 +7,14 @@ metadata:
 ...
 
 ---
-kind: ClusterRole
+kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ settings.project_name }}-account-role
   namespace: {{ sas_k8s_namespace }}
 rules:
 - apiGroups: ["*"]
-  resources: ["*"]
+  resources: ["configmaps"]
   verbs: ["*"]
 ...
 
@@ -26,7 +26,7 @@ metadata:
   namespace: {{ sas_k8s_namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: {{ settings.project_name }}-account-role
 subjects:
 - kind: ServiceAccount
