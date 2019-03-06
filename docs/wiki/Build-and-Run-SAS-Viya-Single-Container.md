@@ -327,7 +327,7 @@ docker run --interactice --tty \
 --env CASENV_CAS_VIRTUAL_HOST=myhostname \
 --env CASENV_CAS_VIRTUAL_PORT=8081 \
 --hostname sas-viya-programming \
---publish 443:443 \
+--publish 8443:443 \
 --publish 8081:80 \
 --name viya-single-container \
 viya-single-container:latest
@@ -337,7 +337,7 @@ viya-single-container:latest
 - `SSL_KEY_NAME` must be the file name of your key.
 - The file provided by `--volume /my/path/to/casigned.cer` is placed inside the container in the /etc/pki/tls/certs/ directory so that it can be used by the HTTPD SSL configuration.
 - The file provided by `--volume /my/path/to/servertls.key` is placed inside the container in the /etc/pki/tls/private/ directory so that it can be used by the HTTPD SSL configuration.
-- Port 443 is published by using the `--publish 443:443` argument, which is the default HTTPS port.
+- HTTPS runs on port 8443 and is published by using the `--publish 8443:443` argument in the Docker run command
 
 ### SAS Batch Server
 
