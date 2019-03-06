@@ -86,23 +86,20 @@ Run the following to create a user 'sasdemo' with the password 'sasdemo' for pro
 A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
 is recommended for all build commands.
 ```
-  ./build.sh --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
+ ./build.sh --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
 ```                         
 
 ### Run the Container
 
 After the container is built then instructions for how to run the image will be printed out.
 ```
-
-  docker run --detach --rm --hostname sas-viya-programming \
-    --env CASENV_CAS_VIRTUAL_HOST=<my_host_address> \
-    --env CASENV_CAS_VIRTUAL_PORT=8081 \
-    --publish-all \
-    --publish 8081:80 \
-    --name sas-viya-programming \
-    sas-viya-programming:<VERSION-TAG>
-
-    
+ docker run --detach --rm --hostname sas-viya-programming \
+ --env CASENV_CAS_VIRTUAL_HOST=<my_host_address> \
+ --env CASENV_CAS_VIRTUAL_PORT=8081 \
+ --publish-all \
+ --publish 8081:80 \
+ --name sas-viya-programming \
+ sas-viya-programming:<VERSION-TAG>  
 ```
 Use the `docker images` command to see what images were built and what the most recent tag is (example: tag `19.0.1-20190109112555-48f98d8`).
 Once the docker run command is completed, use docker ps to list the running container.  
@@ -129,8 +126,6 @@ SAS Environment Manager, and the complete suite of services that are
 included with a full deployment. Therefore, make sure that you are providing 
 your users with the features that they require.
 
-
-
 ### Prerequisites
 - A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux or Mac must be installed on the build machine
 - Python2 with python-pip2 and virtualenv or Python3 and python-pip3 must be installed on the build machine
@@ -143,86 +138,99 @@ your users with the features that they require.
 A non-root user is recommended for all build commands.
 
 ```    
+Examples of build.sh
 
-        SAS Viya Programming example:
-            ./build.sh --type multiple --zip /path/to/SAS_Viya_deployment_data.zip --docker-registry-namespace myuniquename --docker-registry-url myregistry.myhost.com --virtual-host ingress-path --addons "addons/auth-demo"
+ SAS Viya programming-only deployment, mulitple containers:
 
-        SAS Viya Full example: 
-            ./build.sh --type full --zip /path/to/SAS_Viya_deployment_data.zip --docker-registry-namespace myuniquename --docker-registry-url myregistry.myhost.com --virtual-host ingress-path --addons "addons/auth-sssd"
+  ./build.sh \
+  --type multiple \
+  --zip /path/to/SAS_Viya_deployment_data.zip \
+  --docker-registry-namespace myuniquename \
+  --docker-registry-url myregistry.myhost.com \
+  --virtual-host ingress-path \
+  --addons "addons/auth-demo"
+
+ SAS Viya full deployment, multiple containers:
+
+  ./build.sh \
+  --type full \
+  --zip /path/to/SAS_Viya_deployment_data.zip \
+  --docker-registry-namespace myuniquename \
+  --docker-registry-url myregistry.myhost.com \
+  --virtual-host ingress-path \
+  --addons "addons/auth-sssd"
         
+Required Arguments
 
-  -y|--type [ multiple | full ] 
-                          The type of deployment.
-                            multiple: SAS Viya Programming Multi-Container deployment with Kubernetes
-                            full: SAS Visuals based deployment with Kubernetes.
-                            single: One container for SAS Programming. See the "Single Container" guide section.
+  -y|--type [multiple | full]
+    sets the deployment type.
+    multiple: SAS Viya programming-only deployment, multiple containers using Kubernetes
+    full: SAS Viya full deployment, multiple containers using Kubernetes.
 
   -n|--docker-registry-namespace <value>
-                          The namespace in the Docker registry where Docker images 
-                          will be pushed to. Use a unique name to prevent collisions.
-                            example: myuniquename
+    specifies the namespace in the Docker registry where the Docker images will be pushed. 
+    Use a unique name to prevent collisions.
+    Example: myuniquename
 
   -u|--docker-registry-url <value>
-                          URL of the Docker registry where Docker images will be pushed to.
-                          This is required for Kubernetes 
-                            example: 10.12.13.14:5000 or myregistry.myhost.com
+    specifies the URL of the Docker registry where Docker the images will be pushed.
+    Required for Kubernetes.
+    Examples: 10.12.13.14:5000 or myregistry.myhost.com
 
-  -v|--virtual-host 
-                          The Kubernetes Ingress path that defines the location of the HTTP endpoint.
-                          For more details on Ingress see the official Kubernetes documentation at
-                          https://kubernetes.io/docs/concepts/services-networking/ingress/
-                          
-                            example: user-myproject.mylocal.com
+  -v|--virtual-host
+    specifies the Kubernetes Ingress path that defines the location of the HTTP endpoint.
+    For details about Ingress, see the official Kubernetes documentation at 
+    https://kubernetes.io/docs/concepts/services-networking/ingress/.
+    Example: user-myproject.mylocal.com
 
   -z|--zip <value>
-                          Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
-                            example: /my/path/to/SAS_Viya_deployment_data.zip
-                            
-                            SAS License Assistance: https://support.sas.com/en/technical-support/license-assistance.html
-                            SAS Software Purchase: https://www.sas.com/en_us/software/how-to-buy.html
-                            SAS Software Trial: https://www.sas.com/en_us/trials.html
-                      
+    specifies the path to the SAS_Viya_deployment_data.zip file, which is from your Software Order Email (SOE).
+    Example: /my/path/to/SAS_Viya_deployment_data.zip
+
+Additional Resources
+
+  SAS License Assistance: https://support.sas.com/en/technical-support/license-assistance.html
+  SAS Software Purchase: https://www.sas.com/en_us/software/how-to-buy.html
+  SAS Software Trial: https://www.sas.com/en_us/trials.html                  
 ```
 
 ### Optional `build.sh` Arguments
 ```
+Optional Arguments
 
   -a|--addons "[<value>] [<value>]"
-                          A space separated list of layers to add on to the main SAS image.
-                          See the 'Appendix: Under the Hood' section in the wiki for details
-                          on adding access engines and other tools.
-                          https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
-                            example: --addons \"addons/auth-sssd addons/access-postgres\"
+    adds one or more software layers to the main SAS image.
+    For more information about addons, see 'Appendix: Under the Hood' in the wiki at 
+    https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
+    Example: --addons \"addons/auth-sssd addons/access-postgres\"
 
   -i|--baseimage <value>
-                          The Docker image from which the SAS images will build on top of
-                            Default: centos
+    specifies the Docker image from which the SAS images will build on top of
+    Default: centos
 
   -t|--basetag <value>
-                          The Docker tag for the base image that is being used
-                            Default: latest
+    specifies the Docker tag for the base image that is being used.
+    Default: latest
 
   -m|--mirror-url <value>
-                          The location of the mirror URL. See the Mirror Manager guide at
-                          https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
+    specifies the location of the mirror URL. See the Mirror Manager guide at
+    https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
   -p|--platform <value>
-                          The type of distribution of the image defined by the \"baseimage\" option.
-                            Options: [ redhat ]
-                            Default: redhat
+    specifies the type of distribution of the image defined by the \"baseimage\" option.
+    Options: [ redhat ]
+    Default: redhat
 
   -d|--skip-docker-url-validation
-                          Skips validating the Docker registry URL
+    skips validating the Docker registry URL.
 
   -k|--skip-mirror-url-validation
-                          Skips validating the mirror URL from the --mirror-url flag.
+    skips validating the mirror URL from the --mirror-url flag.
 
   -s|--sas-docker-tag
-                          The tag to apply to the images before pushing to the Docker registry.
-                            default: ${recipe_project_version}-${datetime}-${last_commit_sha1}
-                            example: 18.12.0-20181209115304-b197206
-  
-  
+    specifies the tag to apply to the images before pushing to the Docker registry.
+    Default: ${recipe_project_version}-${datetime}-${last_commit_sha1}
+    Example: 18.12.0-20181209115304-b197206
 ```
 
 ### After running `build.sh`
@@ -236,8 +244,7 @@ Choose between Symmetric Multi Processing (SMP) or Massively Parallel Processing
 Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other services using `kubectl edit ingress`. In the following example, `sas-viya-http.<mycompany>.com` represents the _ingress-path_.
 
 ```
-
-    - Kubernetes Ingress Example -
+Kubernetes Ingress Example
 
   apiVersion: extensions/v1beta1
   kind: Ingress
@@ -252,7 +259,6 @@ Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other ser
         - backend:
             serviceName: sas-viya-httpproxy
             servicePort: 80
-
 ```
 For more details on Ingress Controllers see [the official Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/).
 
