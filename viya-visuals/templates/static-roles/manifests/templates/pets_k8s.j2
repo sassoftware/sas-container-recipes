@@ -53,8 +53,6 @@ spec:
 {%   endfor %}
 {% endif %}
         env:
-        - name: SERVICE_NAME
-          value: "{{ item.key | lower }}"
         - name: DEPLOYMENT_NAME
           value: "{{ settings.project_name }}"
 {% if services.consul is defined %}
