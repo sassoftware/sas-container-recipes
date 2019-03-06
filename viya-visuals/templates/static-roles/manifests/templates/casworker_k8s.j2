@@ -135,8 +135,8 @@ spec:
 {%     endfor %}
 {%   endfor %}
 {% endif %}
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
         volumeMounts:
+{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
         - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
