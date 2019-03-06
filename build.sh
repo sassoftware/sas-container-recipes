@@ -828,7 +828,7 @@ case ${SAS_RECIPE_TYPE} in
         python --version || missing_dependencies python
         pip    --version || missing_dependencies pip
 
-        export the values so that they are picked up by the lower level scipt.
+        # export the values so that they are picked up by the lower level scipt.
         [[ ! -z ${CHECK_MIRROR_URL} ]] && export CHECK_MIRROR_URL
         [[ ! -z ${CHECK_DOCKER_URL} ]] && export CHECK_DOCKER_URL
         [[ ! -z ${SAS_RPM_REPO_URL} ]] && export SAS_RPM_REPO_URL
