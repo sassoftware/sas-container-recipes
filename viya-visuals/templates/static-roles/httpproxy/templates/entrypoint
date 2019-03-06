@@ -75,6 +75,14 @@ if [ -f ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem ]
 then
     echo "Using SSL certificate in ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem."
     sed -i 's,/etc/ssl/certs/ssl-cert-snakeoil.pem,${SASCONFIG}/srv/httpd/certs/ssl-cert.pem,' /etc/apache2/sites-enabled/default-ssl.conf
+    if [ -n ${CACERTS_CONFIGMAP} ]; then
+        echo_line "Detected Kubernetes ConfigMap usage. Posting Apache SSL certificate to ${CACERTS_CONFIGMAP}"
+        post_file_contents_to_configmap "${CACERTS_CONFIGMAP}" "httpproxy-${HOSTNAME}-ca.crt" "${SASCONFIG}/srv/httpd/certs/ssl-cert.pem"
+        if [ $? -ne 0 ]; then
+            echo_line "Failed to post the Apache SSL certificate to ${CACERTS_CONFIGMAP}. Exiting."
+            exit 1
+        fi
+    fi
 else
     echo "[INFO]  : Turn off starting the httpd service in ${SASHOME}/bin/replace_httpd_default_cert.sh"
     sed -i.bak 's/service httpd restart$/#service httpd restart/' ${SASHOME}/bin/replace_httpd_default_cert.sh
@@ -83,6 +91,14 @@ else
     ${SASHOME}/bin/replace_httpd_default_cert.sh
 
     # Take the result of this and echo it out to Kubernetes
+    if [ -n ${CACERTS_CONFIGMAP} ]; then
+        echo_line "Detected Kubernetes ConfigMap usage. Posting Apache SSL certificate to ${CACERTS_CONFIGMAP}"
+        post_file_contents_to_configmap "${CACERTS_CONFIGMAP}" "httpproxy-${HOSTNAME}-ca.crt" "/etc/pki/tls/certs/localhost.crt"
+        if [ $? -ne 0 ]; then
+            echo_line "Failed to post the Apache SSL certificate to ${CACERTS_CONFIGMAP}. Exiting."
+            exit 1
+        fi
+    fi
 fi
 
 echo "[INFO]  : Change httpd start command in ${SASHOME}/bin/${SASSERVICENAME}"
