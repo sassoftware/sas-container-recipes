@@ -78,12 +78,12 @@ spec:
         - name: CONSUL_SERVER_LIST
           value: "{{ settings.project_name }}-consul"
 {% endif %}
-{% if item.key == "sas-casserver-primary" and cas_manifest_type == "smp" %}
+{% if item.key == "sas-casserver-primary" %}
         - name: CASCFG_MODE
-          value: "smp"
-{% elif item.key == "sas-casserver-primary" and cas_manifest_type == "mpp" %}
-        - name: CASCFG_MODE
-          value: "mpp"
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-cas
+              key: cascfg_mode
 {% endif %}
 {% if SECURE_CONSUL %}
         - name: SECURE_CONSUL
