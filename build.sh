@@ -380,6 +380,18 @@ function echo_footer()
     [[ -z ${PROJECT_DIRECTORY+x} ]]         && PROJECT_DIRECTORY=working
     [[ -z ${SAS_MANIFEST_DIR+x} ]]          && SAS_MANIFEST_DIR=manifests
     [[ -z ${SAS_DEPLOY_MANIFEST_TYPE+x} ]]  && SAS_DEPLOY_MANIFEST_TYPE=kubernetes
+
+    # See if the user provided a different manifest directory via the vars_usermods.yml
+    if [[ -f $1/$PROJECT_DIRECTORY/vars_usermods.yml ]]; then
+        set +e
+        user_manifest_dir=$(grep "^SAS_MANIFEST_DIR:" $1/$PROJECT_DIRECTORY/vars_usermods.yml)
+        if [[ -n $user_manifest_dir ]]; then
+            SAS_MANIFEST_DIR=$(echo $user_manifest_dir | awk -F ": " '{ print $2 }')
+        fi
+        set -e
+    fi
+
+    # See if the user provided a namespace via the vars_usermods.yml
     sas_kubernetes_namespace=sas-viya
     if [[ -d $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/namespace ]]; then
         sas_kubernetes_namespace=$(grep "name\": \"" $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/namespace/*.json | head -n 1 | awk -F "\"" '{ print $4 }')
