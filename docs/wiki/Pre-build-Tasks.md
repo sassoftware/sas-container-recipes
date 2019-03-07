@@ -290,16 +290,13 @@ To help with managing changes to the generated manifests, you can provide custom
 
 ```
 # The directory where manifests will be created. Default is "manifest"
-#sas_manifest_dir: manifest
+#SAS_MANIFEST_DIR: manifest
 
 # The Kubernetes namespace that we are deploying into. Default is "sas-viya"
-#sas_k8s_namespace: sas-viya
+#SAS_K8S_NAMESPACE: sas-viya
 
 # The Ingress path for the httpproxy environment. Default is "sas-viya.company.com"
-#sas_k8s_ingress_path: sas-viya.company.com
-
-# Defines if inter-communication between services is TLS enabled. Default is "false"
-#SECURE_CONSUL: false
+#SAS_K8S_INGRESS_PATH: sas-viya.company.com
 ```
 
 If this is not done prior to running the build process, you can modify this file post build and then regenerate the manifests. See the post-build [(Optional) Regenerating Manifests](post-run-tasks#optional-regenerating-manifests) task for more information.
