@@ -3,7 +3,11 @@ kind: Deployment
 metadata:
   name: {{ settings.project_name }}-cas-worker
 spec:
-  replicas: 1
+{%   if sas_cas_mode == 'smp' %}
+  replicas: 0
+{% else %}
+  replicas: 3
+{% endif %}
   template:
     metadata:
       labels:
