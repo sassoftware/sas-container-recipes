@@ -318,7 +318,13 @@ update_vault_token_list(){
     for token in ${services_list}; do
         #grep VAULT_TOKEN_SERVICE_LIST for existing token
         # if it doesn't exist create it
-        if [[ "${vault_token_service_list}" != *"${token}"* ]]; then
+        found=false
+        for existing_token in ${vault_token_service_list}; do
+            if [[ "${token}" == "${existing_token}" ]]; then
+                found=true
+            fi
+        done
+        if [[ ${found} == false ]]; then
             generate_service_token "$token"
         fi
     done

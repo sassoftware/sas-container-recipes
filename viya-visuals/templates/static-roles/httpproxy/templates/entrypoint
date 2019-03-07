@@ -65,6 +65,12 @@ if [ -z $APACHE_CONF_D ]; then
   fi
 fi
 
+###############################################################################
+# Run httpd
+###############################################################################
+
+docker_run_local_consul
+
 echo "[INFO]  : Change 80 to 64 as the deciding factor to use IP instead of hostname in ${SASCONFIG}/consul/proxy.conf.ctmpl"
 sed -i 's|gt 80|gt 64|g' ${SASCONFIG}/consul/proxy.conf.ctmpl
 
@@ -75,30 +81,47 @@ if [ -f ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem ]
 then
     echo "Using SSL certificate in ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem."
     sed -i 's,/etc/ssl/certs/ssl-cert-snakeoil.pem,${SASCONFIG}/srv/httpd/certs/ssl-cert.pem,' /etc/apache2/sites-enabled/default-ssl.conf
-    if [ -n ${CACERTS_CONFIGMAP} ]; then
-        echo_line "Detected Kubernetes ConfigMap usage. Posting Apache SSL certificate to ${CACERTS_CONFIGMAP}"
-        post_file_contents_to_configmap "${CACERTS_CONFIGMAP}" "httpproxy-${HOSTNAME}-ca.crt" "${SASCONFIG}/srv/httpd/certs/ssl-cert.pem"
-        if [ $? -ne 0 ]; then
-            echo_line "Failed to post the Apache SSL certificate to ${CACERTS_CONFIGMAP}. Exiting."
-            exit 1
-        fi
-    fi
+    # if [ -n ${CACERTS_CONFIGMAP} ]; then
+    #     echo_line "Detected Kubernetes ConfigMap usage. Posting Apache SSL certificate to ${CACERTS_CONFIGMAP}"
+    #     post_file_contents_to_configmap "${CACERTS_CONFIGMAP}" "httpproxy-${HOSTNAME}-ca.crt" "${SASCONFIG}/srv/httpd/certs/ssl-cert.pem"
+    #     if [ $? -ne 0 ]; then
+    #         echo_line "Failed to post the Apache SSL certificate to ${CACERTS_CONFIGMAP}. Exiting."
+    #         exit 1
+    #     fi
+    # fi
 else
     echo "[INFO]  : Turn off starting the httpd service in ${SASHOME}/bin/replace_httpd_default_cert.sh"
     sed -i.bak 's/service httpd restart$/#service httpd restart/' ${SASHOME}/bin/replace_httpd_default_cert.sh
 
     echo "[INFO]  : No SSL certificate found in ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem. Using self-signed certificate."
-    ${SASHOME}/bin/replace_httpd_default_cert.sh
+    if [[ $SECURE_CONSUL == "true" ]]; then
+        /opt/sas/viya/home/SASSecurityCertificateFramework/bin/sas-crypto-management \
+            req-vault-cert \
+            --vault-token /tokens/httpproxy_vault.token \
+            --vault-cafile /anchors/vault-ca.crt \
+            --common-name sas-viya-httpproxy-0 \
+            --out-key /etc/pki/tls/private/localhost.key \
+            --out-crt /etc/pki/tls/certs/localhost.crt \
+            --san-dns $(hostname -f) \
+            --san-dns $(hostname) \
+            --san-dns $(hostname -s) \
+            --san-dns "*.$(hostname -f)" \
+            --san-dns "*.$(hostname)" \
+            --san-dns "*.$(hostname -s)" \
+            --san-dns "localhost"
+    else
+        ${SASHOME}/bin/replace_httpd_default_cert.sh
+    fi
 
     # Take the result of this and echo it out to Kubernetes
-    if [ -n ${CACERTS_CONFIGMAP} ]; then
-        echo_line "Detected Kubernetes ConfigMap usage. Posting Apache SSL certificate to ${CACERTS_CONFIGMAP}"
-        post_file_contents_to_configmap "${CACERTS_CONFIGMAP}" "httpproxy-${HOSTNAME}-ca.crt" "/etc/pki/tls/certs/localhost.crt"
-        if [ $? -ne 0 ]; then
-            echo_line "Failed to post the Apache SSL certificate to ${CACERTS_CONFIGMAP}. Exiting."
-            exit 1
-        fi
-    fi
+    # if [ -n ${CACERTS_CONFIGMAP} ]; then
+    #     echo_line "Detected Kubernetes ConfigMap usage. Posting Apache SSL certificate to ${CACERTS_CONFIGMAP}"
+    #     post_file_contents_to_configmap "${CACERTS_CONFIGMAP}" "httpproxy-${HOSTNAME}-ca.crt" "/etc/pki/tls/certs/localhost.crt"
+    #     if [ $? -ne 0 ]; then
+    #         echo_line "Failed to post the Apache SSL certificate to ${CACERTS_CONFIGMAP}. Exiting."
+    #         exit 1
+    #     fi
+    # fi
 fi
 
 echo "[INFO]  : Change httpd start command in ${SASHOME}/bin/${SASSERVICENAME}"
@@ -135,12 +158,6 @@ rm --verbose --force /run/httpd/authdigest_shm.*
 ###############################################################################
 sed -ri -e 's!^(\s*CustomLog)\s+\S+!\1 /proc/self/fd/1!g' ${APACHE_CONF}
 sed -ri -e 's!^(\s*ErrorLog)\s+\S+!\1 /proc/self/fd/2!g' ${APACHE_CONF}
-
-###############################################################################
-# Run httpd
-###############################################################################
-
-docker_run_local_consul
 
 # Start and continually check the ops-agent process.
 ${SASHOME}/lib/envesntl/docker-ops-agent &

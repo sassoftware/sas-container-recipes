@@ -187,6 +187,8 @@ function write_services_to_configmap()
                             sas_token_name=consul
                         elif [[ "${sas_command}" == "appserver.sh" ]]; then
                             sas_token_name=programming
+                        elif [[ "${sas_command}" == "sas-httpproxy" ]]; then
+                            sas_token_name=httpproxy
                         else
                             # has_svc_context=$(grep -P -c "^servicecontext" ${SASHOME}/bin/${sas_command} || true)
                             # if [ $has_svc_context -eq 1 ]; then
@@ -501,6 +503,8 @@ function copy_vault_token_for_sas_service()
                     sas_token_name=cas
                 elif [[ "${sas_command}" == "appserver.sh" ]]; then
                     sas_token_name=programming
+                elif [[ "${sas_command}" == "sas-httpproxy" ]]; then
+                    sas_token_name=httpproxy
                 fi
             fi
             echo_line "[INFO]  : token name = ${sas_token_name}"
