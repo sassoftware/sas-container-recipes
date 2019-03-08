@@ -147,7 +147,7 @@ Examples of build.sh
   --zip /path/to/SAS_Viya_deployment_data.zip \
   --docker-registry-namespace myuniquename \
   --docker-registry-url myregistry.myhost.com \
-  --virtual-host ingress-path \
+  --virtual-host user-myproject.mylocal.com \
   --addons "addons/auth-demo"
 
  SAS Viya full deployment, multiple containers:
@@ -157,33 +157,27 @@ Examples of build.sh
   --zip /path/to/SAS_Viya_deployment_data.zip \
   --docker-registry-namespace myuniquename \
   --docker-registry-url myregistry.myhost.com \
-  --virtual-host ingress-path \
+  --virtual-host user-myproject.mylocal.com \
   --addons "addons/auth-sssd"
         
 Required Arguments
 
-  -y|--type [multiple | full]
+  --type [multiple | full]
     sets the deployment type.
     multiple: SAS Viya programming-only deployment, multiple containers using Kubernetes
     full: SAS Viya full deployment, multiple containers using Kubernetes.
 
-  -n|--docker-registry-namespace <value>
+  --docker-registry-namespace <value>
     specifies the namespace in the Docker registry where the Docker images will be pushed. 
     Use a unique name to prevent collisions.
     Example: myuniquename
 
-  -u|--docker-registry-url <value>
+  --docker-registry-url <value>
     specifies the URL of the Docker registry where Docker the images will be pushed.
     Required for Kubernetes.
     Examples: 10.12.13.14:5000 or myregistry.myhost.com
 
-  -v|--virtual-host
-    specifies the Kubernetes Ingress path that defines the location of the HTTP endpoint.
-    For details about Ingress, see the official Kubernetes documentation at 
-    https://kubernetes.io/docs/concepts/services-networking/ingress/.
-    Example: user-myproject.mylocal.com
-
-  -z|--zip <value>
+  --zip <value>
     specifies the path to the SAS_Viya_deployment_data.zip file, which is from your Software Order Email (SOE).
     Example: /my/path/to/SAS_Viya_deployment_data.zip
 
@@ -198,36 +192,42 @@ Additional Resources
 ```
 Optional Arguments
 
-  -a|--addons "[<value>] [<value>]"
+  --virtual-host
+    specifies the Kubernetes Ingress path that defines the location of the HTTP endpoint.
+    For details about Ingress, see the official Kubernetes documentation at 
+    https://kubernetes.io/docs/concepts/services-networking/ingress/.
+    Example: user-myproject.mylocal.com
+
+  --addons "[<value>] [<value>]"
     adds one or more software layers to the main SAS image.
     For more information about addons, see 'Appendix: Under the Hood' in the wiki at 
     https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
     Example: --addons \"addons/auth-sssd addons/access-postgres\"
 
-  -i|--baseimage <value>
+  --baseimage <value>
     specifies the Docker image from which the SAS images will build on top of
     Default: centos
 
-  -t|--basetag <value>
+  --basetag <value>
     specifies the Docker tag for the base image that is being used.
     Default: latest
 
-  -m|--mirror-url <value>
+  --mirror-url <value>
     specifies the location of the mirror URL. See the Mirror Manager guide at
     https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
-  -p|--platform <value>
+  --platform <value>
     specifies the type of distribution of the image defined by the \"baseimage\" option.
     Options: [ redhat ]
     Default: redhat
 
-  -d|--skip-docker-url-validation
+  --skip-docker-url-validation
     skips validating the Docker registry URL.
 
-  -k|--skip-mirror-url-validation
+  --skip-mirror-url-validation
     skips validating the mirror URL from the --mirror-url flag.
 
-  -s|--sas-docker-tag
+  --sas-docker-tag
     specifies the tag to apply to the images before pushing to the Docker registry.
     Default: ${recipe_project_version}-${datetime}-${last_commit_sha1}
     Example: 18.12.0-20181209115304-b197206
@@ -241,7 +241,7 @@ Choose between Symmetric Multi Processing (SMP) or Massively Parallel Processing
 `kubectl create --file` or `kubectl replace --file` on the manifests inside the kubernetes directory.
 - Note: If you are running the build process process multiple times then use `kubectl replace` to add your new manifests instead of `kubectl create`.
 
-Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other services using `kubectl edit ingress`. In the following example, `sas-viya-http.<mycompany>.com` represents the _ingress-path_.
+Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other services using `kubectl edit ingress`. In the following example, `user-myproject.mylocal.com` represents the _ingress-path_.
 
 ```
 Kubernetes Ingress Example
@@ -253,7 +253,7 @@ Kubernetes Ingress Example
     name: example ingress
   spec:
     rules:
-    - host: sas-viya-http.<mycompany>.com
+    - host: user-myproject.mylocal.com
       http:
         paths:
         - backend:
