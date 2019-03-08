@@ -181,29 +181,25 @@ The Dockerfile looks for the Teradata gzip file and runs the setup.bat script to
 ### Ingress Configuration
 In order to access SAS, we need to expose endpoints that allow things outside the Kubernetes environment to talk to the correct endpoints inside the Kubernetes environment. While this can be done different ways, the trend is to use an Ingress Controller. We will not cover how to set up the Ingress Controller but will provide how to setup a specific Ingress configuration to expose the proper endpoints for the SAS containers. We are doing this now as it is an expected value when running the build utility. 
 
-In the _samples_ directory we have the following structure:
+For both the *viya-programming/viya-multi-container* and the *viya-visuals* we have added building the ingress configuration as part of the manifest generation. For *viya-programming/viya-single-container* an example configuration is provided in the *samples* directory:
 
 ```
 samples
-├── viya-multi-container
-│   └── example_ingress.yml
 ├── viya-single-container
 │   ├── example_ingress.yml
 │   ├── example_launchsas.sh
 │   └── example_programming.yml
-└── viya-visuals
-    └── example_ingress.yml
 ```
 
-Find the _*_ingress.yml_ file that matches your deployment type, copy and edit:
+Find the _*_ingress.yml_ file for the single container, copy and edit:
 
 ```
 mkdir ${PWD}/run
-cp samples/viya-visuals/example_ingress.yml ${PWD}/run/visuals_ingress.yml
-vi ${PWD}/run/visuals_ingress.yml
+cp samples/single-container/example_ingress.yml ${PWD}/run/programming_ingress.yml
+vi ${PWD}/run/programming_ingress.yml
 ```
 
-In the copy, _visuals_ingress.yml_, find all occurrences of _@REPLACE_ME_WITH_YOUR_K8S_NAMESPACE@_ and _@REPLACE_ME_WITH_YOUR_DOMAIN@_ with appropriate values. Here is an example
+In the copy, _programming_ingress.yml_, find all occurrences of _@REPLACE_ME_WITH_YOUR_K8S_NAMESPACE@_ and _@REPLACE_ME_WITH_YOUR_DOMAIN@_ with appropriate values. Here is an example
 
 ```
 apiVersion: extensions/v1beta1
@@ -211,7 +207,7 @@ kind: Ingress
 metadata:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
-  name: sas-viya-visuals-ingress
+  name: sas-viya-programming-ingress
   namespace: sasviya
 spec:
   rules:
@@ -239,7 +235,7 @@ TLS is setup by configuring the Ingress definition. For more information, see [T
 Load the configuration:
 
 ```
-kubectl -n sasviya apply -f samples/viya-visuals/visuals_ingress.yml
+kubectl -n sasviya apply -f ${PWD}/run/programming_ingress.yml
 ```
 
 If you are not in a position to set this up yet, you can continue on with the deployment process, but the ingress will need to be configured in order to access the environment.
@@ -299,4 +295,26 @@ To help with managing changes to the generated manifests, you can provide custom
 #SAS_K8S_INGRESS_PATH: sas-viya.company.com
 ```
 
-If this is not done prior to running the build process, you can modify this file post build and then regenerate the manifests. See the post-build [(Optional) Regenerating Manifests](post-run-tasks#optional-regenerating-manifests) task for more information.
+By default the generated manifests will define a CAS SMP environment. If you want to change this so that a CAS MPP environment is defined initially, edit the `viya-visuals/vars_usermods.yml` and change the following section from
+
+```
+#custom_services:
+#  sas-casserver-primary:
+#    deployment_overrides:
+#      environment:
+#        - "CASCFG_MODE=mpp"
+```
+
+to 
+
+```
+custom_services:
+  sas-casserver-primary:
+    deployment_overrides:
+      environment:
+        - "CASCFG_MODE=mpp"
+```
+
+When that change is made, CAS will start in MPP mode and a default of three CAS worker containers will start.
+
+If customizing is not done prior to running the build process, you can modify this file post build and then regenerate the manifests. See the post-build [(Optional) Regenerating Manifests](post-run-tasks#optional-regenerating-manifests) task for more information.

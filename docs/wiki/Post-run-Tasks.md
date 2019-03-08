@@ -216,6 +216,28 @@ If the deployment manifests that were generated in the *working/manifests* direc
     ```
 1. New manifests will be generated.
 
+## (Optional) Converting a CAS SMP to a MPP Environment
+
+By default, the CAS deployment is setup as SMP. If a MPP environment is needed, you can take one of the following steps.
+
+* If you have not yet deployed the environment, regenerate manifests. See the pre-build [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) task for information on how to edit the *viya-visuals/vars_usermods.yml* file to support the MPP mode.
+* If you have already deployed the environment:
+    1. Scale down the controller to 0: 
+
+        `kubectl -n <k8s namespace> scale statefulsets sas-viya-cas --replicas=0`
+
+    1. Edit the CAS configmap and set the cascfg_mode to "mpp": 
+
+        `kubectl -n <k8s namespace> edit configmap sas-viya-cas`
+
+    1. Scale up the controller to 1: 
+
+        `kubectl -n <k8s namespace> scale statefulsets sas-viya-cas --replicas=1`
+
+    1. Scale up the workers: 
+
+        `kubectl -n <k8s namespace> scale deployment.v1.apps/sas-viya-cas-worker --replicas=3`
+
 ## (Optional) Verify Bulk Loaded Configuration
 
 For a *viya-visuals* deployment, if you used the pre-build task of [Bulk Loading of Configuration Values](Pre-build-Tasks#bulk-loading-of-configuration-values), you will want to make sure that the key-value pairs were loaded correctly. To do this view the configuration properties for a configuration definition such as, SAS Logon Manager, in SAS Environment Manager to verify that the specified values are present. For more information, follow the first five steps in [Edit Configuration Instances](https://go.documentation.sas.com/?cdcId=calcdc&cdcVersion=3.4&docsetId=calconfig&docsetTarget=n03000sasconfiguration0admin.htm&locale=en#n03007sasconfiguration0admin).
