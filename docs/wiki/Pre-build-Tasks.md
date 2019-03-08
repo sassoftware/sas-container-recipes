@@ -273,7 +273,7 @@ Here are the steps to use sitedefault.yml to set configuration values:
     **CAUTION:**
   
     **Some properties require passwords.**<br/>
-    If properties with passwords are specified in sitedefault.yml, you must secure the file appropriately. If you chose not to supply the properties in sitedefault.yml, then you can enter them using SAS Environment Manager. Sign in to SAS Environment Manager as sasboot, and follow the instructions in [Configure the Connection to Your Identity Provider](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=p0dt267jhkqh3un178jzupyyetsa.htm&docsetVersion=3.4&locale=en#n1p4yydj6grbban1kl1te52gv0kf) in _SAS Viya for Linux: Deployment Guide_.
+    If properties with passwords are specified in sitedefault.yml, you must secure the file appropriately. If you chose not to supply the properties in sitedefault.yml, then you can enter them using SAS Environment Manager. Sign in to SAS Environment Manager as sasboot, and follow the instructions in [Configure the Connection to Your Identity Provider](post-run-tasks#configure-the-connection-to-your-identity-provider).
 
 1. When you are finished, save sitedefault.yml and make sure that it resides in the viya-visuals/templates/ directory of the playbook.
 When the build script is run, the data from the viya-visuals/templates/sitedefault.yml file will get added to the viya-visuals/working/manifests/kubernetes/configmaps/consul.yml file. On startup of the consul container, the content will get loaded into the SAS configuration store. See the post-run [(Optional) Verify Bulk Loaded Configuration](post-run-tasks#optional-verify-bulk-loaded-configuration) task for confirming the values provided were loaded.
