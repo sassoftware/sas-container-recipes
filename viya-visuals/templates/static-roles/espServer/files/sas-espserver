@@ -75,16 +75,18 @@ sas_set_service_env || sas_fail 1 "Unable to set up service environment"
 [[ -n $SAS_CONFIG ]] ||                 export SAS_CONFIG=/opt/sas/$SASDEPLOYID/config
 [[ -n $DFESP_CONFIG ]] ||               export DFESP_CONFIG=$SAS_CONFIG/etc/SASEventStreamProcessingEngine/default
 [[ -n $DFESP_HOME ]] ||                 export DFESP_HOME=$SASHOME/SASEventStreamProcessingEngine/$ESPVERSION
-[[ -n $ESP_AUTHENTICATION_STRING ]] ||  export ESP_AUTHENTICATION_STRING=""
-[[ -n $ESP_LOGLEVEL_STRING ]] ||        export ESP_LOGLEVEL_STRING=""
-[[ -n $ESP_MODEL_STRING ]] ||           export ESP_MODEL_STRING=""
+[[ -z $ESP_AUTHENTICATION_STRING ]] ||  export ESP_AUTHENTICATION_STRING=""
+[[ -z $ESP_LOGLEVEL_STRING ]] ||        export ESP_LOGLEVEL_STRING=""
+[[ -z $ESP_MODEL_STRING ]] ||           export ESP_MODEL_STRING=""
 [[ -n $ESP_HTTP_PORT ]] ||              export ESP_HTTP_PORT=31415
 [[ -n $ESP_PUBSUB_PORT ]] ||            export ESP_PUBSUB_PORT=31416
-[[ -z $SASLOGON_SERVERPORT ]] ||        export ESP_AUTHENTICATION_STRING="-auth saslogon://$SASLOGON_SERVERPORT"
-[[ -z $ESP_LOGGING_LEVEL ]] ||          export ESP_LOGLEVEL_STRING="-loglevel ${ESP_LOGGING_LEVEL}"
-[[ -z $ESP_MODEL_PATH ]] ||             export ESP_MODEL_STRING="-model ${ESP_MODEL_PATH}"
-[[ -z $ESPENV ]] ||                     export ESPENV=""
-[[ -z $SASTENANT ]] ||                  export SASTENANT="shared"
+[[ -n $SASLOGON_SERVERPORT ]] ||        export ESP_AUTHENTICATION_STRING="-auth saslogon://$SASLOGON_SERVERPORT"
+[[ -n $ESP_LOGGING_LEVEL ]] ||          export ESP_LOGLEVEL_STRING="-loglevel ${ESP_LOGGING_LEVEL}"
+[[ -n $ESP_MODEL_PATH ]] ||             export ESP_MODEL_STRING="-model ${ESP_MODEL_PATH}"
+[[ -n $ESPENV ]] ||                     export ESPENV=""
+[[ -n $SASTENANT ]] ||                  export SASTENANT="shared"
+[[ -n $ESP_ROLE ]] ||                   export ESP_ROLE="design"
+[[ -n $ESP_METERED_BILLING_DB ]] ||     export ESP_METERED_BILLING_DB=$SAS_CONFIG/data/SASEventStreamProcessingEngine
 
 export LD_LIBRARY_PATH=$DFESP_HOME/lib:$SASHOME/SASFoundation/sasexe
 
@@ -195,17 +197,28 @@ fi
 
 # Register the ESP server in Consul
 # using source to pick up already defined environment variables
-if [[ -f $SAS_CONFIG/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token ]]; then
-    source "${SASHOME}/bin/register_esp.sh"
+if [[ $ESP_ROLE == "design" ]]; then
+    if [[ -f $SAS_CONFIG/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token ]]; then
+        source "${SASHOME}/bin/register_esp.sh"
+    fi
 fi
 
-if [[ -z $ESPENV ]]; then
-    # shellcheck disable=SC2086
-    $DFESP_HOME/bin/dfesp_xml_server -http "$ESP_HTTP_PORT" -pubsub "$ESP_PUBSUB_PORT" "$ESP_AUTHENTICATION_STRING" "$ESP_MODEL_STRING" "$ESP_LOGLEVEL_STRING" &
+if [[ $ESP_ROLE != "metered_billing" ]]; then
+    echo "[INFO]  : Running a ESP server with a role of \"${ESP_ROLE}\""
+    if [[ -z $ESPENV ]]; then
+        # shellcheck disable=SC2086
+        $DFESP_HOME/bin/dfesp_xml_server -http "$ESP_HTTP_PORT" -pubsub "$ESP_PUBSUB_PORT" "$ESP_AUTHENTICATION_STRING" "$ESP_MODEL_STRING" "$ESP_LOGLEVEL_STRING" &
+    else
+        echo "[INFO]  : Running with ESPENV = \"${ESPENV}\""
+        # shellcheck disable=SC2086
+        $DFESP_HOME/bin/dfesp_xml_server &
+    fi
 else
-    echo "[INFO]  : Running with ESPENV"
-    # shellcheck disable=SC2086
-    $DFESP_HOME/bin/dfesp_xml_server &
+    echo "[INFO]  : Running a ESP metered billing server"
+    # -d indicates it is running in the background
+    # -f points to the full path to an H2 DB that stores the metering data
+    #    If not specified, it will create one in the configuration directory.
+    $DFESP_HOME/bin/dfesp_metering -d -f $ESP_METERED_BILLING_DB
 fi
 
 pid=$!  # Bash get process ID of the most recently executed background (asynchronous) command
