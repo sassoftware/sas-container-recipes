@@ -87,6 +87,9 @@ fi
 # Register in Consul
 ###############################################################################
 
+esp_service_name="SASESP"
+esp_http_port=${ESP_HTTP_PORT}
+
 _tag_tenant=""
 if [ "${SASTENANT}" != "shared" ]; then
     _tag_tenant="--tags tenant=${SASTENANT}"
@@ -104,9 +107,9 @@ echo_line "Register the ESP service"
 if [ "$_network_web_enabled" = "true" ]; then
     # shellcheck disable=SC2086
     ${BOOTSTRAP_CMD} agent service register \
-        --name "SASESP"  \
+        --name "${esp_service_name}"  \
         --address "${SAS_CURRENT_HOST}" \
-        --port ${ESP_HTTP_PORT} \
+        --port ${esp_http_port} \
         ${_tag_proxy} \
         --tags "https" \
         ${_tag_tenant} \
@@ -115,9 +118,9 @@ if [ "$_network_web_enabled" = "true" ]; then
 else
     # shellcheck disable=SC2086
     ${BOOTSTRAP_CMD} agent service register \
-        --name "SASESP"  \
+        --name "${esp_service_name}"  \
         --address "${SAS_CURRENT_HOST}" \
-        --port ${ESP_HTTP_PORT} \
+        --port ${esp_http_port} \
         ${_tag_proxy} \
         ${_tag_tenant} \
         ${_tag_rest_port_ssl} \
@@ -126,7 +129,7 @@ fi
 rc=$?
 
 if [ $rc != 0 ]; then
-    echo_line "Failed to register the service esp-${SASTENANT}-${SASINSTANCE}-http on port ${ESP_HTTP_PORT}"
+    echo_line "Failed to register the service esp-${SASTENANT}-${SASINSTANCE}-http on port ${esp_http_port}"
     exit $rc;
 else
     echo_line "esp-${SASTENANT}-${SASINSTANCE}-http has been registered in Consul"
@@ -138,18 +141,18 @@ if [ "$_network_web_enabled" = "true" ]; then
         --service-id "esp-${SASTENANT}-${SASINSTANCE}-http" \
         --id "esp-${SASTENANT}-${SASINSTANCE}-http" \
         --name "esphttpport"  \
-        --http "https://${SAS_CURRENT_HOST}:${ESP_HTTP_PORT}/SASESP" --interval 60s --timeout 5s
+        --http "https://${SAS_CURRENT_HOST}:${esp_http_port}/${esp_service_name}" --interval 60s --timeout 5s
 else
     ${BOOTSTRAP_CMD} agent check register \
         --service-id "esp-${SASTENANT}-${SASINSTANCE}-http" \
         --id "esp-${SASTENANT}-${SASINSTANCE}-http" \
         --name "esphttpport"  \
-        --http "http://${SAS_CURRENT_HOST}:${ESP_HTTP_PORT}/SASESP" --interval 60s --timeout 5s
+        --http "http://${SAS_CURRENT_HOST}:${esp_http_port}/${esp_service_name}" --interval 60s --timeout 5s
 fi
 rc=$?
 
 if [ $rc != 0 ]; then
-    echo_line "Failed to register the check esp-${SASTENANT}-${SASINSTANCE}-http on port ${ESP_HTTP_PORT}"
+    echo_line "Failed to register the check esp-${SASTENANT}-${SASINSTANCE}-http on port ${esp_http_port}"
     exit $rc;
 fi
 
