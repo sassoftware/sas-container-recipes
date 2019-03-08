@@ -18,10 +18,6 @@ fi
 [[ -z ${SASHOME+x} ]]          && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
 [[ -z ${SASCONFIG+x} ]]        && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
 [[ -z ${SASTENANT+x} ]]        && SASTENANT="shared"
-[[ -z ${SASCONSULHOST+x} ]]    && SASCONSULHOST=localhost
-[[ -z ${SAS_CURRENT_HOST+x} ]] && SAS_CURRENT_HOST=$(hostname -f)
-[[ -z ${ESP_HTTP_PORT+x} ]]    && export ESP_HTTP_PORT=31415
-[[ -z ${ESP_PUBSUB_PORT+x} ]]  && export ESP_PUBSUB_PORT=31416
 
 CONSUL_TOKEN_FILE="${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/${SASINSTANCE}/client.token"
 
