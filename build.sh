@@ -250,10 +250,12 @@ function add_layers()
         docker pull ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG}
         docker_pull_rc=$?
         set -e
-        if (( ${docker_pull_rc} > 0 )); then
-            echo "[ERROR] : Could not find image ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG}"
-            exit 5
-        fi
+        # This check shouldn't be needed and causes issues if one of the above containers doesn't exist.
+        # if (( ${docker_pull_rc} > 0 )); then
+        #     echo "[ERROR] : Could not find image ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG}"
+        #     exit 5
+        # fi
+
         # Make sure the image exists
         # shellcheck disable=SC2086
         if [[ "$(docker images -q ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG} 2> /dev/null)" != "" ]]; then
@@ -384,10 +386,13 @@ function add_esp_layers()
         docker pull ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG}
         docker_pull_rc=$?
         set -e
-        if (( ${docker_pull_rc} > 0 )); then
-            echo "[ERROR] : Could not find image ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG}"
-            exit 5
-        fi
+        # This check shouldn't be needed and causes issues if one of the above containers doesn't exist.
+        #
+        # if (( ${docker_pull_rc} > 0 )); then
+        #     echo "[ERROR] : Could not find image ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG}"
+        #     exit 5
+        # fi
+
         # Make sure the image exists
         # shellcheck disable=SC2086
         if [[ "$(docker images -q ${docker_reg_location}/${sas_image}:${SAS_DOCKER_TAG} 2> /dev/null)" != "" ]]; then
@@ -939,7 +944,7 @@ case ${SAS_RECIPE_TYPE} in
           --docker-url "${DOCKER_REGISTRY_URL}" \
           --docker-registry-type "${DOCKER_REGISTRY_TYPE}" \
           --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
-          --sas-docker-tag "${SAS_DOCKER_TAG}" 
+          --sas-docker-tag "${SAS_DOCKER_TAG}"
 
         multi_build_rc=$?
         set -e
@@ -981,7 +986,7 @@ case ${SAS_RECIPE_TYPE} in
           --platform "${PLATFORM}" \
           --docker-url "${DOCKER_REGISTRY_URL}" \
           --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
-          --sas-docker-tag "${SAS_DOCKER_TAG}" 
+          --sas-docker-tag "${SAS_DOCKER_TAG}"
 
         visuals_build_rc=$?
         set -e
