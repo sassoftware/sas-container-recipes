@@ -1,8 +1,3 @@
-# THIS CONTENT HAS BEEN MIGRATED
-# Please use the project's GitHub wiki: https://github.com/sassoftware/sas-container-recipes/wiki
-
----
-
 ### How do I push Docker images to my AWS repository?
 
 If building multiple containers, ansible-container does not support pushing to a AWS based registry. One will need to do a `docker tag` and `docker push` for each image built. To get the list of images run the following from the root of the project:
