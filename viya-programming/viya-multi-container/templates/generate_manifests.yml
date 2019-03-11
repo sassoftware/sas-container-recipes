@@ -4,11 +4,14 @@
   connection: local
 
   vars:
-    sas_cas_mode: "{{ cas_mode | default('smp') }}"
+    SAS_MANIFEST_DIR: manifests
+    SAS_K8S_NAMESPACE: sas-viya
+    SAS_K8S_INGRESS_PATH: sas-viya.company.com
 
   vars_files:
   - container.yml
   - everything.yml
+  - vars_usermods.yml
 
   roles:
   - manifests
