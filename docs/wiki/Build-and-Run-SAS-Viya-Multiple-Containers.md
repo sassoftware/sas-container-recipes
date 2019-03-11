@@ -156,12 +156,12 @@ The manifests define several paths where data that should persist between restar
 
 In the case of a full build, each of the containers will also have a volume defined to write logs to. To keep these logs around through pod restarts, this volume should also be mapped to persisted storage.
 
-Create the deployment. In this example, we are deploying into the _sas-viya_ Kubernetes namespace. For more information about _namespaces_, see [Kubernetes Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
+To create your deployment, use the manifests created during the build process. In this example, we are deploying into the _sas-viya_ Kubernetes namespace. For more information about _namespaces_, see [Kubernetes Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
 
 A json file was created during manifest generation to help with creating the Kubernetes name space. If your user has the ability to create *namespaces* in the Kuberetes environment, run the following, or request your Kuberenetes administrator to create you a name space in the Kubernetes environment:
 
 ```
-kubectl create -f $MANIFESTS/kubernetes/namespace/sas-viya.json
+kubectl create -f $MANIFESTS/kubernetes/namespace/sas-viya.yml
 ```
 
 Once a *namespace* is available, run the manifests in the following order. Note that the examples are using *sas-viya* for the Kubernetes namespace. If you created a different *namespace*, please use that value instead of *sas-viya*:
