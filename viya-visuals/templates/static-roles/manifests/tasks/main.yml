@@ -38,7 +38,7 @@
 - name: Create k8s namespace
   template:
     src: "k8s_namespace.j2"
-    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/namespace/{{ SAS_K8S_NAMESPACE }}.json"
+    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/namespace/{{ SAS_K8S_NAMESPACE }}.yml"
   run_once: true
 
 - name: Create k8s Ingress configuration
