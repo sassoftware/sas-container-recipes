@@ -3,7 +3,7 @@
 - [Configure Your Environment with SAS Environment Manager](#configure-your-environment-with-sas-environment-manager)
 - [Verify That Licenses Are Applied](#verify-that-licenses-are-applied)
 - [(Optional) Regenerating Manifests](#optional-regenerating-manifests)
-- [(Optional) Converting an Environment from CAS SMP to CAS MPP](#converting-an-environment-from-cas-smp-to-cas-mpp)
+- [(Optional) Converting an Environment from CAS SMP to CAS MPP](#optional-converting-an-environment-from-cas-smp-to-cas-mpp)
 - [(Optional) Verify Bulk Loaded Configuration](#optional-verify-bulk-loaded-configuration)
 - [(Optional) Create a Local Copy of Documentation](#optional-create-a-local-copy-of-documentation)
 
