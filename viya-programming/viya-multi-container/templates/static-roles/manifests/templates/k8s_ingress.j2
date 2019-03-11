@@ -1,0 +1,21 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      gzip off;
+  name: {{ settings.project_name }}-programming-ingress
+  namespace: {{ SAS_K8S_NAMESPACE }}
+spec:
+  rules:
+  - host: {{ SAS_K8S_INGRESS_PATH }}
+    http:
+      paths:
+      - backend:
+          serviceName: {{ settings.project_name }}-httpproxy
+          servicePort: 80
+#  tls:
+#  - hosts:
+#    - {{ SAS_K8S_INGRESS_PATH }}
+#    secretName: @REPLACE_ME_WITH_YOUR_CERT@
