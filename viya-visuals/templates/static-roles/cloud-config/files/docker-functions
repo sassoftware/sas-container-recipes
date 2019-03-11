@@ -13,6 +13,35 @@ function echo_line()
     printf "%s\n" "$line_out"
 }
 
+function retrieve_keys_from_configmap()
+{
+    if [ $# -ne 2 ]; then
+        echo_line "[ERROR] : Function retrieve_keys_from_configmap needs two parameters: <configmap name> <target variable name>"
+        return 1
+    fi
+
+    export KUBE_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+    export KUBE_NAMESPACE=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+    export KUBE_CACERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+    local result=$2
+    local status=-1
+    local attempts=0
+    local resp=''
+
+    while [ ${status} -ne 0 ]; do
+        let "attempts=attempts+1"
+        if [ ${attempts} -gt 5 ]; then
+            echo_line "[ERROR] : Failed to retrieve from ConfigMap $1 after 5 attempts"
+            return 1
+        fi
+
+        resp=$(curl -s --cacert $KUBE_CACERT -H "Authorization: Bearer $KUBE_TOKEN" https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_PORT_443_TCP_PORT/api/v1/namespaces/$KUBE_NAMESPACE/configmaps/$1 | python -c 'import json, sys;content = json.load(sys.stdin);data = content.get("data",{});print " ".join(data.keys())')
+        status=$?
+    done
+    eval $result="'$resp'"
+}
+
 function post_key_value_to_configmap()
 {
     if [ $# -ne 3 ]; then
@@ -129,19 +158,24 @@ function write_services_to_configmap()
     if [ -n "${SASSERVICES_CONFIGMAP}" ]; then
         echo_line "[INFO]  : Kubernetes ConfigMap detected. Writing services to configmap for token generation"
         if [[ -n ${APP_NAME} ]]; then
-            post_key_value_to_configmap "${SASSERVICES_CONFIGMAP}" "${APP_NAME}" ""
+            post_key_value_to_configmap "${SASSERVICES_CONFIGMAP}" "${APP_NAME}" "1"
         else
             for service in $(ls -1 /etc/init.d/sas-viya-*); do
                 sas_token_name=
-                grep_command_line=$(grep "^SASPRODCMD=" $1)
+                if [ ${service} == '/etc/init.d/sas-viya-all-services' ]; then
+                    continue
+                fi
+                grep_command_line=$(grep "^SASPRODCMD=" $service)
                 if [[ -n ${grep_command_line} ]]; then
                     sas_command=$(echo ${grep_command_line##*=} | tr -d '"')
-                    if [[ -f  ${SASHOME}/bin/${sas_command} ]]; then
-                        grep_service_context=$(grep "^servicecontext=" ${SASHOME}/bin/${sas_command})
-                        if [[ -n ${grep_service_context} ]]; then
-                            sas_token_name=${grep_service_context##*=}
-                        elif [[ "${sas_command}" == "sas-runlauncher" ]]; then
-                            grep_appname=$(grep "^appname=" ${SASHOME}/bin/${sas_command})
+                    executable="${SASHOME}/bin/${sas_command}"
+                    if [[ "${sas_command}" == 'appserver.sh' ]]; then
+                        executable="${SASHOME}/SASStudio/bin/${sas_command}"
+                    fi
+
+                    if [[ -f  ${executable} ]]; then
+                        if [[ "${sas_command}" == "sas-runlauncher" ]]; then
+                            grep_appname=$(grep "^appname=" ${executable})
                             sas_token_name=$(echo ${grep_appname##*=} | tr -d '"')
                         elif [[ "${sas_command}" == "sas-alert-trackclt" ]]; then
                             sas_token_name=evmcltsv
@@ -149,11 +183,30 @@ function write_services_to_configmap()
                             sas_token_name=evmsvrops
                         elif [[ "${sas_command}" == "sas-cas.sh" ]]; then
                             sas_token_name=cas
+                        elif [[ "${sas_command}" == "sas-consul" ]]; then
+                            sas_token_name=consul
+                        elif [[ "${sas_command}" == "appserver.sh" ]]; then
+                            sas_token_name=programming
+                        elif [[ "${sas_command}" == "sas-httpproxy" ]]; then
+                            sas_token_name=httpproxy
+                        else
+                            # has_svc_context=$(grep -P -c "^servicecontext" ${SASHOME}/bin/${sas_command} || true)
+                            # if [ $has_svc_context -eq 1 ]; then
+                                grep_service_context=$(grep -P "^servicecontext" ${executable} |head -n1|| true)
+                                if [[ -n ${grep_service_context} ]]; then
+                                    sas_token_name=${grep_service_context##*=}
+                                    # sas_token_name=${sas_token_name//\"/}
+                                else
+                                    continue
+                                fi
                         fi
                     fi
                 fi
                 if [[ -n ${sas_token_name} ]]; then
-                    post_key_value_to_configmap "${SASSERVICES_CONFIGMAP}" "${sas_token_name}" ""
+                    if [[ ${sas_token_name} == "consul" ]]; then
+                        post_key_value_to_configmap "${SASSERVICES_CONFIGMAP}" "sas-viya-consul-default" "1"
+                    fi
+                    post_key_value_to_configmap "${SASSERVICES_CONFIGMAP}" "${sas_token_name}" "1"
                 else
                     echo_line "[INFO]  : No copying vault token for $1"
                 fi
@@ -265,8 +318,13 @@ function docker_define_consul_environment()
         done
     fi
 
+    if [[ "${SECURE_CONSUL}" == "true" ]]; then 
+        write_services_to_configmap
+    fi
+
     if [[ "${SECURE_CONSUL}" == "true" ]] && [[ "${CONSUL_SERVER_FLAG}" != "true" ]]; then
         echo_line "Kubernetes ConfigMap detected. Copying vault token from mounted location ${VAULT_TOKEN_DIR}"
+
         # If CONSUL_SERVER_FLAG != true
         local sas_instance=${SASINSTANCE}
         [[ -z ${sas_instance} ]] && export SASINSTANCE="default"
@@ -423,14 +481,19 @@ function copy_vault_token_for_sas_service()
             set +e
             sas_command=$(echo ${grep_command_line##*=} | tr -d '"')
             set -e
-            if [[ -f  ${SASHOME}/bin/${sas_command} ]]; then
+            executable="${SASHOME}/bin/${sas_command}"
+            if [[ "${sas_command}" == 'appserver.sh' ]]; then
+                executable="${SASHOME}/SASStudio/bin/${sas_command}"
+            fi
+
+            if [[ -f  ${executable} ]]; then
                 set +e
-                grep_service_context=$(grep -m 1 "^servicecontext=" ${SASHOME}/bin/${sas_command})
+                grep_service_context=$(grep -m 1 "^servicecontext=" ${executable})
                 set -e
                 if [[ -n ${grep_service_context} ]]; then
                     sas_token_name=${grep_service_context##*=}
                 elif [[ "${sas_command}" == "sas-runlauncher" ]]; then
-                    grep_appname=$(grep "^appname=" ${SASHOME}/bin/${sas_command})
+                    grep_appname=$(grep "^appname=" ${executable})
                     sas_token_name=$(echo ${grep_appname##*=} | tr -d '"')
                 elif [[ "${sas_command}" == "sas-alert-trackclt" ]]; then
                     sas_token_name=evmcltsv
@@ -438,13 +501,17 @@ function copy_vault_token_for_sas_service()
                     sas_token_name=evmsvrops
                 elif [[ "${sas_command}" == "sas-cas.sh" ]]; then
                     sas_token_name=cas
+                elif [[ "${sas_command}" == "appserver.sh" ]]; then
+                    sas_token_name=programming
+                elif [[ "${sas_command}" == "sas-httpproxy" ]]; then
+                    sas_token_name=httpproxy
                 fi
             fi
             echo_line "[INFO]  : token name = ${sas_token_name}"
         fi
         if [[ -n ${APP_NAME} ]] && [[ -n ${sas_token_name} ]]; then
             echo_line "[INFO]  : Using APP_NAME value of '${APP_NAME}' to get tokens for SAS services"
-            copy_token_from_configmap "${VAULT_TOKEN_DIR}" "${APP_NAME}" "${sas_token_name}"
+            copy_token_from_configmap "${VAULT_TOKEN_DIR}" "${APP_NAME,,}" "${sas_token_name}"
         elif [[ -n ${sas_token_name} ]]; then
             echo_line "[INFO]  : Using token value of '${sas_token_name}' to get tokens for specific SAS service"
             copy_token_from_configmap "${VAULT_TOKEN_DIR}" "${sas_token_name}" "${sas_token_name}"
