@@ -156,14 +156,23 @@ The manifests already define several paths where data that needs to persist betw
 
 In the case of a full build, each of the containers will also have a volume defined to write logs to. To keep these logs around through pod restarts, this volume should also be mapped to persisted storage.
 
-Create the deployment. In this example, we are deploying into the _sasviya_ Kubernetes namespace. For more information about _namespaces_, see [Kubernetes Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
+Create the deployment. In this example, we are deploying into the _sas-viya_ Kubernetes namespace. For more information about _namespaces_, see [Kubernetes Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
 
-Run the manifests in the following order:
+A json file was created during manifest generation to help with creating the Kubernetes name space. If your user has the ability to create *namespaces* in the Kuberetes environment, run the following, or request your Kuberenetes administrator to create you a name space in the Kubernetes environment:
+
 
 ```
+kubectl create -f $MANIFESTS/kubernetes/namespace/sas-viya.json
+```
+
+Once a *namespace* is available, run the manifests in the following order:
+
+```
+kubectl -n sasviya create -f $MANIFESTS/kubernetes/ingress
 kubectl -n sasviya create -f $MANIFESTS/kubernetes/configmaps
 kubectl -n sasviya create -f $MANIFESTS/kubernetes/secrets
-kubectl -n sasviya create -f $MANIFESTS/kubernetes/deployments-mpp
+kubectl -n sasviya create -f $MANIFESTS/kubernetes/services
+kubectl -n sasviya create -f $MANIFESTS/kubernetes/deployments
 ```
 
 To check the status of the containers, run `kubectl -n sasviya get pods`. The following example reflects a programming multiple container deployment.
