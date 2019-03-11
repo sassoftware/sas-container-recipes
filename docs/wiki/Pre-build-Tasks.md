@@ -96,7 +96,7 @@ This section provides pre-build tasks for some of the access addons that provide
 
 #### Greenplum
 
-Before you can use the access-greenplum addon, confirm that the environment variables in the _greenplum_saserver.sh_ will represent where ODBC configurations will live. The default configuration expects that ODBC configuration files will be available in the directory `/sasinside`. For single containers running on Docker, this directory is mapped automatically directly to the running container from the Docker host. If running on kubernetes, `/sasinside`, or a preferred directory used should be mapped to the _sas-viya-programming_, _sas-viya-computeserver_ and _sas-viya-sas-casserver-primary_ pods. 
+Before you can use the access-greenplum addon, confirm that the environment variables in the _greenplum_saserver.sh_ will represent where ODBC configurations will live. The default configuration expects that ODBC configuration files will be available in the directory `/sasinside`. For single containers running on Docker, this directory is mapped automatically directly to the running container from the Docker host. If running on kubernetes, `/sasinside`, or a preferred directory used should be mapped to the _sas-viya-programming_, _sas-viya-computeserver_ and _sas-viya-cas_ pods. 
 
 ```
 export ODBCSYSINI=/sasinside/odbc
@@ -124,7 +124,7 @@ sas-container-recipes/addons/access-hadoop/hadoop/jars
 
 #### ODBC
 
-Before you can use the access-odbc addon, confirm that the environment variables in the _odbc_cas.settings_ and _odbc_saserver.sh_ will represent where ODBC configurations will live. The default configuration expects that ODBC configuration files will be available in the directory `/sasinside`. For single containers running on Docker, this directory is mapped automatically directly to the running container from the Docker host. If running on kubernetes, `/sasinside`, or a preferred directory used should be mapped to the _sas-viya-programming_, _sas-viya-computeserver_ and _sas-viya-sas-casserver-primary_ pods.
+Before you can use the access-odbc addon, confirm that the environment variables in the _odbc_cas.settings_ and _odbc_saserver.sh_ will represent where ODBC configurations will live. The default configuration expects that ODBC configuration files will be available in the directory `/sasinside`. For single containers running on Docker, this directory is mapped automatically directly to the running container from the Docker host. If running on kubernetes, `/sasinside`, or a preferred directory used should be mapped to the _sas-viya-programming_, _sas-viya-computeserver_ and _sas-viya-cas_ pods.
 
 ```
 export ODBCSYSINI=/sasinside/odbc
@@ -147,7 +147,7 @@ Confirm that the environment variables in the _oracle_cas.settings_ and _oracle_
 
 #### Redshift
 
-Before you can use the access-redshift addon, confirm that the environment variables in the _redshift_cas.settings_ and _redshift_saserver.sh_ will represent where ODBC configurations will live. The default configuration expects that ODBC configuration files will be available in the directory `/sasinside`. For single containers running on Docker, this directory is mapped automatically directly to the running container from the Docker host. If running on kubernetes, `/sasinside`, or a preferred directory used should be mapped to the _sas-viya-programming_, _sas-viya-computeserver_ and _sas-viya-sas-casserver-primary_ pods. 
+Before you can use the access-redshift addon, confirm that the environment variables in the _redshift_cas.settings_ and _redshift_saserver.sh_ will represent where ODBC configurations will live. The default configuration expects that ODBC configuration files will be available in the directory `/sasinside`. For single containers running on Docker, this directory is mapped automatically directly to the running container from the Docker host. If running on kubernetes, `/sasinside`, or a preferred directory used should be mapped to the _sas-viya-programming_, _sas-viya-computeserver_ and _sas-viya-cas_ pods. 
 
 ```
 export ODBCSYSINI=/sasinside/odbc

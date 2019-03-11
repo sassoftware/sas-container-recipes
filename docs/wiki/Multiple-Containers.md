@@ -34,7 +34,7 @@ kubectl create -f manifests/kubernetes/deployments-mpp/
 
 ### How do I change the information associated with the users created by the auth-demo add on?
 
-In the 18m11 release, the `auth-demo` add on was modified so that it creates two users. There is the _DEMO_USER_ and the _CASENV_ADMIN_USER_. To change the values of the _DEMO_USER_, add the following to the _programming_ and _sas-casserver-primary_ manifest (values shown are the defaults): 
+In the 18m11 release, the `auth-demo` add on was modified so that it creates two users. There is the _DEMO_USER_ and the _CASENV_ADMIN_USER_. To change the values of the _DEMO_USER_, add the following to the _programming_ and _cas_ manifest (values shown are the defaults): 
 
 ```
         - name: DEMO_USER
@@ -50,7 +50,7 @@ In the 18m11 release, the `auth-demo` add on was modified so that it creates two
         - name: DEMO_USER_GID
           value: "1001"
 ```
-To change the _CASENV_ADMIN_USER_ information, add the following to the _sas-casserver-primary_ manifest (values shown are the defaults): 
+To change the _CASENV_ADMIN_USER_ information, add the following to the _cas_ manifest (values shown are the defaults): 
 ```
         - name: CASENV_ADMIN_USER=
           value: "sasdemo"

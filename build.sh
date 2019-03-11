@@ -396,7 +396,7 @@ function echo_footer()
     if [[ -d $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/namespace ]]; then
         sas_kubernetes_namespace=$(grep "name\": \"" $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/namespace/*.yml | head -n 1 | awk -F "\"" '{ print $4 }')
     fi
-    ls -1dtr $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/* | awk -v sas_kubernetes_namespace="$sas_kubernetes_namespace" '{ if ($1 ~ /namespace/) print "kubectl create -f " $1; else print "kubectl create -n " sas_kubernetes_namespace " -f " $1; }'
+    ls -1dtr $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/* | awk -v sas_kubernetes_namespace="$sas_kubernetes_namespace" '{ if ($1 ~ /namespace/) print "kubectl apply -f " $1; else print "kubectl apply -n " sas_kubernetes_namespace " -f " $1; }'
     echo ""
     kubectl version > /dev/null 2>&1 || echo -e "*** Kubernetes (kubectl) is required for the deployment step. See https://kubernetes.io/docs/tasks/tools/install-kubectl/"
 }
