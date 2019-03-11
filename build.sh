@@ -1,4 +1,5 @@
 #!/bin/bash -e
+set -x
 #
 # Copyright 2018 SAS Institute Inc.
 #
@@ -394,7 +395,7 @@ function echo_footer()
     # See if the user provided a namespace via the vars_usermods.yml
     sas_kubernetes_namespace=sas-viya
     if [[ -d $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/namespace ]]; then
-        sas_kubernetes_namespace=$(grep "name\": \"" $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/namespace/*.json | head -n 1 | awk -F "\"" '{ print $4 }')
+        sas_kubernetes_namespace=$(grep "name\": \"" $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/namespace/*.yml | head -n 1 | awk -F "\"" '{ print $4 }')
     fi
     ls -1dtr $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/* | awk -v sas_kubernetes_namespace="$sas_kubernetes_namespace" '{ if ($1 ~ /namespace/) print "kubectl create -f " $1; else print "kubectl create -n " sas_kubernetes_namespace " -f " $1; }'
     echo ""
@@ -464,11 +465,6 @@ while [[ $# -gt 0 ]]; do
         -t|--basetag)
             shift # past argument
             BASETAG="$1"
-            shift # past value
-            ;;
-        -r|--docker-registry-type)
-            shift # past argument
-            DOCKER_REGISTRY_TYPE="$1"
             shift # past value
             ;;
         -m|--mirror-url)
@@ -809,7 +805,6 @@ case ${SAS_RECIPE_TYPE} in
           --basetag "${BASETAG}" \
           --platform "${PLATFORM}" \
           --docker-url "${DOCKER_REGISTRY_URL}" \
-          --docker-registry-type "${DOCKER_REGISTRY_TYPE}" \
           --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
           --sas-docker-tag "${SAS_DOCKER_TAG}" 
 
