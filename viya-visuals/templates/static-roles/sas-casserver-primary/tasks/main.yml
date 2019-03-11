@@ -20,6 +20,17 @@
   with_items:
   - { name: register_cas.sh, path: "SASFoundation/utilities/bin", mode: "0755" }
   - { name: tenant_setup_docker.sh, path: "bin", mode: "0755" }
+  - { name: cas-tls.lua, path: "SASFoundation/utilities/bin", mode: "0755" }
+
+- name: Copy files to remote host - config
+  copy:
+    src: "{{ item.name }}"
+    dest: "/opt/sas/viya/config/{{ item.path }}/{{ item.name }}"
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+    mode: "{{ item.mode }}"
+  with_items:
+  - { name: cas-tls.lua, path: "etc/cas/default/", mode: "0755" }
 
 - name: Copy over entrypoint script
   template:

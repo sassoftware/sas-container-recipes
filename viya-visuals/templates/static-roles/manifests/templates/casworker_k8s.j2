@@ -43,8 +43,6 @@ spec:
 {%   endfor %}
 {% endif %}
         env:
-        - name: APP_NAME
-          value: "casworker"
         - name: DEPLOYMENT_NAME
           value: "{{ settings.project_name }}"
 {% if services.consul is defined %}
@@ -131,11 +129,11 @@ spec:
               configMapKeyRef:
                 name: {{ settings.project_name }}-consul
                 key: sas_anchors_dir
-        # - name: SASSERVICES_CONFIGMAP
-        #   valueFrom:
-        #     configMapKeyRef:
-        #       name: {{ settings.project_name }}-consul
-        #       key: sasservices_configmap
+        - name: SASSERVICES_CONFIGMAP
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: sas_services_configmap
 {% if item.value.deployment_overrides.resources is defined and item.value.deployment_overrides.resources %}
         resources:
 {%   for key,value in item.value.deployment_overrides.resources.items() %}
@@ -164,8 +162,8 @@ spec:
         - name: tokens
           mountPath: /tokens
 
-      volumes:
 {% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
+      volumes:
 {%   for volumes in item.value.deployment_overrides.volumes %}
       - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
@@ -180,7 +178,7 @@ spec:
 {% endif %}
       - name: tokens
         configMap:
-          name: consul-tokens-configmap
+          name: {{ settings.project_name }}-consul-tokens-configmap
       - name: anchors
         configMap:
           name: {{ settings.project_name }}-cacerts-configmap

@@ -39,13 +39,16 @@ spec:
           value: "{{ settings.project_name }}-cacerts-configmap"
         - name: VAULT_TOKENS_CONFIGMAP
           value: consul-tokens-configmap
-{% if SECURE_CONSUL == 'true' %}
-        - name: VAULT_TOKEN_SERVICE_LIST
-          value: "{% for service in services %}{% if service != 'consul' %}{{ service }},{% endif %}{% endfor %}sas-viya-consul-default,localconsul"
-{% else %}
-        #- name: VAULT_TOKEN_SERVICE_LIST
-        #  value: ""
-{% endif %}
+        - name: VAULT_SERVICES_CONFIGMAP
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: vault_services_configmap
+        - name: SASSERVICES_CONFIGMAP
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: sas_services_configmap
         - name: CONSUL_HTTP_ADDR
           valueFrom:
             configMapKeyRef:

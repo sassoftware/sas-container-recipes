@@ -78,6 +78,13 @@
     src: "domain-service_k8s.j2"
     dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/services/domain-service.yml"
 
+- name: Create ESP metered billing k8s service
+  template:
+    src: "esp_metered_billing_k8s_services.j2"
+    dest: "{{ playbook_dir }}/{{ sas_manifest_dir }}/kubernetes/services/esp_metered_billing.yml"
+  when: item.key == 'espserver'
+  with_dict: '{{ services }}'
+
 - name: Create pets k8s services 
   template:
     src: "k8s_services.j2"
@@ -90,6 +97,13 @@
     src: "consul_k8s.j2"
     dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/deployments/{{ item.key }}.yml"
   when: item.key == 'consul'
+  with_dict: '{{ services }}'
+
+- name: Create ESP metered billing k8s manifest
+  template:
+    src: "esp_metered_billing_k8s.j2"
+    dest: "{{ playbook_dir }}/{{ sas_manifest_dir }}/kubernetes/deployments/esp_metered_billing.yml"
+  when: item.key == 'espserver'
   with_dict: '{{ services }}'
 
 - name: Create pets k8s manifest
