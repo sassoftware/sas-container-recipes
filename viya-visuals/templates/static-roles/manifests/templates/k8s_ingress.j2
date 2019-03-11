@@ -3,6 +3,8 @@ kind: Ingress
 metadata:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      gzip off;
   name: {{ settings.project_name }}-visuals-ingress
   namespace: {{ SAS_K8S_NAMESPACE }}
 spec:
@@ -17,4 +19,3 @@ spec:
 #  - hosts:
 #    - {{ SAS_K8S_INGRESS_PATH }}
 #    secretName: @REPLACE_ME_WITH_YOUR_CERT@
-
