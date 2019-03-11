@@ -16,6 +16,12 @@
   - "kubernetes"
   - "kubernetes/namespace"
   - "kubernetes/ingress"
+
+- name: Create directories for Kubernetes types
+  file:
+    path: "{{ playbook_dir + '/' + SAS_MANIFEST_DIR + '/' + item }}"
+    state: directory
+  with_items:
   - "kubernetes/configmaps"
   - "kubernetes/secrets"
   - "kubernetes/services"
@@ -45,6 +51,13 @@
     src: "k8s_secrets.j2"
     dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/secrets/cas.yml{% else %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/secrets/{{ item.key }}.yml{% endif %}"
   when: item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets
+  with_dict: '{{ services }}'
+
+- name: Create pets k8s services
+  template:
+    src: "k8s_services.j2"
+    dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/services/cas.yml{% else %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/services/{{ item.key }}.yml{% endif %}"
+  when: item.key in 'httpproxy, programming, sas-casserver-primary'
   with_dict: '{{ services }}'
 
 - name: Create pets k8s manifest
