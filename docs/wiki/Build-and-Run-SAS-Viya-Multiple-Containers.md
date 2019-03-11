@@ -160,25 +160,24 @@ Create the deployment. In this example, we are deploying into the _sas-viya_ Kub
 
 A json file was created during manifest generation to help with creating the Kubernetes name space. If your user has the ability to create *namespaces* in the Kuberetes environment, run the following, or request your Kuberenetes administrator to create you a name space in the Kubernetes environment:
 
-
 ```
 kubectl create -f $MANIFESTS/kubernetes/namespace/sas-viya.json
 ```
 
-Once a *namespace* is available, run the manifests in the following order:
+Once a *namespace* is available, run the manifests in the following order. Note that the examples are using *sas-viya* for the Kubernetes namespace. If you created a different *namespace*, please use that value instead of *sas-viya*:
 
 ```
-kubectl -n sasviya create -f $MANIFESTS/kubernetes/ingress
-kubectl -n sasviya create -f $MANIFESTS/kubernetes/configmaps
-kubectl -n sasviya create -f $MANIFESTS/kubernetes/secrets
-kubectl -n sasviya create -f $MANIFESTS/kubernetes/services
-kubectl -n sasviya create -f $MANIFESTS/kubernetes/deployments
+kubectl -n sas-viya create -f $MANIFESTS/kubernetes/ingress
+kubectl -n sas-viya create -f $MANIFESTS/kubernetes/configmaps
+kubectl -n sas-viya create -f $MANIFESTS/kubernetes/secrets
+kubectl -n sas-viya create -f $MANIFESTS/kubernetes/services
+kubectl -n sas-viya create -f $MANIFESTS/kubernetes/deployments
 ```
 
-To check the status of the containers, run `kubectl -n sasviya get pods`. The following example reflects a programming multiple container deployment.
+To check the status of the containers, run `kubectl -n sas-viya get pods`. The following example reflects a programming multiple container deployment.
 
 ```
-kubectl -n sasviya get pods
+kubectl -n sas-viya get pods
 NAME                                            READY   STATUS    RESTARTS   AGE
 sas-viya-httpproxy-0                            1/1     Running   0          21h
 sas-viya-programming-0                          1/1     Running   0          21h
@@ -188,7 +187,7 @@ sas-viya-sas-casserver-primary-0                1/1     Running   0          21h
 For a full deployment it would look something like:
 
 ```
-$ kubectl -n sasviya get pods
+$ kubectl -n sas-viya get pods
 NAME                                                   READY   STATUS    RESTARTS   AGE
 sas-viya-adminservices-6f4cb4bcc4-2gdw5                1/1     Running   0          2d8h
 sas-viya-advancedanalytics-9cf44bc8d-79qkd             1/1     Running   0          2d8h
@@ -224,7 +223,7 @@ sas-viya-themeservices-98dd99654-pzdp5                 1/1     Running   0      
 Check that all the services are started:
 
 ```
-$ kubectl -n sasviya exec -it sas-viya-coreservices-75dfbbd9b4-9x85p -- /etc/init.d/sas-viya-all-services status
+$ kubectl -n sas-viya exec -it sas-viya-coreservices-75dfbbd9b4-9x85p -- /etc/init.d/sas-viya-all-services status
 Getting service info from consul...
   Service                                            Status     Host               Port     PID
   sas-viya-consul-default                            up         N/A                 N/A     140
