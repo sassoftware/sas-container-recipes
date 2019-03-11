@@ -223,7 +223,7 @@ spec:
 #    secretName: @REPLACE_ME_WITH_YOUR_CERT@
 ```
 
-TLS is setup by configuring the Ingress definition. For more information, see [TLS](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls). You will need to create a key and cert and store it in a Kubernetes secret. For the purpose of the example, we will call the secret _sas-tls-secret_. Once that is in place, update `${PWD}/run/visuals_ingress.yml` and change the `tls` section so that it looks like
+TLS is setup by configuring the Ingress definition. For more information, see [TLS](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls). You will need to create a key and cert and store it in a Kubernetes secret. For the purpose of the example, we will call the secret _sas-tls-secret_. Once that is in place, update `${PWD}/run/programming_ingress.yml` and change the `tls` section so that it looks like
 
 ```
   tls:
