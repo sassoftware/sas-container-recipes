@@ -35,9 +35,9 @@ services:
     deployment_overrides:
       resources:
         limits:
-        - "memory=512Mi"
+        - "memory=1024Mi"
         requests:
-        - "memory=10Mi"
+        - "memory=250Mi"
       volumes:
         - "log=/opt/sas/viya/config/var/log"
 
@@ -87,7 +87,9 @@ services:
     deployment_overrides:
       environment:
         - "SERVICE_NAME=cascontroller"
+        - "CASCFG_MODE=smp"  
         - "CASENV_ADMIN_USER=sasdemo"
+        - "CASENV_CAS_VIRTUAL_HOST={{ CAS_VIRTUAL_HOST }}"
         - "CASENV_CAS_VIRTUAL_PROTO=http"
         - "CASENV_CASDATADIR=/cas/data"
         - "CASENV_CASPERMSTORE=/cas/permstore"

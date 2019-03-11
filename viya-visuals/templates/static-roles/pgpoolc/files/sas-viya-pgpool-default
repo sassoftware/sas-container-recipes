@@ -1,0 +1,220 @@
+#!/bin/bash
+# Copyright (c) 2017, SAS Institute Inc., Cary, NC, USA, All Rights Reserved
+#
+# Service: sas-sasdatasvrc
+# Context: sasdatasvrc
+# DO NOT MODIFY THIS SCRIPT ABOVE THIS LINE
+#
+# chkconfig: - 74 33
+# description: pgpool service daemon
+#
+
+### BEGIN INIT INFO
+# Provides: sas-viya-sasdatasvrc-default
+# Required-Start: $local_fs $network $remote_fs
+# Required-Stop: $local_fs $network $remote_fs
+# Should-Start: $network
+# Should-Stop: $network
+# Default-Start: -
+# Default-Stop: -
+# Short-Description: start and stop pgpool service
+# Description: sas-sasdatavrc sasdatavrc service
+### END INIT INFO
+
+# Parse script name - assume it is of the form sas-$SASDEPLOYID-$SASPRODNAME-$SASINSTANCE
+# where $SASPRODNAME may include dashes.  No spaces allowed.
+SASINITBASE=$(basename $(readlink -nf $0))
+baseparts=(${SASINITBASE//-/ })
+[[ ${baseparts[0]} != "sas" || ${#baseparts[@]} < 4 ]] && echo >&2 "Unexpected init script name: $SASINITBASE" && exit 1
+SASDEPLOYID=${baseparts[1]}
+SASPRODNAME=${baseparts[@]:2:${#baseparts[@]}-3}
+SASPRODNAME=${SASPRODNAME// /-}
+SASINSTANCE=${baseparts[${#baseparts[@]}-1]}
+
+# look for an optional sasenv.conf for this SASDEPLOYID
+[[ -f /etc/sysconfig/sas/$SASDEPLOYID/sasenv.conf ]] && source /etc/sysconfig/sas/$SASDEPLOYID/sasenv.conf
+
+# set standard environment if not already set
+[[ -z ${SASHOME+x} ]] && SASHOME=/opt/sas/${SASDEPLOYID}/home
+[[ -z ${SASCONFIG+x} ]] && SASCONFIG=/opt/sas/${SASDEPLOYID}/config
+[[ -z ${SASLOGROOT+x} ]] && SASLOGROOT="${SASCONFIG}/var/log"
+[[ -z ${SASUSER+x} ]] && SASUSER=sas
+[[ -z ${SASGROUP+x} ]] && SASGROUP=sas
+
+. $SASHOME/lib/envesntl/sas-init-functions
+
+#
+#SASINITDEBUG=true  # output some extra debugging script debugging messages
+
+sas_debug_msg SASINITBASE=$SASINITBASE
+sas_debug_msg SASDEPLOYID=$SASDEPLOYID
+sas_debug_msg SASPRODNAME=$SASPRODNAME
+sas_debug_msg SASINSTANCE=$SASINSTANCE
+
+#
+# Command script name - this is invoked by this init script to start/stop the service.
+# CHANGE to reflect the actual base script name to be executed.
+
+SASPRODCMD="sas-pgpool"
+SASPRODCMDARGS=
+
+#
+# Deployment settings - should not be changed except for unusual circumstances
+#
+# root directory for the active PID file(s) for the service
+SASPIDROOT="/var/run/sas"
+# path to the lock file subtree
+SASLOCKROOT="/var/lock/subsys"
+
+daemon_pidfiledir="${SASPIDROOT}"
+daemon_pidfile="${daemon_pidfiledir}/${SASINITBASE}.pid"
+daemon_logfiledir="${SASLOGROOT}/${SASPRODNAME}/postgres"
+
+daemon_exec="${SASHOME}/bin/${SASPRODCMD}"
+# note: must escape quotes that need to pass through in daemon_args
+daemon_args="-p ${daemon_pidfile} -d ${SASDEPLOYID} ${SASPRODCMDARGS}"
+
+daemon_name="${SASINITBASE}"
+daemon_user="${SASUSER}"
+daemon_group="${SASGROUP}"
+daemon_lockfile="${SASLOCKROOT}/${SASINITBASE}"
+
+#
+# Custom overrides for symbols defined above
+#
+
+[ -f /etc/sysconfig/sas/${SASINITBASE} ] && . /etc/sysconfig/sas/${SASINITBASE}
+
+sas_debug_msg daemon_pidfiledir=$daemon_pidfiledir
+sas_debug_msg daemon_pidfile=$daemon_pidfile
+sas_debug_msg daemon_logfiledir=$daemon_logfiledir
+sas_debug_msg daemon_exec=$daemon_exec
+sas_debug_msg daemon_args=$daemon_args
+sas_debug_msg daemon_name=$daemon_name
+sas_debug_msg daemon_user=$daemon_user
+sas_debug_msg daemon_group=$daemon_group
+sas_debug_msg daemon_lockfile=$daemon_lockfile
+
+# Check that networking is up.
+[ "${NETWORKING}" = "no" ] && exit 0
+
+do_start()
+{
+  local result
+  local exec
+
+  sas_check_pid -p "${daemon_pidfile}"
+  if [ $? -eq 0 ]; then
+    sas_log_success_msg "${daemon_name} is already started"
+    result=0  # trying to start an already-running service is considered SUCCESS
+  else
+    # Make sure the instance's log file dir exists and the service account has access
+    if [ ! -d ${daemon_logfiledir} ]; then
+        # Make sure the root SAS log dir exists too
+        if [ ! -d ${SASLOGROOT} ]; then
+          sas_debug_msg "creating SAS root log dir ${SASLOGROOT}"
+          mkdir ${SASLOGROOT}
+          chown ${SASUSER}:${SASGROUP} ${SASLOGROOT}
+        fi
+      sas_debug_msg "creating product instance log dir ${daemon_logfiledir}"
+      mkdir -p ${daemon_logfiledir}
+      chown ${daemon_user}:${daemon_group} ${daemon_logfiledir}
+      # The mkdir -p might have had to create the parent product dir, so chown that too
+      chown ${daemon_user}:${daemon_group} ${daemon_logfiledir}/..
+    fi
+
+    # Make sure the pid file dir is created and the service account has access
+    if [ ! -d ${daemon_pidfiledir} ]; then
+      sas_debug_msg "creating product pidfile dir ${daemon_pidfiledir}"
+      mkdir -p ${daemon_pidfiledir}
+      chown ${daemon_user}:${daemon_group} ${daemon_pidfiledir}
+    fi
+
+    # Start the daemon
+
+    sas_debug_msg "invoking start_daemon"
+    #sas_debug_msg sas_start_service ${daemon_user} ${daemon_exec} ${daemon_args}
+    #sas_start_service ${daemon_user} ${daemon_exec} ${daemon_args}
+    ${daemon_exec} ${daemon_args}
+    do_status
+    result=$?
+  fi
+
+  [ $result -eq 0 ] && touch $daemon_lockfile
+  return $result
+}
+
+do_stop()
+{
+  local result
+  local pidcheck
+
+  sas_check_pid -p "${daemon_pidfile}"
+  pidcheck=$?
+  if [ $pidcheck -eq 1 ]; then
+    sas_log_success_msg "${daemon_name} is dead"
+    result=0
+  elif [ $pidcheck -eq 3 ]; then
+    sas_log_success_msg "${daemon_name} is stopped"
+    result=0
+  else
+    ${SASHOME}/libexec/sasdatasvrc/script/pgpool_stop.sh
+    sas_stop_pid -p "${daemon_pidfile}"
+    result=$?
+    if [ $result -eq 0 ]; then
+      rm -f $daemon_lockfile
+      sas_log_success_msg "${daemon_name} is stopped"
+    else
+      sas_log_failure_msg "${daemon_name} could not be stopped"
+    fi
+  fi
+  return $result
+}
+
+do_status()
+{
+  local result
+  local pidcheck
+
+  sas_check_pid -p "${daemon_pidfile}"
+  pidcheck=$?
+  result=0
+
+  # NOTE: Status Log Messages must not be changed due to dependencies
+  # sas-viya-all-services script
+  if [ $pidcheck -eq 1 ]; then
+    sas_log_success_msg "${daemon_name} is dead"
+    result=1
+  elif [ $pidcheck -eq 3 ]; then
+    sas_log_success_msg "${daemon_name} is stopped"
+    result=1
+  elif [ $pidcheck -eq 4 ]; then
+    sas_log_success_msg "${daemon_name} status is unknown"
+    result=1
+  else
+    sas_log_success_msg "${daemon_name} is running"
+  fi
+
+  return $result
+}
+
+do_usage()
+{
+  echo $"Usage: $0 {start|stop|restart|status|force-reload}"
+  exit 1
+}
+
+case "$1" in
+    start)
+        do_start; exit $? ;;
+
+    stop)
+        do_stop; exit $? ;;
+
+    status)
+        do_status; exit $? ;;
+
+    *)
+        do_usage; exit 1 ;;
+esac
+

@@ -1,0 +1,82 @@
+# Site Specific Defaults
+#
+# For instructions on how to use this file, see:
+# http://documentation.sas.com/?softwareId=calcdc&softwareVersion=production.a&softwareContextId=sitedefault
+config:
+    application:
+        # ---------------------------------------------------------------------
+        # SAS Viya bases its default LDAP settings on an Active Directory
+        # environment. This includes default values for all relevant search
+        # filters as well as mappings for each LDAP attribute that is read.
+        #
+        # When connecting to a non-Active Directory LDAP server (for example,
+        # OpenLDAP, Apache Directory Server, and so on) it might be necessary
+        # to supply values for additional LDAP field mappings. Please see the
+        # sections below for any optional properties that might need to be
+        # supplied. Additional properties documented in the linked instructions
+        # above might be needed as well.
+        # ---------------------------------------------------------------------
+        sas.identities.providers.ldap.connection:
+            # (required) The host name of the LDAP server to connect to.
+            host:
+            # (required) The password for logging on to the LDAP server.
+            password:
+            # (required) The port for connecting to the LDAP server. Standard
+            # LDAP port values are set to 389, or 636 when connecting via LDAPS.
+            port:
+            # (required) The URL for connecting to the LDAP server. Provided
+            # the host and port properties have been specified, this does not
+            # need to change unless connecting via the LDAPS protocol.
+            url: ldap://${sas.identities.providers.ldap.connection.host}:${sas.identities.providers.ldap.connection.port}
+            # (required) The distinguished name (DN) of the user account for
+            # binding to the LDAP server.
+            # Example: cn=AdminUser,dn=example,dn=com
+            userDN:
+        sas.identities.providers.ldap.group:
+            # (required) The root from which the LDAP server searches for
+            # groups.
+            # Example: ou=groups,dc=example,dn=com
+            baseDN:
+            # -----------------------------------------------------------------
+            # The following properties should be set if the default values used
+            # for LDAP groups in an Active Directory environment need to be
+            # overridden. Uncomment the entries beginning with ##.
+            # -----------------------------------------------------------------
+            # The field in the LDAP provider that is used to populate the
+            # group's ID.
+            # Examples: sAMAccountName (default), uid, gidNumber
+            ##accountId:
+            # The object class value to use when loading groups.
+            # Examples: group (default), posixGroup
+            ##objectClass:
+            # The filter to use when searching groups.
+            # Example: (objectClass=group)
+            ##objectFilter:
+        sas.identities.providers.ldap.user:
+            # (required) The root from which the LDAP server searches for users.
+            # Example: ou=users,dc=example,dn=com
+            baseDN:
+            # -----------------------------------------------------------------
+            # The following properties should be set if the default values used
+            # for LDAP users in an Active Directory environment need to be
+            # overridden. Uncomment the entries beginning with ##.
+            # -----------------------------------------------------------------
+            # The filter used for locating a user account in the LDAP provider
+            # so that the user can make a connection using an ID and password.
+            ##searchFilter: ${sas.identities.providers.ldap.user.accountId}={0}
+            # The field in the LDAP provider that is used to populate the
+            # user's ID.
+            # Examples: sAMAccountName (default), uid, gidNumber
+            ##accountId:
+            # The object class value to use when loading users.
+            # Examples: organizationalPerson (default), inetOrgPerson
+            ##objectClass:
+            # The filter to use when searching users.
+            # Example: (objectClass=inetOrgPerson)
+            # Default value: (&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))
+            ##objectFilter:
+        sas.identities:
+            # The account id of the user to optionally set as the system's
+            # initial administrator. The value must refer to a valid user
+            # within your LDAP provider.
+            administrator:
