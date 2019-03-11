@@ -32,7 +32,7 @@
 # are desired per service. If the same set of volumes and volume mounts are used
 # across multiple services they will need to be defined per service. This will 
 # add to or replace defaults. The structure is that everything after the pipe '|'
-# is added to the manifest. It is a straight copy of what is provided, to the
+# is added to the manifest. It is a straight copy of what is provided to the
 # generated manifest.
 
 #custom_volumes:
