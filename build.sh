@@ -1,5 +1,4 @@
 #!/bin/bash -e
-set -x
 #
 # Copyright 2018 SAS Institute Inc.
 #
