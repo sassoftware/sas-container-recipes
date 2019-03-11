@@ -46,8 +46,8 @@ spec:
     metadata:
       labels:
         app: sas-programming
-    hostname: sas-programming
     spec:
+      hostname: sas-programming
       containers:
       - name: sas-programming
         image: @REPLACE_ME with location-of-docker-image:tag@
