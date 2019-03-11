@@ -30,7 +30,7 @@ function primary_data_node() {
 
     # If no file existed, then lets see if the data dir exists yet
     if [ ! -d ${PG_DATADIR} ]; then
-        su - -c "${SASHOME}/bin/pg_ctl -D ${PG_DATADIR} initdb || rm -rf ${PG_DATADIR}" ${SASPOSTGRESOWNER}
+        su - -s /bin/bash -c "${SASHOME}/bin/pg_ctl -D ${PG_DATADIR} initdb || rm -rf ${PG_DATADIR}" ${SASPOSTGRESOWNER}
 
         success=false
         mkdir ${PG_DATADIR}/archivedir && success=true
@@ -80,7 +80,7 @@ function secondary_data_node() {
         echo_line "INFO: Initializing backup..."
         success=false
         echo_line "[repl:secondary] DATADIR (${PG_DATADIR}) not found; seeding from preferred primary (${primary_ip})"
-        su - -c "${SASHOME}/bin/pg_basebackup -h ${primary_ip} -p ${SASPOSTGRESPORT} -D ${PG_DATADIR} -P -U ${SASPOSTGRESREPLUSER} --xlog-method=stream -R" ${SASPOSTGRESOWNER} && success=true
+        su - -s /bin/bash -c "${SASHOME}/bin/pg_basebackup -h ${primary_ip} -p ${SASPOSTGRESPORT} -D ${PG_DATADIR} -P -U ${SASPOSTGRESREPLUSER} --xlog-method=stream -R" ${SASPOSTGRESOWNER} && success=true
 
         if ! $success; then
             echo_line "ERROR: Initial backup failed."

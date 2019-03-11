@@ -1,99 +1,114 @@
 ---
-- name: Create the deployment directory to place kubernetes manifests in
+- name: Create the deployment directory {{ SAS_MANIFEST_DIR }} to place kubernetes manifests in
   file:
     path: "{{ playbook_dir + '/' + item }}"
     state: directory
   with_items:
-  - "manifests"
+  - "{{ SAS_MANIFEST_DIR }}"
 
-- name: Create temporary directory on remote machine
+# The order of the creation of the directory is important as the top level script
+# is going to show the list by creation date.
+- name: Create directories for Kubernetes types
   file:
-    path: "{{ playbook_dir + '/manifests/' + item }}"
+    path: "{{ playbook_dir + '/' + SAS_MANIFEST_DIR + '/' + item }}"
     state: directory
   with_items:
   - "kubernetes"
-  - "kubernetes/deployments-smp"
-  - "kubernetes/deployments-mpp"
+  - "kubernetes/namespace"
+  - "kubernetes/ingress"
+
+- name: Create directories for Kubernetes account if SECURE_CONSUL is true
+  file:
+    path: "{{ playbook_dir + '/' + SAS_MANIFEST_DIR + '/' + item }}"
+    state: directory
+  with_items:
+  - "kubernetes/accounts"
+  when: SECURE_CONSUL | lower == 'true'
+
+- name: Create directories for Kubernetes types
+  file:
+    path: "{{ playbook_dir + '/' + SAS_MANIFEST_DIR + '/' + item }}"
+    state: directory
+  with_items:
   - "kubernetes/configmaps"
   - "kubernetes/secrets"
+  - "kubernetes/services"
+  - "kubernetes/deployments"
+
+- name: Create k8s namespace
+  template:
+    src: "k8s_namespace.j2"
+    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/namespace/{{ SAS_K8S_NAMESPACE }}.json"
+  run_once: true
+
+- name: Create k8s Ingress configuration
+  template:
+    src: "k8s_ingress.j2"
+    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/ingress/{{ SAS_K8S_NAMESPACE }}.yml"
+  run_once: true
+
+- name: Create k8s accounts manifest
+  template:
+    src: "k8s_accounts.j2"
+    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/accounts/accounts.yml"
+  when: item.key == 'consul' and SECURE_CONSUL | lower == 'true'
+  with_dict: '{{ services }}'
+
+# - name: Define custom_services if not defined
+  # set_fact:
+    # name: custom_services
+  # when: custom_services is not defined
 
 - name: Create k8s configmaps
   template:
     src: "k8s_configmap.j2"
-    dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/manifests/kubernetes/configmaps/cas.yml{% else %}{{ playbook_dir }}/manifests/kubernetes/configmaps/{{ item.key }}.yml{% endif %}"
-  when: item.value.deployment_overrides.environment is defined and item.value.deployment_overrides.environment
+    dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/configmaps/cas.yml{% else %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/configmaps/{{ item.key }}.yml{% endif %}"
+  when: (item.value.deployment_overrides.environment is defined and item.value.deployment_overrides.environment) or (custom_services is defined and custom_services and item.key in custom_services.items())
   with_dict: '{{ services }}'
 
 - name: Create k8s secrets
   template:
     src: "k8s_secrets.j2"
-    dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/manifests/kubernetes/secrets/cas.yml{% else %}{{ playbook_dir }}/manifests/kubernetes/secrets/{{ item.key }}.yml{% endif %}"
+    dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/secrets/cas.yml{% else %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/secrets/{{ item.key }}.yml{% endif %}"
   when: item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets
   with_dict: '{{ services }}'
-
-- name: Define variable to indicate what type of manifest we are creating
-  set_fact:
-    cas_manifest_type: "smp"
 
 - name: Create k8s domain service
   template:
     src: "domain-service_k8s.j2"
-    dest: "{{ playbook_dir }}/manifests/kubernetes/deployments-smp/domain-service.yml"
+    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/services/domain-service.yml"
+
+- name: Create pets k8s services 
+  template:
+    src: "k8s_services.j2"
+    dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/services/cas.yml{% else %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/services/{{ item.key }}.yml{% endif %}"
+  when: item.key in 'consul, computeserver, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
+  with_dict: '{{ services }}'
 
 - name: Create Consul k8s manifest
   template:
     src: "consul_k8s.j2"
-    dest: "{{ playbook_dir }}/manifests/kubernetes/deployments-smp/{{ item.key }}.yml"
+    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/deployments/{{ item.key }}.yml"
   when: item.key == 'consul'
   with_dict: '{{ services }}'
 
 - name: Create pets k8s manifest
   template:
     src: "pets_k8s.j2"
-    dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/manifests/kubernetes/deployments-smp/cas.yml{% else %}{{ playbook_dir }}/manifests/kubernetes/deployments-smp/{{ item.key }}.yml{% endif %}"
+    dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/deployments/cas.yml{% else %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/deployments/{{ item.key }}.yml{% endif %}"
   when: item.key in 'computeserver, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 
 - name: Create micro-services k8s manifest
   template:
     src: "microservice_k8s.j2"
-    dest: "{{ playbook_dir }}/manifests/kubernetes/deployments-smp/{{ item.key }}.yml"
-  when: item.key not in 'computeserver, consul, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
-  with_dict: '{{ services }}'
-
-- name: Define variable to indicate what type of manifest we are creating
-  set_fact:
-    cas_manifest_type: "mpp"
-
-- name: Create k8s domain service
-  template:
-    src: "domain-service_k8s.j2"
-    dest: "{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/domain-service.yml"
-
-- name: Create Consul k8s manifest
-  template:
-    src: "consul_k8s.j2"
-    dest: "{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/{{ item.key }}.yml"
-  when: item.key == 'consul'
-  with_dict: '{{ services }}'
-
-- name: Create pets k8s manifest 
-  template:
-    src: "pets_k8s.j2"
-    dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/cas.yml{% else %}{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/{{ item.key }}.yml{% endif %}"
-  when: item.key in 'computeserver, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
-  with_dict: '{{ services }}'
-
-- name: Create micro-services k8s manifest
-  template:
-    src: "microservice_k8s.j2"
-    dest: "{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/{{ item.key }}.yml"
+    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/deployments/{{ item.key }}.yml"
   when: item.key not in 'computeserver, consul, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 
 - name: Create CAS worker manifest
   template:
     src: "casworker_k8s.j2"
-    dest: "{{ playbook_dir }}/manifests/kubernetes/deployments-mpp/cas-worker.yml"
+    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/deployments/cas-worker.yml"
   when: item.key in 'sas-casserver-primary'
   with_dict: '{{ services }}'

@@ -55,35 +55,14 @@ save_env sas SASSERVICENAME
 docker_define_consul_environment
 
 # start local consul
-/etc/init.d/sas-viya-consul-default start
-
-# Wait for Consul to be up
-docker_wait_for_consul_leader
+docker_run_local_consul
 
 ###############################################################################
 # Shutdown
 ###############################################################################
-function gracefulshutdown {
-    echo
-    echo_line "Shutting down ${SASSERVICECONTEXT} pid $(cat ${DOCKERPIDFILE})!"
-    echo
 
-    # new SAS init stuff
-    kill -TERM $(cat ${DOCKERPIDFILE})
-    result=$?
-    # sleep 10
-    echo
-    if [ $result -eq 0 ]; then
-        echo_line "SUCCESS: ${SASSERVICECONTEXT} is stopped"
-    else
-        echo_line "ERROR: ${SASSERVICECONTEXT} could not be stopped"
-    fi
-
-    exit 0
-}
-
-trap gracefulshutdown SIGTERM
-trap gracefulshutdown SIGINT
+trap docker_shutdown_sas_services SIGTERM
+trap docker_shutdown_sas_services SIGINT
 
 ###############################################################################
 # Run pgpool
@@ -122,16 +101,21 @@ else
     if [[ -z ${SASINSTANCE+x} ]] || [ "${SASINSTANCE}" = "" ]; then
         export SASINSTANCE=$(uuidgen | sed 's/\-//g')
     fi
-    
+
     echo "Save the instance value (${SASINSTANCE}) off to be used on restart"
     echo "export SASINSTANCE=${SASINSTANCE}" > ${_sasuuid}
 fi
 
-echo "Starting ${SASSERVICENAME}..."
+unset SASINSTANCE
+export SASINSTANCE="default"
 
-source ${SASHOME}/bin/sas-pgpool
+chmod -v 0775 /var/run/sas/
 
-export DOCKERPIDFILE=${SASPGPOOLRUNDIR}/${SASPGPOOLPIDFILE}
+echo "Starting SAS Services..."
+docker_run_sas_services
+
+# The following matches what the init.d script will create and pass to sas-pgpool
+export DOCKERPIDFILE=/var/run/sas/sas-viya-pgpool-default.pid
 
 ###############################################################################
 # Keep the container alive until it is killed

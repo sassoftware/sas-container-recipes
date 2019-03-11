@@ -3,13 +3,31 @@ kind: Deployment
 metadata:
   name: {{ settings.project_name }}-cas-worker
 spec:
-  replicas: 1
+{% if custom_services is defined and custom_services %}
+{%   for key,value in custom_services.items() %}
+{%     if key == item.key and value.deployment_overrides.environment is defined and value.deployment_overrides.environment %}
+{%       for override in value.deployment_overrides.environment %}
+{%         if 'CASCFG_MODE=mpp' in override %}
+  replicas: 3
+{%         endif %}
+{%       endfor %}
+{%     endif %}
+{%   endfor %}
+{% else %}
+  replicas: 0
+{% endif %}
   template:
     metadata:
       labels:
         app: {{ settings.project_name }}-cas-worker
         domain: {{ settings.project_name }}
     spec:
+{% if SECURE_CONSUL %}
+      serviceAccountName: {{ settings.project_name }}-account
+{% else %}
+      # Required for TLS configurations
+      #serviceAccountName: {{ settings.project_name }}-account
+{% endif %}
       hostname: {{ settings.project_name }}-cas-worker
       subdomain: {{ settings.project_name }}-subdomain
       containers:
@@ -25,6 +43,8 @@ spec:
 {%   endfor %}
 {% endif %}
         env:
+        - name: APP_NAME
+          value: "casworker"
         - name: DEPLOYMENT_NAME
           value: "{{ settings.project_name }}"
 {% if services.consul is defined %}
@@ -32,15 +52,14 @@ spec:
           value: "{{ settings.project_name }}-consul"
 {% endif %}
         - name: CASCFG_MODE
-          value: "mpp"
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-cas
+              key: cascfg_mode
         - name: SERVICE_NAME
           value: "casworker"
         - name: CASCONTROLLERHOST
-          value: "{{ settings.project_name }}-cas" 
-{% if SECURE_CONSUL %}
-        - name: SECURE_CONSUL
-          value: "true"
-{% endif %}
+          value: "{{ settings.project_name }}-cas"
 {% if services.consul is defined %}
 {%   for environment in services.consul.deployment_overrides.environment %}
 {%     if environment.split('=')[0] == 'CONSUL_DATACENTER_NAME' %}
@@ -87,6 +106,36 @@ spec:
               key: {{ secrets.split('=')[0] | lower }}
 {%   endfor %}
 {% endif %}
+        - name: CONSUL_DATACENTER_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: consul_datacenter_name
+        - name: SECURE_CONSUL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: secure_consul
+        - name: DISABLE_CONSUL_HTTP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: disable_consul_http_port
+        - name: VAULT_TOKEN_DIR
+          valueFrom:
+              configMapKeyRef:
+                name: {{ settings.project_name }}-consul
+                key: vault_token_dir
+        - name: SAS_ANCHORS_DIR
+          valueFrom:
+              configMapKeyRef:
+                name: {{ settings.project_name }}-consul
+                key: sas_anchors_dir
+        # - name: SASSERVICES_CONFIGMAP
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: {{ settings.project_name }}-consul
+        #       key: sasservices_configmap
 {% if item.value.deployment_overrides.resources is defined and item.value.deployment_overrides.resources %}
         resources:
 {%   for key,value in item.value.deployment_overrides.resources.items() %}
@@ -96,19 +145,43 @@ spec:
 {%     endfor %}
 {%   endfor %}
 {% endif %}
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
         volumeMounts:
+{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
         - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
 {%   endfor %}
 {% endif %}
+{% if custom_volume_mounts is defined and custom_volume_mounts %}
+{%   for mount_key,mount_value in custom_volume_mounts.items() %}
+{%     if mount_key == item.key %}
+        {{ mount_value | indent(8) }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+        - name: anchors
+          mountPath: /anchors
+        - name: tokens
+          mountPath: /tokens
 
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
       volumes:
+{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
       - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
 {%   endfor %}
 {% endif %}
+{% if custom_volumes is defined and custom_volumes %}
+{%   for vol_key,vol_value in custom_volumes.items() %}
+{%     if vol_key == item.key %}
+      {{ vol_value | indent(6) }}
+{%-    endif %}
+{%   endfor %}
+{% endif %}
+      - name: tokens
+        configMap:
+          name: consul-tokens-configmap
+      - name: anchors
+        configMap:
+          name: {{ settings.project_name }}-cacerts-configmap
 ...
