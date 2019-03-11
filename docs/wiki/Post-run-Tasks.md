@@ -2,8 +2,9 @@
 
 - [Configure Your Environment with SAS Environment Manager](#configure-your-environment-with-sas-environment-manager)
 - [Verify That Licenses Are Applied](#verify-that-licenses-are-applied)
-- [(Optional) Verify Bulk Loaded Configuration](#optional-verify-bulk-loaded-configuration)
 - [(Optional) Regenerating Manifests](#optional-regenerating-manifests)
+- [(Optional) Converting an Environment from CAS SMP to CAS MPP](#optional-converting-an-environment-from-cas-smp-to-cas-mpp)
+- [(Optional) Verify Bulk Loaded Configuration](#optional-verify-bulk-loaded-configuration)
 - [(Optional) Create a Local Copy of Documentation](#optional-create-a-local-copy-of-documentation)
 
 ## Configure Your Environment with SAS Environment Manager
@@ -196,15 +197,18 @@ If the licenses were not applied, use the instructions to apply the licenses.
 
 ## (Optional) Regenerating Manifests
 
-If the deployment manifests that were generated in the *working/manifests* directory did not contain everything that is needed, or need to be updated, you can regenerate the manifests post build. Here are the steps:
+If the deployment manifests that were generated in the working/manifests directory did not contain everything that is needed, or need to be updated, you can regenerate the manifests post build. Here are the steps:
 
-1. Change to the *sas-container-recipes/viya-visuals/working/* directory.
-1. If you need to provide custom configuration, edit the *vars_usermods.yml* file in the *working* directory. See the pre-build [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) task for more information.
+1. Change to the sas-container-recipes/viya-visuals/working/ directory.
+1. If you need to provide custom configuration, edit the vars_usermods.yml file in the /working directory. For more information, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task).
 1. Get the Docker tag for the images that were built.
+
     ```
     SAS_DOCKER_TAG=$(grep "image:" manifests/kubernetes/deployments/consul.yml | awk -F':' '{ print $3 }')
     ```
-1. From the *working* directory, run the following from the command prompt
+    
+1. From the /working directory, run the following from the command prompt
+   
     ```
     source ../env/bin/activate
     ansible-playbook \
@@ -214,16 +218,38 @@ If the deployment manifests that were generated in the *working/manifests* direc
         -e "docker_tag=${SAS_DOCKER_TAG}" \
         -e 'ansible_python_interpreter=/usr/bin/python'
     ```
+    
 1. New manifests will be generated.
+
+## (Optional) Converting an Environment from CAS SMP to CAS MPP
+
+By default, the CAS deployment is set up as SMP. If a MPP environment is needed, perform one of the following steps:
+
+* If you have not yet deployed the environment, regenerate manifests. See [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) for information about editing the viya-visuals/vars_usermods.yml file to support MPP mode.
+* If you have already deployed the environment:
+    1. Scale down the controller to 0: 
+
+        `kubectl -n <k8s namespace> scale statefulsets sas-viya-cas --replicas=0`
+
+    1. Edit the CAS configmap and set the cascfg_mode to "mpp": 
+
+        `kubectl -n <k8s namespace> edit configmap sas-viya-cas`
+
+    1. Scale up the controller to 1: 
+
+        `kubectl -n <k8s namespace> scale statefulsets sas-viya-cas --replicas=1`
+
+    1. Scale up the workers: 
+
+        `kubectl -n <k8s namespace> scale deployment.v1.apps/sas-viya-cas-worker --replicas=3`
 
 ## (Optional) Verify Bulk Loaded Configuration
 
-For a *viya-visuals* deployment, if you used the pre-build task of [Bulk Loading of Configuration Values](Pre-build-Tasks#bulk-loading-of-configuration-values), you will want to make sure that the key-value pairs were loaded correctly. To do this view the configuration properties for a configuration definition such as, SAS Logon Manager, in SAS Environment Manager to verify that the specified values are present. For more information, follow the first five steps in [Edit Configuration Instances](https://go.documentation.sas.com/?cdcId=calcdc&cdcVersion=3.4&docsetId=calconfig&docsetTarget=n03000sasconfiguration0admin.htm&locale=en#n03007sasconfiguration0admin).
-
+For a full deployment, if you performed the [Bulk Loading of Configuration Values](Pre-build-Tasks#bulk-loading-of-configuration-values) pre-build task, you want to confirm that the key-value pairs were loaded correctly. To do this, view the configuration properties for a configuration definition such as, SAS Logon Manager, in SAS Environment Manager to verify that the specified values are present. For more information, follow the first five steps in [Edit Configuration Instances](https://go.documentation.sas.com/?cdcId=calcdc&cdcVersion=3.4&docsetId=calconfig&docsetTarget=n03000sasconfiguration0admin.htm&locale=en#n03007sasconfiguration0admin) in _SAS Viya Administration_.
 
 ## (Optional) Create a Local Copy of Documentation
 
-You can configure your software to give your users access to local documentation. Here are two instances where access to local documentation would be useful:
+You can configure your software to give users access to local documentation. Here are two instances where access to local documentation would be useful:
 
 - You have customized your documentation.
 - Your SAS system is highly secure, and it does not have access to the internet. Because the SAS documentation is cloud-hosted, it cannot be reached without internet access.
