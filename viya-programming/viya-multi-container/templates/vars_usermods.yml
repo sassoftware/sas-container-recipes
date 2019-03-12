@@ -1,8 +1,8 @@
 # A user should not edit this file. Instead, copy this file and place it in
 # sas-container-recipes/viya-programming/viya-multi-container and add any overrides that are desired.
 
-# The directory where manifests will be created. Default is "manifest"
-#SAS_MANIFEST_DIR: manifest
+# The directory where manifests will be created. Default is "manifests"
+#SAS_MANIFEST_DIR: manifests
 
 # The Kubernetes namespace that we are deploying into. Default is "sas-viya"
 #SAS_K8S_NAMESPACE: sas-viya
@@ -31,12 +31,12 @@
 # is added to the manifest. It is a straight copy of what is provided added to the
 # manifest.
 
-#custom_volumes:
+#custom_volume_mounts:
 #  sas-casserver-primary: |
 #    - name: someserver
 #      mountPath: /specific/path/to/mount
 
-#custom_volume_mounts:
+#custom_volumes:
 #  sas-casserver-primary: |
 #    - name: someserver
 #      nfs:
