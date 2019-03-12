@@ -29,7 +29,6 @@ spec:
       labels:
         app: {{ settings.project_name }}-{{ item.key }}
     spec:
-      hostname: {{ settings.project_name }}-{{ item.key }}
       containers:
       - name: {{ settings.project_name }}-{{ item.key }}
 {% for regkey,regvalue in registries.iteritems() %}
