@@ -242,4 +242,3 @@ if [ -n "${pidfile}" ]; then
     # The variable pidfile is non-empty.
     echo "${pid}" > "${pidfile}"
 fi
-
