@@ -1,11 +1,10 @@
 ## Contents
 
 - [Configure Your Environment with SAS Environment Manager](#configure-your-environment-with-sas-environment-manager)
-- [Verify That Licenses Are Applied](#verify-that-licenses-are-applied)
 - [(Optional) Regenerating Manifests](#optional-regenerating-manifests)
 - [(Optional) Converting an Environment from CAS SMP to CAS MPP](#optional-converting-an-environment-from-cas-smp-to-cas-mpp)
 - [(Optional) Verify Bulk Loaded Configuration](#optional-verify-bulk-loaded-configuration)
-- [(Optional) Create a Local Copy of Documentation](#optional-create-a-local-copy-of-documentation)
+- [(Optional) Create a Local Copy of the Documentation](#optional-create-a-local-copy-of-the-documentation)
 
 ## Configure Your Environment with SAS Environment Manager
 
@@ -49,7 +48,7 @@ To reset the password:
 
     After you reset the password, SAS Environment Manager automatically opens in your browser.
 
-5. Click Yes for all the assumable groups so that you have the permissions to perform subsequent tasks.
+5. Click **Yes** for all the assumable groups so that you have the permissions to perform subsequent tasks.
 
 ### Configure the Connection to Your Identity Provider
 
@@ -103,13 +102,13 @@ While signed in as sasboot, configure the connection to your identity provider:
 
 ### Set Up Administrative Users
 
-While you are signed on to SAS Environment Manager as the sasboot user, set up at least one SAS Administrator user, as follows:
+While you are signed in to SAS Environment Manager as the sasboot user, set up at least one SAS Administrator user, as follows:
 
 1. On the Users page in SAS Environment Manager, select **Custom Groups** from the list in the toolbar.
 
 1. In the left pane, click **SAS Administrators**.
 
-1. In the **Members** section of the right pane, click the **Edit** icon, and add one or more members to the group (including your own account, if applicable).
+1. In the **Members** section of the right pane, click the Edit icon, and add one or more members to the group (including your own account, if applicable).
 
 1. Sign out from SAS Environment Manager so that you are no longer signed in as the sasboot user.
 
@@ -127,7 +126,7 @@ Open SAS Environment Manager from a URL with the following format:
 
 `https://ingress-path/SASEnvironmentManager`
 
-Sign in as one of the SAS Administrators that you set up in the Set Up Administrative Users section above.
+Sign in as one of the SAS Administrators that you set up in the [Set Up Administrative Users](#set-up-administrative-users).
 
 ### Configure the Connection to the Mail Service
 
@@ -151,11 +150,11 @@ Configure the connection to your mailservice. Complete these steps while you are
 
     1. In the **management.health.mail** section, click the Edit icon.
 
-    1. Turn the **enabled** toggle to **on**.
+    1. Set the **enabled** toggle to **on**.
 
     1. Click **Save**.
 
-    When this toggle is set, health checks will be enabled after the mail service is restarted. If the mail host is not configured or is configured incorrectly, or if it cannot connect to the SMTP mail server, the mail service will indicate it is in a failed state.
+    When this toggle is set, health checks will be enabled after the mail service is restarted. If the mail host is not configured or is configured incorrectly, or if it cannot connect to the SMTP mail server, the mail service will indicate that it is in a failed state.
 
 5. Restart the mail service.
 
@@ -163,7 +162,7 @@ Configure the connection to your mailservice. Complete these steps while you are
 
 ### Disable the Password Reset Feature and Reset the sasboot Password
 
-When you are finished setting up LDAP and the initial administrative users, you should reset the password for the sasboot user. For additional security, you can then disable the password reset feature. This action prevents password reset links from being written to the log each time the SASLogon service is restarted.
+After you are finished setting up LDAP and the initial administrative users, you should reset the password for the sasboot user. For additional security, you can then disable the password reset feature. This action prevents password reset links from being written to the log each time the SASLogon service is restarted.
 
 1. Sign in to SAS Environment Manager as an administrative user and select the wrench icon from the side menu to open the Configuration page.
 
@@ -186,14 +185,6 @@ When you are finished setting up LDAP and the initial administrative users, you 
 ### Configure SAS Viya to Encrypt the LDAP Connection
 
 SAS Viya supports encrypted connections between the LDAP client and server. To configure a secure LDAP connection, see [Encrypt  LDAP Connections](http://documentation.sas.com/?docsetId=calencryptmotion&amp;docsetTarget=n1xdqv1sezyrahn17erzcunxwix9.htm&amp;docsetVersion=3.4#p1bai319815977n1bzdyyxr3d5he) in _Encryption in SAS Viya: Data in Motion._
-
-## Verify That Licenses Are Applied
-
-During deployment, a license is applied to both the CAS in-memory compute engine and the SAS Foundation compute engine. To ensure proper operation of the engines, you should verify that the licenses were applied properly.
-
-For more information, see [Licensing: How To (SAS Studio)](https://go.documentation.sas.com/?cdcId=calcdc&cdcVersion=3.4&docsetId=callicense&docsetTarget=n03028saslicensing00000admin.htm) in _SAS Viya Administration_.
-
-If the licenses were not applied, use the instructions to apply the licenses.
 
 ## (Optional) Regenerating Manifests
 
@@ -247,7 +238,7 @@ By default, the CAS deployment is set up as SMP. If a MPP environment is needed,
 
 For a full deployment, if you performed the [Bulk Loading of Configuration Values](Pre-build-Tasks#bulk-loading-of-configuration-values) pre-build task, you want to confirm that the key-value pairs were loaded correctly. To do this, view the configuration properties for a configuration definition such as, SAS Logon Manager, in SAS Environment Manager to verify that the specified values are present. For more information, follow the first five steps in [Edit Configuration Instances](https://go.documentation.sas.com/?cdcId=calcdc&cdcVersion=3.4&docsetId=calconfig&docsetTarget=n03000sasconfiguration0admin.htm&locale=en#n03007sasconfiguration0admin) in _SAS Viya Administration_.
 
-## (Optional) Create a Local Copy of Documentation
+## (Optional) Create a Local Copy of the Documentation
 
 You can configure your software to give users access to local documentation. Here are two instances where access to local documentation would be useful:
 
@@ -277,4 +268,4 @@ To configure local documentation:
 
 1. Click **Save** on the New htmlcommons Configuration pane.
 
-Users see a new item in the **Help Menu** list, between the **Help Center** and **About** entries. Clicking this link opens the specified HTML page.
+Users will see a new item in the **Help Menu** list, between the **Help Center** and **About** entries. Clicking this link opens the specified HTML page.
