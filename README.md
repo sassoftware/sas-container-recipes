@@ -1,5 +1,5 @@
 <div align="center">  
-<h1>SAS® Viya® Container Recipes</h1>
+<h1>SAS<sup>®</sup> Viya<sup>®</sup> Container Recipes</h1>
 <img src="docs/sas-container-icon.jpg" alt="SAS Containers Icon" height="200">
 <p>Framework to build SAS Viya Docker images and create deployments using Kubernetes.</p>
 
@@ -119,8 +119,8 @@ your users with the features that they require.
 - Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed: required for the deployment step but not required for the build step.
 - **Strongly recommended:** A local mirror of the SAS software. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
 
-### Run `build.sh`
-Examples of running build.sh to deploy multiple containers are provided below. A non-root user is recommended for all build commands.
+### How to Build
+Examples of running build.sh to build multiple containers are provided below. A non-root user is recommended for all build commands.
 
 **Example: Programming-Only Deployment, Mulitple Containers**
 
@@ -213,9 +213,10 @@ Examples of running build.sh to deploy multiple containers are provided below. A
     Example: 18.12.0-20181209115304-b197206
 ```
 
-### After Running `build.sh`
-* For a SAS Viya Programming deployment, the Kubernetes manifests are located at `viya-programming/viya-multi-container/working/manifests/kubernetes`
-* For a SAS Viya Full deployment, the Kubernetes manifests are located at `viya-visuals/working/manifests/kubernetes/`
+### How to Run
+
+* For a SAS Viya programming-only deployment, the Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests`
+* For a SAS Viya full deployment, the Kubernetes manifests are located at `$PWD/viya-visuals/working/manifests`
 
 Choose between SMP or MPP and run a 
 `kubectl create --file` or `kubectl replace --file` on the manifests inside the kubernetes directory.
