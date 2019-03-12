@@ -47,6 +47,16 @@ if [ -z $APACHE_CONF_D ]; then
   fi
 fi
 
+# Enable TLS if the certificate and key have been provided
+if [[ ! -z ${SSL_CERT_NAME} ]] && [[ ! -z ${SSL_KEY_NAME} ]]; then
+    chmod 0600 /etc/pki/tls/certs/${SSL_CERT_NAME}
+    chown -R root /etc/pki/tls/certs/${SSL_CERT_NAME}
+    sed -i "s:SSLCertificateFile /etc/pki/tls/certs/localhost.crt:SSLCertificateFile /etc/pki/tls/certs/${SSL_CERT_NAME}:g" /etc/httpd/conf.d/ssl.conf
+
+    chmod 0600 /etc/pki/tls/private/${SSL_KEY_NAME}
+    chown -R root /etc/pki/tls/private/${SSL_KEY_NAME}
+    sed -i "s:SSLCertificateKeyFile /etc/pki/tls/private/localhost.key:SSLCertificateKeyFile /etc/pki/tls/private/${SSL_KEY_NAME}:g" /etc/httpd/conf.d/ssl.conf
+fi
 
 _deployid=${SASDEPLOYID}
 export CASCONFIG="${SASROOT}/${_deployid}/config"

@@ -163,7 +163,7 @@ function setup_defaults() {
     [[ -z ${SAS_DOCKER_TAG+x} ]]               && SAS_DOCKER_TAG=${SAS_RECIPE_VERSION}-${sas_datetime}-${sas_sha1}
     [[ -z ${PROJECT_NAME+x} ]]                 && PROJECT_NAME=sas-viya
     [[ -z ${SAS_K8S_NAMESPACE+x} ]]            && SAS_K8S_NAMESPACE="${PROJECT_NAME}"
-    [[ -z ${SAS_K8S_INGRESS_PATH+x} ]]         && SAS_K8S_INGRESS_PATH="${PROJECT_NAME}.company.com"
+    [[ -z ${SAS_K8S_INGRESS_DOMAIN+x} ]]       && SAS_K8S_INGRESS_DOMAIN="company.com"
     [[ -z ${BASEIMAGE+x} ]]                    && BASEIMAGE=centos
     [[ -z ${BASETAG+x} ]]                      && BASETAG="7"
     [[ -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP+x} ]] && SAS_VIYA_DEPLOYMENT_DATA_ZIP=${PWD}/SAS_Viya_deployment_data.zip
@@ -422,7 +422,7 @@ EOL
     echo
     echo "PROJECT_NAME: ${PROJECT_NAME}" > everything.yml
     echo "SAS_K8S_NAMESPACE: ${SAS_K8S_NAMESPACE}" >> everything.yml
-    echo "SAS_K8S_INGRESS_PATH: ${SAS_K8S_INGRESS_PATH}" >> everything.yml
+    echo "SAS_K8S_INGRESS_DOMAIN: ${SAS_K8S_INGRESS_DOMAIN}" >> everything.yml
     echo "BASEIMAGE: ${BASEIMAGE}" >> everything.yml
     echo "BASETAG: ${BASETAG}" >> everything.yml
     echo "PLATFORM: ${PLATFORM}" >> everything.yml

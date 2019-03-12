@@ -101,7 +101,7 @@ This section provides pre-build tasks for some of the access addons that provide
 Before you can use the access-greenplum addon, confirm that the environment variables in the greenplum_saserver.sh file specify the locations of the ODBC configurations. The default locations for the ODBC configuration files are in the /sasinside directory.
 
 - For single containers running on Docker, this directory is mapped automatically to the running container from the Docker host.
-- For containers running on Kubernetes, the /sasinside directory (or a preferred directory) should be mapped to the sas-viya-programming, sas-viya-computeserver and sas-viya-sas-casserver-primary pods.
+- For containers running on Kubernetes, the /sasinside directory (or a preferred directory) should be mapped to the sas-viya-programming, sas-viya-computeserver and sas-viya-cas pods.
 
 Here are the commands that specify the locations of the ODBC configurations:
 
@@ -132,7 +132,7 @@ sas-container-recipes/addons/access-hadoop/hadoop/jars
 Before you can use the access-odbc addon, confirm that the environment variables in the odbc_cas.settings and odbc_saserver.sh files specify the locations of the ODBC configurations. The default locations for the ODBC configuration files are in the /sasinside directory.
 
 - For single containers running on Docker, this directory is mapped automatically to the running container from the Docker host.
-- If running on Kubernetes,  the /sasinside directory (or a preferred directory) should be mapped to the sas-viya-programming, sas-viya-computeserver and sas-viya-sas-casserver-primary pods.
+- If running on Kubernetes,  the /sasinside directory (or a preferred directory) should be mapped to the sas-viya-programming, sas-viya-computeserver and sas-viya-cas pods.
 
 Here are the commands that specify the locations of the ODBC configurations:
 
@@ -155,10 +155,11 @@ Confirm that the environment variables in the oracle_cas.settings and oracle_sas
 
 #### Redshift
 
-Before you can use the access-redshift addon, confirm that the environment variables in the redshift_cas.settings and redshift_saserver.sh files specify the locations of the ODBC configurations. The default locations for the ODBC configuration files are in the /sasinside directory.
+Before you can use the access-redshift addon, confirm that the environment variables in the redshift_cas.settings and redshift_saserver.sh files specify the locations of the ODBC configurations. 
+The default locations for the ODBC configuration files are in the /sasinside directory.
 
 - For single containers running on Docker, this directory is mapped automatically to the running container from the Docker host.
-- If running on Kubernetes, the /sasinside directory (or a preferred directory) should be mapped to the sas-viya-programming, sas-viya-computeserver and sas-viya-sas-casserver-primary pods. 
+- If running on Kubernetes, the /sasinside directory (or a preferred directory) should be mapped to the sas-viya-programming, sas-viya-computeserver and sas-viya-cas pods. 
 
 Here are the commands that specify the locations of the ODBC configurations:
 

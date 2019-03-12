@@ -3,18 +3,44 @@ kind: Ingress
 metadata:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      gzip off;
   name: {{ settings.project_name }}-visuals-ingress
   namespace: {{ SAS_K8S_NAMESPACE }}
 spec:
   rules:
-  - host: {{ SAS_K8S_INGRESS_PATH }}
+  - host: {{ settings.project_name }}.{{ SAS_K8S_NAMESPACE }}.{{ SAS_K8S_INGRESS_DOMAIN }}
     http:
       paths:
       - backend:
           serviceName: {{ settings.project_name }}-httpproxy
           servicePort: 80
+{% if "espserver" in services %}
+  - host: {{ settings.project_name }}-esp-design.{{ SAS_K8S_NAMESPACE }}.{{ SAS_K8S_INGRESS_DOMAIN }}
+    http:
+      paths:
+      - backend:
+          serviceName: {{ settings.project_name }}-espserver
+          servicePort: 31415
+  - host: {{ settings.project_name }}-esp-run-time.{{ SAS_K8S_NAMESPACE }}.{{ SAS_K8S_INGRESS_DOMAIN }}
+    http:
+      paths:
+      - backend:
+          serviceName: {{ settings.project_name }}-esp-run-time
+          servicePort: 31415
+  - host: {{ settings.project_name }}-esp-metered-billing.{{ SAS_K8S_NAMESPACE }}.{{ SAS_K8S_INGRESS_DOMAIN }}
+    http:
+      paths:
+      - backend:
+          serviceName: {{ settings.project_name }}-esp-metered-billing
+          servicePort: 31001
+{% endif %}
 #  tls:
 #  - hosts:
-#    - {{ SAS_K8S_INGRESS_PATH }}
+#    - {{ settings.project_name }}.{{ SAS_K8S_NAMESPACE }}.{{ SAS_K8S_INGRESS_DOMAIN }}
+{% if "espserver" in services %}
+#    - {{ settings.project_name }}-esp-design.{{ SAS_K8S_NAMESPACE }}.{{ SAS_K8S_INGRESS_DOMAIN }}
+#    - {{ settings.project_name }}-esp-run-time.{{ SAS_K8S_NAMESPACE }}.{{ SAS_K8S_INGRESS_DOMAIN }}
+#    - {{ settings.project_name }}-esp-metered-billing.{{ SAS_K8S_NAMESPACE }}.{{ SAS_K8S_INGRESS_DOMAIN }}
+{% endif %}
 #    secretName: @REPLACE_ME_WITH_YOUR_CERT@
-

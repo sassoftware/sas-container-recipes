@@ -97,4 +97,7 @@ export CASSET_{{ key }}={{ value | string | quote }}
 
 {% if item.value.caskey is defined and item.value.caskey %}
 export CASKEY={{ item.value.caskey | string | quote }}
+{% elif ansible_env.ANSIBLE_CONTAINER is defined %}
+# Setting CASKEY so that CASCFG_ELASTIC is defined in Consul
+export CASKEY="REPLACE_KEY_WITH_RUN_TIME_VALUE"
 {% endif %}
