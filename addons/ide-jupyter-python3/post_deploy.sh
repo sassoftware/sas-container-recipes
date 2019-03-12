@@ -132,6 +132,7 @@ runuser --shell "/bin/sh" --login ${RUN_USER} \
     jupyter notebook \
     --ip='*' \
     --no-browser \
+    --NotebookApp.allow_origin='*' \
     --NotebookApp.token='${JUPYTER_TOKEN}' \
     --NotebookApp.terminals_enabled=${ENABLE_TERMINAL} \
     --NotebookApp.base_url=/Jupyter \

@@ -18,8 +18,7 @@
     dev_overrides:
       environment:
         - "SAS_DEBUG=0"
-        - "APP_NAME=rabbitmq"
-        - "SERVICE_NAME=abbitmq"
+        - "SERVICE_NAME=rabbitmq"
     deployment_overrides:
       resources:
         limits:
