@@ -380,7 +380,23 @@ function echo_footer()
     [[ -z ${PROJECT_DIRECTORY+x} ]]         && PROJECT_DIRECTORY=working
     [[ -z ${SAS_MANIFEST_DIR+x} ]]          && SAS_MANIFEST_DIR=manifests
     [[ -z ${SAS_DEPLOY_MANIFEST_TYPE+x} ]]  && SAS_DEPLOY_MANIFEST_TYPE=kubernetes
-    ls -1dtr $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/* | awk '{ print "kubectl create -f " $1 }'
+
+    # See if the user provided a different manifest directory via the vars_usermods.yml
+    if [[ -f $1/$PROJECT_DIRECTORY/vars_usermods.yml ]]; then
+        set +e
+        user_manifest_dir=$(grep "^SAS_MANIFEST_DIR:" $1/$PROJECT_DIRECTORY/vars_usermods.yml)
+        if [[ -n $user_manifest_dir ]]; then
+            SAS_MANIFEST_DIR=$(echo $user_manifest_dir | awk -F ": " '{ print $2 }')
+        fi
+        set -e
+    fi
+
+    # See if the user provided a namespace via the vars_usermods.yml
+    sas_kubernetes_namespace=sas-viya
+    if [[ -d $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/namespace ]]; then
+        sas_kubernetes_namespace=$(grep "name\": \"" $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/namespace/*.yml | head -n 1 | awk -F "\"" '{ print $4 }')
+    fi
+    ls -1dtr $1/$PROJECT_DIRECTORY/$SAS_MANIFEST_DIR/$SAS_DEPLOY_MANIFEST_TYPE/* | awk -v sas_kubernetes_namespace="$sas_kubernetes_namespace" '{ if ($1 ~ /namespace/) print "kubectl apply -f " $1; else print "kubectl apply -n " sas_kubernetes_namespace " -f " $1; }'
     echo ""
     kubectl version > /dev/null 2>&1 || echo -e "*** Kubernetes (kubectl) is required for the deployment step. See https://kubernetes.io/docs/tasks/tools/install-kubectl/"
 }
@@ -448,11 +464,6 @@ while [[ $# -gt 0 ]]; do
         -t|--basetag)
             shift # past argument
             BASETAG="$1"
-            shift # past value
-            ;;
-        -r|--docker-registry-type)
-            shift # past argument
-            DOCKER_REGISTRY_TYPE="$1"
             shift # past value
             ;;
         -m|--mirror-url)
@@ -793,7 +804,6 @@ case ${SAS_RECIPE_TYPE} in
           --basetag "${BASETAG}" \
           --platform "${PLATFORM}" \
           --docker-url "${DOCKER_REGISTRY_URL}" \
-          --docker-registry-type "${DOCKER_REGISTRY_TYPE}" \
           --docker-namespace "${DOCKER_REGISTRY_NAMESPACE}" \
           --sas-docker-tag "${SAS_DOCKER_TAG}" 
 

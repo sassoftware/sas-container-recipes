@@ -1,31 +1,4 @@
 ---
-apiVersion: v1
-kind: Service
-metadata:
-{% if item.key == "sas-casserver-primary" %}
-  name: {{ settings.project_name }}-cas
-{% else %}
-  name: {{ settings.project_name }}-{{ item.key }}
-{% endif %}
-spec:
-  selector:
-{% if item.key == "sas-casserver-primary" %}
-    app: {{ settings.project_name }}-cas
-{% else %}
-    app: {{ settings.project_name }}-{{ item.key }}
-{% endif %}
-{% if item.value.ports is defined and item.value.ports %}
-  ports:
-{%   for ports in item.value.ports %}
-    - name: "{{ ports.split(':')[0] }}"
-      protocol: TCP
-      port: {{ ports.split(':')[0] }}
-      targetPort: {{ ports.split(':')[0] }}
-{%   endfor %}
-{% endif %}
-  sessionAffinity: None
-  clusterIP: None
----
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
@@ -73,12 +46,12 @@ spec:
         - name: CONSUL_SERVER_LIST
           value: "{{ settings.project_name }}-consul"
 {% endif %}
-{% if item.key == "sas-casserver-primary" and cas_manifest_type == "smp" %}
+{% if item.key == "sas-casserver-primary" %}
         - name: CASCFG_MODE
-          value: "smp"
-{% elif item.key == "sas-casserver-primary" and cas_manifest_type == "mpp" %}
-        - name: CASCFG_MODE
-          value: "mpp"
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-cas
+              key: cascfg_mode
 {% endif %}
 {% if SECURE_CONSUL %}
         - name: SECURE_CONSUL
@@ -122,7 +95,7 @@ spec:
 {% if item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets %}
 {%   for secrets in item.value.deployment_overrides.secrets %}
 {%     if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
-        - name: SETINIT_TEXT 
+        - name: SETINIT_TEXT
 {%     else      %}
         - name: {{ secrets.split('=')[0] }}
 {%     endif     %}
