@@ -319,7 +319,7 @@ A certificate and key can be passed into the Docker image to encrypt traffic bet
 
 Example:
 ```
-docker run --interactice --tty \
+docker run --interactive --tty \
 --volume /my/path/to/casigned.cer:/etc/pki/tls/certs/casigned.cer \
 --volume /my/path/to/servertls.key:/etc/pki/tls/private/servertls.key \
 --env SSL_CERT_NAME=casigned.cer \
