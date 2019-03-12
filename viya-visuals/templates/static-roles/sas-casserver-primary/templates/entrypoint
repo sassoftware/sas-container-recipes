@@ -155,6 +155,7 @@ fi
 # Clean up some other CAS configuration for a Docker image
 #
 
+[[ -z ${CASKEY+x} ]]       && CASKEY="REPLACE ME with unique text. This is used to allow CAS workers to talk to the CAS controller"
 [[ -z ${SERVICE_NAME+x} ]] && export SERVICE_NAME="cascontroller"
 is_controller=true
 
@@ -162,6 +163,7 @@ if [ "${SERVICE_NAME}" = "cascontroller" ]; then
     export CASCONTROLLERHOST="${SAS_CURRENT_HOST}"
     export CASWORKERHOSTS=""
     # Update the controller host before updating Consul
+    sed -i "s|REPLACE_KEY_WITH_RUN_TIME_VALUE|${CASKEY}|" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
     sed -i "s|SASCONTROLLERHOST: .*|SASCONTROLLERHOST: ${CASCONTROLLERHOST}|" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
     echo "[INFO]  : Load the cas.yml file into consul"
     ${SASHOME}/bin/sas-bootstrap-config kv bulkload \
@@ -198,7 +200,7 @@ if [ "${CASCFG_MODE}" = "mpp" ]; then
         grep_rc=$?
         set -e
         if (( ${grep_rc} != 0 )); then
-            echo "[ERROR] - Unknown service type passed in."
+            echo "[ERROR] - Running in MPP mode but CASKEY cannot be found."
             exit 11
         else
             echo "[INFO]  - CASKEY found in ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment"
@@ -250,8 +252,8 @@ source ${SASCONFIG}/etc/sysconfig/sas-javaesntl/sas-java
 [[ -z ${CASLLP_JAVA+x} ]]      && export CASLLP_JAVA=\$LD_LIBRARY_PATH:\$JAVA_HOME/lib/amd64/server
 
 # If the license is being passed in via an environment variable then echo it into a file.
-[[ ! -z ${SETINIT_TEXT+x} ]]     && echo "${SETINIT_TEXT}" > ${SASLICENSEDIR}/${SASLICENSEFILE}
-[[ ! -z ${SETINIT_TEXT_ENC+x} ]] && echo "${SETINIT_TEXT_ENC}" | base64 --decode --ignore-garbage > ${SASLICENSEDIR}/${SASLICENSEFILE}
+[[ ! -z ${SETINIT_TEXT+x} ]]     && echo "${SETINIT_TEXT}" > ${SASLICENSEDIR}/${SASLICENSEFILE} && unset SETINIT_TEXT
+[[ ! -z ${SETINIT_TEXT_ENC+x} ]] && echo "${SETINIT_TEXT_ENC}" | base64 --decode --ignore-garbage > ${SASLICENSEDIR}/${SASLICENSEFILE} && unset SETINIT_TEXT_ENC
 
 # Tell CAS where the license lives if the user has not already set it.
 [[ -z ${CASENV_CAS_LICENSE+x} ]] && export CASENV_CAS_LICENSE=${SASLICENSEDIR}/${SASLICENSEFILE}
