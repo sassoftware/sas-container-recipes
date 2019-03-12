@@ -205,6 +205,22 @@ fi
 
 if [[ $ESP_ROLE != "metered_billing" ]]; then
     echo "[INFO]  : Running a ESP server with a role of \"${ESP_ROLE}\""
+    if [[ -n $ESPENV ]]; then
+        ESPENV="${ESPENV},connectors.excluded.kafka=false"
+    else
+        ESPENV="connectors.excluded.kafka=false"
+    fi
+    if [[ $ESP_ROLE == "run_time" && -n $ESPENV ]]; then
+        [[ -z ${ESP_METERED_BILLING_PORT+x} ]] && ESP_METERED_BILLING_PORT=31001
+        [[ -z ${ESP_METERED_BILLING_HOST+x} ]] && ESP_METERED_BILLING_HOST=${DEPLOYMENT_NAME}-esp-metered-billing
+        ESPENV="${ESPENV},meta.meteringhost=${ESP_METERED_BILLING_HOST},meta.meteringport=${ESP_METERED_BILLING_PORT}"
+         
+        rc=$(curl -LI http://${ESP_METERED_BILLING_HOST}:${ESP_METERED_BILLING_PORT}/SASESP/meterData -o /dev/null -w '%{http_code}\n' -s)
+        if [ $rc -ne 200 ]; then
+            echo "[ERROR] : Metered billing server not up at http://${ESP_METERED_BILLING_HOST}:${ESP_METERED_BILLING_PORT}"
+            exit -1
+        fi
+    fi
     if [[ -z $ESPENV ]]; then
         # shellcheck disable=SC2086
         $DFESP_HOME/bin/dfesp_xml_server -http "$ESP_HTTP_PORT" -pubsub "$ESP_PUBSUB_PORT" "$ESP_AUTHENTICATION_STRING" "$ESP_MODEL_STRING" "$ESP_LOGLEVEL_STRING" &
