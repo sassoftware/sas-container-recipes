@@ -85,11 +85,18 @@
   when: item.key == 'espserver'
   with_dict: '{{ services }}'
 
+- name: Create ESP run time k8s service
+  template:
+    src: "esp_run_time_k8s_services.j2"
+    dest: "{{ playbook_dir }}/{{ sas_manifest_dir }}/kubernetes/services/esp_run_time.yml"
+  when: item.key == 'espserver'
+  with_dict: '{{ services }}'
+
 - name: Create pets k8s services 
   template:
     src: "k8s_services.j2"
     dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/services/cas.yml{% else %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/services/{{ item.key }}.yml{% endif %}"
-  when: item.key in 'consul, computeserver, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
+  when: item.key in 'consul, computeserver, httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc, espserver'
   with_dict: '{{ services }}'
 
 - name: Create Consul k8s manifest
@@ -103,6 +110,13 @@
   template:
     src: "esp_metered_billing_k8s.j2"
     dest: "{{ playbook_dir }}/{{ sas_manifest_dir }}/kubernetes/deployments/esp_metered_billing.yml"
+  when: item.key == 'espserver'
+  with_dict: '{{ services }}'
+
+- name: Create ESP run-time k8s manifest
+  template:
+    src: "esp_run_time_k8s.j2"
+    dest: "{{ playbook_dir }}/{{ sas_manifest_dir }}/kubernetes/deployments/esp_run_time.yml"
   when: item.key == 'espserver'
   with_dict: '{{ services }}'
 
