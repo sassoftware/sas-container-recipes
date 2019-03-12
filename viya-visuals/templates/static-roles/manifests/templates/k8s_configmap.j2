@@ -111,9 +111,7 @@ kind: ConfigMap
 metadata:
   name: {{ settings.project_name }}-sasservices-configmap
 data:
-{% endif %}
 ---
-{% if item.value.deployment_overrides.environment is defined %}
 apiVersion: v1
 kind: ConfigMap
 metadata:

@@ -7,8 +7,8 @@
 # The Kubernetes namespace that we are deploying into. Default is "sas-viya"
 #SAS_K8S_NAMESPACE: sas-viya
 
-# The Ingress path for the httpproxy environment. Default is "sas-viya.company.com"
-#SAS_K8S_INGRESS_PATH: sas-viya.company.com
+# The Ingress path for the httpproxy environment. Default is "company.com"
+#SAS_K8S_INGRESS_DOMAIN: company.com
 
 # In the following structure, define the deployment_overrides per service that
 # you want to end up in the generated manifests. This will add to or replace defaults
