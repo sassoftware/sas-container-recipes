@@ -18,7 +18,6 @@ spec:
       # Required for TLS configurations
       #serviceAccountName: {{ settings.project_name }}-account
 {% endif %}
-      hostname: {{ settings.project_name }}-{{ item.key }}
       subdomain: {{ settings.project_name }}-subdomain
       containers:
       - name: {{ settings.project_name }}-{{ item.key }}

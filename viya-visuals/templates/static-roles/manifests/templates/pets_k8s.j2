@@ -30,11 +30,6 @@ spec:
       # Required for TLS configurations
       #serviceAccountName: {{ settings.project_name }}-account
 {% endif %}
-{% if item.key == "sas-casserver-primary" %}
-      hostname: {{ settings.project_name }}-cas
-{% else %}
-      hostname: {{ settings.project_name }}-{{ item.key }}
-{% endif %}
       subdomain: {{ settings.project_name }}-subdomain
       containers:
 {% if item.key == "sas-casserver-primary" %}

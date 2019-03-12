@@ -23,11 +23,6 @@ spec:
         app: {{ settings.project_name }}-{{ item.key }}
 {% endif %}
     spec:
-{% if item.key == "sas-casserver-primary" %}
-      hostname: {{ settings.project_name }}-cas
-{% else %}
-      hostname: {{ settings.project_name }}-{{ item.key }}
-{% endif %}
       containers:
 {% if item.key == "sas-casserver-primary" %}
       - name: {{ settings.project_name }}-cas

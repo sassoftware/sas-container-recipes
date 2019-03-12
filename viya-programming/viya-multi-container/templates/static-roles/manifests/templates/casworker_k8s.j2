@@ -21,7 +21,6 @@ spec:
       labels:
         app: {{ settings.project_name }}-cas-worker
     spec:
-      hostname: {{ settings.project_name }}-cas-worker
       containers:
       - name: {{ settings.project_name }}-cas-worker
 {% for regkey,regvalue in registries.items() %}
