@@ -1,8 +1,3 @@
-# THIS CONTENT HAS BEEN MIGRATED
-# Please use the project's GitHub wiki: https://github.com/sassoftware/sas-container-recipes/wiki
-
----
-
 ### Docker fails to push the newly built images to my registry, what are some common causes?
 
 You must first authenticate with your docker registry using `docker login <my-registry>.mydomain.com`. This will prompt you for a username and password (with LDAP if configured) and a file at `~/.docker/config.json` is created to store that credential.

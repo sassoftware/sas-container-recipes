@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ settings.project_name }}-esp-run-time
+
+spec:
+  selector:
+    app: {{ settings.project_name }}-esp-run-time
+{% if item.value.ports is defined and item.value.ports %}
+  ports:
+{%   for ports in item.value.ports %}
+    - name: "{{ ports.split(':')[0] }}"
+      protocol: TCP
+      port: {{ ports.split(':')[0] }}
+      targetPort: {{ ports.split(':')[0] }}
+{%   endfor %}
+{% endif %}
+  sessionAffinity: None
+  clusterIP: None

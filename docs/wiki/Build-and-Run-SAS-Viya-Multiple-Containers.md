@@ -64,8 +64,8 @@ The _docker-registry-url_ and _docker-registry-namespace_ are used so that the p
 The `--virtual-host` option should point to the ingress host that is representing the end point for the sas-viya-httpproxy container. If this is not known at time of deployment, fill this value in with a place holder. The value can changed post running of `build.sh` and prior to deploying the images to Kubernetes.
 
 Passing in `--addons` will follow a convention to automatically add the layers to the correct SAS images. 
-* Addons that begin with _auth_ will be added to the computeserver, programming and sas-casserver-primary containers
-* Addons that begin with _access_ will be added to the computeserver, programming and sas-casserver-primary  containers
+* Addons that begin with _auth_ will be added to the computeserver, programming and cas containers
+* Addons that begin with _access_ will be added to the computeserver, programming and cas  containers
 * Addons that begin with _ide_ will be added to the programming containers
 
 In some cases, addons may change the httpproxy container as well. This will only be if the addon contains a _Dockerfile_http_ file. One can see an example of this in the _ide-jpuyter-python3_ addon.
@@ -138,7 +138,7 @@ See the Docker documentation for more options on cleaning up your build system. 
 ### Kubernetes
 For a programming only build, a set of Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests` and for full build they are at `$PWD/viya-visuals/working/manifests`. Please use the path that matches to your type of build. We will refer to this path as _$MANIFESTS_. 
 
-For a programming only image, you can change the virtual host value from the value used in building the image. You may need to do this if you used a value when building that is no longer valid. Edit the `$MANIFESTS/kubernetes/deployments-mpp/sas-casserver-primary.yml` file and add the following to the "env" section for the _sas-viya-sas-casserver-primary_ container:
+For a programming only image, you can change the virtual host value from the value used in building the image. You may need to do this if you used a value when building that is no longer valid. Edit the `$MANIFESTS/kubernetes/deployments/cas.yml` file and add the following to the "env" section for the _sas-viya-cas_ container:
 
 ```
         - name: CASENV_CAS_VIRTUAL_HOST 
@@ -147,21 +147,21 @@ For a programming only image, you can change the virtual host value from the val
           value: "<port value of ingress controller>"
 ```
 
-The manifests already define several paths where data that needs to persist between restarts can be stored. By default these are setup to point to local storage that will disappear once the Kubernetes pods are deleted. Please update the manifest to support how your site implements persistence storage. It is strongly suggested that you review [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) to understand what options are available. The manifests need to be updated are:
+The manifests define several paths where data that should persist between restarts can be stored. By default, these paths point to local storage that disappears when Kubernetes pods are deleted. Please update the manifests to support how your site implements persistent storage. It is strongly suggested that you review [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) to evaluate the options for persistence. The manifests that require updates are:
 
 * consul (only in the full build)
 * rabbitmq (only in the full build)
-* sas-casserver-primary
+* cas
 * sasdatasvrc (only in the full build)
 
 In the case of a full build, each of the containers will also have a volume defined to write logs to. To keep these logs around through pod restarts, this volume should also be mapped to persisted storage.
 
-Create the deployment. In this example, we are deploying into the _sas-viya_ Kubernetes namespace. For more information about _namespaces_, see [Kubernetes Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
+To create your deployment, use the manifests created during the build process. In this example, we are deploying into the _sas-viya_ Kubernetes namespace. For more information about _namespaces_, see [Kubernetes Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
 
 A json file was created during manifest generation to help with creating the Kubernetes name space. If your user has the ability to create *namespaces* in the Kuberetes environment, run the following, or request your Kuberenetes administrator to create you a name space in the Kubernetes environment:
 
 ```
-kubectl create -f $MANIFESTS/kubernetes/namespace/sas-viya.json
+kubectl create -f $MANIFESTS/kubernetes/namespace/sas-viya.yml
 ```
 
 Once a *namespace* is available, run the manifests in the following order. Note that the examples are using *sas-viya* for the Kubernetes namespace. If you created a different *namespace*, please use that value instead of *sas-viya*:
@@ -181,7 +181,7 @@ kubectl -n sas-viya get pods
 NAME                                            READY   STATUS    RESTARTS   AGE
 sas-viya-httpproxy-0                            1/1     Running   0          21h
 sas-viya-programming-0                          1/1     Running   0          21h
-sas-viya-sas-casserver-primary-0                1/1     Running   0          21h
+sas-viya-cas-0                                  1/1     Running   0          21h
 ```
 
 For a full deployment it would look something like:
@@ -210,10 +210,10 @@ sas-viya-programming-0                                 1/1     Running   0      
 sas-viya-rabbitmq-0                                    1/1     Running   0          2d8h
 sas-viya-reportservices-86f8459f6-chh6l                1/1     Running   1          2d8h
 sas-viya-reportviewerservices-79f45fbd5b-nqkf2         1/1     Running   0          2d8h
-sas-viya-sas-casserver-primary-0                       1/1     Running   0          2d8h
-sas-viya-sas-casserver-worker-7b4696c458-59429         1/1     Running   0          2d7h
-sas-viya-sas-casserver-worker-7b4696c458-gzbks         1/1     Running   0          2d7h
-sas-viya-sas-casserver-worker-7b4696c458-kddgj         1/1     Running   1          2d8h
+sas-viya-cas-0                                         1/1     Running   0          2d8h
+sas-viya-cas-worker-7b4696c458-59429                   1/1     Running   0          2d7h
+sas-viya-cas-worker-7b4696c458-gzbks                   1/1     Running   0          2d7h
+sas-viya-cas-worker-7b4696c458-kddgj                   1/1     Running   1          2d8h
 sas-viya-sasdatasvrc-0                                 1/1     Running   0          2d8h
 sas-viya-scoringservices-6f97f7df86-bc4dh              1/1     Running   0          2d8h
 sas-viya-studioviya-fc7fb4c9b-8wtp4                    1/1     Running   0          2d8h

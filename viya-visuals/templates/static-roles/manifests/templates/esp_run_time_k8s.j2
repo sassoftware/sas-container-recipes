@@ -1,25 +1,14 @@
+---
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: {{ settings.project_name }}-cas-worker
+  name: {{ settings.project_name }}-esp-run-time
 spec:
-{% if custom_services is defined and custom_services %}
-{%   for key,value in custom_services.items() %}
-{%     if key == item.key and value.deployment_overrides.environment is defined and value.deployment_overrides.environment %}
-{%       for override in value.deployment_overrides.environment %}
-{%         if 'CASCFG_MODE=mpp' in override %}
-  replicas: 3
-{%         endif %}
-{%       endfor %}
-{%     endif %}
-{%   endfor %}
-{% else %}
-  replicas: 0
-{% endif %}
+  replicas: 1
   template:
     metadata:
       labels:
-        app: {{ settings.project_name }}-cas-worker
+        app: {{ settings.project_name }}-esp-run-time
         domain: {{ settings.project_name }}
     spec:
 {% if SECURE_CONSUL %}
@@ -30,7 +19,7 @@ spec:
 {% endif %}
       subdomain: {{ settings.project_name }}-subdomain
       containers:
-      - name: {{ settings.project_name }}-cas-worker
+      - name: {{ settings.project_name }}-esp-run-time
 {% for regkey,regvalue in registries.items() %}
         image: {{ regvalue.url }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
 {% endfor %}
@@ -44,70 +33,10 @@ spec:
         env:
         - name: DEPLOYMENT_NAME
           value: "{{ settings.project_name }}"
-{% if services.consul is defined %}
         - name: CONSUL_SERVER_LIST
           value: "{{ settings.project_name }}-consul"
-{% endif %}
-        - name: CASCFG_MODE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ settings.project_name }}-cas
-              key: cascfg_mode
-        - name: SERVICE_NAME
-          value: "casworker"
-        - name: CASCONTROLLERHOST
-          value: "{{ settings.project_name }}-cas"
-{% if services.consul is defined %}
-{%   for environment in services.consul.deployment_overrides.environment %}
-{%     if environment.split('=')[0] == 'CONSUL_DATACENTER_NAME' %}
-        - name: {{ environment.split('=')[0] }}
-          valueFrom:
-            configMapKeyRef:
-              name: {{ settings.project_name }}-consul
-              key: {{ environment.split('=')[0] | lower }}
-{%     endif %}
-{%   endfor %}
-{% endif %}
-{% if item.value.deployment_overrides.environment is defined and item.value.deployment_overrides.environment %}
-{%   for environment in item.value.deployment_overrides.environment %}
-{%     if "SERVICE_NAME" not in environment %}
-        - name: {{ environment.split('=')[0] }}
-          valueFrom:
-            configMapKeyRef:
-              name: {{ settings.project_name }}-cas
-              key: {{ environment.split('=')[0] | lower }}
-{%     endif %}
-{%   endfor %}
-{% endif %}
-{% if services.consul is defined %}
-{%   for secrets in services.consul.deployment_overrides.secrets %}
-{%     if secrets.split('=')[0] != 'CONSUL_TOKENS_MANAGEMENT' %}
-        - name: {{ secrets.split('=')[0] }}
-          valueFrom:
-            secretKeyRef:
-              name: {{ settings.project_name }}-consul
-              key: {{ secrets.split('=')[0] | lower }}
-{%     endif %}
-{%   endfor %}
-{% endif %}
-{% if item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets %}
-{%   for secrets in item.value.deployment_overrides.secrets %}
-{%     if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
-        - name: SETINIT_TEXT
-{%     else      %}
-        - name: {{ secrets.split('=')[0] }}
-{%     endif     %}
-          valueFrom:
-            secretKeyRef:
-              name: {{ settings.project_name }}-cas
-              key: {{ secrets.split('=')[0] | lower }}
-{%   endfor %}
-{% endif %}
-        - name: CONSUL_DATACENTER_NAME
-          valueFrom:
-            configMapKeyRef:
-              name: {{ settings.project_name }}-consul
-              key: consul_datacenter_name
+        - name: ESP_ROLE
+          value: "run_time"
         - name: SECURE_CONSUL
           valueFrom:
             configMapKeyRef:
@@ -118,21 +47,47 @@ spec:
             configMapKeyRef:
               name: {{ settings.project_name }}-consul
               key: disable_consul_http_port
-        - name: VAULT_TOKEN_DIR
-          valueFrom:
-              configMapKeyRef:
-                name: {{ settings.project_name }}-consul
-                key: vault_token_dir
         - name: SAS_ANCHORS_DIR
           valueFrom:
               configMapKeyRef:
                 name: {{ settings.project_name }}-consul
                 key: sas_anchors_dir
-        - name: SASSERVICES_CONFIGMAP
+        - name: VAULT_TOKEN_DIR
+          valueFrom:
+              configMapKeyRef:
+                name: {{ settings.project_name }}-consul
+                key: vault_token_dir
+{% for environment in services.consul.deployment_overrides.environment %}
+{%   if environment.split('=')[0] == 'CONSUL_DATACENTER_NAME' %}
+        - name: {{ environment.split('=')[0] }}
           valueFrom:
             configMapKeyRef:
               name: {{ settings.project_name }}-consul
-              key: sas_services_configmap
+              key: {{ environment.split('=')[0] | lower }}
+{%   endif %}
+{% endfor %}
+{% for secrets in services.consul.deployment_overrides.secrets %}
+{%   if secrets.split('=')[0] != 'CONSUL_TOKENS_MANAGEMENT' %}
+        - name: {{ secrets.split('=')[0] }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: {{ secrets.split('=')[0] | lower }}
+{%   endif %}
+{% endfor %}
+{% if item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets %}
+{%   for secrets in item.value.deployment_overrides.secrets %}
+{%     if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
+        - name: SETINIT_TEXT
+{%     else      %}
+        - name: {{ secrets.split('=')[0] }}
+{%     endif     %}
+          valueFrom:
+            secretKeyRef:
+              name: {{ settings.project_name }}-{{ item.key | lower }}
+              key: {{ secrets.split('=')[0] | lower }}
+{%   endfor %}
+{% endif %}
 {% if item.value.deployment_overrides.resources is defined and item.value.deployment_overrides.resources %}
         resources:
 {%   for key,value in item.value.deployment_overrides.resources.items() %}
@@ -143,9 +98,13 @@ spec:
 {%   endfor %}
 {% endif %}
         volumeMounts:
+{% if item.key == 'espserver' %}
+        - name: {{ settings.project_name }}-esp-run-time-sysconfig
+          mountPath: {{ SAS_CONFIG_ROOT }}/etc/sysconfig/SASEventStreamProcessingEngine
+{% endif %}
 {% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
-        - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
+        - name: {{ settings.project_name }}-esp-run-time-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
 {%   endfor %}
 {% endif %}
@@ -161,10 +120,18 @@ spec:
         - name: tokens
           mountPath: /tokens
 
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
       volumes:
+{% if item.key == 'espserver' %}
+      - name: {{ settings.project_name }}-esp-run-time-sysconfig
+        configMap:
+          name: {{ settings.project_name }}-{{ item.key }}
+          items:
+          - key: espenv
+            path: sas-esp
+{% endif %}
+{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
 {%   for volumes in item.value.deployment_overrides.volumes %}
-      - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
+      - name: {{ settings.project_name }}-esp-run-time-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
 {%   endfor %}
 {% endif %}
@@ -177,7 +144,7 @@ spec:
 {% endif %}
       - name: tokens
         configMap:
-          name: {{ settings.project_name }}-consul-tokens-configmap
+          name: consul-tokens-configmap
       - name: anchors
         configMap:
           name: {{ settings.project_name }}-cacerts-configmap

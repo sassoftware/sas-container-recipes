@@ -128,6 +128,7 @@ do_start()
       sas_debug_msg "creating product pidfile dir ${daemon_pidfiledir}"
       mkdir -p ${daemon_pidfiledir}
       chown ${daemon_user}:${daemon_group} ${daemon_pidfiledir}
+      chmod 777 ${daemon_pidfiledir}
     fi
 
     # Start the daemon

@@ -21,7 +21,7 @@
 
   - name: Install tini
     shell: |
-      curl --insecure --output {{ METAREPO_CERT_DIR }}/{{ tini_rpm_name }} --location {{ tini_rpm_url }}
+      curl --output {{ METAREPO_CERT_DIR }}/{{ tini_rpm_name }} --location {{ tini_rpm_url }}
       yum install --assumeyes {{ METAREPO_CERT_DIR }}/{{ tini_rpm_name }}
 
   - name: Clean up yum
