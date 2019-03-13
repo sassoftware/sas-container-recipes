@@ -285,7 +285,7 @@ When the sitedefault.yml file is present in the viya-visuals directory, the buil
 
 Here are the steps to use sitedefault.yml to set configuration values:
 
-1. Sign on to your Ansible controller with administrator privileges, and locate the viya-visuals/templates/sitedefault_sample.yml file.
+1. Sign on to your build machine with administrator privileges, and locate the viya-visuals/templates/sitedefault_sample.yml file.
 1. Make a copy of sitedefault_sample.yml and name it sitedefault.yml.
 1. Using a text editor, open sitedefault.yml and add values that are valid for your site.
    - For information about the LDAP properties used in sitedefault.yml, see [sas.identities.providers.ldap](https://go.documentation.sas.com/?cdcId=calcdc&cdcVersion=3.4&docsetId=calconfig&docsetTarget=n08000sasconfiguration0admin.htm#n08044sasconfiguration0admin) in _SAS Viya for Linux: Deployment Guide_.
