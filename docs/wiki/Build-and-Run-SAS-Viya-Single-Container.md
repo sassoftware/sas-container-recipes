@@ -325,7 +325,7 @@ docker run --interactive --tty \
 --env SSL_CERT_NAME=casigned.cer \
 --env SSL_KEY_NAME=servertls.key \
 --env CASENV_CAS_VIRTUAL_HOST=myhostname \
---env CASENV_CAS_VIRTUAL_PORT=8081 \
+--env CASENV_CAS_VIRTUAL_PORT=8443 \
 --hostname sas-viya-programming \
 --publish 8443:443 \
 --publish 8081:80 \
