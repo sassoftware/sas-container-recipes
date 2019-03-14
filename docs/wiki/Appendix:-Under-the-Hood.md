@@ -415,7 +415,7 @@ SAS/ACCESS Interface to Amazon Redshift.
     | BASEIMAGE | Define the namespace and image name to build from | sas-viya-programming |
     | BASETAG | The verision of the image to build from | latest |
     | CASENV_ADMIN_USER | The user to create | sasdemo |
-    | ADMIN_USER_PWD | The password of the user in plain text | sasdemo |
+    | ADMIN_USER_PASSWD | The password of the user in plain text | sasdemo |
     | ADMIN_USER_HOME | The home directory of the user |  /home/${CASENV_ADMIN_USER} |
     | ADMIN_USER_UID | The unique id of the user | 1003 |
     | ADMIN_USER_GROUP | The group name to assign the user to. It matches the "sas" group created during the deployment. | sas |
@@ -430,7 +430,7 @@ SAS/ACCESS Interface to Amazon Redshift.
     --env CASENV_CAS_VIRTUAL_HOST=$(hostname) \
     --env CASENV_CAS_VIRTUAL_PORT=8081 \
     --env CASENV_ADMIN_USER=foo \
-    --env ADMIN_USER_PWD=bar \
+    --env ADMIN_USER_PASSWD=bar \
     --env ADMIN_USER_UID=1010 \
     --env ADMIN_USER_GROUP=widget \
     --env ADMIN_USER_GID=1011 \
