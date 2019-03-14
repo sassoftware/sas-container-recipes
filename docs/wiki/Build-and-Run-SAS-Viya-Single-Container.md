@@ -328,7 +328,6 @@ docker run --interactive --tty \
 --env CASENV_CAS_VIRTUAL_PORT=8443 \
 --hostname sas-viya-programming \
 --publish 8443:443 \
---publish 8081:80 \
 --name viya-single-container \
 viya-single-container:latest
 ```
