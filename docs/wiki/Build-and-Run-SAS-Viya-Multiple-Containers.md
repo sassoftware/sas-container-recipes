@@ -57,11 +57,11 @@ To see what options `build.sh` takes, run
 build.sh --help
 ```
 
-The `build.sh` script will validate several of the settings that are needed to help with the deployment process. The _docker-registry-url_ and _docker-registry-namespace_ are expected as well as the _virtual-host_. If these values are not provided then the script will exit early until they are provided.
+The `build.sh` script will validate several of the settings that are needed to help with the deployment process. The _docker-registry-url_ and _docker-registry-namespace_ are expected. If these values are not provided then the script will exit early until they are provided.
 
 The _docker-registry-url_ and _docker-registry-namespace_ are used so that the process can push the containers to the Docker registry with a specific Docker tag. This same information is then used to generate the Kubernetes manifests. 
 
-The `--virtual-host` option should point to the ingress host that is representing the end point for the sas-viya-httpproxy container. If this is not known at time of deployment, fill this value in with a place holder. The value can changed post running of `build.sh` and prior to deploying the images to Kubernetes.
+The `--virtual-host` option points to the ingress hostname that is representing the end point for the sas-viya-httpproxy container. This is an optional parameter for programming. The value can be changed or added post running of `build.sh` and prior to deploying the images to Kubernetes. Without updating post build, hyperlinks between SASStudio and CAS Monitor will not work for the programming deployment. Full deployment has Environment Manager and virtual-host has no impact. 
 
 Passing in `--addons` will follow a convention to automatically add the layers to the correct SAS images. 
 * Addons that begin with _auth_ will be added to the computeserver, programming and cas containers
@@ -87,7 +87,6 @@ build.sh \
 --mirror-url http://host.company.com/sas_repo \
 --docker-registry-url docker.registry.company.com \
 --docker-registry-namespace sas \
---virtual-host sas-viya.company.com \
 --addons "addons/auth-sssd addons/access-odbc"
 ```
 
@@ -102,7 +101,6 @@ build.sh \
 --mirror-url http://host.company.com/sas_repo \
 --docker-registry-url docker.registry.company.com \
 --docker-registry-namespace sas \
---virtual-host sas-viya.company.com \
 --addons "addons/auth-sssd addons/access-odbc"
 ```
 
@@ -138,13 +136,10 @@ See the Docker documentation for more options on cleaning up your build system. 
 ### Kubernetes
 For a programming only build, a set of Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests` and for full build they are at `$PWD/viya-visuals/working/manifests`. Please use the path that matches to your type of build. We will refer to this path as _$MANIFESTS_. 
 
-For a programming only image, you can change the virtual host value from the value used in building the image. You may need to do this if you used a value when building that is no longer valid. Edit the `$MANIFESTS/kubernetes/deployments/cas.yml` file and add the following to the "env" section for the _sas-viya-cas_ container:
+For a programming only image, you can update the virtual host information. This will need to be done for working hyperlinks between SASStudio and CAS Monitor in programming only build. Edit the `$MANIFESTS/kubernetes/configmaps/cas.yml` file and update the following line:
 
 ```
-        - name: CASENV_CAS_VIRTUAL_HOST 
-          value: "ingress-path" 
-        - name: CASENV_CAS_VIRTUAL_PORT 
-          value: "<port value of ingress controller>"
+  casenv_cas_virtual_host: "sas-viya"
 ```
 
 The manifests define several paths where data that should persist between restarts can be stored. By default, these paths point to local storage that disappears when Kubernetes pods are deleted. Please update the manifests to support how your site implements persistent storage. It is strongly suggested that you review [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) to evaluate the options for persistence. The manifests that require updates are:
@@ -158,7 +153,7 @@ In the case of a full build, each of the containers will also have a volume defi
 
 To create your deployment, use the manifests created during the build process. In this example, we are deploying into the _sas-viya_ Kubernetes namespace. For more information about _namespaces_, see [Kubernetes Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
 
-A json file was created during manifest generation to help with creating the Kubernetes name space. If your user has the ability to create *namespaces* in the Kuberetes environment, run the following, or request your Kuberenetes administrator to create you a name space in the Kubernetes environment:
+A yaml file was created during manifest generation to help with creating the Kubernetes name space. If your user has the ability to create *namespaces* in the Kuberetes environment, run the following, or request your Kuberenetes administrator to create you a name space in the Kubernetes environment:
 
 ```
 kubectl create -f $MANIFESTS/kubernetes/namespace/sas-viya.yml
