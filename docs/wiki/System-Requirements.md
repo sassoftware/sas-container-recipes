@@ -52,7 +52,7 @@ The following software and hardware requirements are for the one or more machine
 | **Software and Hardware** | **Run a Single Image** | **Run Multiple Images** |
 | --- | --- | --- |
 | Docker | Community Edition or Enterprise Edition, Docker 17.06 or later. Using `docker run` is required. | Community Edition or Enterprise Edition, Docker 17.06 or later |  
-| Kubernetes | n/a | Kubernetes 1.10 or later and kubectl installed | 
+| Kubernetes | Kubernetes 1.10 or later and kubectl installed | Kubernetes 1.10 or later and kubectl installed | 
 | Cores | 4 (minimum) | 6 (minimum) for a programming-only deployment or 8 (minimum) for a full deployment  | 
 | RAM | 8GB (minimum) | 10 GB (minimum) for a programming-only deployment or 80 GB (minimum) for a full deployment |  
 
