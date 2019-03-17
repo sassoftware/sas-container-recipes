@@ -633,7 +633,7 @@ There could be additional applications depending on your order.
 
 **Overview**
 
-This runs Cloud Analytic Services (CAS). This image can be run as the controller or a worker. This will support Symmetric Multi Processing (SMP) and Massive Parallel Processing (MPP). By setting environment variables it will define how the image runs, controller or worker.
+This runs Cloud Analytic Services (CAS). This image can be run as the controller or a worker. This will support Symmetric Multi Processing (SMP) and Massive Parallel Processing (MPP). By setting environment variables it will define how the image runs, controller or worker. This image is used in the cas and cas-worker deployment manifests.
 
 **Details**
 
@@ -994,7 +994,7 @@ In addition to RabbitMQ running, there are SAS operational components that are r
 
 **Overview**
 
-This runs Cloud Analytic Services (CAS). This image can be run as the controller or a worker. This will support Symmetric Multi Processing (SMP) and Massive Parallel Processing (MPP). By setting environment variables it will define how the image runs, controller or worker.
+This runs Cloud Analytic Services (CAS). This image can be run as the controller or a worker. This will support Symmetric Multi Processing (SMP) and Massive Parallel Processing (MPP). By setting environment variables it will define how the image runs, controller or worker. This image is used in the cas and cas-worker deployment manifests.
 
 In addition to the CAS process running, there are SAS operational components that are running as well:
 - Consul agent
