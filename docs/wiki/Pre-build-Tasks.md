@@ -303,8 +303,8 @@ When the build script is run, the data from the viya-visuals/templates/sitedefau
 To help with managing changes to the generated manifests, you can provide customizations that will be used when creating the Kubernetes manifests. Copy the viya-visuals/templates/vars_usermods.yml file to viya-visuals/vars_usermods.yml, and then edit the file. You can enter any of the following values and override the defaults:
 
 ```
-# The directory where manifests will be created. Default is "manifest"
-#SAS_MANIFEST_DIR: manifest
+# The directory where manifests will be created. Default is "manifests"
+#SAS_MANIFEST_DIR: manifests
 
 # The Kubernetes namespace that we are deploying into. Default is "sas-viya"
 #SAS_K8S_NAMESPACE: sas-viya
