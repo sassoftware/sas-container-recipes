@@ -177,7 +177,7 @@ spec:
 {% endif %}
       - name: tokens
         configMap:
-          name: {{ settings.project_name }}-consul-tokens-configmap
+          name: consul-tokens-configmap
       - name: anchors
         configMap:
           name: {{ settings.project_name }}-cacerts-configmap
