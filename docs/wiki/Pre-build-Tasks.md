@@ -227,7 +227,7 @@ metadata:
   namespace: sasviya
 spec:
   rules:
-  - host: sas-viya.company.com
+  - host: sas-viya.sasviya.company.com
     http:
       paths:
       - backend:
@@ -235,7 +235,7 @@ spec:
           servicePort: 80
 #  tls:
 #  - hosts:
-#    - sas-viya.company.com
+#    - sas-viya.sasviya.company.com
 #    secretName: @REPLACE_ME_WITH_YOUR_CERT@
 ```
 
@@ -246,7 +246,7 @@ You will need to create a key and certificate, and then store it in a Kubernetes
 ```
   tls:
   - hosts:
-    - sas-viya.company.com
+    - sas-viya.sasviya.company.com
     secretName: sas-tls-secret
 ```
 
