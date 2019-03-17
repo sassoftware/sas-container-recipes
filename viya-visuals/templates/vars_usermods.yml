@@ -7,7 +7,7 @@
 # The Kubernetes namespace that we are deploying into. Default is "sas-viya"
 #SAS_K8S_NAMESPACE: sas-viya
 
-# The Ingress path for the httpproxy environment. Default is "company.com"
+# Reflects the domain to use when filling in the ingress paths. Default is "company.com"
 #SAS_K8S_INGRESS_DOMAIN: company.com
 
 # Defines if inter-communication between services is TLS enabled. Default is "false"

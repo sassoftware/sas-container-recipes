@@ -308,9 +308,13 @@ To help with managing changes to the generated manifests, you can provide custom
 
 # The Kubernetes namespace that we are deploying into. Default is "sas-viya"
 #SAS_K8S_NAMESPACE: sas-viya
+```
 
-# The Ingress path for the httpproxy environment. Default is "sas-viya.company.com"
-#SAS_K8S_INGRESS_PATH: sas-viya.company.com
+In order to setup the Ingress paths correctly, update the following to the correct domain:
+
+```
+# Reflects the domain to use when filling in the ingress paths. Default is "company.com"
+#SAS_K8S_INGRESS_DOMAIN: company.com
 ```
 
 By default, the generated manifests will define a CAS SMP environment. If you want to define a CAS MPP environment initially, locate the following section in the viya-visuals/vars_usermods.yml file:
