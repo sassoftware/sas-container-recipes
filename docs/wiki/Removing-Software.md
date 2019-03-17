@@ -40,32 +40,36 @@
 
 1. Verify that the images are still running.
 
-    `kubectl -n sasviya get pods | grep sas`
+    `kubectl -n sas-viya get pods | grep sas`
 
     The output is a list of pods and their status.
 
-2. Remove the service and pod.
+1. Remove the service and pod.
 
     Delete the viya-programming/viya-single-container objects
 
     ```
-    kubectl -n sasviya delete -f run/programming.yml
+    kubectl -n sas-viya delete -f run/programming.yml
     ```
 
     Delete the viya-programming/viya-multi-container objects
 
     ```
-    kubectl -n sasviya delete -f viya-programming/viya-multi-container/working/manifests/kubernetes/deployments-mpp/
-    kubectl -n sasviya delete -f viya-programming/viya-multi-container/working/manifests/kubernetes/secrets/
-    kubectl -n sasviya delete -f viya-programming/viya-multi-container/working/manifests/kubernetes/configmaps/
+    kubectl -n sas-viya delete -f viya-programming/viya-multi-container/working/manifests/kubernetes/deployments/
+    kubectl -n sas-viya delete -f viya-programming/viya-multi-container/working/manifests/kubernetes/services/
+    kubectl -n sas-viya delete -f viya-programming/viya-multi-container/working/manifests/kubernetes/secrets/
+    kubectl -n sas-viya delete -f viya-programming/viya-multi-container/working/manifests/kubernetes/configmaps/
+    kubectl -n sas-viya delete -f viya-programming/viya-multi-container/working/manifests/kubernetes/ingress/
     ```
 
     Delete the viya-visuals objects
 
     ```
-    kubectl -n sasviya delete -f viya-visuals/working/manifests/kubernetes/deployments-mpp/
-    kubectl -n sasviya delete -f viya-visuals/working/manifests/kubernetes/secrets/
-    kubectl -n sasviya delete -f viya-visuals/working/manifests/kubernetes/configmaps/
+    kubectl -n sas-viya delete -f viya-visuals/working/manifests/kubernetes/deployments/
+    kubectl -n sas-viya delete -f viya-visuals/working/manifests/kubernetes/services/
+    kubectl -n sas-viya delete -f viya-visuals/working/manifests/kubernetes/secrets/
+    kubectl -n sas-viya delete -f viya-visuals/working/manifests/kubernetes/configmaps/
+    kubectl -n sas-viya delete -f viya-visuals/working/manifests/kubernetes/ingress/
     ```
 
     As the service and pod are removed, messages that indicate success are displayed. Here is an example:
@@ -75,13 +79,19 @@
     statefulset "container-name" deleted
     ```
 
-3. (Optional) Verify that the service and pod are removed.
+1. (Optional) Verify that the service and pod are removed.
 
-    `kubectl -n sasviya get pods | grep sas`
+    `kubectl -n sas-viya get pods | grep sas`
     
-    `kubectl -n sasviya get svc | grep sas`
+    `kubectl -n sas-viya get svc | grep sas`
 
     No results indicate a successful removal of the service and pod.
+
+1. (Optional) If you have the permissions to do so, remove the Kubernetes namespace.
+
+    ```
+    kubectl delete ns sas-viya
+    ```
 
 ## (Optional) Clean Up the Docker Registry
 
