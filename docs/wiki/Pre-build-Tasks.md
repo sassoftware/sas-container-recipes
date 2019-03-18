@@ -300,7 +300,7 @@ Here are the steps to use sitedefault.yml to set configuration values:
 When the build script is run, the data from the viya-visuals/templates/sitedefault.yml file will get added to the viya-visuals/working/manifests/kubernetes/configmaps/consul.yml file. On startup of the consul container, the content will get loaded into the SAS configuration store. See the post-run [(Optional) Verify Bulk Loaded Configuration](post-run-tasks#optional-verify-bulk-loaded-configuration) task for confirming the values provided were loaded.
 
 ### Kubernetes Manifest Inputs
-To help with managing changes to the generated manifests, you can provide customizations that will be used when creating the Kubernetes manifests. Copy the viya-visuals/templates/vars_usermods.yml file to viya-visuals/vars_usermods.yml, and then edit the file. You can enter any of the following values and override the defaults:
+To help with managing changes to the generated manifests, you can provide customizations that will be used when creating the Kubernetes manifests. In the templates directory for both viya-programming/viya-multi-container and viya-visuals, there is a vars_usermods.yml file. For your specific deployment, copy the templates/vars_usermods.yml file to either viya-programming/viya-multi-container/vars_usermods.yml or viya-visuals/vars_usermods.yml, and then edit the file. You can enter any of the following values and override the defaults:
 
 ```
 # The directory where manifests will be created. Default is "manifest"
