@@ -1,0 +1,69 @@
+httpproxy:
+  roles:
+  - tini
+  - sas-prerequisites
+  - httpproxy
+  - cloud-config
+  ports:
+  - "80:80"
+  - "443:443"
+  # TODO
+  #volumes:
+  #- static-content:/httpproxy
+  resources:
+    limits:
+    - "memory=1024Mi"
+    requests:
+    - "memory=250Mi"
+
+programming:
+  roles:
+  - tini
+  - sas-prerequisites
+  - sas-java
+  - programming
+  - spawner-config
+  - batchserver
+  - connect-config
+  - sas-studio-config
+  - cloud-config
+  ports:
+  - "7080:7080"
+  resources:
+    limits:
+    - "memory=12000Mi"
+    requests:
+    - "memory=512Mi"
+  secrets:
+  - "SETINIT_TEXT_ENC="
+
+sas-casserver-primary:
+  roles:
+  - tini
+  - sas-prerequisites
+  - sas-java
+  - sas-casserver-primary
+  - cloud-config
+  ports:
+  - "5570:5570"
+  - "5571:5571"
+  - "8777:8777"
+  environment:
+  - "SERVICE_NAME=cascontroller"
+  - "CASENV_ADMIN_USER=sasdemo"
+  - "CASENV_CAS_VIRTUAL_HOST={{ CAS_VIRTUAL_HOST }}"
+  - "CASENV_CAS_VIRTUAL_PROTO=http"
+  - "CASENV_CASDATADIR=/cas/data"
+  - "CASENV_CASPERMSTORE=/cas/permstore"
+  resources:
+    limits:
+    - "memory=12000Mi"
+    requests:
+    - "memory=1024Mi"
+  secrets:
+  - "SETINIT_TEXT_ENC="
+  - "CASKEY=REPLACE ME with unique text. This is used to allow CAS workers to talk to the CAS controller"
+  volumes:
+  - "data=/cas/data"
+  - "cache=/cas/cache"
+  - "permstore=/cas/permstore"

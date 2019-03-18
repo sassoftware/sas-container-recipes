@@ -1,0 +1,277 @@
+computeserver:
+  roles:
+  - tini
+  - sas-prerequisites
+  - sas-install-base-packages
+  - sas-java
+  - sas-install-spre
+  - ComputeServer
+  - cloud-config
+  ports:
+  - "5600:5600"
+  resources:
+    limits:
+    - "memory=12000Mi"
+    requests:
+    - "memory=512Mi"
+  secrets:
+  - "SETINIT_TEXT_ENC="
+
+consul:
+  roles:
+  - tini
+  - sas-prerequisites
+  - sas-install-base-packages
+  - sas-java
+  - consul
+  - cloud-config
+  ports:
+  - "8200:8200"
+  - "8201:8201"
+  - "8300:8300"
+  - "8301:8301"
+  - "8302:8302"
+  - "8400:8400"
+  - "8500:8500"
+  - "8501:8501"
+  - "8600:8600"
+  environment:
+  - "CONSUL_BOOTSTRAP_EXPECT=1"
+  - "CONSUL_CLIENT_ADDRESS=0.0.0.0"
+  - "CONSUL_CONFIG_DIR=/consul/config"
+  - "CONSUL_DATA_DIR=/consul/data"
+  - "CONSUL_DATACENTER_NAME={{ DEPLOYMENT_LABEL }}"
+  - "CONSUL_KEY_VALUE_DATA_ENC="
+  - "CONSUL_SECRETS_DIR=/consul/config"
+  - "CONSUL_SERVER_FLAG=true"
+  - "CONSUL_UI_FLAG=false"
+  - "DISABLE_CONSUL_HTTP_PORT={{ DISABLE_CONSUL_HTTP_PORT }}"
+  - "SAS_DEBUG=0"
+  - "SASINITDEBUG=false"
+  - "SECURE_CONSUL={{ SECURE_CONSUL | lower}}"
+  - "VAULT_ROOT_TOKEN_DIR=/tokens"
+  - "VAULT_SHARED_SECRETS_DIR=/tokens"
+  resources:
+    limits:
+      - "memory=4000Mi"
+    requests:
+      - "memory=512Mi"
+  secrets:
+  - "CONSUL_TOKENS_CLIENT=tobeusedfordemosonlyclnt"
+  - "CONSUL_TOKENS_ENCRYPTION=9eV9uJXG0r8o3xTDH6+ykg=="
+  - "CONSUL_TOKENS_MANAGEMENT=tobeusedfordemosonlymgmt"
+  volumes:
+  - "data=/consul/data"
+  - "config=/consul/config"
+
+espserver:
+  roles:
+  - tini
+  - sas-prerequisites
+  - sas-install-base-packages
+  - sas-java
+  - espServer
+  - cloud-config
+  ports:
+  - "31415:31415"
+  - "31416:31416"
+  environment:
+  - "SASLICENSEDIR=/opt/sas/viya/home/SASEventStreamProcessingEngine/current/etc/license"
+  - "SASLICENSEFILE=license.txt"
+  - "ESPENV=server.license=$DFESP_HOME/etc/license/license.txt"
+  secrets:
+    - "SETINIT_TEXT_ENC="
+  resources:
+    limits:
+    - "memory=5Gi"
+    requests:
+    - "memory=1Gi"
+
+espstudio:
+  #roles: - espStudio + (defaults)
+  ports:
+  - "31415:31415"
+
+httpproxy:
+  roles:
+  - tini
+  - sas-prerequisites
+  - sas-install-base-packages
+  - sas-java
+  - httpproxy
+  - cloud-config
+  ports:
+  - "80:80"
+  - "443:443"
+  resources:
+    limits:
+    - "memory=1024Mi"
+    requests:
+    - "memory=250Mi"
+
+microanalyticservice:
+  roles:
+  - tini
+  - sas-prerequisites
+  - sas-install-base-packages
+  - sas-java
+  - MicroAnalyticService
+  - cloud-config
+  environment:
+  - "SASLICENSEDIR=/opt/sas/viya/config/etc/SASMicroAnalyticService/"
+  secrets:
+  - "SETINIT_TEXT_ENC="
+
+operations:
+  roles:
+  - tini
+  - sas-prerequisites
+  - sas-install-base-packages
+  - sas-java
+  - sas-install-spre
+  - Operations
+  - cloud-config
+  environment:
+  - "SAS_LICENSE="
+  - "SAS_CLIENT_CERT="
+  - "SAS_CA_CERT="
+  secrets:
+  - "SETINIT_TEXT_ENC="
+
+pgpoolc:
+  roles:
+  - tini
+  - sas-prerequisites
+  - sas-install-base-packages
+  - sas-java
+  - pgpoolc
+  - cloud-config
+  ports:
+  - "5431:5431"
+  environment:
+  - "SASPOSTGRESDBSIZE=large"
+  - "PG_VOLUME=/database/data"
+  resources:
+    limits:
+    - "memory=12000Mi"
+    requests:
+    - "memory=512Mi"
+  secrets:
+  - "SAS_DEFAULT_PGPWD=ChangePassword"
+  - "SASPOSTGRESREPLPWD=ChangePassword"
+  - "SAS_DATAMINING_PASSWORD=ChangePassword"
+
+programming:
+  roles:
+  - tini
+  - sas-prerequisites
+  - sas-install-base-packages
+  - sas-java
+  - sas-install-spre
+  - programming
+  - spawner-config
+  - batchserver
+  - connect-config
+  - sas-studio-config
+  - cloud-config
+  ports:
+  - "7080:7080"
+  resources:
+    limits:
+    - "memory=12000Mi"
+    requests:
+    - "memory=512Mi"
+  secrets:
+  - "SETINIT_TEXT_ENC="
+
+rabbitmq:
+  roles:
+  - tini
+  - sas-prerequisites
+  - sas-install-base-packages
+  - rabbitmq
+  - cloud-config
+  ports:
+  - "5672:5672"
+  - "15672:15672"
+  volumes:
+  - static-content:/rabbitmq
+  environment:
+  - "SAS_DEBUG=0"
+  - "APP_NAME=rabbitmq"
+  - "SERVICE_NAME=abbitmq"
+  resources:
+    limits:
+    - "memory=1024Mi"
+    requests:
+    - "memory=1024Mi"
+  volumes:
+  - "data=/rabbitmq/data"
+
+sas-casserver-primary:
+  roles:
+  - tini
+  - sas-prerequisites
+  - sas-install-base-packages
+  - sas-java
+  - sas-casserver-primary
+  - casserver-config
+  - cloud-config
+  ports:
+  - "5570:5570"
+  - "5571:5571"
+  - "8777:8777"
+  environment:
+  - "CASENV_ADMIN_USER=sasdemo"
+  - "CASENV_CAS_VIRTUAL_PROTO=http"
+  - "CASENV_CAS_VIRTUAL_HOST={{ CAS_VIRTUAL_HOST }}"
+  - "CASENV_CASDATADIR=/cas/data"
+  - "CASENV_CASPERMSTORE=/cas/permstore"
+  - "CASCFG_MODE=smp"
+  resources:
+    limits:
+    - "memory=12000Mi"
+    requests:
+    - "memory=1024Mi"
+  secrets:
+  - "SETINIT_TEXT_ENC="
+  - "CASKEY=REPLACE ME with unique text. This is used to allow CAS workers to talk to the CAS controller"
+  volumes:
+  - "data=/cas/data"
+  - "cache=/cas/cache"
+  - "permstore=/cas/permstore"
+
+sasdatasvrc:
+  roles:
+  - tini
+  - sas-prerequisites
+  - sas-install-base-packages
+  - sasdatasvrc
+  - cloud-config
+  ports:
+  - "5432:5432"
+  environment:
+  - "SAS_DEBUG=1"
+  - "SASPOSTGRESDBSIZE=large"
+  - "PG_VOLUME=/database/data"
+  resources:
+    limits:
+    - "memory=12000Mi"
+    requests:
+    - "memory=1024Mi"
+  secrets:
+  - "SAS_DEFAULT_PGPWD=ChangePassword"
+  - "SASPOSTGRESREPLPWD=ChangePassword"
+  - "SAS_DATAMINING_PASSWORD=ChangePassword"
+  volumes:
+  - "data=/database/data"
+
+vipresm:
+  #roles: - viprESM + (defaults)
+  ports:
+  - "8080:8080"
+  environment:
+  - "SASLICENSEDIR=/opt/sas/viya/config/etc/sysconfig/sas-esm-service/default"
+  - "SASLICENSEFILE=license.txt"
+  secrets:
+  - "SETINIT_TEXT_ENC="
