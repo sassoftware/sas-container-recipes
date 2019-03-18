@@ -93,7 +93,7 @@ spec:
               key: cascfg_mode
 {% endif %}
 {% if services.consul is defined %}
-{%   for environment in services.consul.deployment_overrides.environment %}
+{%   for environment in services.consul.environment %}
 {%     if environment.split('=')[0] == 'CONSUL_DATACENTER_NAME' %}
         - name: {{ environment.split('=')[0] }}
           valueFrom:
@@ -103,8 +103,8 @@ spec:
 {%     endif %}
 {%   endfor %}
 {% endif %}
-{% if item.value.deployment_overrides.environment is defined and item.value.deployment_overrides.environment %}
-{%   for environment in item.value.deployment_overrides.environment %}
+{% if item.value.environment is defined and item.value.environment %}
+{%   for environment in item.value.environment %}
         - name: {{ environment.split('=')[0] }}
           valueFrom:
             configMapKeyRef:
@@ -117,7 +117,7 @@ spec:
 {%   endfor %}
 {% endif %}
 {% if services.consul is defined %}
-{%   for secrets in services.consul.deployment_overrides.secrets %}
+{%   for secrets in services.consul.secrets %}
 {%     if secrets.split('=')[0] != 'CONSUL_TOKENS_MANAGEMENT' %}
         - name: {{ secrets.split('=')[0] }}
           valueFrom:
@@ -127,8 +127,8 @@ spec:
 {%     endif %}
 {%   endfor %}
 {% endif %}
-{% if item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets %}
-{%   for secrets in item.value.deployment_overrides.secrets %}
+{% if item.value.secrets is defined and item.value.secrets %}
+{%   for secrets in item.value.secrets %}
 {%     if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
         - name: SETINIT_TEXT
 {%     else      %}
@@ -144,18 +144,18 @@ spec:
               key: {{ secrets.split('=')[0] | lower }}
 {%   endfor %}
 {% endif %}
-{% if item.value.deployment_overrides.resources is defined and item.value.deployment_overrides.resources %}
+{% if item.value.resources is defined and item.value.resources %}
         resources:
-{%   for key,value in item.value.deployment_overrides.resources.items() %}
+{%   for key,value in item.value.resources.items() %}
           {{ key }}:
 {%     for items in value %}
             {{ items.split('=')[0] }}: {{ items.split('=')[1] }}
 {%     endfor %}
 {%   endfor %}
 {% endif %}
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
+{% if item.value.volumes is defined and item.value.volumes %}
         volumeMounts:
-{%   for volumes in item.value.deployment_overrides.volumes %}
+{%   for volumes in item.value.volumes %}
 {%     if item.key == "sas-casserver-primary" %}
         - name: {{ settings.project_name }}-cas-{{ volumes.split('=')[0] }}-volume
 {%     else %}
@@ -177,8 +177,8 @@ spec:
           mountPath: /tokens
 
       volumes:
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
-{%   for volumes in item.value.deployment_overrides.volumes %}
+{% if item.value.volumes is defined and item.value.volumes %}
+{%   for volumes in item.value.volumes %}
 {%     if item.key == "sas-casserver-primary" %}
       - name: {{ settings.project_name }}-cas-{{ volumes.split('=')[0] }}-volume
 {%     else %}

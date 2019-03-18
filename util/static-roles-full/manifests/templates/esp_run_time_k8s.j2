@@ -57,7 +57,7 @@ spec:
               configMapKeyRef:
                 name: {{ settings.project_name }}-consul
                 key: vault_token_dir
-{% for environment in services.consul.deployment_overrides.environment %}
+{% for environment in services.consul.environment %}
 {%   if environment.split('=')[0] == 'CONSUL_DATACENTER_NAME' %}
         - name: {{ environment.split('=')[0] }}
           valueFrom:
@@ -66,7 +66,7 @@ spec:
               key: {{ environment.split('=')[0] | lower }}
 {%   endif %}
 {% endfor %}
-{% for secrets in services.consul.deployment_overrides.secrets %}
+{% for secrets in services.consul.secrets %}
 {%   if secrets.split('=')[0] != 'CONSUL_TOKENS_MANAGEMENT' %}
         - name: {{ secrets.split('=')[0] }}
           valueFrom:
@@ -75,8 +75,8 @@ spec:
               key: {{ secrets.split('=')[0] | lower }}
 {%   endif %}
 {% endfor %}
-{% if item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets %}
-{%   for secrets in item.value.deployment_overrides.secrets %}
+{% if item.value.secrets is defined and item.value.secrets %}
+{%   for secrets in item.value.secrets %}
 {%     if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
         - name: SETINIT_TEXT
 {%     else      %}
@@ -88,9 +88,9 @@ spec:
               key: {{ secrets.split('=')[0] | lower }}
 {%   endfor %}
 {% endif %}
-{% if item.value.deployment_overrides.resources is defined and item.value.deployment_overrides.resources %}
+{% if item.value.resources is defined and item.value.resources %}
         resources:
-{%   for key,value in item.value.deployment_overrides.resources.items() %}
+{%   for key,value in item.value.resources.items() %}
           {{ key }}:
 {%     for items in value %}
             {{ items.split('=')[0] }}: {{ items.split('=')[1] }}
@@ -102,8 +102,8 @@ spec:
         - name: {{ settings.project_name }}-esp-run-time-sysconfig
           mountPath: {{ SAS_CONFIG_ROOT }}/etc/sysconfig/SASEventStreamProcessingEngine
 {% endif %}
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
-{%   for volumes in item.value.deployment_overrides.volumes %}
+{% if item.value.volumes is defined and item.value.volumes %}
+{%   for volumes in item.value.volumes %}
         - name: {{ settings.project_name }}-esp-run-time-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
 {%   endfor %}
@@ -129,8 +129,8 @@ spec:
           - key: espenv
             path: sas-esp
 {% endif %}
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
-{%   for volumes in item.value.deployment_overrides.volumes %}
+{% if item.value.volumes is defined and item.value.volumes %}
+{%   for volumes in item.value.volumes %}
       - name: {{ settings.project_name }}-esp-run-time-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
 {%   endfor %}

@@ -43,14 +43,14 @@
   template:
     src: "k8s_configmap.j2"
     dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/configmaps/cas.yml{% else %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/configmaps/{{ item.key }}.yml{% endif %}"
-  when: (item.value.deployment_overrides.environment is defined and item.value.deployment_overrides.environment) or (custom_services is defined and custom_services and item.key in custom_services.items())
+  when: (item.value.environment is defined and item.value.environment) or (custom_services is defined and custom_services and item.key in custom_services.items())
   with_dict: '{{ services }}'
 
 - name: Create k8s secrets
   template:
     src: "k8s_secrets.j2"
     dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/secrets/cas.yml{% else %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/secrets/{{ item.key }}.yml{% endif %}"
-  when: item.value.deployment_overrides.secrets is defined and item.value.deployment_overrides.secrets
+  when: item.value.secrets is defined and item.value.secrets
   with_dict: '{{ services }}'
 
 - name: Create pets k8s services
