@@ -1,6 +1,6 @@
 ### How do I push Docker images to my AWS repository?
 
-If you are building multiple containers, the `ansible-container` command does not support pushing to an AWS-based registry. Therefore, `docker tag` and `docker push` commands are required for each image built.
+If you are building multiple containers, ansible-container does not support pushing to an AWS-based registry. Therefore, `docker tag` and `docker push` commands are required for each image built.
 
 To get the list of images run the following command from the root of the project:
 
@@ -91,7 +91,7 @@ docker build \
 --tag sas-viya-programming
 ```
 
-If you follow the preceding instructions, then you should be able to use the `ansible-container` command to tag and push the images to the Docker registry. Make sure that you are in the viya-programming/viya-multi-container directory, and run the following commands:
+If you follow the preceding instructions, then you should be able to use ansible-container to tag and push the images to the Docker registry. Make sure that you are in the viya-programming/viya-multi-container directory, and run the following commands:
 
 ```
 # Source the virtualenv
@@ -101,7 +101,7 @@ ansible-container --push --push-to docker-registry --tag $(cat ${PWD}/../../VERS
 deactivate
 ```
 
-To tag and push the images without using the `ansible-container` command, double check the manifests to make sure that they have the correct image.
+To tag and push the images without using ansible-container, double check the manifests to make sure that they have the correct image.
 
 ### How do I configure tokens for Jupyter Notebook?
 
