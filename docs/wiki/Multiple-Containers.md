@@ -54,7 +54,7 @@ To change the CASENV_ADMIN_USER information, add the following to the cas manife
 ```
 If these changes are made post pod deployment, then run `kubectl replace -f path/to/manifest` on the appropriate manifest to update the pod. Next, run `kubectl delete pod <pod>` and the new values will be applied when the new pod is deployed.
 
-### How do I build Jupyter Notebook when ?
+### How do I build Jupyter Notebook in a multiple-container environment?
 
 The ide-jupyter-python3 addon includes two Docker files that support the configuration of the httpproxy and programming images. The httpproxy image supports the redirect to the Jupyter Notebook URL, and the programming image is where the Jupyter Notebook server is running.
 
