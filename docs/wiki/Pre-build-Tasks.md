@@ -224,10 +224,10 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
   name: sas-viya-programming-ingress
-  namespace: sasviya
+  namespace: sas-viya
 spec:
   rules:
-  - host: sas-viya.sasviya.company.com
+  - host: sas-viya.sas-viya.company.com
     http:
       paths:
       - backend:
@@ -235,7 +235,7 @@ spec:
           servicePort: 80
 #  tls:
 #  - hosts:
-#    - sas-viya.sasviya.company.com
+#    - sas-viya.sas-viya.company.com
 #    secretName: @REPLACE_ME_WITH_YOUR_CERT@
 ```
 
@@ -246,14 +246,14 @@ You will need to create a key and certificate, and then store it in a Kubernetes
 ```
   tls:
   - hosts:
-    - sas-viya.sasviya.company.com
+    - sas-viya.sas-viya.company.com
     secretName: sas-tls-secret
 ```
 
 Load the configuration:
 
 ```
-kubectl -n sasviya apply -f ${PWD}/run/programming_ingress.yml
+kubectl -n sas-viya apply -f ${PWD}/run/programming_ingress.yml
 ```
 
 If you cannot set this up yet, you can continue on the deployment process. However, the ingress must be configured to access the environment.
