@@ -65,8 +65,8 @@ spec:
               key: vault_token_dir
         - name: CONSUL_SERVICE_NAME
           value: {{ settings.project_name }}-{{ item.key }}
-{% if item.value.deployment_overrides.environment is defined and item.value.deployment_overrides.environment %}
-{%   for environment in item.value.deployment_overrides.environment %}
+{% if item.value.environment is defined and item.value.environment %}
+{%   for environment in item.value.environment %}
         - name: {{ environment.split('=')[0] }}
           valueFrom:
             configMapKeyRef:
@@ -74,7 +74,7 @@ spec:
               key: {{ environment.split('=')[0] | lower }}
 {%   endfor %}
 {% endif %}
-{% for secrets in services.consul.deployment_overrides.secrets %}
+{% for secrets in services.consul.secrets %}
 {%   if 'CONSUL_HTTP_TOKEN' not in secrets %}
         - name: {{ secrets.split('=')[0] }}
           valueFrom:
@@ -83,9 +83,9 @@ spec:
               key: {{ secrets.split('=')[0] | lower }}
 {%   endif %}
 {% endfor %}
-{% if item.value.deployment_overrides.resources is defined and item.value.deployment_overrides.resources %}
+{% if item.value.resources is defined and item.value.resources %}
         resources:
-{%   for key,value in item.value.deployment_overrides.resources.items() %}
+{%   for key,value in item.value.resources.items() %}
           {{ key }}:
 {%     for items in value %}
             {{ items.split('=')[0] }}: {{ items.split('=')[1] }}
@@ -93,8 +93,8 @@ spec:
 {%   endfor %}
 {% endif %}
         volumeMounts:
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
-{%   for volumes in item.value.deployment_overrides.volumes %}
+{% if item.value.volumes is defined and item.value.volumes %}
+{%   for volumes in item.value.volumes %}
         - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
 {%   endfor %}
@@ -118,8 +118,8 @@ spec:
         - name: tokens
           mountPath: /tokens
       volumes:
-{% if item.value.deployment_overrides.volumes is defined and item.value.deployment_overrides.volumes %}
-{%   for volumes in item.value.deployment_overrides.volumes %}
+{% if item.value.volumes is defined and item.value.volumes %}
+{%   for volumes in item.value.volumes %}
       - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
 {%   endfor %}
