@@ -57,7 +57,8 @@ or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
 <br>
 
-# For a Single User - SAS Viya Programming-Only Deployment Running on a Single Container
+## For a Single User - SAS Viya Programming-Only Deployment Running on a Single Container
+
 Use these instructions to create a SAS Viya programming-only deployment in a single container for
 an independent data scientist or developer to execute SAS code. All code and
 data should be stored in a persistent location outside the container.
@@ -67,6 +68,7 @@ which provides in-memory analytics for symmetric multi-processing (SMP).
 **A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce (community edition)](https://docs.docker.com/install/linux/docker-ce/centos/) is required.**
 
 ### Build the Image
+
 Run the following to create a user 'sasdemo' with the password 'sasdemo' for product evaluation.
 A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
 is recommended for all build commands.
@@ -98,7 +100,8 @@ For more info see the [GitHub Project Wiki Page](https://github.com/sassoftware/
 
 <br>
 
-# For One or More users - SAS Viya Programming-Only or SAS Viya Full Deployment Running on Multiple Containers
+## For One or More Users - SAS Viya Programming-Only or SAS Viya Full Deployment Running on Multiple Containers
+
 Use these instructions to build multiple Docker images and then use the images 
 to create a SAS Viya programming-only or a SAS Viya full deployment in Kubernetes. 
 These deployments can have SMP or massively parallel processing (MPP) CAS servers,
@@ -112,15 +115,17 @@ included with a full deployment. Therefore, make sure that you are providing
 your users with the features that they require.
 
 ### Prerequisites
+
 - A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux or Mac must be installed on the build machine
 - Python2 with python-pip2 and virtualenv or Python3 and python-pip3 must be installed on the build machine
 - `java-1.8.0-openjdk` or another Java Runtime Environment (1.8.x) must be installed on the build machine
 - **Access to a Docker registry:** The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
-- Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed: required for the deployment step but not required for the build step.
+- Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed: required for the run step but not required for the build step.
 - **Strongly recommended:** A local mirror of the SAS software. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
 
-### How to Build
-Examples of running build.sh to build multiple containers are provided below. A non-root user is recommended for all build commands.
+### Build Examples
+
+Examples of running `build.sh` to build multiple containers are provided below. A non-root user is recommended for all build commands.
 
 **Example: Programming-Only Deployment, Mulitple Containers**
 
@@ -213,43 +218,35 @@ Examples of running build.sh to build multiple containers are provided below. A 
     Example: 18.12.0-20181209115304-b197206
 ```
 
-### How to Run
+### Running Multiple Containers
 
-* For a SAS Viya programming-only deployment, the Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests`
-* For a SAS Viya full deployment, the Kubernetes manifests are located at `$PWD/viya-visuals/working/manifests`
+The build process creates Kubernetes manifests that you use to run multiple containers. 
 
-Choose between SMP or MPP and run a 
-`kubectl create --file` or `kubectl replace --file` on the manifests inside the kubernetes directory.
+   * For a SAS Viya programming-only deployment, the Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests`
+   * For a SAS Viya full deployment, the Kubernetes manifests are located at `$PWD/viya-visuals/working/manifests`
 
-**Note:** If you are running the build process process multiple times then use `kubectl replace` to add your new manifests instead of `kubectl create`.
+For information about using the manifests, see [Build and Run SAS Viya Multiple Containers](https://github.com/sassoftware/sas-container-recipes/wiki/Build-and-Run-SAS-Viya-Multiple-Containers).
 
-Then add hosts to your Kubernetes Ingress for `sas-viya-httpproxy` and other services using `kubectl edit ingress`. In the following example, `user-myproject.mylocal.com` represents the Kubernetes Ingress path.
+## Log on to SAS Studio ##
 
-```
-# Kubernetes Ingress Example
+After the containers are running, users can sign on to SAS Studio.
 
-  apiVersion: extensions/v1beta1
-  kind: Ingress
-  metadata:
-    namespace: <myuniquename>
-    name: example ingress
-  spec:
-    rules:
-    - host: user-myproject.mylocal.com
-      http:
-        paths:
-        - backend:
-            serviceName: sas-viya-httpproxy
-            servicePort: 80
-```
-For more details on Ingress Controllers see [the official Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/).
+- If you deployed a programming-only environment, then your environment contains SAS Studio 4.4.
+- If you deployed a full environment, then your environment contains both SAS Studio 4.4 and SAS Studio 5.1. By default, you will log on to SAS Studio 5.1.
 
-Finally, go to the host address that's defined in your Kubernetes Ingress to view your SAS product(s). Using the example Ingress configuration above, the URL is http://<span></span>user-myproject.mylocal.com.
+Here are some examples of how to log on:
 
-If there is no response from the host, then check the status of the containers by running `kubectl get pods`.
-There should be one or more `sas-viya-<service>` pods, depending on your software order. It may take several
-minutes to see a login screen, even with all pods showing a "Running" status.
-You may also need to correct the host name on your Ingress Controller and check your Kubernetes configurations.
+- For SAS Studio 4.4 via Docker run without TLS:
+
+  `https://docker-host:8081/SASStudio`
+
+- For SAS Studio 4.4 via Kubernetes:
+
+  `https://ingress-path/SASStudio`
+
+- For SAS Studio 5.1:
+
+  `https://ingress-path/SASStudioV`
 
 <img src="docs/sas-logon-screen.png" alt="SAS Logon Screen" style="width: 100%; height: 100%; object-fit: contain;">
 
