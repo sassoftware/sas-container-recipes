@@ -262,10 +262,10 @@ Later in this documentation, the term _ingress-path_ refers to the host value in
 
 ### Persistence
 
-Several SAS Viya containers will need configured persistence storage in order to make sure that the environment can shut down and start up without losing data.
+Several SAS Viya containers will need persistent storage configured to make sure that the environment can shut down and start up without losing data.
 
-- Decide whether to set up persistence storage.
-- No persistance is the default condition. The default is useful if you are evaluating SAS Viya containers. Otherwise you will probably want to make sure that your Kuberenetes environment is configured for container persistence. For more information, see [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/). 
+- Decide whether to set up persistent storage.
+- No persistance is the default condition. The default is useful if you are evaluating SAS Viya containers. Otherwise you will want to make sure that your Kuberenetes environment is configured for container persistence. For more information, see [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/). 
 
 ### Data Import
 
