@@ -75,7 +75,7 @@ cat $HOME/.docker/config.json
 
 You can use addons to include extra components in your SAS Viya images. There are addons for authentication, data sources, and integrated development environments (IDE). Only the addons that require pre-build tasks are listed in this section. You can find the addons in sas-container-recipes/addons directory.
 
-For more information, see [Addons](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/Appendix:-Under-the-Hood#addons).
+For more information, see [Addons](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#addons).
 
 ### Host Authentication
 
@@ -262,10 +262,10 @@ Later in this documentation, the term _ingress-path_ refers to the host value in
 
 ### Persistence
 
-Several SAS Viya containers will need configured persistence storage in order to make sure that the environment can shut down and start up without losing data.
+Several SAS Viya containers will need persistent storage configured to make sure that the environment can shut down and start up without losing data.
 
-- Decide whether to set up persistence storage.
-- No persistance is the default condition. The default is useful if you are evaluating SAS Viya containers. Otherwise you will probably want to make sure that your Kuberenetes environment is configured for container persistence. For more information, see [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/). 
+- Decide whether to set up persistent storage.
+- No persistance is the default condition. The default is useful if you are evaluating SAS Viya containers. Otherwise you will want to make sure that your Kuberenetes environment is configured for container persistence. For more information, see [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/). 
 
 ### Data Import
 
@@ -285,7 +285,7 @@ When the sitedefault.yml file is present in the viya-visuals directory, the buil
 
 Here are the steps to use sitedefault.yml to set configuration values:
 
-1. Sign on to your Ansible controller with administrator privileges, and locate the viya-visuals/templates/sitedefault_sample.yml file.
+1. Sign on to your build machine with administrator privileges, and locate the viya-visuals/templates/sitedefault_sample.yml file.
 1. Make a copy of sitedefault_sample.yml and name it sitedefault.yml.
 1. Using a text editor, open sitedefault.yml and add values that are valid for your site.
    - For information about the LDAP properties used in sitedefault.yml, see [sas.identities.providers.ldap](https://go.documentation.sas.com/?cdcId=calcdc&cdcVersion=3.4&docsetId=calconfig&docsetTarget=n08000sasconfiguration0admin.htm#n08044sasconfiguration0admin) in _SAS Viya for Linux: Deployment Guide_.
