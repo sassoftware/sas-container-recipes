@@ -276,7 +276,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	verbose := flag.Bool("verbose", false, "")
 	buildOnly := flag.String("build-only", "", "")
 	version := flag.Bool("version", false, "")
-	deploymentType := flag.String("type", "", "")
+	deploymentType := flag.String("type", "single", "")
 
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU() - 1
@@ -315,7 +315,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Always require a deployment type
 	if *deploymentType != "multiple" && *deploymentType != "full" && *deploymentType != "single" {
-		err := errors.New("A valid '--type' is required: choose between multiple or full.")
+		err := errors.New("A valid '--type' is required: choose between single, multiple, or full.")
 		return err
 	}
 	order.DeploymentType = strings.ToLower(*deploymentType)
@@ -337,6 +337,8 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Detect the platform based on the image
 	order.BaseImage = *baseImage
+	order.MirrorURL = *mirrorURL
+	// TODO: a mirror is required if single container is using an opensuse base image
 	if strings.Contains(order.BaseImage, "opensuse") {
 		order.Platform = "suse"
 	} else {
@@ -391,7 +393,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 		order.WriteLog(true, "Building only:", order.BuildOnly)
 	}
 
-	order.MirrorURL = *mirrorURL
 	order.VirtualHost = *virtualHost
 
 	return nil
