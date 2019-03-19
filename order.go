@@ -84,8 +84,7 @@ type SoftwareOrder struct {
 	BuildContext context.Context       // Background context
 	RegistryAuth string                // Used to push and pull from/to a regitry
 	BuildPath    string                // Kubernetes manifests are generated and placed into this location
-	ServerPort   int                   // Port used to serve http requests for entitlement and CA certs
-	HostIP       string                // IP of the host used to build the images
+	CertBaseURL  string                // The URL that the build containers will use to fetch their CA and entitlement certs
 
 	// Metrics
 	StartTime      time.Time
@@ -246,14 +245,13 @@ func (order *SoftwareOrder) Serve() {
 	if err != nil {
 		panic(err)
 	}
-	order.ServerPort = port
 	hostIP, err := getIPAddr()
 	if err != nil {
 		panic(err)
 	}
-	order.HostIP = hostIP
 	order.WriteLog(true, fmt.Sprintf("Serving license and entitlement on %s:%d", hostIP, port))
 
+	order.CertBaseURL = fmt.Sprintf("http://%s:%d", hostIP, port)
 	http.HandleFunc("/entitlement/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, string(order.Entitlement))
 	})
@@ -566,7 +564,6 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 
 // Start each container build concurrently and report the results
 func (order *SoftwareOrder) Build() error {
-	go order.Serve()
 
 	// Handle single container build
 	if order.DeploymentType == "single" {
@@ -752,6 +749,8 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 	if len(order.License) == 0 || len(order.CA) == 0 || len(order.Entitlement) == 0 {
 		fail <- "Unable to parse all content from SOE zip"
 	}
+
+	go order.Serve()
 
 	progress <- "Finished reading Software Order Email"
 	done <- 1
