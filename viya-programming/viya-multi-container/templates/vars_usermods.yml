@@ -23,6 +23,7 @@
 #    deployment_overrides:
 #      environment:
 #        - "CASCFG_MODE=mpp"
+#        - "CASENV_CAS_VIRTUAL_HOST=sas-viya.namespace.ingress.domain"
 
 # In the following structures, define the custom volumes and volume mounts that
 # are desired per service. If the same set of volumes and volume mounts are used
