@@ -224,10 +224,10 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
   name: sas-viya-programming-ingress
-  namespace: sasviya
+  namespace: sas-viya
 spec:
   rules:
-  - host: sas-viya.company.com
+  - host: sas-viya.sas-viya.company.com
     http:
       paths:
       - backend:
@@ -235,7 +235,7 @@ spec:
           servicePort: 80
 #  tls:
 #  - hosts:
-#    - sas-viya.company.com
+#    - sas-viya.sas-viya.company.com
 #    secretName: @REPLACE_ME_WITH_YOUR_CERT@
 ```
 
@@ -246,14 +246,14 @@ You will need to create a key and certificate, and then store it in a Kubernetes
 ```
   tls:
   - hosts:
-    - sas-viya.company.com
+    - sas-viya.sas-viya.company.com
     secretName: sas-tls-secret
 ```
 
 Load the configuration:
 
 ```
-kubectl -n sasviya apply -f ${PWD}/run/programming_ingress.yml
+kubectl -n sas-viya apply -f ${PWD}/run/programming_ingress.yml
 ```
 
 If you cannot set this up yet, you can continue on the deployment process. However, the ingress must be configured to access the environment.
@@ -303,14 +303,18 @@ When the build script is run, the data from the viya-visuals/templates/sitedefau
 To help with managing changes to the generated manifests, you can provide customizations that will be used when creating the Kubernetes manifests. In the templates directory for both viya-programming/viya-multi-container and viya-visuals, there is a vars_usermods.yml file. For your specific deployment, copy the templates/vars_usermods.yml file to either viya-programming/viya-multi-container/vars_usermods.yml or viya-visuals/vars_usermods.yml, and then edit the file. You can enter any of the following values and override the defaults:
 
 ```
-# The directory where manifests will be created. Default is "manifest"
-#SAS_MANIFEST_DIR: manifest
+# The directory where manifests will be created. Default is "manifests"
+#SAS_MANIFEST_DIR: manifests
 
 # The Kubernetes namespace that we are deploying into. Default is "sas-viya"
 #SAS_K8S_NAMESPACE: sas-viya
+```
 
-# The Ingress path for the httpproxy environment. Default is "sas-viya.company.com"
-#SAS_K8S_INGRESS_PATH: sas-viya.company.com
+In order to setup the Ingress paths correctly, update the following to the correct domain:
+
+```
+# Reflects the domain to use when filling in the ingress paths. Default is "company.com"
+#SAS_K8S_INGRESS_DOMAIN: company.com
 ```
 
 By default, the generated manifests will define a CAS SMP environment. If you want to define a CAS MPP environment initially, locate the following section in the viya-visuals/vars_usermods.yml file:
