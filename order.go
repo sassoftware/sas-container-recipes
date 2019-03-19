@@ -891,11 +891,14 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 			err.Error() + "\n" + generatePlaybookCommand
 	}
 
-	// Detect if Ansible is installed. This is required for the Generate Manifests function
-	testAnsibleInstall := "ansible --version"
-	_, err = exec.Command("sh", "-c", testAnsibleInstall).Output()
-	if err != nil {
-		fail <- "[ERROR]: The package `ansible` must be installed in order to generate Kubernetes manifests."
+	// Detect if Ansible is installed.
+	// This is required for the Generate Manifests function in multiple and full deployment types, not in the single container.
+	if order.DeploymentType != "single" {
+		testAnsibleInstall := "ansible --version"
+		_, err = exec.Command("sh", "-c", testAnsibleInstall).Output()
+		if err != nil {
+			fail <- "[ERROR]: The package `ansible` must be installed in order to generate Kubernetes manifests."
+		}
 	}
 
 	// TODO replace with "golang.org/x/build/internal/untar"
