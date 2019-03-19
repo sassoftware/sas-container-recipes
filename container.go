@@ -258,16 +258,19 @@ func (container *Container) GetBuildArgs() {
 	var licPtr = new(string)
 	var caPtr = new(string)
 	var platformPtr = new(string)
+	var basePtr = new(string)
 	*entPtr = base64.StdEncoding.EncodeToString(container.SoftwareOrder.Entitlement)
 	*licPtr = base64.StdEncoding.EncodeToString(container.SoftwareOrder.License)
 	*caPtr = base64.StdEncoding.EncodeToString(container.SoftwareOrder.CA)
 	*platformPtr = container.SoftwareOrder.Platform
+	*basePtr = container.SoftwareOrder.BaseImage
 	buildArgs["ENTITLEMENT"] = entPtr
 	buildArgs["CACERT"] = caPtr
 	buildArgs["PLATFORM"] = platformPtr
+	buildArgs["BASE"] = basePtr
 
-	container.BuildArgs = buildArgs
 	container.WriteLog(container.BuildArgs)
+	container.BuildArgs = buildArgs
 }
 
 // Interface with the Docker client to run an image build
@@ -454,9 +457,8 @@ func appendAddonLines(name string, dockerfile string, addons []string) string {
 	return dockerfile
 }
 
-// Go through each item in the container's docker context and write the file's content to the tar file.
-// Follow the Container directory structure (files/*, tasks/*, templates/*, vars/*)
-func (container *Container) CreateDockerContext() error {
+// Create a sub-directory within the builds directory, set the log path, and the Docker context path
+func (container *Container) CreateBuildDirectory() error {
 	// Create the tar file on the build machine
 	path := container.SoftwareOrder.BuildPath + container.GetName()
 	err := os.MkdirAll(path, 0744)
@@ -471,6 +473,24 @@ func (container *Container) CreateDockerContext() error {
 	container.Log = logFile
 	buildContextTarName := "build_context.tar"
 
+	container.DockerContextPath = path + "/" + buildContextTarName
+	finalTarFile, err := os.Create(container.DockerContextPath)
+	if err != nil {
+		return err
+	}
+	container.ContextWriter = tar.NewWriter(finalTarFile)
+	container.DockerContext = finalTarFile
+	return nil
+}
+
+// Go through each item in the container's docker context and write the file's content to the tar file.
+// Follow the Container directory structure (files/*, tasks/*, templates/*, vars/*)
+func (container *Container) CreateDockerContext() error {
+	err := container.CreateBuildDirectory()
+	if err != nil {
+		return err
+	}
+
 	// Add a rebuild script for easy debugging
 	// TODO: change license SASVIYAV0300_x_
 	// TODO: Indent this block and use de-indent on each line to print correctly
@@ -484,18 +504,10 @@ docker build \
 --build-arg CACERT="$(cat ../sas_viya_playbook/SAS_CA_Certificate.pem | base64)" \
 --build-arg ENTITLEMENT="$(cat ../sas_viya_playbook/entitlement_certificate.pem | base64)" .
 `, container.SoftwareOrder.Platform)
-	err = ioutil.WriteFile(path+"/docker-build.sh", []byte(rebuildCommand), 0744)
+	err = ioutil.WriteFile(container.SoftwareOrder.BuildPath+"/docker-build.sh", []byte(rebuildCommand), 0744)
 	if err != nil {
 		return err
 	}
-
-	container.DockerContextPath = path + "/" + buildContextTarName
-	finalTarFile, err := os.Create(container.DockerContextPath)
-	if err != nil {
-		return err
-	}
-	container.ContextWriter = tar.NewWriter(finalTarFile)
-	defer container.ContextWriter.Close()
 
 	// Load the config.yml
 	err = container.GetConfig()
@@ -620,7 +632,6 @@ docker build \
 	// Always include the sas-install role since its used by other roles
 	container.AddDirectoryToContext("util/static-roles-"+container.SoftwareOrder.DeploymentType+"/sas-install/", "roles/sas-install/", "sas-install")
 
-	container.DockerContext = finalTarFile
 	return nil
 }
 
@@ -649,7 +660,10 @@ func (container *Container) AddFileToContext(externalPath string, contextPath st
 		Mode:    0777,
 		ModTime: time.Now(),
 	}
-	container.ContextWriter.WriteHeader(header)
+	err := container.ContextWriter.WriteHeader(header)
+	if err != nil {
+		return err
+	}
 
 	// Write the bytes to the tar file
 	// Skip writing the file's bytes if there's no content to write (like with a directory)
@@ -709,5 +723,6 @@ func (container *Container) Finish() error {
 		container.WriteLog("failed to close log handle", err)
 		return err
 	}
+	container.ContextWriter.Close()
 	return nil
 }
