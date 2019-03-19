@@ -106,13 +106,11 @@ type ContainerConfig struct {
 
 // Provide a human readable output of a container's configurations
 func (config *ContainerConfig) String() string {
-	return fmt.Sprintf("\n\n[CONFIGURATION]\n[Ports] %s\n[Environment] %s\n[Secrets] %s\n[Roles] %s\n[Volumes] %s\n\n",
+	return fmt.Sprintf("\n\n[CONFIGURATION]\n[Ports] %s\n[Environment] %s\n[Roles] %s\n[Volumes] %s\n\n",
 		strings.Join(config.Ports, ", "),
 		strings.Join(config.Environment, ", "),
 		strings.Join(config.Roles, ", "),
 		strings.Join(config.Volumes, ", "),
-		strings.Join(config.Resources.Limits, ", "),
-		strings.Join(config.Resources.Requests, ", "),
 	)
 }
 
@@ -254,20 +252,9 @@ func (container *Container) Prebuild(progress chan string) error {
 // Note: The Docker api requires BuildArgs to be a string pointer instead of just a string
 func (container *Container) GetBuildArgs() {
 	buildArgs := make(map[string]*string)
-	var entPtr = new(string)
-	var licPtr = new(string)
-	var caPtr = new(string)
-	var platformPtr = new(string)
-	var basePtr = new(string)
-	*entPtr = base64.StdEncoding.EncodeToString(container.SoftwareOrder.Entitlement)
-	*licPtr = base64.StdEncoding.EncodeToString(container.SoftwareOrder.License)
-	*caPtr = base64.StdEncoding.EncodeToString(container.SoftwareOrder.CA)
-	*platformPtr = container.SoftwareOrder.Platform
-	*basePtr = container.SoftwareOrder.BaseImage
-	buildArgs["ENTITLEMENT"] = entPtr
-	buildArgs["CACERT"] = caPtr
-	buildArgs["PLATFORM"] = platformPtr
-	buildArgs["BASE"] = basePtr
+	playbooksrv := fmt.Sprintf("http://%s:%d", container.SoftwareOrder.HostIP, container.SoftwareOrder.ServerPort)
+	buildArgs["PLATFORM"] = &container.SoftwareOrder.Platform
+	buildArgs["PLAYBOOK_SRV"] = &playbooksrv
 
 	container.WriteLog(container.BuildArgs)
 	container.BuildArgs = buildArgs
@@ -359,13 +346,12 @@ func readDockerStream(responseStream io.ReadCloser,
 const dockerfileFromBase = `# Generated Dockerfile for %s
 FROM %s
 ARG PLATFORM
-ARG CACERT
-ARG ENTITLEMENT
+ARG PLAYBOOK_SRV
 ENV PLATFORM=$PLATFORM ANSIBLE_CONFIG=/ansible/ansible.cfg ANSIBLE_CONTAINER=true
 RUN mkdir --parents /opt/sas/viya/home/{lib/envesntl,bin}
 RUN yum install --assumeyes ansible && rm -rf /root/.cache /var/cache/yum && \
     echo "\nminrate=1\ntimeout=300" >> /etc/yum.conf
-ADD . /ansible 
+ADD . /ansible
 `
 
 const dockerfileSetupEntrypoint = `# Start a top level process that starts all services
@@ -374,8 +360,8 @@ ENTRYPOINT /usr/bin/tini /opt/sas/viya/home/bin/%s-entrypoint.sh
 
 // Each Ansible role is a RUN layer
 const dockerfileRunLayer = `# %s role
-RUN echo "${CACERT}" | base64 --decode > /ansible/SAS_CA_Certificate.pem && \
-    echo "${ENTITLEMENT}" | base64 --decode > /ansible/entitlement_certificate.pem && \
+RUN curl -vvv -o /ansible/SAS_CA_Certificate.pem ${PLAYBOOK_SRV}/cacert/ && \
+    curl -vvv -o /ansible/entitlement_certificate.pem ${PLAYBOOK_SRV}/entitlement/ && \
     ansible-playbook --verbose /ansible/playbook.yml --extra-vars layer=%s && \
     rm /ansible/SAS_CA_Certificate.pem /ansible/entitlement_certificate.pem
 `
@@ -501,9 +487,8 @@ fi
 
 docker build \
 --build-arg PLATFORM=%s \
---build-arg CACERT="$(cat ../sas_viya_playbook/SAS_CA_Certificate.pem | base64)" \
---build-arg ENTITLEMENT="$(cat ../sas_viya_playbook/entitlement_certificate.pem | base64)" .
-`, container.SoftwareOrder.Platform)
+--build-arg PLAYBOOK_SRV="http://%s:%d"" .
+`, container.SoftwareOrder.Platform, container.SoftwareOrder.HostIP, container.SoftwareOrder.ServerPort)
 	err = ioutil.WriteFile(container.SoftwareOrder.BuildPath+"/docker-build.sh", []byte(rebuildCommand), 0744)
 	if err != nil {
 		return err

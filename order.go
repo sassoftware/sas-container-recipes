@@ -33,6 +33,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -83,6 +84,8 @@ type SoftwareOrder struct {
 	BuildContext context.Context       // Background context
 	RegistryAuth string                // Used to push and pull from/to a regitry
 	BuildPath    string                // Kubernetes manifests are generated and placed into this location
+	ServerPort   int                   // Port used to serve http requests for entitlement and CA certs
+	HostIP       string                // IP of the host used to build the images
 
 	// Metrics
 	StartTime      time.Time
@@ -210,6 +213,55 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 			order.WriteLog(true, progress)
 		}
 	}
+}
+
+func getIPAddr() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		os.Stderr.WriteString("Oops: " + err.Error() + "\n")
+		os.Exit(1)
+	}
+
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String(), nil
+				// os.Stdout.WriteString(ipnet.IP.String() + "\n")
+			}
+		}
+	}
+	return "", errors.New("No IP found for serving playbook")
+}
+
+// Serve up the entitlement and CA cert on a random port from the host so
+// the contents of these files don't exist in any docker layer or history.
+func (order *SoftwareOrder) Serve() {
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		panic(err)
+	}
+	hostAndPort := listener.Addr().String()
+	parts := strings.Split(hostAndPort, ":")
+	port, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		panic(err)
+	}
+	order.ServerPort = port
+	hostIP, err := getIPAddr()
+	if err != nil {
+		panic(err)
+	}
+	order.HostIP = hostIP
+	order.WriteLog(true, fmt.Sprintf("Serving license and entitlement on %s:%d", hostIP, port))
+
+	http.HandleFunc("/entitlement/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, string(order.Entitlement))
+	})
+	http.HandleFunc("/cacert/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, string(order.CA))
+	})
+
+	http.Serve(listener, nil)
 }
 
 // Multiplexer for writing logs.
@@ -513,9 +565,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 
 // Start each container build concurrently and report the results
 func (order *SoftwareOrder) Build() error {
-	// Allow containers to fetch their licenses without placing the files permanently in the images
-	// TODO: WIP
-	//go order.ServeLicenses()
+	go order.Serve()
 
 	// Handle single container build
 	if order.DeploymentType == "single" {
@@ -787,9 +837,9 @@ func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string,
 	// Load the registry auth from ~/.docker/config.json
 	userObject, err := user.Current()
 	if err != nil {
-		fail <- "Cannot get /home/user/ path for docker config. " + err.Error()
+		fail <- "Cannot get user home directory path for docker config. " + err.Error()
 	}
-	dockerConfigPath := fmt.Sprintf("/home/%s/.docker/config.json", userObject.Username)
+	dockerConfigPath := fmt.Sprintf("%s/.docker/config.json", userObject.HomeDir)
 	configContent, err := ioutil.ReadFile(dockerConfigPath)
 	if err != nil {
 		fail <- "Cannot read Docker configuration or file read permission is not permitted in " + dockerConfigPath + " run a `docker login <registry>`. " + err.Error()
