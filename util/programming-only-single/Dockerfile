@@ -15,31 +15,31 @@
 #
 #
 # BUILD:
-#   docker build --file Dockerfile --build-arg BASEIMAGE=centos --build-arg BASETAG=7 --build-arg PLATFORM=redhat . --tag viya-single-container
-#   docker build --file Dockerfile --build-arg BASEIMAGE=opensuse/leap --build-arg BASETAG=42 --build-arg PLATFORM=suse . --tag viya-single-container
+#   docker build --file Dockerfile --build-arg BASE=centos:7 --build-arg PLATFORM=redhat . --tag viya-single-container
+#   docker build --file Dockerfile --build-arg BASE=opensuse/leap:42 --build-arg PLATFORM=suse . --tag viya-single-container
 #
 # RUN:
 #   docker run --detach --rm --publish-all --name viya-single-container --hostname viya-single-container viya-single-container
 #
 
-ARG BASEIMAGE=centos
-ARG BASETAG=latest
-
-FROM $BASEIMAGE:$BASETAG
-
+ARG BASE
 ARG PLATFORM=redhat
-
 ARG TINI_RPM_NAME=tini_0.18.0.rpm
 ARG TINI_URL=https://github.com/krallin/tini/releases/download/v0.18.0
-
-#By default, use the web. For SUSE, a mirror is required.
-ARG SAS_RPM_REPO_URL=https://ses.sas.download/ses/
+ARG SAS_RPM_REPO_URL=https://ses.sas.download/ses/ # For SUSE a mirror is required.
 ARG ANSIBLE_VERSION=2.4.1
+
+FROM $BASE
+
 USER root
-
 WORKDIR /tmp/sas
-
 COPY SAS_Viya_deployment_data.zip ./
+
+EXPOSE 80 \
+       443 \
+       5570
+
+ENTRYPOINT ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/entrypoint"]
 
 #
 # Install some of the expected packages in their own layer
@@ -337,8 +337,3 @@ RUN chmod +x /opt/sas/viya/home/bin/replace_httpd_default_cert.sh
 COPY entrypoint /opt/sas/viya/home/bin/entrypoint
 RUN chmod +x /opt/sas/viya/home/bin/entrypoint
 
-EXPOSE 80 \
-       443 \
-       5570
-
-ENTRYPOINT ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/entrypoint"]

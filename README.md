@@ -39,9 +39,9 @@ or get [SAS License Assistance](https://support.sas.com/en/technical-support/lic
 If you have not purchased SAS Software but would like to give it a try, 
 please check out our [Free Software Trials](https://www.sas.com/en_us/trials.html).
     
-2. Download the latest <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes Releases">
-        <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&" alt="Latest Release"/></a> 
-or `git clone git@github.com:sassoftware/sas-container-recipes.git`
+2. Download the latest `sas-container-recipes` binary and download then un-archive the latest code archive (zip or tgz) <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes Releases">
+        <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&" alt="Latest Release"/></a>.
+If you would like to compile the binary yourself then see (CONTRIBUTING.md)[https://github.com/sassoftware/sas-container-recipes/blob/master/CONTRIBUTING.md] file for instructions.
 
 3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
