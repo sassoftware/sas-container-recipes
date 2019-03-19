@@ -252,9 +252,8 @@ func (container *Container) Prebuild(progress chan string) error {
 // Note: The Docker api requires BuildArgs to be a string pointer instead of just a string
 func (container *Container) GetBuildArgs() {
 	buildArgs := make(map[string]*string)
-	playbooksrv := fmt.Sprintf("http://%s:%d", container.SoftwareOrder.HostIP, container.SoftwareOrder.ServerPort)
 	buildArgs["PLATFORM"] = &container.SoftwareOrder.Platform
-	buildArgs["PLAYBOOK_SRV"] = &playbooksrv
+	buildArgs["PLAYBOOK_SRV"] = &container.SoftwareOrder.CertBaseURL
 
 	container.WriteLog(container.BuildArgs)
 	container.BuildArgs = buildArgs
@@ -360,8 +359,8 @@ ENTRYPOINT /usr/bin/tini /opt/sas/viya/home/bin/%s-entrypoint.sh
 
 // Each Ansible role is a RUN layer
 const dockerfileRunLayer = `# %s role
-RUN curl -o /ansible/SAS_CA_Certificate.pem ${PLAYBOOK_SRV}/cacert/ && \
-    curl -o /ansible/entitlement_certificate.pem ${PLAYBOOK_SRV}/entitlement/ && \
+RUN curl -vvv -o /ansible/SAS_CA_Certificate.pem ${PLAYBOOK_SRV}/cacert/ && \
+    curl -vvv -o /ansible/entitlement_certificate.pem ${PLAYBOOK_SRV}/entitlement/ && \
     ansible-playbook --verbose /ansible/playbook.yml --extra-vars layer=%s && \
     rm /ansible/SAS_CA_Certificate.pem /ansible/entitlement_certificate.pem
 `
@@ -487,8 +486,8 @@ fi
 
 docker build \
 --build-arg PLATFORM=%s \
---build-arg PLAYBOOK_SRV="http://%s:%d"" .
-`, container.SoftwareOrder.Platform, container.SoftwareOrder.HostIP, container.SoftwareOrder.ServerPort)
+--build-arg PLAYBOOK_SRV="%s" .
+`, container.SoftwareOrder.Platform, filepath.Clean(container.SoftwareOrder.CertBaseURL))
 	err = ioutil.WriteFile(container.SoftwareOrder.BuildPath+"/docker-build.sh", []byte(rebuildCommand), 0744)
 	if err != nil {
 		return err
