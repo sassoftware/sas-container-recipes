@@ -72,6 +72,7 @@ type Container struct {
 
 	// Builder attributes
 	BuildArgs         map[string]*string // Arguments that are passed into the Docker builder https://docs.docker.com/engine/reference/commandline/build/
+	BuildPath         string             // Path to the inner container build directory: builds/<deployment-type>-<date>-<time>/sas-viya-<name>/
 	DockerContext     *os.File           // Payload sent to the Docker builder, includes all files and the Dockerfile for the build
 	DockerContextPath string             // Location of the tar file, which is passed to the Docker client
 	Log               *os.File           // Open file buffer that's written to
@@ -405,8 +406,10 @@ func (container *Container) CreateDockerfile() string {
 func appendAddonLines(name string, dockerfile string, addons []string) string {
 	// TODO move this logic into each addon,
 	//      where a file inside each addon would determine which container it affects
-	if name == "programming" || name == "computeserver" || name == "sas-casserver-primary" {
-		dockerfile += "\n# AddOn(s)"
+	if len(addons) > 0 {
+		if name == "programming" || name == "computeserver" || name == "sas-casserver-primary" {
+			dockerfile += "\n# AddOn(s)"
+		}
 	}
 
 	for _, addon := range addons {
@@ -446,12 +449,12 @@ func appendAddonLines(name string, dockerfile string, addons []string) string {
 // Create a sub-directory within the builds directory, set the log path, and the Docker context path
 func (container *Container) CreateBuildDirectory() error {
 	// Create the tar file on the build machine
-	path := container.SoftwareOrder.BuildPath + container.GetName()
-	err := os.MkdirAll(path, 0744)
+	container.BuildPath = container.SoftwareOrder.BuildPath + container.GetName()
+	err := os.MkdirAll(container.BuildPath, 0744)
 	if err != nil {
 		return err
 	}
-	container.LogPath = path + "/log.txt"
+	container.LogPath = container.BuildPath + "/log.txt"
 	logFile, err := os.Create(container.LogPath)
 	if err != nil {
 		return err
@@ -459,7 +462,7 @@ func (container *Container) CreateBuildDirectory() error {
 	container.Log = logFile
 	buildContextTarName := "build_context.tar"
 
-	container.DockerContextPath = path + "/" + buildContextTarName
+	container.DockerContextPath = container.BuildPath + "/" + buildContextTarName
 	finalTarFile, err := os.Create(container.DockerContextPath)
 	if err != nil {
 		return err
@@ -478,7 +481,6 @@ func (container *Container) CreateDockerContext() error {
 	}
 
 	// Add a rebuild script for easy debugging
-	// TODO: change license SASVIYAV0300_x_
 	// TODO: Indent this block and use de-indent on each line to print correctly
 	rebuildCommand := fmt.Sprintf(`
 if [[ ! -f "Dockerfile" ]]; then
@@ -487,9 +489,9 @@ fi
 
 docker build \
 --build-arg PLATFORM=%s \
---build-arg PLAYBOOK_SRV="http://%s:%d"" .
+--build-arg PLAYBOOK_SRV="http://%s:%d" .
 `, container.SoftwareOrder.Platform, container.SoftwareOrder.HostIP, container.SoftwareOrder.ServerPort)
-	err = ioutil.WriteFile(container.SoftwareOrder.BuildPath+"/docker-build.sh", []byte(rebuildCommand), 0744)
+	err = ioutil.WriteFile(container.BuildPath+"/docker-build.sh", []byte(rebuildCommand), 0744)
 	if err != nil {
 		return err
 	}
@@ -645,10 +647,7 @@ func (container *Container) AddFileToContext(externalPath string, contextPath st
 		Mode:    0777,
 		ModTime: time.Now(),
 	}
-	err := container.ContextWriter.WriteHeader(header)
-	if err != nil {
-		return err
-	}
+	container.ContextWriter.WriteHeader(header)
 
 	// Write the bytes to the tar file
 	// Skip writing the file's bytes if there's no content to write (like with a directory)
