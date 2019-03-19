@@ -147,6 +147,7 @@ The manifests define several paths where data that should persist between restar
 * consul (only in the full build)
 * rabbitmq (only in the full build)
 * cas
+* cas-worker
 * sasdatasvrc (only in the full build)
 
 In the case of a full build, each of the containers will also have a volume defined to write logs to. To keep these logs around through pod restarts, this volume should also be mapped to persisted storage.
