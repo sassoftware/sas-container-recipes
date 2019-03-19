@@ -71,7 +71,7 @@ Run the following to create a user 'sasdemo' with the password 'sasdemo' for pro
 A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
 is recommended for all build commands.
 ```
- ./sas-container-recipes --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
+ ./sas-container-recipes --type single --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
 ```                         
 
 ### Run the Container
@@ -151,10 +151,12 @@ Examples of running sas-container-recipes to build multiple containers are provi
 ```
 # Required Arguments
 
-  --type [multiple | full]
+  --type [multiple | full | single]
     sets the deployment type.
+
+    single  : SAS Viya programming-only container started with a `docker run` command
     multiple: SAS Viya programming-only deployment, multiple containers using Kubernetes
-    full: SAS Viya full deployment, multiple containers using Kubernetes.
+    full    : SAS Viya full deployment, multiple containers using Kubernetes.
 
   --zip <value>
     specifies the path to the SAS_Viya_deployment_data.zip file, which is from your Software Order Email (SOE).

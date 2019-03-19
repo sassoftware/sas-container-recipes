@@ -26,13 +26,47 @@ const usage = `
     SAS Container Recipes
     Framework to build SAS Viya Docker images and create deployments using Kubernetes.
 
-    Required Arguments:
+    Single Container Arguments 
+    ------------------------
+
+      Required:
+
+      --zip <value>
+          Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
+          If you do not know if your organization has a SAS license then contact
+          https://www.sas.com/en_us/software/how-to-buy.html
+          
+            example: /path/to/SAS_Viya_deployment_data.zip
+
+      Optional:
+
+      --addons [<value> <value>]
+          A space or comma separated list of addon names. Each requires additional configuration:
+          See the GitHub Wiki: https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
+            Access Engines: access-greenplum, access-hadoop, access-odbc, access-oracle, access-pcfiles, access-postgres, access-redshift, access-teradata
+            Authentication: auth-sssd, auth-demo
+            Other: ide-jupyter-python3
+
+      --base-image <value>
+          The Docker image and tag from which the SAS images will build on top of
+            Default: centos:latest
+
+      -m|--mirror-url <value>
+          The location of the mirror URL. See the Mirror Manager guide at
+          https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
+
+
+    Multi-Container Arguments
+    ------------------------
+
+      Required:
 
       --type <value>
           Choose one of the following deployments.
-            single  : SAS Viya Programming in a single container, deployed using a Docker run command
             multiple: SAS Viya Programming Multi-Container deployment with Kubernetes
     	    full    : SAS Visuals based deployment with Kubernetes.
+
+        Note: the default deployment type is 'single'.
 
       --zip <value>
           Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
@@ -52,7 +86,8 @@ const usage = `
 
             example: 10.12.13.14:5000 or my-registry.docker.com
 
-    Optional:
+
+      Optional:
 
       --virtual-host 
           The Kubernetes Ingress path that defines the location of the HTTP endpoint.
@@ -69,7 +104,7 @@ const usage = `
             Other: ide-jupyter-python3
 
       --base-image <value>
-          The Docker image and tag from which the SAS images will build on top of
+          The Docker image and tag from which the SAS images will build on top of.
             Default: centos:latest
 
       --mirror-url <value>
@@ -77,11 +112,11 @@ const usage = `
           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
     
       --workers <integer>
-          Specify the number of CPU cores to allocate for the build process
+          Specify the number of CPU cores to allocate for the build process.
             default: Utilize all cores on the build machine
 
       --verbose
-          Output the result of each Docker layer creation
+          Output the result of each Docker layer creation.
             default: false
 
       --build-only "<container-name> <container-name> ..."
@@ -92,7 +127,7 @@ const usage = `
             example: --build-only "consul" or --build-only "consul httpproxy"
 
       --version
-          Print the SAS Container Recipes version
+          Print the SAS Container Recipes version and exit.
 
 
     Need some more help?
