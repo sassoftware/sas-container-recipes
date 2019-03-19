@@ -360,8 +360,8 @@ ENTRYPOINT /usr/bin/tini /opt/sas/viya/home/bin/%s-entrypoint.sh
 
 // Each Ansible role is a RUN layer
 const dockerfileRunLayer = `# %s role
-RUN curl -vvv -o /ansible/SAS_CA_Certificate.pem ${PLAYBOOK_SRV}/cacert/ && \
-    curl -vvv -o /ansible/entitlement_certificate.pem ${PLAYBOOK_SRV}/entitlement/ && \
+RUN curl -o /ansible/SAS_CA_Certificate.pem ${PLAYBOOK_SRV}/cacert/ && \
+    curl -o /ansible/entitlement_certificate.pem ${PLAYBOOK_SRV}/entitlement/ && \
     ansible-playbook --verbose /ansible/playbook.yml --extra-vars layer=%s && \
     rm /ansible/SAS_CA_Certificate.pem /ansible/entitlement_certificate.pem
 `
