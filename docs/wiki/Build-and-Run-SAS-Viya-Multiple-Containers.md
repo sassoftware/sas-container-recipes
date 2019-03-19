@@ -160,7 +160,10 @@ A yaml file was created during manifest generation to help with creating the Kub
 kubectl create -f $MANIFESTS/kubernetes/namespace/sas-viya.yml
 ```
 
-Once a *namespace* is available, run the manifests in the following order. Note that the examples are using *sas-viya* for the Kubernetes namespace. If you created a different *namespace*, please use that value instead of *sas-viya*:
+Once a *namespace* is available, run the manifests in the following order. 
+* The examples are using *sas-viya* for the Kubernetes namespace. If you created a different *namespace*, please use that value instead of *sas-viya*. 
+* Double check the file in the $MANIFESTS/kubernetes/ingress directory to make sure it contains the correct Ingress domain. A default value of company.com is used which will not work in your environment. To change this, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) on how to set it and [(Optional) Regenerating Manifests](post-run-tasks#optional-regenerating-manifests) (a post-run task) on how to regenerate the manifests.
+* If setting up TLS, make sure the TLS section of the file in the $MANIFESTS/kubernetes/ingress directory is configured correctly. See the [Ingress Configuration](Pre-build-Tasks#ingress-configuration) (a pre-build task) for more information.
 
 ```
 kubectl -n sas-viya create -f $MANIFESTS/kubernetes/ingress
@@ -187,6 +190,10 @@ $ kubectl -n sas-viya get pods
 NAME                                                   READY   STATUS    RESTARTS   AGE
 sas-viya-adminservices-6f4cb4bcc4-2gdw5                1/1     Running   0          2d8h
 sas-viya-advancedanalytics-9cf44bc8d-79qkd             1/1     Running   0          2d8h
+sas-viya-cas-0                                         1/1     Running   0          2d8h
+sas-viya-cas-worker-7b4696c458-59429                   1/1     Running   0          2d7h
+sas-viya-cas-worker-7b4696c458-gzbks                   1/1     Running   0          2d7h
+sas-viya-cas-worker-7b4696c458-kddgj                   1/1     Running   1          2d8h
 sas-viya-casservices-867587f58-2d9sw                   1/1     Running   0          2d8h
 sas-viya-cognitivecomputingservices-5967948d9b-4lgs5   1/1     Running   0          2d8h
 sas-viya-computeserver-0                               1/1     Running   0          2d8h
@@ -206,10 +213,6 @@ sas-viya-programming-0                                 1/1     Running   0      
 sas-viya-rabbitmq-0                                    1/1     Running   0          2d8h
 sas-viya-reportservices-86f8459f6-chh6l                1/1     Running   1          2d8h
 sas-viya-reportviewerservices-79f45fbd5b-nqkf2         1/1     Running   0          2d8h
-sas-viya-cas-0                                         1/1     Running   0          2d8h
-sas-viya-cas-worker-7b4696c458-59429                   1/1     Running   0          2d7h
-sas-viya-cas-worker-7b4696c458-gzbks                   1/1     Running   0          2d7h
-sas-viya-cas-worker-7b4696c458-kddgj                   1/1     Running   1          2d8h
 sas-viya-sasdatasvrc-0                                 1/1     Running   0          2d8h
 sas-viya-scoringservices-6f97f7df86-bc4dh              1/1     Running   0          2d8h
 sas-viya-studioviya-fc7fb4c9b-8wtp4                    1/1     Running   0          2d8h
