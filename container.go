@@ -105,6 +105,11 @@ type ContainerConfig struct {
 	} `yaml:"resources"`
 }
 
+// effectedImage holdes the docker file that will need to be applied to the container
+type effectedImage struct {
+	Dockerfile string
+}
+
 // Provide a human readable output of a container's configurations
 func (config *ContainerConfig) String() string {
 	return fmt.Sprintf("\n\n[CONFIGURATION]\n[Ports] %s\n[Environment] %s\n[Roles] %s\n[Volumes] %s\n\n",
@@ -400,41 +405,71 @@ func (container *Container) CreateDockerfile() string {
 	return dockerfile
 }
 
-// Add any corresponding addon lines to a Dockerfile
-// Helper function utilized by all the deployment types: single, multiple, and full
-func appendAddonLines(name string, dockerfile string, addons []string) string {
-	// TODO move this logic into each addon,
-	//      where a file inside each addon would determine which container it affects
-	if len(addons) > 0 {
-		if name == "programming" || name == "computeserver" || name == "sas-casserver-primary" {
-			dockerfile += "\n# AddOn(s)"
-		}
+// readAddonConf reads the yaml file and return the data.
+func readAddonConf(fileName string) (map[string]effectedImage, error) {
+
+	imageData := make(map[string]effectedImage)
+
+	yamlFile, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return imageData, err
+	}
+	err = yaml.Unmarshal(yamlFile, &imageData)
+	if err != nil {
+		return imageData, err
 	}
 
-	for _, addon := range addons {
-		// Read the addon's Dockerfile and only grab the RUN, ADD, COPY, USER, lines
-		dockerfile += "\n# " + addon + "\n"
-		addonPath := "addons/" + addon + "/"
-		bytes, _ := ioutil.ReadFile(addonPath + "Dockerfile")
+	return imageData, nil
+}
 
-		lines := strings.Split(string(bytes), "\n")
-		for index, line := range lines {
-			line = strings.TrimSpace(line)
-			if len(line) == 0 {
+// appendAddonLines adds any corresponding addon lines to a Dockerfile
+// Helper function utilized by all the deployment types: single, multiple, and full
+func appendAddonLines(name string, dockerfile string, addons []string) string {
+
+	// This function now reads an addon_config.yml file in the addon directory to determine
+	// which containers are affected by the Dockerfiles.
+	if len(addons) > 0 {
+		for _, addon := range addons {
+			addonPath := "addons/" + addon + "/"
+
+			images, err := readAddonConf(addonPath + "addon_config.yml")
+			if err != nil {
+				errString := fmt.Sprintf("Read YAML Failed: %s", err)
+				log.Fatalf(errString)
+			}
+
+			targetImage, targetFound := images[name]
+
+			// If we don't fine the image name listed we skip.
+			if !targetFound {
 				continue
 			}
 
-			if strings.HasPrefix(line, "RUN ") ||
-				strings.HasPrefix(line, "ADD ") ||
-				strings.HasPrefix(line, "COPY ") {
-				dockerfile += line + "\n"
+			dockerfile += "\n# AddOn(s)"
 
-				// If there's a "\" then it's a multi-line command
-				if strings.Contains(line, "\\") {
-					for _, nextLine := range lines[index+1:] {
-						dockerfile += nextLine + "\n"
-						if !strings.Contains(nextLine, "\\") {
-							break
+			// Read the addon's Dockerfile and only grab the RUN, ADD, COPY, USER, lines
+			dockerfile += "\n# " + addon + "\n"
+			bytes, _ := ioutil.ReadFile(addonPath + targetImage.Dockerfile)
+
+			lines := strings.Split(string(bytes), "\n")
+			for index, line := range lines {
+				line = strings.TrimSpace(line)
+				if len(line) == 0 {
+					continue
+				}
+
+				if strings.HasPrefix(line, "RUN ") ||
+					strings.HasPrefix(line, "ADD ") ||
+					strings.HasPrefix(line, "COPY ") {
+					dockerfile += line + "\n"
+
+					// If there's a "\" then it's a multi-line command
+					if strings.Contains(line, "\\") {
+						for _, nextLine := range lines[index+1:] {
+							dockerfile += nextLine + "\n"
+							if !strings.Contains(nextLine, "\\") {
+								break
+							}
 						}
 					}
 				}
