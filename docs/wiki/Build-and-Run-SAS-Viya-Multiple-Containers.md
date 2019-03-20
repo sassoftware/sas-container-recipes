@@ -157,7 +157,7 @@ To create your deployment, use the manifests created during the build process. I
 A yaml file was created during manifest generation to help with creating the Kubernetes name space. If your user has the ability to create *namespaces* in the Kuberetes environment, run the following, or request your Kuberenetes administrator to create you a name space in the Kubernetes environment:
 
 ```
-kubectl create -f $MANIFESTS/kubernetes/namespace/sas-viya.yml
+kubectl apply -f $MANIFESTS/kubernetes/namespace/sas-viya.yml
 ```
 
 Once a *namespace* is available, run the manifests in the following order. 
@@ -166,11 +166,11 @@ Once a *namespace* is available, run the manifests in the following order.
 * If setting up TLS, make sure the TLS section of the file in the $MANIFESTS/kubernetes/ingress directory is configured correctly. See the [Ingress Configuration](Pre-build-Tasks#ingress-configuration) (a pre-build task) for more information.
 
 ```
-kubectl -n sas-viya create -f $MANIFESTS/kubernetes/ingress
-kubectl -n sas-viya create -f $MANIFESTS/kubernetes/configmaps
-kubectl -n sas-viya create -f $MANIFESTS/kubernetes/secrets
-kubectl -n sas-viya create -f $MANIFESTS/kubernetes/services
-kubectl -n sas-viya create -f $MANIFESTS/kubernetes/deployments
+kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/ingress
+kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/configmaps
+kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/secrets
+kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/services
+kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/deployments
 ```
 
 To check the status of the containers, run `kubectl -n sas-viya get pods`. The following example reflects a programming multiple container deployment.
