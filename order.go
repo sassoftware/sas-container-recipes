@@ -38,6 +38,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -71,6 +72,7 @@ type SoftwareOrder struct {
 	Platform        string
 	WorkerCount     int
 	Verbose         bool
+	TagOverride     string
 
 	// Build attributes
 	TimestampTag string                // Allows for datetime on each temp build bfile
@@ -214,18 +216,17 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	}
 }
 
+// Look through the network interfaces and find the machine's non-loopback IP
 func getIPAddr() (string, error) {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		os.Stderr.WriteString("Oops: " + err.Error() + "\n")
-		os.Exit(1)
+		return "", err
 	}
 
 	for _, a := range addrs {
 		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
 				return ipnet.IP.String(), nil
-				// os.Stdout.WriteString(ipnet.IP.String() + "\n")
 			}
 		}
 	}
@@ -249,8 +250,9 @@ func (order *SoftwareOrder) Serve() {
 	if err != nil {
 		panic(err)
 	}
-	order.WriteLog(true, fmt.Sprintf("Serving license and entitlement on %s:%d", hostIP, port))
 
+	// Serve only two endpoints to receive the entitlement and CA
+	order.WriteLog(true, fmt.Sprintf("Serving license and entitlement on %s:%d", hostIP, port))
 	order.CertBaseURL = fmt.Sprintf("http://%s:%d", hostIP, port)
 	http.HandleFunc("/entitlement/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, string(order.Entitlement))
@@ -258,14 +260,13 @@ func (order *SoftwareOrder) Serve() {
 	http.HandleFunc("/cacert/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, string(order.CA))
 	})
-
 	http.Serve(listener, nil)
 }
 
 // Multiplexer for writing logs.
 // Write any number of object info to the build log file and/or to standard output
 func (order *SoftwareOrder) WriteLog(writeToStdout bool, contentBlocks ...interface{}) {
-	// Write to standard output
+	// Write each block to standard output
 	if writeToStdout {
 		for _, block := range contentBlocks {
 			log.Println(block)
@@ -283,7 +284,6 @@ func (order *SoftwareOrder) WriteLog(writeToStdout bool, contentBlocks ...interf
 	for _, block := range contentBlocks {
 		order.Log.Write([]byte(fmt.Sprintf("%v\n", block)))
 	}
-
 	order.Log.Write([]byte("\n"))
 }
 
@@ -327,6 +327,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	buildOnly := flag.String("build-only", "", "")
 	version := flag.Bool("version", false, "")
 	deploymentType := flag.String("type", "single", "")
+	tagOverride := flag.String("tag", "", "")
 
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU() - 1
@@ -396,6 +397,14 @@ func (order *SoftwareOrder) LoadCommands() error {
 		order.Platform = "redhat"
 	}
 
+	// Optional: override the standard tag format
+	// TODO: checking for acceptable format
+	order.TagOverride = *tagOverride
+	validTagCharacters := regexp.MustCompile("^[_A-z0-9]*((-|s)*[_A-z0-9])*$")
+	if len(order.TagOverride) > 0 && !validTagCharacters.Match([]byte(order.TagOverride)) {
+		return errors.New("The --tag argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
+	}
+
 	// The next arguments do not apply to the single deployment type
 	if order.DeploymentType == "single" {
 		return nil
@@ -450,47 +459,51 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 func buildWorker(id int, containers <-chan *Container, done chan<- string, progress chan string, fail chan string) {
 	for container := range containers {
-		if container.Status == Loaded {
-			container.BuildStart = time.Now()
-			err := container.Build(progress)
-			if err != nil {
-				container.Status = Failed
-				fail <- container.Name + ":" + container.Tag + " container build " + err.Error()
-				return
-			}
-			container.BuildEnd = time.Now()
-			if container.Status != Failed {
-				container.Status = Built
-			}
-
-			// Get each image's size
-			// TODO: have this run as another goroutine after the build
-			filterArgs := filters.NewArgs()
-			filterArgs.Add("reference", container.GetWholeImageName())
-			imageInfo, err := container.SoftwareOrder.DockerClient.ImageList(container.SoftwareOrder.BuildContext,
-				types.ImageListOptions{Filters: filterArgs})
-			if err != nil {
-				container.SoftwareOrder.WriteLog(true, "Unable to connect to Docker client for image build sizes")
-			}
-			imageSize := imageInfo[0].Size
-			container.SoftwareOrder.TotalBuildSize += imageSize
-			container.ImageSize = imageSize
-
-			container.PushStart = time.Now()
-			err = container.Push(progress)
-			if err != nil {
-				container.Status = Failed
-				fail <- container.GetWholeImageName() + " container push " + err.Error()
-				done <- container.Name
-				return
-			}
-			container.PushEnd = time.Now()
-
-			container.Status = Pushed
-			progress <- container.GetWholeImageName() + ": finished pushing image to Docker registry"
-			container.SoftwareOrder.GetIntermediateStatus(progress)
-			done <- container.Name
+		if container.Status != Loaded {
+			continue
 		}
+
+		// Build
+		container.BuildStart = time.Now()
+		err := container.Build(progress)
+		if err != nil {
+			container.Status = Failed
+			fail <- container.Name + ":" + container.Tag + " container build " + err.Error()
+			return
+		}
+		container.BuildEnd = time.Now()
+		if container.Status != Failed {
+			container.Status = Built
+		}
+
+		// Get each image's size
+		filterArgs := filters.NewArgs()
+		filterArgs.Add("reference", container.GetWholeImageName())
+		imageInfo, err := container.SoftwareOrder.DockerClient.ImageList(container.SoftwareOrder.BuildContext,
+			types.ImageListOptions{Filters: filterArgs})
+		if err != nil {
+			container.SoftwareOrder.WriteLog(true, "Unable to connect to Docker client for image build sizes")
+		}
+		imageSize := imageInfo[0].Size
+		container.SoftwareOrder.TotalBuildSize += imageSize
+		container.ImageSize = imageSize
+
+		// Push
+		container.PushStart = time.Now()
+		err = container.Push(progress)
+		if err != nil {
+			container.Status = Failed
+			fail <- container.GetWholeImageName() + " container push " + err.Error()
+			done <- container.Name
+			return
+		}
+		container.PushEnd = time.Now()
+
+		// Signal the end of the build and push processes
+		container.Status = Pushed
+		progress <- container.GetWholeImageName() + ": finished pushing image to Docker registry"
+		container.SoftwareOrder.GetIntermediateStatus(progress)
+		done <- container.Name
 	}
 }
 
@@ -627,30 +640,10 @@ func (order *SoftwareOrder) Build() error {
 	return nil
 }
 
-// Allow containers to pull the CA and entitlement so it can download licensed content
-// TODO: WIP for delivering the entitlement and CA to a container build without having it
-//       include the pem files in the docker history.
-const LICENSE_PORT = "20140"
-
-// TODO: WIP
-func (order *SoftwareOrder) ServeLicenses() {
-	log.Println("Starting license server")
-	http.HandleFunc("/entitlement/", func(w http.ResponseWriter, r *http.Request) {
-		// Accept localhost connections, reject others
-		fmt.Fprintf(w, string(order.CA))
-	})
-	http.HandleFunc("/cacert/", func(w http.ResponseWriter, r *http.Request) {
-		// Accept localhost connections, reject others
-		fmt.Fprintf(w, string(order.CA))
-	})
-	http.ListenAndServe(":"+LICENSE_PORT, nil)
-}
-
 // Get the names of each individual host to be created
 //
 // Read the sas_viya_playbook directory for the "group_vars" where each
 // file individually defines a host. There is one container per host.
-//
 func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 	containers := make(map[string]*Container)
 
@@ -758,6 +751,7 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 
 // Ensure the Docker client is accessible and pull the specified base image from Docker Hub
 func (order *SoftwareOrder) LoadDocker(progress chan string, fail chan string, done chan int) {
+
 	// Make sure Docker is able to connect
 	progress <- "Connecting to the Docker daemon  ..."
 	dockerConnection, err := client.NewClientWithOpts(client.WithVersion("1.37"))
@@ -1170,7 +1164,7 @@ settings:
 	return nil
 }
 
-// Attempt to download the orchestration tool locally if it isn't anywnere
+// Download the orchestration tool locally if it is not in the util directory
 func getOrchestrationTool() error {
 	_, err := os.Stat("util/sas-orchestration")
 	if !os.IsNotExist(err) {
@@ -1223,11 +1217,16 @@ func bytesToGB(bytes int64) string {
 	return fmt.Sprintf("%.2f GB", float64(bytes)/float64(1000000000))
 }
 
-// Calculate all metrics and display them in a table
+// Calculate all metrics and display them in a table.
 func (order *SoftwareOrder) ShowBuildSummary() {
-	// TODO: single container
 
-	// Print successes
+	// Special case where the single deployment does not use the order.Containers list
+	if order.DeploymentType == "single" {
+		fmt.Println(fmt.Sprintf("\nTotal Elapsed Time: %s\n\n", order.EndTime.Sub(order.StartTime).Round(time.Second)))
+		return
+	}
+
+	// Print each container's metrics in a table
 	summaryHeader := fmt.Sprintf("\n%s  Summary  ( %s, %s ) %s", strings.Repeat("-", 23),
 		order.EndTime.Sub(order.StartTime).Round(time.Second),
 		bytesToGB(order.TotalBuildSize),
@@ -1252,18 +1251,4 @@ func (order *SoftwareOrder) ShowBuildSummary() {
 	manifestInstructions := fmt.Sprintf("\nKubernetes manifests have been created: `%s`\nUse `kubectl create -f <directory>` or `kubectl replace -f <directory>` to deploy.\n", order.BuildPath+"manifests/")
 	fmt.Println(manifestInstructions)
 	order.WriteLog(false, manifestInstructions)
-
-	// Print failures
-	failCount := 0
-	failedContainers := []string{}
-	for _, container := range order.Containers {
-		if container.Status == Failed {
-			failedContainers = append(failedContainers, container.Name)
-			failCount += 1
-		}
-	}
-	if failCount > 0 {
-		order.WriteLog(true, fmt.Sprintf("\n\nBUILD FAILURES (%v): %s", failCount, failedContainers))
-		order.WriteLog(true, fmt.Sprintf("\nSee the build directory to debug: `cd %s`\n", order.BuildPath))
-	}
 }
