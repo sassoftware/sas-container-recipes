@@ -73,32 +73,33 @@ type Container struct {
 	// Builder attributes
 	BuildArgs         map[string]*string // Arguments that are passed into the Docker builder https://docs.docker.com/engine/reference/commandline/build/
 	BuildPath         string             // Path to the inner container build directory: builds/<deployment-type>-<date>-<time>/sas-viya-<name>/
+	ContextWriter     *tar.Writer        // Writes to a tar file that's passed to the Docker daemon as the build context
+	Dockerfile        string             // Generated from the container's included roles
 	DockerContext     *os.File           // Payload sent to the Docker builder, includes all files and the Dockerfile for the build
 	DockerContextPath string             // Location of the tar file, which is passed to the Docker client
+	DockerClient      *client.Client     // Individual connection to the Docker daemon, which allows for concurrency
 	Log               *os.File           // Open file buffer that's written to
 	LogPath           string             // Path to the log file so the buffer will know where to write
-	Dockerfile        string             // Generated from the container's included roles
-	ContextWriter     *tar.Writer        // Writes to a tar file that's passed to the Docker daemon as the build context
-	DockerClient      *client.Client     // Individual connection to the Docker daemon, which allows for concurrency
 	Config            ContainerConfig    // Set by the config.yml and loaded by the order
-	ImageSize         int64              // Value set after the build process
 
 	// Used for metrics, though this does not account for layer cache
-	BuildStart time.Time
-	BuildEnd   time.Time
-	PushStart  time.Time
-	PushEnd    time.Time
+	BuildStart time.Time // Set when the build command is sent to the Docker client
+	BuildEnd   time.Time // Set when the build command receives a success signal from the Docker client
+	PushStart  time.Time // Set when the push command is sent to the Docker client
+	PushEnd    time.Time // Set when the push command receives a success signal from the Docker client
+	ImageSize  int64     // Set after the build process by the Docker client ImageList command
 }
 
 // Each container has a configmap which define Docker layers.
 // A static configmap.yml file is parsed and all containers
 // that do not have static values are set to the defaults
+// (see container.GetConfig).
 type ContainerConfig struct {
 	Ports       []string `yaml:"ports"`
 	Environment []string `yaml:"environment"`
 	Secrets     []string `yaml:"secrets"`
 	Roles       []string `yaml:"roles"`
-	Volumes     []string `yaml:"volumes"` // Default: log:/opt/sas/viya/config/var/log
+	Volumes     []string `yaml:"volumes"`
 	Resources   struct {
 		Limits   []string `yaml:"limits"`
 		Requests []string `yaml:"requests"`
@@ -144,8 +145,13 @@ func (container *Container) GetName() string {
 	return "sas-viya-" + strings.ToLower(container.Name)
 }
 
-// Get a <recipe-version>-<datetime>
+// Get a the <recipe_version>-<date>-<time> format
 func (container *Container) GetTag() string {
+	// Use the "--tag" argument if provided
+	if len(container.SoftwareOrder.TagOverride) > 0 {
+		return container.SoftwareOrder.TagOverride
+	}
+
 	return fmt.Sprintf("%s-%s",
 		strings.TrimSpace(RECIPE_VERSION),
 		container.SoftwareOrder.TimestampTag)
@@ -479,22 +485,6 @@ func (container *Container) CreateDockerContext() error {
 		return err
 	}
 
-	// Add a rebuild script for easy debugging
-	// TODO: Indent this block and use de-indent on each line to print correctly
-	rebuildCommand := fmt.Sprintf(`
-if [[ ! -f "Dockerfile" ]]; then
-    tar -xf build_context.tar
-fi
-
-docker build \
---build-arg PLATFORM=%s \
---build-arg PLAYBOOK_SRV="%s" .
-`, container.SoftwareOrder.Platform, filepath.Clean(container.SoftwareOrder.CertBaseURL))
-	err = ioutil.WriteFile(container.SoftwareOrder.BuildPath+"/docker-build.sh", []byte(rebuildCommand), 0744)
-	if err != nil {
-		return err
-	}
-
 	// Load the config.yml
 	err = container.GetConfig()
 	if err != nil {
@@ -696,7 +686,7 @@ func (container *Container) AddDirectoryToContext(externalPath string, contextPa
 	return nil
 }
 
-// Clean up
+// Shut down open file handles and client connections
 func (container *Container) Finish() error {
 	if err := container.DockerClient.Close(); err != nil {
 		container.WriteLog("failed to close docker client", err)
