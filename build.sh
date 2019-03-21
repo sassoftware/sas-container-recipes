@@ -337,10 +337,6 @@ docker run -d \
 
 docker logs -f ${SAS_BUILD_CONTAINER_NAME}
 
-# while docker ps |grep ${SAS_BUILD_CONTAINER_NAME}; do
-#     sleep 3
-# done
-
 # find exit status
 build_container_exit_status=$(docker inspect ${SAS_BUILD_CONTAINER_NAME} --format='{{.State.ExitCode}}')
 
