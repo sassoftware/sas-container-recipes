@@ -151,6 +151,9 @@ type ConfigMap struct {
 //       If any of these steps return an error then the entire process will be exited.
 func NewSoftwareOrder() (*SoftwareOrder, error) {
 	order := &SoftwareOrder{}
+	order.StartTime = time.Now()
+	order.TimestampTag = string(order.StartTime.Format("2006-01-02-15-04-05"))
+
 	if err := order.LoadCommands(); err != nil {
 		return order, err
 	}
@@ -161,8 +164,6 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		order.ConfigPath = "config-multiple.yml"
 	}
 
-	order.StartTime = time.Now()
-	order.TimestampTag = string(order.StartTime.Format("2006-01-02-15-04-05"))
 	order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
 	if err := os.MkdirAll(order.BuildPath+"manifests", 0744); err != nil {
 		return order, err
@@ -189,8 +190,8 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	workerCount += 1
 	go order.LoadDocker(progress, fail, done)
 
-	workerCount += 1
-	go order.TestMirror(progress, fail, done)
+	// workerCount += 1
+	// go order.TestMirror(progress, fail, done)
 
 	workerCount += 1
 	go order.TestRegistry(progress, fail, done)
@@ -327,12 +328,12 @@ func (order *SoftwareOrder) LoadCommands() error {
 	buildOnly := flag.String("build-only", "", "")
 	version := flag.Bool("version", false, "")
 	deploymentType := flag.String("type", "single", "")
-	tagOverride := flag.String("tag", "", "")
+	tagOverride := flag.String("tag", RECIPE_VERSION+"-"+order.TimestampTag, "")
 
 	// By default detect the cpu core count and utilize all of them
-	defaultWorkerCount := runtime.NumCPU() - 1
+	defaultWorkerCount := runtime.NumCPU()
 	workerCount := flag.Int("workers", defaultWorkerCount, "")
-	order.WorkerCount = *workerCount - 1
+	order.WorkerCount = *workerCount
 	if *workerCount == 0 || *workerCount > defaultWorkerCount {
 		err := errors.New("Invalid '--worker' count, must be less than or equal to the number of CPU cores that are free and permissible in your cgroup configuration.")
 		return err
@@ -403,7 +404,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Optional: override the standard tag format
 	order.TagOverride = *tagOverride
-	validTagRegex := regexp.MustCompile("^[_A-z0-9]*((-|s)*[_A-z0-9])*$")
+	validTagRegex := regexp.MustCompile("^[_A-z0-9]*([_A-z0-9\\-\\.]*)$")
 	if len(order.TagOverride) > 0 && !validTagRegex.Match([]byte(order.TagOverride)) {
 		return errors.New("The --tag argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
 	}
@@ -1002,7 +1003,6 @@ func (order *SoftwareOrder) Prepare() error {
 			order.WriteLog(true, progress)
 		}
 	}
-	return nil
 }
 
 // Run the generate_manifests playbook to output Kubernetes configs
@@ -1110,7 +1110,7 @@ settings:
 		order.VirtualHost,
 		order.VirtualHost,
 		order.VirtualHost,
-		RECIPE_VERSION+"-"+order.TimestampTag,
+		order.TagOverride,
 		order.BaseImage,
 		order.DockerNamespace)
 

@@ -277,10 +277,12 @@ func (container *Container) Build(progress chan string) error {
 	// Set the payload to send to the Docker client
 	container.GetBuildArgs()
 	buildOptions := types.ImageBuildOptions{
-		Context:    dockerBuildContext,
-		Tags:       []string{container.GetWholeImageName()},
-		Dockerfile: "Dockerfile",
-		BuildArgs:  container.BuildArgs,
+		Context:     dockerBuildContext,
+		Tags:        []string{container.GetWholeImageName()},
+		Dockerfile:  "Dockerfile",
+		BuildArgs:   container.BuildArgs,
+		Remove:      true,
+		ForceRemove: true,
 	}
 
 	// Build the image and get the response

@@ -161,8 +161,8 @@ spec:
         - name: tokens
           mountPath: /tokens
 
-{% if item.value.volumes is defined and item.value.volumes %}
       volumes:
+{% if item.value.volumes is defined and item.value.volumes %}
 {%   for volumes in item.value.volumes %}
       - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
