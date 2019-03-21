@@ -237,7 +237,7 @@ type File struct {
 // Perform all pre-build steps after the playbook has been parsed
 func (container *Container) Prebuild(progress chan string) error {
 	// Open an individual Docker client connection
-	dockerConnection, err := client.NewClientWithOpts(client.WithVersion("1.39"))
+	dockerConnection, err := client.NewClientWithOpts(client.WithVersion("1.37"))
 	if err != nil {
 		debugMessage := "Unable to connect to Docker daemon. Ensure Docker is installed and the service is started. "
 		return errors.New(debugMessage + err.Error())
@@ -432,7 +432,8 @@ func appendAddonLines(name string, dockerfile string, addons []string) string {
 
 			if strings.HasPrefix(line, "RUN ") ||
 				strings.HasPrefix(line, "ADD ") ||
-				strings.HasPrefix(line, "COPY ") {
+				strings.HasPrefix(line, "COPY ") ||
+				strings.HasPrefix(line, "ARG ") {
 				dockerfile += line + "\n"
 
 				// If there's a "\" then it's a multi-line command
@@ -643,8 +644,10 @@ func (container *Container) AddFileToContext(externalPath string, contextPath st
 	if len(bytes) == 0 {
 		return nil
 	}
-	if _, err := container.ContextWriter.Write(bytes); err != nil {
-		log.Println("Excluding file from context", externalPath, contextPath)
+	_, err := container.ContextWriter.Write(bytes)
+	if err != nil {
+		log.Println("Excluding file from context", externalPath, contextPath, err)
+		container.WriteLog("Excluding files from context", externalPath, contextPath, err)
 	}
 	return nil
 }
@@ -688,14 +691,18 @@ func (container *Container) AddDirectoryToContext(externalPath string, contextPa
 
 // Shut down open file handles and client connections
 func (container *Container) Finish() error {
-	if err := container.DockerClient.Close(); err != nil {
+	err := container.DockerClient.Close()
+	if err != nil {
 		container.WriteLog("failed to close docker client", err)
 		return err
 	}
-	if err := container.Log.Close(); err != nil {
+
+	err = container.Log.Close()
+	if err != nil {
 		container.WriteLog("failed to close log handle", err)
 		return err
 	}
+
 	container.ContextWriter.Close()
 	return nil
 }

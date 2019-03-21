@@ -388,8 +388,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Detect the platform based on the image
 	order.BaseImage = *baseImage
-	order.MirrorURL = *mirrorURL
-	// TODO: a mirror is required if single container is using an opensuse base image
 	if strings.Contains(order.BaseImage, "opensuse") {
 		order.Platform = "suse"
 	} else {
@@ -397,11 +395,16 @@ func (order *SoftwareOrder) LoadCommands() error {
 		order.Platform = "redhat"
 	}
 
+	// A mirror is optional, except in the case of using an opensuse base image
+	order.MirrorURL = *mirrorURL
+	if len(order.MirrorURL) == 0 && order.DeploymentType == "single" && order.Platform == "suse" {
+		return errors.New("A --mirror-url argument is required for a base suse single container.")
+	}
+
 	// Optional: override the standard tag format
-	// TODO: checking for acceptable format
 	order.TagOverride = *tagOverride
-	validTagCharacters := regexp.MustCompile("^[_A-z0-9]*((-|s)*[_A-z0-9])*$")
-	if len(order.TagOverride) > 0 && !validTagCharacters.Match([]byte(order.TagOverride)) {
+	validTagRegex := regexp.MustCompile("^[_A-z0-9]*((-|s)*[_A-z0-9])*$")
+	if len(order.TagOverride) > 0 && !validTagRegex.Match([]byte(order.TagOverride)) {
 		return errors.New("The --tag argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
 	}
 
@@ -416,6 +419,10 @@ func (order *SoftwareOrder) LoadCommands() error {
 		return err
 	}
 	order.DockerNamespace = *dockerNamespace
+	validNamespaceRegex := regexp.MustCompile("^[_A-z0-9]*((-|s)*[_A-z0-9])*$")
+	if !validNamespaceRegex.Match([]byte(order.DockerNamespace)) {
+		return errors.New("The --docker-namespace argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
+	}
 
 	// Require a docker registry for multi and full
 	if *dockerRegistry == "" {
@@ -613,8 +620,7 @@ func (order *SoftwareOrder) Build() error {
 	fail := make(chan string)
 	done := make(chan string)
 	progress := make(chan string)
-	// TODO: make the number of workers configurable not just equal the number of CPUs
-	for w := 1; w <= runtime.NumCPU(); w++ {
+	for w := 1; w <= order.WorkerCount; w++ {
 		go buildWorker(w, jobs, done, progress, fail)
 	}
 	for _, container := range order.Containers {
@@ -759,7 +765,6 @@ func (order *SoftwareOrder) LoadDocker(progress chan string, fail chan string, d
 		fail <- "Unable to connect to Docker daemon. Ensure Docker is installed and the service is started."
 	}
 	order.DockerClient = dockerConnection
-	//TODO order.DockerClient.Close() at some point
 	progress <- "Finished connecting to Docker daemon"
 
 	// Pull the base image depending on what the argument was

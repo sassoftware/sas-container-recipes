@@ -186,6 +186,10 @@ Examples of running sas-container-recipes to build multiple containers are provi
     https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
     Example: --addons \"addons/auth-sssd addons/access-postgres\"
 
+  --workers <integer>
+    Specify the number of CPU cores to allocate for the build process.
+    default: Utilize all cores on the build machine
+
   --base-image <value>
     specifies the Docker image and version from which the SAS images will build on top of
     Default: centos:7

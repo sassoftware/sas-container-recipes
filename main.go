@@ -70,25 +70,41 @@ const usage = `
             multiple: SAS Viya Programming Multi-Container deployment with Kubernetes
     	    full    : SAS Visuals based deployment with Kubernetes.
 
+<<<<<<< HEAD
+          Note: the default deployment type is 'single'.
+=======
         Note: the default deployment type is 'single'.
+>>>>>>> 28eb1e6acc08f5fbb7eec42f062be78e08e4525a
 
       --zip <value>
           Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
           If you do not know if your organization has a SAS license then contact
           https://www.sas.com/en_us/software/how-to-buy.html
           
+<<<<<<< HEAD
+          example: /path/to/SAS_Viya_deployment_data.zip
+=======
             example: /path/to/SAS_Viya_deployment_data.zip
+>>>>>>> 28eb1e6acc08f5fbb7eec42f062be78e08e4525a
 
       --docker-namespace <value>
           The namespace in the Docker registry where Docker
           images will be pushed to. Used to prevent collisions.
 
+<<<<<<< HEAD
+          example: mynamespace
+=======
             example: mynamespace
+>>>>>>> 28eb1e6acc08f5fbb7eec42f062be78e08e4525a
 
       --docker-registry-url <value>
           URL of the Docker registry where Docker images will be pushed to.
 
+<<<<<<< HEAD
+          example: 10.12.13.14:5000 or my-registry.docker.com
+=======
             example: 10.12.13.14:5000 or my-registry.docker.com
+>>>>>>> 28eb1e6acc08f5fbb7eec42f062be78e08e4525a
 
 
       Optional:
@@ -106,10 +122,17 @@ const usage = `
             Access Engines: access-greenplum, access-hadoop, access-odbc, access-oracle, access-pcfiles, access-postgres, access-redshift, access-teradata
             Authentication: auth-sssd, auth-demo
             Other: ide-jupyter-python3
+<<<<<<< HEAD
+        
+      --base-image <value>
+          The Docker image and tag from which the SAS images will build on top of.
+          Default: centos:latest
+=======
 
       --base-image <value>
           The Docker image and tag from which the SAS images will build on top of.
             Default: centos:latest
+>>>>>>> 28eb1e6acc08f5fbb7eec42f062be78e08e4525a
 
       --mirror-url <value>
           The location of the mirror URL.See the Mirror Manager guide at
@@ -121,11 +144,11 @@ const usage = `
     
       --workers <integer>
           Specify the number of CPU cores to allocate for the build process.
-            default: Utilize all cores on the build machine
+          default: Utilize all cores on the build machine
 
       --verbose
           Output the result of each Docker layer creation.
-            default: false
+          default: false
 
       --build-only "<container-name> <container-name> ..."
           Build specific containers by providing a comma or space separated list of container names in quotes.
