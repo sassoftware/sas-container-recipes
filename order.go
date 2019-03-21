@@ -59,20 +59,22 @@ var CONFIG_PATH = "config-full.yml"
 type SoftwareOrder struct {
 
 	// Build arguments and flags (see order.LoadCommands for details)
-	LicensePath     string
-	BaseImage       string
-	MirrorURL       string
-	VirtualHost     string
-	DockerNamespace string
-	DockerRegistry  string
-	DeploymentType  string
-	PlaybookPath    string
-	AddOns          []string
-	DebugContainers []string
-	Platform        string
-	WorkerCount     int
-	Verbose         bool
-	TagOverride     string
+	LicensePath          string
+	BaseImage            string
+	MirrorURL            string
+	VirtualHost          string
+	DockerNamespace      string
+	DockerRegistry       string
+	DeploymentType       string
+	PlaybookPath         string
+	AddOns               []string
+	DebugContainers      []string
+	Platform             string
+	WorkerCount          int
+	Verbose              bool
+	TagOverride          string
+	SkipMirrorValidation bool
+	SkipDockerValidation bool
 
 	// Build attributes
 	TimestampTag string                // Allows for datetime on each temp build bfile
@@ -181,26 +183,30 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	fail := make(chan string)
 	progress := make(chan string)
 
-	workerCount += 1
+	workerCount++
 	go order.LoadPlaybook(progress, fail, done)
 
-	workerCount += 1
+	workerCount++
 	go order.LoadLicense(progress, fail, done)
 
-	workerCount += 1
+	workerCount++
 	go order.LoadDocker(progress, fail, done)
 
-	// workerCount += 1
-	// go order.TestMirror(progress, fail, done)
+	if order.SkipDockerValidation {
+		workerCount++
+		go order.TestMirror(progress, fail, done)
+	}
 
-	workerCount += 1
-	go order.TestRegistry(progress, fail, done)
+	if order.SkipMirrorValidation {
+		workerCount++
+		go order.TestRegistry(progress, fail, done)
+	}
 
 	doneCount := 0
 	for {
 		select {
 		case <-done:
-			doneCount += 1
+			doneCount++
 			if doneCount == workerCount {
 				// After the configs have been loaded then pre-build the containers and generate the manifests
 				err := order.Prepare()
@@ -328,6 +334,8 @@ func (order *SoftwareOrder) LoadCommands() error {
 	buildOnly := flag.String("build-only", "", "")
 	version := flag.Bool("version", false, "")
 	deploymentType := flag.String("type", "single", "")
+	skipMirrorValidation := flag.Bool("skip-mirror-url-validation", false, "")
+	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
 	tagOverride := flag.String("tag", RECIPE_VERSION+"-"+order.TimestampTag, "")
 
 	// By default detect the cpu core count and utilize all of them
@@ -350,6 +358,8 @@ func (order *SoftwareOrder) LoadCommands() error {
 		os.Exit(0)
 	}
 	order.Verbose = *verbose
+	order.SkipMirrorValidation = *skipMirrorValidation
+	order.SkipDockerValidation = *skipDockerValidation
 
 	// This is a safeguard for when a user does not use quotes around a multi value argument
 	otherArgs := flag.Args()
@@ -706,6 +716,11 @@ func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 // and load the content into the SoftwareOrder struct for use in the build process.
 func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, done chan int) {
 	progress <- "Reading Software Order Email Zip ..."
+
+	if _, err := os.Stat(order.SOEZipPath); os.IsNotExist(err) {
+		fail <- err.Error()
+	}
+
 	zipped, err := zip.OpenReader(order.SOEZipPath)
 	if err != nil {
 		fail <- err.Error()

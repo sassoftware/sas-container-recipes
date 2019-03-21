@@ -40,27 +40,7 @@ function sas_container_recipes_shutdown()
     echo "================================"
     echo
 
-    case "${SAS_RECIPE_TYPE}" in
-        multiple)
-            if [[ -f ${PWD}/viya-programming/viya-multi-container/working/sas_ansible_container.pid ]]; then
-                echo "[INFO]  : Shutting ansible-container process '$(cat ${PWD}/viya-programming/viya-multi-container/working/sas_ansible_container.pid)'"
-                kill -TERM $(cat ${PWD}/viya-programming/viya-multi-container/working/sas_ansible_container.pid)
-            fi
-            ;;
-        full)
-            if [[ -f ${PWD}/viya-visuals/working/sas_ansible_container.pid ]]; then
-                echo "[INFO]  : Shutting ansible-container process '$(cat ${PWD}/viya-visuals/working/sas_ansible_container.pid)'"
-                kill -TERM $(cat ${PWD}/viya-visuals/working/sas_ansible_container.pid)
-            fi
-            ;;
-    esac
-
-    # See if Docker still has any containers that are of type ${PROJECT_NAME}_*
-    echo "[INFO]  : Stopping and removing any Docker containers of type '${PROJECT_NAME}_*'"
-    set +e
-    docker stop $(docker container ls -q --filter "name=${PROJECT_NAME}_*")
-    docker rm $(docker container ls -aq --filter "name=${PROJECT_NAME}_*")
-    set -e
+    docker rm -f sas-container-recipes-builder-${SAS_DOCKER_TAG}
 
     exit 1
 }
@@ -108,6 +88,9 @@ function usage() {
           The type of distribution of the image defined by the \"baseimage\" option.
             Options: [ redhat | suse ]
             Default: redhat
+
+      -k|--skip-mirror-url-validation
+          Skips validating the mirror URL from the --mirror-url flag.
 
       -s|--sas-docker-tag
           The tag to apply to the images before pushing to the Docker registry.
@@ -180,6 +163,12 @@ function usage() {
             Options: [ redhat ]
             Default: redhat
 
+      -d|--skip-docker-url-validation
+          Skips validating the Docker registry URL
+
+      -k|--skip-mirror-url-validation
+          Skips validating the mirror URL from the --mirror-url flag.
+
       -s|--sas-docker-tag
           The tag to apply to the images before pushing to the Docker registry.
             default: \${recipe_project_version}-\${datetime}-\${last_commit_sha1}
@@ -194,8 +183,8 @@ function usage() {
     "
 }
 
-# trap sas_container_recipes_shutdown SIGTERM
-# trap sas_container_recipes_shutdown SIGINT
+trap sas_container_recipes_shutdown SIGTERM
+trap sas_container_recipes_shutdown SIGINT
 
 #
 # Set some defaults
@@ -252,6 +241,14 @@ while [[ $# -gt 0 ]]; do
             SAS_VIYA_DEPLOYMENT_DATA_ZIP="$1"
             shift # past value
             ;;
+        -k|--skip-mirror-url-validation)
+            shift # past argument
+            CHECK_MIRROR_URL=false
+            ;;
+        -d|--skip-docker-url-validation)
+            shift # past argument
+            CHECK_DOCKER_URL=false
+            ;;
         -a|--addons)
             shift # past argument
             ADDONS="$1"
@@ -289,7 +286,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 run_args="${run_args} --mirror-url ${SAS_RPM_REPO_URL}"
-run_args="${run_args} --zip ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
+run_args="${run_args} --zip /$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP})"
 run_args="${run_args} --type ${SAS_RECIPE_TYPE}"
 run_args="${run_args} --docker-registry-url ${DOCKER_REGISTRY_URL}"
 run_args="${run_args} --docker-namespace ${DOCKER_REGISTRY_NAMESPACE}"
@@ -311,25 +308,41 @@ echo "  Deployment Type                 = ${SAS_RECIPE_TYPE}"
 echo "  BASEIMAGE                       = ${BASEIMAGE}"
 echo "  BASETAG                         = ${BASETAG}"
 echo "  Mirror URL                      = ${SAS_RPM_REPO_URL}"
+echo "  Validate Mirror URL             = ${CHECK_MIRROR_URL}"
 echo "  Platform                        = ${PLATFORM}"
 echo "  Deployment Data Zip             = ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
 echo "  Addons                          = ${ADDONS## }"
 echo "  Docker registry URL             = ${DOCKER_REGISTRY_URL}"
 echo "  Docker registry namespace       = ${DOCKER_REGISTRY_NAMESPACE}"
+echo "  Validate Docker registry URL    = ${CHECK_DOCKER_URL}"
 echo "  HTTP Ingress endpoint           = ${CAS_VIRTUAL_HOST}"
 echo "  Tag SAS will apply              = ${SAS_DOCKER_TAG}"
 echo "  Build run args                  = ${run_args## }"
 echo
 
-
+SAS_BUILD_CONTAINER_NAME="sas-container-recipes-builder-${SAS_DOCKER_TAG}"
 echo "Building Docker build container."
 docker build -t sas-container-recipes-builder:${SAS_DOCKER_TAG} -f Dockerfile .
 
 DOCKER_GID=$(getent group docker|awk -F: '{print $3}')
 echo "Building images."
-docker run \
+docker run -d \
+    --name ${SAS_BUILD_CONTAINER_NAME} \
+    -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
     -v ${PWD}:/sas-container-recipes \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v ${HOME}/.docker/config.json:/root/.docker/config.json \
     sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
     # -u ${UID}:${DOCKER_GID} \
+
+docker logs -f ${SAS_BUILD_CONTAINER_NAME}
+
+# while docker ps |grep ${SAS_BUILD_CONTAINER_NAME}; do
+#     sleep 3
+# done
+
+# find exit status
+build_container_exit_status=$(docker inspect ${SAS_BUILD_CONTAINER_NAME} --format='{{.State.ExitCode}}')
+
+docker rm ${SAS_BUILD_CONTAINER_NAME}
+exit ${build_container_exit_status}
