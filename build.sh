@@ -194,8 +194,8 @@ function usage() {
     "
 }
 
-trap sas_container_recipes_shutdown SIGTERM
-trap sas_container_recipes_shutdown SIGINT
+# trap sas_container_recipes_shutdown SIGTERM
+# trap sas_container_recipes_shutdown SIGINT
 
 #
 # Set some defaults
