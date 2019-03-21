@@ -440,7 +440,7 @@ func appendAddonLines(name string, dockerfile string, addons []string) string {
 
 			targetImage, targetFound := images[name]
 
-			// If we don't fine the image name listed we skip.
+			// If we don't find the image name listed we skip.
 			if !targetFound {
 				continue
 			}
@@ -460,6 +460,7 @@ func appendAddonLines(name string, dockerfile string, addons []string) string {
 
 				if strings.HasPrefix(line, "RUN ") ||
 					strings.HasPrefix(line, "ADD ") ||
+					strings.HasPrefix(line, "ARG") ||
 					strings.HasPrefix(line, "COPY ") {
 					dockerfile += line + "\n"
 
