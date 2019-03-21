@@ -1211,6 +1211,7 @@ func getOrchestrationTool() error {
 // Remove all temporary build files: sas_viya_playbook and all Docker contexts (tar files) in the /tmp directory
 func (order *SoftwareOrder) Finish() {
 	order.EndTime = time.Now()
+	// TODO
 	//for _, container := range order.Containers {
 	//	container.Finish()
 	//}
