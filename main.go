@@ -144,19 +144,11 @@ const usage = `
     
       --workers <integer>
           Specify the number of CPU cores to allocate for the build process.
-<<<<<<< HEAD
           default: Utilize all cores on the build machine
 
       --verbose
           Output the result of each Docker layer creation.
           default: false
-=======
-            default: Utilize all cores on the build machine
-
-      --verbose
-          Output the result of each Docker layer creation.
-            default: false
->>>>>>> 28eb1e6acc08f5fbb7eec42f062be78e08e4525a
 
       --build-only "<container-name> <container-name> ..."
           Build specific containers by providing a comma or space separated list of container names in quotes.
