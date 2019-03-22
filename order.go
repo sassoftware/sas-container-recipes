@@ -197,12 +197,12 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 
 	if !order.SkipDockerValidation {
 		workerCount++
-		go order.TestMirror(progress, fail, done)
+		go order.TestRegistry(progress, fail, done)
 	}
 
 	if !order.SkipMirrorValidation {
 		workerCount++
-		go order.TestRegistry(progress, fail, done)
+		go order.TestMirror(progress, fail, done)
 	}
 
 	doneCount := 0
@@ -896,6 +896,7 @@ func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
 	config = strings.Replace(config, "\t", "", -1)
 
 	order.RegistryAuth = config
+
 	done <- 1
 }
 

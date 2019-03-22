@@ -206,6 +206,8 @@ run_args=""
 [[ -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP+x} ]]  && SAS_VIYA_DEPLOYMENT_DATA_ZIP="SAS_Viya_deployment_data.zip"
 [[ -z ${SAS_DOCKER_TAG+x} ]]                && SAS_DOCKER_TAG=${SAS_RECIPE_VERSION}-${sas_datetime}-${sas_sha1}
 
+CHECK_DOCKER_URL=true
+CHECK_MIRROR_URL=true
 # Use command line options if they have been provided. This overrides environment settings,
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -291,11 +293,22 @@ run_args="${run_args} --type ${SAS_RECIPE_TYPE}"
 run_args="${run_args} --docker-registry-url ${DOCKER_REGISTRY_URL}"
 run_args="${run_args} --docker-namespace ${DOCKER_REGISTRY_NAMESPACE}"
 run_args="${run_args} --tag ${SAS_DOCKER_TAG}"
-run_args="${run_args} --virtual-host ${CAS_VIRTUAL_HOST}"
 run_args="${run_args} --base-image ${BASEIMAGE}:${BASETAG}"
 
 if [[ -n ${ADDONS} ]]; then
     run_args="${run_args} --addons '${ADDONS## }'"
+fi
+
+if [[ -n ${CAS_VIRTUAL_HOST} ]]; then
+    run_args="${run_args} --virtual-host '${CAS_VIRTUAL_HOST## }'"
+fi
+
+if [[ ${CHECK_DOCKER_URL} == false ]]; then
+    run_args="${run_args} --skip-docker-url-validation"
+fi
+
+if [[ ${CHECK_MIRROR_URL} == false ]]; then
+    run_args="${run_args} --skip-mirror-url-validation"
 fi
 
 echo

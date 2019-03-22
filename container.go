@@ -201,7 +201,7 @@ func (container *Container) GetConfig() error {
 	// some defaults are added in this section.
 
 	// Default volumes
-	targetConfig.Volumes = append(targetConfig.Volumes, "log:/opt/sas/viya/config/var/log")
+	targetConfig.Volumes = append(targetConfig.Volumes, "log=/opt/sas/viya/config/var/log")
 
 	// Default roles: only applicable in the full deployment
 	if len(targetConfig.Roles) == 0 {
