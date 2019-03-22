@@ -55,7 +55,7 @@ const usage = `
           Override the default tag formatted as "19.0.4-2019-03-18-09-49-38"
                                             ( <recipe-version> - <date> - <time> )
 
-      -m|--mirror-url <value>
+      --mirror-url <value>
           The location of the mirror URL. See the Mirror Manager guide at
           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
