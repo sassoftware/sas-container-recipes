@@ -360,6 +360,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 		fmt.Println("SAS Container Recipes v" + RECIPE_VERSION)
 		os.Exit(0)
 	}
+
 	order.Verbose = *verbose
 	order.SkipMirrorValidation = *skipMirrorValidation
 	order.SkipDockerValidation = *skipDockerValidation
@@ -539,17 +540,29 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 		BaseImage:     order.BaseImage,
 	}
 
+	dockerConnection, err := client.NewClientWithOpts(client.WithVersion(DOCKER_API_VERSION))
+	if err != nil {
+		debugMessage := "Unable to connect to Docker daemon. Ensure Docker is installed and the service is started. "
+		return errors.New(debugMessage + err.Error())
+	}
+	container.DockerClient = dockerConnection
+
 	// Create the build context and add relevant files to the context
 	resourceDirectory := "util/programming-only-single"
-	err := container.CreateBuildDirectory()
+	err = container.CreateBuildDirectory()
 	if err != nil {
 		return err
 	}
+	container.DockerContextPath = container.SoftwareOrder.BuildPath + "sas-viya-single-programming-only/build_context.tar"
 	err = container.AddFileToContext(resourceDirectory+"/vars_usermods.yml", "vars_usermods.yml", []byte{})
 	if err != nil {
 		return err
 	}
 	err = container.AddFileToContext(resourceDirectory+"/entrypoint", "entrypoint", []byte{})
+	if err != nil {
+		return err
+	}
+	err = container.AddFileToContext(resourceDirectory+"/replace_httpd_default_cert.sh", "replace_httpd_default_cert.sh", []byte{})
 	if err != nil {
 		return err
 	}
@@ -565,9 +578,8 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
-	// TODO: enable and test addons
-	//dockerfile := appendAddonLines(container.Name, string(dockerfileStub), container.SoftwareOrder.AddOns)
-	err = container.AddFileToContext("", "Dockerfile", []byte(dockerfileStub))
+	dockerfile := appendAddonLines(container.Name, string(dockerfileStub), container.SoftwareOrder.AddOns)
+	err = container.AddFileToContext("", "Dockerfile", []byte(dockerfile))
 	if err != nil {
 		return err
 	}
@@ -591,9 +603,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
-	progress := make(chan string) // TODO
-	return readDockerStream(buildResponseStream.Body,
-		&container, container.SoftwareOrder.Verbose, progress)
+	return readDockerStream(buildResponseStream.Body, &container, true, nil)
 }
 
 // Start each container build concurrently and report the results
@@ -862,7 +872,7 @@ func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
 		fail <- "Cannot get user home directory path for docker config. " + err.Error()
 	}
 	dockerConfigPath := fmt.Sprintf("%s/.docker/config.json", userObject.HomeDir)
-	order.WriteLog(true, "Reading log from "+dockerConfigPath)
+	order.WriteLog(true, "Reading config from "+dockerConfigPath)
 	configContent, err := ioutil.ReadFile(dockerConfigPath)
 	if err != nil {
 		fail <- "Cannot read Docker configuration or file read permission is not permitted in " + dockerConfigPath + " run a `docker login <registry>`. " + err.Error()
