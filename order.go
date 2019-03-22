@@ -562,6 +562,10 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
+	err = container.AddFileToContext(resourceDirectory+"/replace_httpd_default_cert.sh", "replace_httpd_default_cert.sh", []byte{})
+	if err != nil {
+		return err
+	}
 
 	// TODO: the SOE should not be added to the container. Need to update the Dockerfile to utilize a license volume mount.
 	err = container.AddFileToContext(container.SoftwareOrder.SOEZipPath, "SAS_Viya_deployment_data.zip", []byte{})
@@ -575,7 +579,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 		return err
 	}
 	dockerfile := appendAddonLines(container.Name, string(dockerfileStub), container.SoftwareOrder.AddOns)
-	err = container.AddFileToContext("", "Dockerfile", []byte(dockerfileStub))
+	err = container.AddFileToContext("", "Dockerfile", []byte(dockerfile))
 	if err != nil {
 		return err
 	}
