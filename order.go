@@ -1083,8 +1083,9 @@ func (order *SoftwareOrder) GenerateManifests() error {
 		}
 
 		// Resources section
+		resources := ""
 		if len(container.Config.Resources.Limits) > 0 && len(container.Config.Resources.Requests) > 0 {
-			resources := "    resources:"
+			resources += "    resources:"
 			if len(container.Config.Resources.Limits) > 0 {
 				resources += "\n"
 				for _, item := range container.Config.Resources.Limits {
@@ -1103,6 +1104,8 @@ func (order *SoftwareOrder) GenerateManifests() error {
 		containerSection += ports
 		containerSection += environment
 		containerSection += secrets
+		containerSection += volumes
+		// containerSection += resources
 		containerVarSections = append(containerVarSections, containerSection)
 	}
 

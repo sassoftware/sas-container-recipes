@@ -215,12 +215,12 @@ func (container *Container) GetConfig() error {
 
 	// Default resource limits
 	if len(targetConfig.Resources.Limits) == 0 {
-		targetConfig.Resources.Limits = append(targetConfig.Resources.Limits, "- \"memory=10Gi\"")
+		targetConfig.Resources.Limits = append(targetConfig.Resources.Limits, "memory=10Gi")
 	}
 
 	// Default resource requests
 	if len(targetConfig.Resources.Requests) == 0 {
-		targetConfig.Resources.Requests = append(targetConfig.Resources.Requests, "- \"memory=2Gi\"")
+		targetConfig.Resources.Requests = append(targetConfig.Resources.Requests, "memory=2Gi")
 	}
 
 	container.Config = targetConfig
@@ -368,8 +368,8 @@ ENTRYPOINT /usr/bin/tini /opt/sas/viya/home/bin/%s-entrypoint.sh
 
 // Each Ansible role is a RUN layer
 const dockerfileRunLayer = `# %s role
-RUN curl -vvv -o /ansible/SAS_CA_Certificate.pem ${PLAYBOOK_SRV}/cacert/ && \
-    curl -vvv -o /ansible/entitlement_certificate.pem ${PLAYBOOK_SRV}/entitlement/ && \
+RUN curl -o /ansible/SAS_CA_Certificate.pem ${PLAYBOOK_SRV}/cacert/ && \
+    curl -o /ansible/entitlement_certificate.pem ${PLAYBOOK_SRV}/entitlement/ && \
     ansible-playbook --verbose /ansible/playbook.yml --extra-vars layer=%s && \
     rm /ansible/SAS_CA_Certificate.pem /ansible/entitlement_certificate.pem
 `
