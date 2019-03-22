@@ -690,6 +690,7 @@ func (container *Container) AddFileToContext(externalPath string, contextPath st
 		return nil
 	}
 	if _, err := container.ContextWriter.Write(bytes); err != nil {
+		log.Println("err:", err)
 		log.Println("Excluding file from context", externalPath, contextPath)
 	}
 	return nil
