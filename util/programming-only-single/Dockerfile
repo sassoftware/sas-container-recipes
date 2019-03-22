@@ -22,14 +22,15 @@
 #   docker run --detach --rm --publish-all --name viya-single-container --hostname viya-single-container viya-single-container
 #
 
-ARG BASE
+ARG BASE=centos:7
+FROM $BASE
+
 ARG PLATFORM=redhat
+ENV PLATFORM=$PLATFORM
+ARG ANSIBLE_VERSION=2.4.1
 ARG TINI_RPM_NAME=tini_0.18.0.rpm
 ARG TINI_URL=https://github.com/krallin/tini/releases/download/v0.18.0
-ARG SAS_RPM_REPO_URL=https://ses.sas.download/ses/ # For SUSE a mirror is required.
-ARG ANSIBLE_VERSION=2.4.1
-
-FROM $BASE
+ARG SAS_RPM_REPO_URL=https://ses.sas.download/ses/ 
 
 USER root
 WORKDIR /tmp/sas

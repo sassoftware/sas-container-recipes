@@ -58,6 +58,8 @@ const (
 	Pushed     State = 10 // Image has finished pushing to the provided registry
 )
 
+const DOCKER_API_VERSION = "1.37"
+
 // Defines the attributes for a single host
 type Container struct {
 	// Reference to the parent SOE
@@ -237,7 +239,7 @@ type File struct {
 // Perform all pre-build steps after the playbook has been parsed
 func (container *Container) Prebuild(progress chan string) error {
 	// Open an individual Docker client connection
-	dockerConnection, err := client.NewClientWithOpts(client.WithVersion("1.37"))
+	dockerConnection, err := client.NewClientWithOpts(client.WithVersion(DOCKER_API_VERSION))
 	if err != nil {
 		debugMessage := "Unable to connect to Docker daemon. Ensure Docker is installed and the service is started. "
 		return errors.New(debugMessage + err.Error())
@@ -259,6 +261,7 @@ func (container *Container) Prebuild(progress chan string) error {
 // Note: The Docker api requires BuildArgs to be a string pointer instead of just a string
 func (container *Container) GetBuildArgs() {
 	buildArgs := make(map[string]*string)
+	buildArgs["BASE"] = &container.SoftwareOrder.BaseImage
 	buildArgs["PLATFORM"] = &container.SoftwareOrder.Platform
 	buildArgs["PLAYBOOK_SRV"] = &container.SoftwareOrder.CertBaseURL
 
@@ -339,7 +342,12 @@ func readDockerStream(responseStream io.ReadCloser,
 		responses = append(responses, *response)
 		container.WriteLog(response)
 		if verbose && len(response.Stream) > 0 {
-			progress <- container.Name + ":\n" + strings.TrimSpace(string(response.Stream))
+			if progress != nil {
+				progress <- container.Name + ":\n" + response.Stream
+			} else {
+				// Work-around to allow single container to build without a progress stream
+				log.Println(response.Stream)
+			}
 		}
 		if response.Error != nil {
 			// If anything goes wrong then dump the error and provide debugging options
@@ -638,6 +646,10 @@ func (container *Container) AddFileToContext(externalPath string, contextPath st
 		Size:    int64(len(bytes)),
 		Mode:    0777,
 		ModTime: time.Now(),
+	}
+
+	if container.ContextWriter == nil {
+		return errors.New("Could not create docker context. Archive context writer is nil.")
 	}
 	container.ContextWriter.WriteHeader(header)
 
