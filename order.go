@@ -192,12 +192,15 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	workerCount++
 	go order.LoadDocker(progress, fail, done)
 
-	if order.SkipDockerValidation {
+	workerCount++
+	go order.LoadRegistryAuth(fail, done)
+
+	if !order.SkipDockerValidation {
 		workerCount++
 		go order.TestMirror(progress, fail, done)
 	}
 
-	if order.SkipMirrorValidation {
+	if !order.SkipMirrorValidation {
 		workerCount++
 		go order.TestRegistry(progress, fail, done)
 	}
@@ -849,12 +852,17 @@ func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string,
 	}
 	progress <- "Finished checking the Docker registry URL for validity: http status code " + strconv.Itoa(response.StatusCode)
 
-	// Load the registry auth from ~/.docker/config.json
+	done <- 1
+}
+
+// Load the registry auth from $USERHOME/.docker/config.json
+func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
 	userObject, err := user.Current()
 	if err != nil {
 		fail <- "Cannot get user home directory path for docker config. " + err.Error()
 	}
 	dockerConfigPath := fmt.Sprintf("%s/.docker/config.json", userObject.HomeDir)
+	order.WriteLog(true, "Reading log from "+dockerConfigPath)
 	configContent, err := ioutil.ReadFile(dockerConfigPath)
 	if err != nil {
 		fail <- "Cannot read Docker configuration or file read permission is not permitted in " + dockerConfigPath + " run a `docker login <registry>`. " + err.Error()
