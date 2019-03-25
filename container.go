@@ -526,6 +526,8 @@ docker build \
 --build-arg PLATFORM=%s \
 --build-arg PLAYBOOK_SRV="%s" .
 `, container.SoftwareOrder.Platform, filepath.Clean(container.SoftwareOrder.CertBaseURL))
+	// End of rebuild script.
+
 	err = ioutil.WriteFile(container.SoftwareOrder.BuildPath+"/docker-build.sh", []byte(rebuildCommand), 0744)
 	if err != nil {
 		return err
@@ -553,6 +555,7 @@ docker build \
 	container.AddFileToContext(
 		container.SoftwareOrder.PlaybookPath+"/internal/soe_defaults.yml",
 		"roles/sas-install/vars/soe_defaults.yml", []byte{})
+
 	for _, dep := range container.Config.Roles {
 		internalRolePath := fmt.Sprintf("util/static-roles-%s/%s/", container.SoftwareOrder.DeploymentType, dep)
 
@@ -627,16 +630,28 @@ docker build \
 		container.AddFileToContext("extravars.yml", "extravars.yml", []byte(otherVars))
 	}
 
-	// Include any items from the AddOns
-	// All access engines and auths are related to computeserver, programming, and casserver
-	// TODO: sas-casserver will be renamed to caserver (or similar) at a later point
-	if container.Name == "programming" || container.Name == "computeserver" || container.Name == "sas-casserver-primary" {
-		for _, addon := range container.SoftwareOrder.AddOns {
-			if strings.Contains(addon, "access") || strings.Contains(addon, "auth") || strings.Contains(addon, "whitelabel") {
-				container.AddDirectoryToContext("addons/"+addon+"/", "addons/", "")
-				container.WriteLog("includes addons", addon)
-			}
+	// Handle the addons -- Each addon has a config file that specifies which container it affects.
+	for _, addon := range container.SoftwareOrder.AddOns {
+		addonPath := "addons/" + addon + "/"
+
+		images, err := readAddonConf(addonPath + "addon_config.yml")
+		if err != nil {
+			errString := fmt.Sprintf("Read YAML Failed: %s", err)
+			log.Fatalf(errString)
 		}
+
+		_, targetFound := images[container.Name]
+
+		// If we don't find the image name listed we skip.
+		if !targetFound {
+			continue
+		}
+		log.Println("Including Addon: ", addon)
+		log.Println("In container: ", container.Name)
+
+		// We just want to add the addons in the top level so the Docker commands will work correctly
+		container.AddDirectoryToContext("addons/"+addon+"/", "", "")
+		container.WriteLog("includes addons", addon)
 	}
 
 	// Create the Dockerfile and add it to the root of the context
@@ -689,6 +704,7 @@ func (container *Container) AddFileToContext(externalPath string, contextPath st
 	if len(bytes) == 0 {
 		return nil
 	}
+
 	if _, err := container.ContextWriter.Write(bytes); err != nil {
 		log.Println("err:", err)
 		log.Println("Excluding file from context", externalPath, contextPath)
@@ -702,9 +718,14 @@ func (container *Container) AddFileToContext(externalPath string, contextPath st
 // contextPath is where the file should go inside the Docker context
 func (container *Container) AddDirectoryToContext(externalPath string, contextPath string, roleName string) error {
 	var paths []string
+
 	err := filepath.Walk(externalPath, func(path string, info os.FileInfo, err error) error {
 		if info != nil {
 			if !info.IsDir() {
+				if strings.Contains(path, "Dockerfile") || strings.Contains(path, "addon_config.yml") {
+					log.Println("Skipping: ", path )
+					return nil
+				}
 				paths = append(paths, path)
 			}
 		}
@@ -716,15 +737,22 @@ func (container *Container) AddDirectoryToContext(externalPath string, contextPa
 
 	// Utilize container.AddFileToContext to add each individual file
 	for _, path := range paths {
-		// Never keep these upper level directories
-		// Always keep intermediate directories. For example,
-		//          Given external=templates/static-roles-<deployment>/sas-java, context=roles/sas-java/
-		//          roles/sas-java/main.yml should be roles/sas-java/tasks/main.yml (keep /tasks/)
-		innerDirectory := strings.Replace(path, "util/static-roles-"+container.SoftwareOrder.DeploymentType+"/"+roleName+"/", "", -1)
+		innerDirectory := ""
+		// if we are adding an addon then we just want the filename
+		// Need to copy sub-directories and preserve the directory structure
+		if strings.Contains(path, "addons") {
+			dirParts := strings.Split(path, "/")
+			innerDirectory = strings.Replace(path, dirParts[0]+"/"+dirParts[1]+"/", "", -1)
+		} else {
+			// Never keep these upper level directories
+			// Always keep intermediate directories. For example,
+			//          Given external=templates/static-roles-<deployment>/sas-java, context=roles/sas-java/
+			//          roles/sas-java/main.yml should be roles/sas-java/tasks/main.yml (keep /tasks/)
+			innerDirectory = strings.Replace(path, "util/static-roles-"+container.SoftwareOrder.DeploymentType+"/"+roleName+"/", "", -1)
+			innerDirectory = strings.Replace(innerDirectory, "/internal/", "", -1)
+			innerDirectory = strings.Replace(innerDirectory, "sas_viya_playbook", "", -1)
+		}
 
-		innerDirectory = strings.Replace(innerDirectory, "/internal/", "", -1)
-		innerDirectory = strings.Replace(innerDirectory, "sas_viya_playbook", "", -1)
-		innerDirectory = strings.Replace(innerDirectory, path, "", -1)
 		err := container.AddFileToContext(path, contextPath+innerDirectory, []byte{})
 		if err != nil {
 			return err
