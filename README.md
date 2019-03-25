@@ -12,9 +12,6 @@
 <a href="https://kubernetes.io/">
     <img src="https://img.shields.io/badge/Kubernetes-1.0+-blue.svg?&style=for-the-badge&colorA=0b5788"
         alt="Kubernetes Version"></a>
-<a href="https://github.com/ansible/ansible-container" alt="Ansible Container">
-    <img src="https://img.shields.io/badge/Ansible%20Container-0.9+-lightgrey.svg?&style=for-the-badge" 
-        alt="Ansible Container Version"/></a>
 </div>
 
 <br>
