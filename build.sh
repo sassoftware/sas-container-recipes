@@ -296,7 +296,10 @@ run_args="${run_args} --tag ${SAS_DOCKER_TAG}"
 run_args="${run_args} --base-image ${BASEIMAGE}:${BASETAG}"
 
 if [[ -n ${ADDONS} ]]; then
-    run_args="${run_args} --addons '${ADDONS## }'"
+    ADDONS=${ADDONS## } # remove trailing space
+    ADDONS=${ADDONS//  /} # replace multiple spaces with a single space
+    ADDONS=${ADDONS// /,} # replace spaces with a comma
+    run_args="${run_args} --addons ${ADDONS}"
 fi
 
 if [[ -n ${CAS_VIRTUAL_HOST} ]]; then
