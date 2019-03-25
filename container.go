@@ -641,7 +641,11 @@ func (container *Container) CreateDockerContext() error {
 		}
 
 		// Add the files to the top level of the docker context
-		container.AddDirectoryToContext("addons/"+addon+"/", "", "")
+		err = container.AddDirectoryToContext("addons/"+addon+"/", "", "")
+		if err != nil {
+			return err
+		}
+
 		container.WriteLog("includes addons", addon)
 	}
 
