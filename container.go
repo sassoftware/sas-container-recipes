@@ -721,7 +721,7 @@ func (container *Container) AddDirectoryToContext(externalPath string, contextPa
 		if info != nil {
 			if !info.IsDir() {
 				if strings.Contains(path, "Dockerfile") || strings.Contains(path, "addon_config.yml") {
-					log.Println("Skipping: ", path)
+					log.Println("Skipping adding file to Docker context: ", path)
 					return nil
 				}
 				paths = append(paths, path)
