@@ -51,7 +51,11 @@ const usage = `
           The Docker image and tag from which the SAS images will build on top of
             Default: centos:latest
 
-      -m|--mirror-url <value>
+      --tag <value>
+          Override the default tag formatted as "19.0.4-2019-03-18-09-49-38"
+                                            ( <recipe-version> - <date> - <time> )
+
+      --mirror-url <value>
           The location of the mirror URL. See the Mirror Manager guide at
           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
@@ -110,14 +114,18 @@ const usage = `
       --mirror-url <value>
           The location of the mirror URL.See the Mirror Manager guide at
           https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
+
+      --tag <value>
+          Override the default tag formatted as "19.0.4-2019-03-18-09-49-38"
+                                            ( <recipe-version> - <date> - <time> )
     
       --workers <integer>
           Specify the number of CPU cores to allocate for the build process.
-            default: Utilize all cores on the build machine
+          default: Utilize all cores on the build machine
 
       --verbose
           Output the result of each Docker layer creation.
-            default: false
+          default: false
 
       --build-only "<container-name> <container-name> ..."
           Build specific containers by providing a comma or space separated list of container names in quotes.

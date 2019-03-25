@@ -113,8 +113,8 @@ your users with the features that they require.
 
 ### Prerequisites
 - A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux or Mac must be installed on the build machine
-- Python2 with python-pip2 and virtualenv or Python3 and python-pip3 must be installed on the build machine
 - `java-1.8.0-openjdk` or another Java Runtime Environment (1.8.x) must be installed on the build machine
+- `ansible` must be installed on the build machine
 - **Access to a Docker registry:** The build process will push built Docker images automatically to the Docker registry. Before running `sas-container-recipes` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
 - Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed: required for the deployment step but not required for the build step.
 - **Strongly recommended:** A local mirror of the SAS software. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
@@ -186,33 +186,22 @@ Examples of running sas-container-recipes to build multiple containers are provi
     https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
     Example: --addons \"addons/auth-sssd addons/access-postgres\"
 
-  --baseimage <value>
-    specifies the Docker image from which the SAS images will build on top of
-    Default: centos
+  --workers <integer>
+    Specify the number of CPU cores to allocate for the build process.
+    default: Utilize all cores on the build machine
 
-  --basetag <value>
-    specifies the Docker tag for the base image that is being used.
-    Default: latest
+  --base-image <value>
+    specifies the Docker image and version from which the SAS images will build on top of
+    Default: centos:7
 
   --mirror-url <value>
     specifies the location of the mirror URL. See the Mirror Manager guide at
     https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
-  --platform <value>
-    specifies the type of distribution of the image defined by the \"baseimage\" option.
-    Options: [ redhat ]
-    Default: redhat
-
-  --skip-docker-url-validation
-    skips validating the Docker registry URL.
-
-  --skip-mirror-url-validation
-    skips validating the mirror URL from the --mirror-url flag.
-
-  --sas-docker-tag
+  --tag
     specifies the tag to apply to the images before pushing to the Docker registry.
-    Default: ${recipe_project_version}-${datetime}-${last_commit_sha1}
-    Example: 18.12.0-20181209115304-b197206
+    Default: <recipe_version> - <date> - <time>
+    Example: 19.0.4-2019-03-18-09-49-38
 ```
 
 ### How to Run

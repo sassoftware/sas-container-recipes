@@ -58,6 +58,8 @@ const (
 	Pushed     State = 10 // Image has finished pushing to the provided registry
 )
 
+const DOCKER_API_VERSION = "1.37"
+
 // Defines the attributes for a single host
 type Container struct {
 	// Reference to the parent SOE
@@ -73,32 +75,33 @@ type Container struct {
 	// Builder attributes
 	BuildArgs         map[string]*string // Arguments that are passed into the Docker builder https://docs.docker.com/engine/reference/commandline/build/
 	BuildPath         string             // Path to the inner container build directory: builds/<deployment-type>-<date>-<time>/sas-viya-<name>/
+	ContextWriter     *tar.Writer        // Writes to a tar file that's passed to the Docker daemon as the build context
+	Dockerfile        string             // Generated from the container's included roles
 	DockerContext     *os.File           // Payload sent to the Docker builder, includes all files and the Dockerfile for the build
 	DockerContextPath string             // Location of the tar file, which is passed to the Docker client
+	DockerClient      *client.Client     // Individual connection to the Docker daemon, which allows for concurrency
 	Log               *os.File           // Open file buffer that's written to
 	LogPath           string             // Path to the log file so the buffer will know where to write
-	Dockerfile        string             // Generated from the container's included roles
-	ContextWriter     *tar.Writer        // Writes to a tar file that's passed to the Docker daemon as the build context
-	DockerClient      *client.Client     // Individual connection to the Docker daemon, which allows for concurrency
 	Config            ContainerConfig    // Set by the config.yml and loaded by the order
-	ImageSize         int64              // Value set after the build process
 
 	// Used for metrics, though this does not account for layer cache
-	BuildStart time.Time
-	BuildEnd   time.Time
-	PushStart  time.Time
-	PushEnd    time.Time
+	BuildStart time.Time // Set when the build command is sent to the Docker client
+	BuildEnd   time.Time // Set when the build command receives a success signal from the Docker client
+	PushStart  time.Time // Set when the push command is sent to the Docker client
+	PushEnd    time.Time // Set when the push command receives a success signal from the Docker client
+	ImageSize  int64     // Set after the build process by the Docker client ImageList command
 }
 
 // Each container has a configmap which define Docker layers.
 // A static configmap.yml file is parsed and all containers
 // that do not have static values are set to the defaults
+// (see container.GetConfig).
 type ContainerConfig struct {
 	Ports       []string `yaml:"ports"`
 	Environment []string `yaml:"environment"`
 	Secrets     []string `yaml:"secrets"`
 	Roles       []string `yaml:"roles"`
-	Volumes     []string `yaml:"volumes"` // Default: log:/opt/sas/viya/config/var/log
+	Volumes     []string `yaml:"volumes"`
 	Resources   struct {
 		Limits   []string `yaml:"limits"`
 		Requests []string `yaml:"requests"`
@@ -149,8 +152,13 @@ func (container *Container) GetName() string {
 	return "sas-viya-" + strings.ToLower(container.Name)
 }
 
-// Get a <recipe-version>-<datetime>
+// Get a the <recipe_version>-<date>-<time> format
 func (container *Container) GetTag() string {
+	// Use the "--tag" argument if provided
+	if len(container.SoftwareOrder.TagOverride) > 0 {
+		return container.SoftwareOrder.TagOverride
+	}
+
 	return fmt.Sprintf("%s-%s",
 		strings.TrimSpace(RECIPE_VERSION),
 		container.SoftwareOrder.TimestampTag)
@@ -198,7 +206,7 @@ func (container *Container) GetConfig() error {
 	// some defaults are added in this section.
 
 	// Default volumes
-	targetConfig.Volumes = append(targetConfig.Volumes, "log:/opt/sas/viya/config/var/log")
+	targetConfig.Volumes = append(targetConfig.Volumes, "log=/opt/sas/viya/config/var/log")
 
 	// Default roles: only applicable in the full deployment
 	if len(targetConfig.Roles) == 0 {
@@ -214,12 +222,12 @@ func (container *Container) GetConfig() error {
 
 	// Default resource limits
 	if len(targetConfig.Resources.Limits) == 0 {
-		targetConfig.Resources.Limits = append(targetConfig.Resources.Limits, "- \"memory=10Gi\"")
+		targetConfig.Resources.Limits = append(targetConfig.Resources.Limits, "memory=10Gi")
 	}
 
 	// Default resource requests
 	if len(targetConfig.Resources.Requests) == 0 {
-		targetConfig.Resources.Requests = append(targetConfig.Resources.Requests, "- \"memory=2Gi\"")
+		targetConfig.Resources.Requests = append(targetConfig.Resources.Requests, "memory=2Gi")
 	}
 
 	container.Config = targetConfig
@@ -236,7 +244,7 @@ type File struct {
 // Perform all pre-build steps after the playbook has been parsed
 func (container *Container) Prebuild(progress chan string) error {
 	// Open an individual Docker client connection
-	dockerConnection, err := client.NewClientWithOpts(client.WithVersion("1.39"))
+	dockerConnection, err := client.NewClientWithOpts(client.WithVersion(DOCKER_API_VERSION))
 	if err != nil {
 		debugMessage := "Unable to connect to Docker daemon. Ensure Docker is installed and the service is started. "
 		return errors.New(debugMessage + err.Error())
@@ -258,6 +266,7 @@ func (container *Container) Prebuild(progress chan string) error {
 // Note: The Docker api requires BuildArgs to be a string pointer instead of just a string
 func (container *Container) GetBuildArgs() {
 	buildArgs := make(map[string]*string)
+	buildArgs["BASE"] = &container.SoftwareOrder.BaseImage
 	buildArgs["PLATFORM"] = &container.SoftwareOrder.Platform
 	buildArgs["PLAYBOOK_SRV"] = &container.SoftwareOrder.CertBaseURL
 
@@ -276,10 +285,12 @@ func (container *Container) Build(progress chan string) error {
 	// Set the payload to send to the Docker client
 	container.GetBuildArgs()
 	buildOptions := types.ImageBuildOptions{
-		Context:    dockerBuildContext,
-		Tags:       []string{container.GetWholeImageName()},
-		Dockerfile: "Dockerfile",
-		BuildArgs:  container.BuildArgs,
+		Context:     dockerBuildContext,
+		Tags:        []string{container.GetWholeImageName()},
+		Dockerfile:  "Dockerfile",
+		BuildArgs:   container.BuildArgs,
+		Remove:      true,
+		ForceRemove: true,
 	}
 
 	// Build the image and get the response
@@ -336,7 +347,12 @@ func readDockerStream(responseStream io.ReadCloser,
 		responses = append(responses, *response)
 		container.WriteLog(response)
 		if verbose && len(response.Stream) > 0 {
-			progress <- container.Name + ":\n" + strings.TrimSpace(string(response.Stream))
+			if progress != nil {
+				progress <- container.Name + ":\n" + response.Stream
+			} else {
+				// Work-around to allow single container to build without a progress stream
+				log.Println(response.Stream)
+			}
 		}
 		if response.Error != nil {
 			// If anything goes wrong then dump the error and provide debugging options
@@ -365,14 +381,14 @@ ENTRYPOINT /usr/bin/tini /opt/sas/viya/home/bin/%s-entrypoint.sh
 
 // Each Ansible role is a RUN layer
 const dockerfileRunLayer = `# %s role
-RUN curl -vvv -o /ansible/SAS_CA_Certificate.pem ${PLAYBOOK_SRV}/cacert/ && \
-    curl -vvv -o /ansible/entitlement_certificate.pem ${PLAYBOOK_SRV}/entitlement/ && \
+RUN curl -o /ansible/SAS_CA_Certificate.pem ${PLAYBOOK_SRV}/cacert/ && \
+    curl -o /ansible/entitlement_certificate.pem ${PLAYBOOK_SRV}/entitlement/ && \
     ansible-playbook --verbose /ansible/playbook.yml --extra-vars layer=%s && \
     rm /ansible/SAS_CA_Certificate.pem /ansible/entitlement_certificate.pem
 `
 
 // Create a Dockerfile by reading the container's configuration
-func (container *Container) CreateDockerfile() string {
+func (container *Container) CreateDockerfile() (string, error) {
 	// Grab the config and start formatting the Dockerfile
 	dockerfile := fmt.Sprintf(dockerfileFromBase, "sas-viya-"+container.Name, container.BaseImage) + "\n"
 
@@ -399,10 +415,13 @@ func (container *Container) CreateDockerfile() string {
 	}
 
 	// Handle AddOns Dockerfile lines
-	dockerfile = appendAddonLines(container.Name, dockerfile, container.SoftwareOrder.AddOns)
+	dockerfile, err := appendAddonLines(container.Name, dockerfile, container.SoftwareOrder.AddOns)
+	if err != nil {
+		return dockerfile, err
+	}
 
 	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Name)
-	return dockerfile
+	return dockerfile, nil
 }
 
 // readAddonConf reads the yaml file and return the data.
@@ -422,35 +441,30 @@ func readAddonConf(fileName string) (map[string]effectedImage, error) {
 	return imageData, nil
 }
 
-// appendAddonLines adds any corresponding addon lines to a Dockerfile
-// Helper function utilized by all the deployment types: single, multiple, and full
-func appendAddonLines(name string, dockerfile string, addons []string) string {
+// Adds any corresponding addon lines to a Dockerfile
+// Helper function utilized by all the deployment types
+func appendAddonLines(name string, dockerfile string, addons []string) (string, error) {
 
 	// This function now reads an addon_config.yml file in the addon directory to determine
 	// which containers are affected by the Dockerfiles.
 	if len(addons) > 0 {
 		for _, addon := range addons {
 			addonPath := "addons/" + addon + "/"
-
 			images, err := readAddonConf(addonPath + "addon_config.yml")
 			if err != nil {
-				errString := fmt.Sprintf("Read YAML Failed: %s", err)
-				log.Fatalf(errString)
+				return "", err
 			}
 
-			targetImage, targetFound := images[name]
-
 			// If we don't find the image name listed we skip.
+			targetImage, targetFound := images[name]
 			if !targetFound {
 				continue
 			}
 
-			dockerfile += "\n# AddOn(s)"
-
 			// Read the addon's Dockerfile and only grab the RUN, ADD, COPY, USER, lines
+			dockerfile += "\n# AddOn(s)"
 			dockerfile += "\n# " + addon + "\n"
 			bytes, _ := ioutil.ReadFile(addonPath + targetImage.Dockerfile)
-
 			lines := strings.Split(string(bytes), "\n")
 			for index, line := range lines {
 				line = strings.TrimSpace(line)
@@ -478,7 +492,7 @@ func appendAddonLines(name string, dockerfile string, addons []string) string {
 		}
 	}
 
-	return dockerfile
+	return dockerfile, nil
 }
 
 // Create a sub-directory within the builds directory, set the log path, and the Docker context path
@@ -511,24 +525,6 @@ func (container *Container) CreateBuildDirectory() error {
 // Follow the Container directory structure (files/*, tasks/*, templates/*, vars/*)
 func (container *Container) CreateDockerContext() error {
 	err := container.CreateBuildDirectory()
-	if err != nil {
-		return err
-	}
-
-	// Add a rebuild script for easy debugging
-	// TODO: Indent this block and use de-indent on each line to print correctly
-	rebuildCommand := fmt.Sprintf(`
-if [[ ! -f "Dockerfile" ]]; then
-    tar -xf build_context.tar
-fi
-
-docker build \
---build-arg PLATFORM=%s \
---build-arg PLAYBOOK_SRV="%s" .
-`, container.SoftwareOrder.Platform, filepath.Clean(container.SoftwareOrder.CertBaseURL))
-	// End of rebuild script.
-
-	err = ioutil.WriteFile(container.SoftwareOrder.BuildPath+"/docker-build.sh", []byte(rebuildCommand), 0744)
 	if err != nil {
 		return err
 	}
@@ -633,23 +629,18 @@ docker build \
 	// Handle the addons -- Each addon has a config file that specifies which container it affects.
 	for _, addon := range container.SoftwareOrder.AddOns {
 		addonPath := "addons/" + addon + "/"
-
 		images, err := readAddonConf(addonPath + "addon_config.yml")
 		if err != nil {
-			errString := fmt.Sprintf("Read YAML Failed: %s", err)
-			log.Fatalf(errString)
+			return err
 		}
 
-		_, targetFound := images[container.Name]
-
 		// If we don't find the image name listed we skip.
+		_, targetFound := images[container.Name]
 		if !targetFound {
 			continue
 		}
-		log.Println("Including Addon: ", addon)
-		log.Println("In container: ", container.Name)
 
-		// We just want to add the addons in the top level so the Docker commands will work correctly
+		// Add the files to the top level of the docker context
 		container.AddDirectoryToContext("addons/"+addon+"/", "", "")
 		container.WriteLog("includes addons", addon)
 	}
@@ -657,7 +648,10 @@ docker build \
 	// Create the Dockerfile and add it to the root of the context
 	container.AddFileToContext("util/ansible.cfg", "ansible.cfg", []byte{})
 
-	container.Dockerfile = container.CreateDockerfile()
+	container.Dockerfile, err = container.CreateDockerfile()
+	if err != nil {
+		return err
+	}
 	container.AddFileToContext("", "Dockerfile", []byte(container.Dockerfile))
 
 	// TODO: workaround for spawner-config requesting items from the casserver-config role
@@ -697,6 +691,10 @@ func (container *Container) AddFileToContext(externalPath string, contextPath st
 		Mode:    0777,
 		ModTime: time.Now(),
 	}
+
+	if container.ContextWriter == nil {
+		return errors.New("Could not create docker context. Archive context writer is nil.")
+	}
 	container.ContextWriter.WriteHeader(header)
 
 	// Write the bytes to the tar file
@@ -704,10 +702,10 @@ func (container *Container) AddFileToContext(externalPath string, contextPath st
 	if len(bytes) == 0 {
 		return nil
 	}
-
-	if _, err := container.ContextWriter.Write(bytes); err != nil {
-		log.Println("err:", err)
-		log.Println("Excluding file from context", externalPath, contextPath)
+	_, err := container.ContextWriter.Write(bytes)
+	if err != nil {
+		log.Println("Excluding file from context", externalPath, contextPath, err)
+		container.WriteLog("Excluding files from context", externalPath, contextPath, err)
 	}
 	return nil
 }
@@ -723,7 +721,7 @@ func (container *Container) AddDirectoryToContext(externalPath string, contextPa
 		if info != nil {
 			if !info.IsDir() {
 				if strings.Contains(path, "Dockerfile") || strings.Contains(path, "addon_config.yml") {
-					log.Println("Skipping: ", path )
+					log.Println("Skipping: ", path)
 					return nil
 				}
 				paths = append(paths, path)
@@ -761,16 +759,20 @@ func (container *Container) AddDirectoryToContext(externalPath string, contextPa
 	return nil
 }
 
-// Clean up
+// Shut down open file handles and client connections
 func (container *Container) Finish() error {
-	if err := container.DockerClient.Close(); err != nil {
+	err := container.DockerClient.Close()
+	if err != nil {
 		container.WriteLog("failed to close docker client", err)
 		return err
 	}
-	if err := container.Log.Close(); err != nil {
+
+	err = container.Log.Close()
+	if err != nil {
 		container.WriteLog("failed to close log handle", err)
 		return err
 	}
+
 	container.ContextWriter.Close()
 	return nil
 }

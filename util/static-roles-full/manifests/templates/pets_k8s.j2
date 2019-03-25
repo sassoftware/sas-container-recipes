@@ -153,8 +153,8 @@ spec:
 {%     endfor %}
 {%   endfor %}
 {% endif %}
-{% if item.value.volumes is defined and item.value.volumes %}
         volumeMounts:
+{% if item.value.volumes is defined and item.value.volumes %}
 {%   for volumes in item.value.volumes %}
 {%     if item.key == "sas-casserver-primary" %}
         - name: {{ settings.project_name }}-cas-{{ volumes.split('=')[0] }}-volume
