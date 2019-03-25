@@ -33,7 +33,7 @@ zypper install java-1_8_0-openjdk
 3. Create the directory structure for developing in Go and 
   go into the src/github.com/sassoftware directory:
 `mkdir --parents ~/go/{bin,pkg,src/github.com/sassoftware/}`
-`cd ~/proj/go/src/github.com/sassoftware/`
+`cd ~/go/src/github.com/sassoftware/`
 
 4. Clone the repository into the src/github.com/sassoftware location: 
   `git clone git@github.com:sassoftware/sas-container-recipes.git`
