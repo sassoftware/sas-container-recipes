@@ -573,6 +573,15 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 		return err
 	}
 
+	// Add files from the addons directory to the build context
+	for _, addon := range order.AddOns {
+		// TODO: WIP
+		err := container.AddDirectoryToContext("addons/"+addon+"/", "", "")
+		if err != nil {
+			return errors.New("Unable to place addon files into Docker context. " + err.Error())
+		}
+	}
+
 	// Add the Dockerfile to the build context
 	dockerfileStub, err := ioutil.ReadFile(resourceDirectory + "/Dockerfile")
 	if err != nil {
@@ -592,7 +601,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	container.GetBuildArgs()
 	buildOptions := types.ImageBuildOptions{
 		Context:    dockerBuildContext,
-		Tags:       []string{container.Name},
+		Tags:       []string{container.GetName()},
 		Dockerfile: "Dockerfile",
 		BuildArgs:  container.BuildArgs,
 	}
@@ -609,9 +618,27 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 // Start each container build concurrently and report the results
 func (order *SoftwareOrder) Build() error {
 
-	// Handle single container build
+	// Handle single container build and output of docker run instructions
 	if order.DeploymentType == "single" {
-		return buildProgrammingOnlySingleContainer(order)
+		err := buildProgrammingOnlySingleContainer(order)
+		if err != nil {
+			return err
+		}
+
+		// TODO: this does not use the Fully Qualified Domain Name
+		hostname, err := os.Hostname()
+		if err != nil {
+			return err
+		}
+		fmt.Println("\n" + fmt.Sprintf(`Run the following to start the container:
+
+    docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=%s \
+    --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 \
+    --name sas-viya-single-programming-only --hostname %s \
+    sas-viya-single-programming-only:latest
+`, hostname, hostname))
+
+		return nil
 	}
 
 	// Handle all other deployment types
@@ -1264,6 +1291,7 @@ func (order *SoftwareOrder) ShowBuildSummary() {
 
 	// Special case where the single deployment does not use the order.Containers list
 	if order.DeploymentType == "single" {
+		order.EndTime = time.Now()
 		fmt.Println(fmt.Sprintf("\nTotal Elapsed Time: %s\n\n", order.EndTime.Sub(order.StartTime).Round(time.Second)))
 		return
 	}
