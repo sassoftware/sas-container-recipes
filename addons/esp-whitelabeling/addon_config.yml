@@ -1,6 +1,6 @@
 ---
-  # Addon config file.
-  # List out containers and the dockerfile that updates that continer.
+# Addon config file.
+# List out containers and the dockerfile that updates the container that is being built.
 espstreamview:
   dockerfile: Dockerfile_espstreamviewer
 espstudio:
