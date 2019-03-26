@@ -1,0 +1,11 @@
+---
+# Addon config file.
+# List out containers and the dockerfile that updates the container that is being built.
+espstreamview:
+  dockerfile: Dockerfile_espstreamviewer
+espstudio:
+  dockerfile: Dockerfile_espstudio
+httpproxy:
+  dockerfile: Dockerfile_http
+vipresm:
+  dockerfile: Dockerfile_vipresm

@@ -587,7 +587,10 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
-	dockerfile := appendAddonLines(container.Name, string(dockerfileStub), container.SoftwareOrder.AddOns)
+	dockerfile, err := appendAddonLines(container.Name, string(dockerfileStub), container.SoftwareOrder.AddOns)
+	if err != nil {
+		return err
+	}
 	err = container.AddFileToContext("", "Dockerfile", []byte(dockerfile))
 	if err != nil {
 		return err

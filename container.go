@@ -108,6 +108,11 @@ type ContainerConfig struct {
 	} `yaml:"resources"`
 }
 
+// effectedImage holdes the docker file that will need to be applied to the container
+type effectedImage struct {
+	Dockerfile string
+}
+
 // Provide a human readable output of a container's configurations
 func (config *ContainerConfig) String() string {
 	return fmt.Sprintf("\n\n[CONFIGURATION]\n[Ports] %s\n[Environment] %s\n[Roles] %s\n[Volumes] %s\n\n",
@@ -383,7 +388,7 @@ RUN curl -o /ansible/SAS_CA_Certificate.pem ${PLAYBOOK_SRV}/cacert/ && \
 `
 
 // Create a Dockerfile by reading the container's configuration
-func (container *Container) CreateDockerfile() string {
+func (container *Container) CreateDockerfile() (string, error) {
 	// Grab the config and start formatting the Dockerfile
 	dockerfile := fmt.Sprintf(dockerfileFromBase, "sas-viya-"+container.Name, container.BaseImage) + "\n"
 
@@ -410,48 +415,76 @@ func (container *Container) CreateDockerfile() string {
 	}
 
 	// Handle AddOns Dockerfile lines
-	dockerfile = appendAddonLines(container.Name, dockerfile, container.SoftwareOrder.AddOns)
-
-	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Name)
-	return dockerfile
-}
-
-// Add any corresponding addon lines to a Dockerfile
-// Helper function utilized by all the deployment types: single, multiple, and full
-func appendAddonLines(name string, dockerfile string, addons []string) string {
-	// TODO move this logic into each addon,
-	//      where a file inside each addon would determine which container it affects
-	if len(addons) > 0 {
-		if name == "programming" || name == "computeserver" || name == "sas-casserver-primary" {
-			dockerfile += "\n# AddOn(s)"
-		}
+	dockerfile, err := appendAddonLines(container.Name, dockerfile, container.SoftwareOrder.AddOns)
+	if err != nil {
+		return dockerfile, err
 	}
 
-	for _, addon := range addons {
-		// Read the addon's Dockerfile and only grab the RUN, ADD, COPY, USER, lines
-		dockerfile += "\n# " + addon + "\n"
-		addonPath := "addons/" + addon + "/"
-		bytes, _ := ioutil.ReadFile(addonPath + "Dockerfile")
+	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Name)
+	return dockerfile, nil
+}
 
-		lines := strings.Split(string(bytes), "\n")
-		for index, line := range lines {
-			line = strings.TrimSpace(line)
-			if len(line) == 0 {
+// readAddonConf reads the yaml file and return the data.
+func readAddonConf(fileName string) (map[string]effectedImage, error) {
+
+	imageData := make(map[string]effectedImage)
+
+	yamlFile, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return imageData, err
+	}
+	err = yaml.Unmarshal(yamlFile, &imageData)
+	if err != nil {
+		return imageData, err
+	}
+
+	return imageData, nil
+}
+
+// Adds any corresponding addon lines to a Dockerfile
+// Helper function utilized by all the deployment types
+func appendAddonLines(name string, dockerfile string, addons []string) (string, error) {
+
+	// This function now reads an addon_config.yml file in the addon directory to determine
+	// which containers are affected by the Dockerfiles.
+	if len(addons) > 0 {
+		for _, addon := range addons {
+			addonPath := "addons/" + addon + "/"
+			images, err := readAddonConf(addonPath + "addon_config.yml")
+			if err != nil {
+				return "", err
+			}
+
+			// If we don't find the image name listed we skip.
+			targetImage, targetFound := images[name]
+			if !targetFound {
 				continue
 			}
 
-			if strings.HasPrefix(line, "RUN ") ||
-				strings.HasPrefix(line, "ADD ") ||
-				strings.HasPrefix(line, "COPY ") ||
-				strings.HasPrefix(line, "ARG ") {
-				dockerfile += line + "\n"
+			// Read the addon's Dockerfile and only grab the RUN, ADD, COPY, USER, lines
+			dockerfile += "\n# AddOn(s)"
+			dockerfile += "\n# " + addon + "\n"
+			bytes, _ := ioutil.ReadFile(addonPath + targetImage.Dockerfile)
+			lines := strings.Split(string(bytes), "\n")
+			for index, line := range lines {
+				line = strings.TrimSpace(line)
+				if len(line) == 0 {
+					continue
+				}
 
-				// If there's a "\" then it's a multi-line command
-				if strings.Contains(line, "\\") {
-					for _, nextLine := range lines[index+1:] {
-						dockerfile += nextLine + "\n"
-						if !strings.Contains(nextLine, "\\") {
-							break
+				if strings.HasPrefix(line, "RUN ") ||
+					strings.HasPrefix(line, "ADD ") ||
+					strings.HasPrefix(line, "ARG") ||
+					strings.HasPrefix(line, "COPY ") {
+					dockerfile += line + "\n"
+
+					// If there's a "\" then it's a multi-line command
+					if strings.Contains(line, "\\") {
+						for _, nextLine := range lines[index+1:] {
+							dockerfile += nextLine + "\n"
+							if !strings.Contains(nextLine, "\\") {
+								break
+							}
 						}
 					}
 				}
@@ -459,7 +492,7 @@ func appendAddonLines(name string, dockerfile string, addons []string) string {
 		}
 	}
 
-	return dockerfile
+	return dockerfile, nil
 }
 
 // Create a sub-directory within the builds directory, set the log path, and the Docker context path
@@ -518,6 +551,7 @@ func (container *Container) CreateDockerContext() error {
 	container.AddFileToContext(
 		container.SoftwareOrder.PlaybookPath+"/internal/soe_defaults.yml",
 		"roles/sas-install/vars/soe_defaults.yml", []byte{})
+
 	for _, dep := range container.Config.Roles {
 		internalRolePath := fmt.Sprintf("util/static-roles-%s/%s/", container.SoftwareOrder.DeploymentType, dep)
 
@@ -592,22 +626,36 @@ func (container *Container) CreateDockerContext() error {
 		container.AddFileToContext("extravars.yml", "extravars.yml", []byte(otherVars))
 	}
 
-	// Include any items from the AddOns
-	// All access engines and auths are related to computeserver, programming, and casserver
-	// TODO: sas-casserver will be renamed to caserver (or similar) at a later point
-	if container.Name == "programming" || container.Name == "computeserver" || container.Name == "sas-casserver-primary" {
-		for _, addon := range container.SoftwareOrder.AddOns {
-			if strings.Contains(addon, "access") || strings.Contains(addon, "auth") || strings.Contains(addon, "whitelabel") {
-				container.AddDirectoryToContext("addons/"+addon+"/", "addons/", "")
-				container.WriteLog("includes addons", addon)
-			}
+	// Handle the addons -- Each addon has a config file that specifies which container it affects.
+	for _, addon := range container.SoftwareOrder.AddOns {
+		addonPath := "addons/" + addon + "/"
+		images, err := readAddonConf(addonPath + "addon_config.yml")
+		if err != nil {
+			return err
 		}
+
+		// If we don't find the image name listed we skip.
+		_, targetFound := images[container.Name]
+		if !targetFound {
+			continue
+		}
+
+		// Add the files to the top level of the docker context
+		err = container.AddDirectoryToContext("addons/"+addon+"/", "", "")
+		if err != nil {
+			return err
+		}
+
+		container.WriteLog("includes addons", addon)
 	}
 
 	// Create the Dockerfile and add it to the root of the context
 	container.AddFileToContext("util/ansible.cfg", "ansible.cfg", []byte{})
 
-	container.Dockerfile = container.CreateDockerfile()
+	container.Dockerfile, err = container.CreateDockerfile()
+	if err != nil {
+		return err
+	}
 	container.AddFileToContext("", "Dockerfile", []byte(container.Dockerfile))
 
 	// TODO: workaround for spawner-config requesting items from the casserver-config role
@@ -672,9 +720,14 @@ func (container *Container) AddFileToContext(externalPath string, contextPath st
 // contextPath is where the file should go inside the Docker context
 func (container *Container) AddDirectoryToContext(externalPath string, contextPath string, roleName string) error {
 	var paths []string
+
 	err := filepath.Walk(externalPath, func(path string, info os.FileInfo, err error) error {
 		if info != nil {
 			if !info.IsDir() {
+				if strings.Contains(path, "Dockerfile") || strings.Contains(path, "addon_config.yml") {
+					log.Println("Skipping adding file to Docker context: ", path)
+					return nil
+				}
 				paths = append(paths, path)
 			}
 		}
@@ -686,15 +739,22 @@ func (container *Container) AddDirectoryToContext(externalPath string, contextPa
 
 	// Utilize container.AddFileToContext to add each individual file
 	for _, path := range paths {
-		// Never keep these upper level directories
-		// Always keep intermediate directories. For example,
-		//          Given external=templates/static-roles-<deployment>/sas-java, context=roles/sas-java/
-		//          roles/sas-java/main.yml should be roles/sas-java/tasks/main.yml (keep /tasks/)
-		innerDirectory := strings.Replace(path, "util/static-roles-"+container.SoftwareOrder.DeploymentType+"/"+roleName+"/", "", -1)
+		innerDirectory := ""
+		// if we are adding an addon then we just want the filename
+		// Need to copy sub-directories and preserve the directory structure
+		if strings.Contains(path, "addons") {
+			dirParts := strings.Split(path, "/")
+			innerDirectory = strings.Replace(path, dirParts[0]+"/"+dirParts[1]+"/", "", -1)
+		} else {
+			// Never keep these upper level directories
+			// Always keep intermediate directories. For example,
+			//          Given external=templates/static-roles-<deployment>/sas-java, context=roles/sas-java/
+			//          roles/sas-java/main.yml should be roles/sas-java/tasks/main.yml (keep /tasks/)
+			innerDirectory = strings.Replace(path, "util/static-roles-"+container.SoftwareOrder.DeploymentType+"/"+roleName+"/", "", -1)
+			innerDirectory = strings.Replace(innerDirectory, "/internal/", "", -1)
+			innerDirectory = strings.Replace(innerDirectory, "sas_viya_playbook", "", -1)
+		}
 
-		innerDirectory = strings.Replace(innerDirectory, "/internal/", "", -1)
-		innerDirectory = strings.Replace(innerDirectory, "sas_viya_playbook", "", -1)
-		innerDirectory = strings.Replace(innerDirectory, path, "", -1)
 		err := container.AddFileToContext(path, contextPath+innerDirectory, []byte{})
 		if err != nil {
 			return err
