@@ -47,7 +47,6 @@
       curl --silent --location --cert {{ METAREPO_CERT_DIR }}/{{ METAREPO_CERT_CLIENT }} --cacert {{ METAREPO_CERT_DIR }}/{{ METAREPO_CERT_CA }} {{ METAREPO_URL }}{{ METAREPO_RPM }} --output {{ METAREPO_CERT_DIR }}/{{ METAREPO_RPM }}
       yum install --assumeyes {{ METAREPO_CERT_DIR }}/{{ METAREPO_RPM }}
       cp --verbose {{ METAREPO_CERT_DIR }}/{{ METAREPO_CERT_CLIENT }} {{ METAREPO_CERT_HOME }}/{{ METAREPO_CERT_CLIENT }}
-
       yum install -y {{ METAREPO_SOE_ORDERABLE }}
     when: ( METAREPO_INSTALL | bool ) == true
 
@@ -103,7 +102,6 @@
       yum erase --assumeyes sas-meta-repo*
       yum clean all
       rm --recursive --force /root/.cache /var/cache/yum
-
       rm --verbose {{ METAREPO_CERT_HOME }}/{{ METAREPO_CERT_CLIENT }}
     when: ( METAREPO_INSTALL | bool ) == true
 

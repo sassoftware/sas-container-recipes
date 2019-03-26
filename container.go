@@ -115,11 +115,13 @@ type effectedImage struct {
 
 // Provide a human readable output of a container's configurations
 func (config *ContainerConfig) String() string {
-	return fmt.Sprintf("\n\n[CONFIGURATION]\n[Ports] %s\n[Environment] %s\n[Roles] %s\n[Volumes] %s\n\n",
+	return fmt.Sprintf("\n\n[CONFIGURATION]\n[Ports] %s\n[Environment] %s\n[Roles] %s\n[Volumes] %s\n[Resources] %s\n\n",
 		strings.Join(config.Ports, ", "),
 		strings.Join(config.Environment, ", "),
 		strings.Join(config.Roles, ", "),
 		strings.Join(config.Volumes, ", "),
+		strings.Join(config.Resources.Limits, ", "),
+		strings.Join(config.Resources.Requests, ", "),
 	)
 }
 
@@ -197,6 +199,23 @@ func (container *Container) GetConfig() error {
 		// Add the decoded license
 		if strings.Contains(strings.ToLower(secret), "setinit_text=") {
 			targetConfig.Secrets[index] = "SETINIT_TEXT=" + string(container.SoftwareOrder.License)
+		}
+	}
+
+	for index, environment := range targetConfig.Environment {
+		// Add the base64 encoded license
+		if strings.Contains(strings.ToLower(environment), "sas_license=") {
+			targetConfig.Environment[index] = "SAS_LICENSE=" + string(container.SoftwareOrder.MeteredLicense)
+		}
+		if strings.Contains(strings.ToLower(environment), "sas_client_cert=") {
+			encodedEntitlement := string(base64.StdEncoding.EncodeToString(
+				container.SoftwareOrder.Entitlement))
+			targetConfig.Environment[index] = "SAS_CLIENT_CERT=" + encodedEntitlement
+		}
+		if strings.Contains(strings.ToLower(environment), "sas_ca_cert=") {
+			encodedCA := string(base64.StdEncoding.EncodeToString(
+				container.SoftwareOrder.CA))
+			targetConfig.Environment[index] = "SAS_CA_CERT=" + encodedCA
 		}
 	}
 
@@ -372,19 +391,29 @@ ENV PLATFORM=$PLATFORM ANSIBLE_CONFIG=/ansible/ansible.cfg ANSIBLE_CONTAINER=tru
 RUN mkdir --parents /opt/sas/viya/home/{lib/envesntl,bin}
 RUN yum install --assumeyes ansible && rm -rf /root/.cache /var/cache/yum && \
     echo "\nminrate=1\ntimeout=300" >> /etc/yum.conf
-ADD . /ansible
+ADD *.yml *.cfg /ansible/
+ADD roles /ansible/roles
 `
 
 const dockerfileSetupEntrypoint = `# Start a top level process that starts all services
-ENTRYPOINT /usr/bin/tini /opt/sas/viya/home/bin/%s-entrypoint.sh
+ENTRYPOINT ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/%s-entrypoint.sh"]
 `
 
 // Each Ansible role is a RUN layer
 const dockerfileRunLayer = `# %s role
-RUN curl -o /ansible/SAS_CA_Certificate.pem ${PLAYBOOK_SRV}/cacert/ && \
-    curl -o /ansible/entitlement_certificate.pem ${PLAYBOOK_SRV}/entitlement/ && \
-    ansible-playbook --verbose /ansible/playbook.yml --extra-vars layer=%s && \
-    rm /ansible/SAS_CA_Certificate.pem /ansible/entitlement_certificate.pem
+RUN ansible-playbook --verbose /ansible/playbook.yml --extra-vars layer=%s --extra-vars PLAYBOOK_SRV=${PLAYBOOK_SRV}
+`
+
+const dockerfileAddDynamicRole = `# Add the %s specific role
+ADD dynamicRoles /ansible/dynamicRoles
+`
+
+// Add Docker labels to help with finding images
+const dockerfileLabels = `# Define labels
+LABEL sas.recipe="true" \
+      sas.recipe.version="%s" \
+      sas.recipe.image="%s" \
+      sas.layer.%s="true"
 `
 
 // Create a Dockerfile by reading the container's configuration
@@ -395,6 +424,9 @@ func (container *Container) CreateDockerfile() (string, error) {
 	// For each role add to the result. Also add the container.Name role (self).
 	dockerfile += "\n# Generated image includes the following Ansible roles, with the "
 	for _, role := range container.Config.Roles {
+		if strings.EqualFold(container.Name, role) {
+			dockerfile += fmt.Sprintf(dockerfileAddDynamicRole, role) + "\n"
+		}
 		dockerfile += fmt.Sprintf(dockerfileRunLayer, role, role) + "\n"
 	}
 
@@ -421,6 +453,7 @@ func (container *Container) CreateDockerfile() (string, error) {
 	}
 
 	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Name)
+	dockerfile += "\n" + fmt.Sprintf(dockerfileLabels, RECIPE_VERSION, container.Name, container.Name)
 	return dockerfile, nil
 }
 
@@ -552,71 +585,109 @@ func (container *Container) CreateDockerContext() error {
 		container.SoftwareOrder.PlaybookPath+"/internal/soe_defaults.yml",
 		"roles/sas-install/vars/soe_defaults.yml", []byte{})
 
-	for _, dep := range container.Config.Roles {
+	// Going to copy all the static-roles over. While this will bloat the context, it will make
+	// the begining layers the same for all images and allow for cache re-use and improve build time.
+	staticRolePath := fmt.Sprintf("util/static-roles-%s/", container.SoftwareOrder.DeploymentType)
+	files, err := ioutil.ReadDir(staticRolePath)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		dep := file.Name()
 		internalRolePath := fmt.Sprintf("util/static-roles-%s/%s/", container.SoftwareOrder.DeploymentType, dep)
 
-		// If the static-role exists then copy that directory structure
-		if _, err := os.Stat(internalRolePath); !os.IsNotExist(err) {
-			// The role exists in the static-roles directory, so copy the entire directory tree
-			err = container.AddDirectoryToContext(internalRolePath, "roles/"+dep+"/", dep)
-			if err != nil {
-				return err
-			}
+		// The role exists in the static-roles directory, so copy the entire directory tree
+		err = container.AddDirectoryToContext(internalRolePath, "roles/"+dep+"/", dep)
+		if err != nil {
+			return err
+		}
 
-			// Some static roles use a default entrypoint.
-			// Check if there is already an entrypoint in the static role's directory, if not then add the default entrypoint.
-			if _, err := os.Stat(internalRolePath + "templates/entrypoint"); os.IsNotExist(err) {
-				err := container.AddFileToContext("util/entrypoint", "roles/"+dep+"/templates/entrypoint", []byte{})
-				if err != nil {
-					return err
-				}
-			}
-
-			// Add the corresponding group_vars file if it exists in the playbook
-			err = container.AddFileToContext(container.SoftwareOrder.PlaybookPath+"/group_vars/"+dep, "roles/"+dep+"/vars/"+dep, []byte{})
-			if err != nil {
-				// Ignore: not all come from the playbook
-				err = nil
-			}
-
-		} else {
-			//
-			// The role does not exist in the static-roles directory, therefore
-			// the entrypoint, templates, and vars cannot be added to the container for that role.
-			//
-			// Instead of using static files, get a set of defaults: util/task.yml, util/entrypoint.yml, playbook/group_vars/<name>.yml
-
-			// Add the default entrypoint
+		// Some static roles use a default entrypoint.
+		// Check if there is already an entrypoint in the static role's directory, if not then add the default entrypoint.
+		if _, err := os.Stat(internalRolePath + "templates/entrypoint"); os.IsNotExist(err) {
 			err := container.AddFileToContext("util/entrypoint", "roles/"+dep+"/templates/entrypoint", []byte{})
 			if err != nil {
 				return err
 			}
+		}
 
-			// Find the group_vars file that corresponds to the container
-			// and add the list of packages to install into the sas-install role
-			varsFileName := ""
-			walkPath := container.SoftwareOrder.BuildPath + "sas_viya_playbook/group_vars/"
-			_ = filepath.Walk(walkPath, func(path string, info os.FileInfo, err error) error {
-				// Vars file may exist at group_vars/viprESM but container name is "vipresm"
-				if strings.ToLower(info.Name()) == container.Name {
-					varsFileName = info.Name()
+		// Add the corresponding group_vars file if it exists in the playbook
+		err = container.AddFileToContext(container.SoftwareOrder.PlaybookPath+"/group_vars/"+dep, "roles/"+dep+"/vars/"+dep, []byte{})
+		if err != nil {
+			// Ignore: not all come from the playbook
+			err = nil
+		}
+	}
+
+	// Now put the role that is specific to the service in the /ansible/dynamicRoles directory.
+	// The ansible.cfg file has this location added to the role_path so that it can be found.
+	// This helps with image caching and improving build performance.
+	for _, dep := range container.Config.Roles {
+		internalRolePath := fmt.Sprintf("util/static-roles-%s/%s/", container.SoftwareOrder.DeploymentType, dep)
+		if strings.EqualFold(container.Name, dep) {
+			// If the static-role exists then copy that directory structure
+			if _, err := os.Stat(internalRolePath); !os.IsNotExist(err) {
+				// The role exists in the static-roles directory, so copy the entire directory tree
+				err = container.AddDirectoryToContext(internalRolePath, "dynamicRoles/"+dep+"/", dep)
+				if err != nil {
+					return err
 				}
-				return nil
-			})
-			if len(varsFileName) == 0 {
-				return errors.New("Unable to create dynamic role for " + container.Name)
-			}
-			err = container.AddFileToContext(walkPath+varsFileName, "roles/"+dep+"/vars/"+dep, []byte{})
-			if err != nil {
-				return err
-			}
 
-			// Add the default task file
-			if dep != "ansible" {
-				err = container.AddFileToContext("util/task.yml", "roles/"+dep+"/tasks/main.yml", []byte{})
-			}
-			if err != nil {
-				return err
+				// Some static roles use a default entrypoint.
+				// Check if there is already an entrypoint in the static role's directory, if not then add the default entrypoint.
+				if _, err := os.Stat(internalRolePath + "templates/entrypoint"); os.IsNotExist(err) {
+					err := container.AddFileToContext("util/entrypoint", "dynamicRoles/"+dep+"/templates/entrypoint", []byte{})
+					if err != nil {
+						return err
+					}
+				}
+
+				// Add the corresponding group_vars file if it exists in the playbook
+				err = container.AddFileToContext(container.SoftwareOrder.PlaybookPath+"/group_vars/"+dep, "roles/"+dep+"/vars/"+dep, []byte{})
+				if err != nil {
+					// Ignore: not all come from the playbook
+					err = nil
+				}
+
+			} else {
+				//
+				// The role does not exist in the static-roles directory, therefore
+				// the entrypoint, templates, and vars cannot be added to the container for that role.
+				//
+				// Instead of using static files, get a set of defaults: util/task.yml, util/entrypoint.yml, playbook/group_vars/<name>.yml
+
+				// Add the default entrypoint
+				err := container.AddFileToContext("util/entrypoint", "dynamicRoles/"+dep+"/templates/entrypoint", []byte{})
+				if err != nil {
+					return err
+				}
+
+				// Find the group_vars file that corresponds to the container
+				// and add the list of packages to install into the sas-install role
+				varsFileName := ""
+				walkPath := container.SoftwareOrder.BuildPath + "sas_viya_playbook/group_vars/"
+				_ = filepath.Walk(walkPath, func(path string, info os.FileInfo, err error) error {
+					// Vars file may exist at group_vars/viprESM but container name is "vipresm"
+					if strings.ToLower(info.Name()) == container.Name {
+						varsFileName = info.Name()
+					}
+					return nil
+				})
+				if len(varsFileName) == 0 {
+					return errors.New("Unable to create dynamic role for " + container.Name)
+				}
+				err = container.AddFileToContext(walkPath+varsFileName, "dynamicRoles/"+dep+"/vars/"+dep, []byte{})
+				if err != nil {
+					return err
+				}
+
+				// Add the default task file
+				if dep != "ansible" {
+					err = container.AddFileToContext("util/task.yml", "dynamicRoles/"+dep+"/tasks/main.yml", []byte{})
+				}
+				if err != nil {
+					return err
+				}
 			}
 		}
 

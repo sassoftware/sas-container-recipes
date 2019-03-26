@@ -40,7 +40,12 @@ function sas_container_recipes_shutdown()
     echo "================================"
     echo
 
-    docker rm -f sas-container-recipes-builder-${SAS_DOCKER_TAG}
+    set +e
+    echo "[INFO]  : Stop ${SAS_BUILD_CONTAINER_NAME} if it is running"
+    docker stop ${SAS_BUILD_CONTAINER_NAME}
+    echo "[INFO]  : Remove ${SAS_BUILD_CONTAINER_NAME}"
+    docker rm -f ${SAS_BUILD_CONTAINER_NAME}
+    set -e
 
     exit 1
 }
@@ -314,6 +319,10 @@ if [[ ${CHECK_MIRROR_URL} == false ]]; then
     run_args="${run_args} --skip-mirror-url-validation"
 fi
 
+#
+# Run
+#
+
 echo
 echo "=============="
 echo "Variable check"
@@ -337,18 +346,33 @@ echo "  Build run args                  = ${run_args## }"
 echo
 
 SAS_BUILD_CONTAINER_NAME="sas-container-recipes-builder-${SAS_DOCKER_TAG}"
-echo "Building Docker build container."
-docker build -t sas-container-recipes-builder:${SAS_DOCKER_TAG} -f Dockerfile .
+echo
+echo "==============================="
+echo "Building Docker Build Container"
+echo "==============================="
+echo
+docker build  \
+    --label sas.recipe=true \
+    --label sas.recipe.builder.version=${SAS_DOCKER_TAG} \
+    -t sas-container-recipes-builder:${SAS_DOCKER_TAG} \
+    -f Dockerfile \
+    .
 
 DOCKER_GID=$(getent group docker|awk -F: '{print $3}')
-echo "Building images."
+echo
+echo "=============================="
+echo "Running Docker Build Container"
+echo "=============================="
+echo
+#set -x
 docker run -d \
     --name ${SAS_BUILD_CONTAINER_NAME} \
     -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
-    -v ${PWD}:/sas-container-recipes \
+    -v ${PWD}/builds:/sas-container-recipes/builds \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v ${HOME}/.docker/config.json:/root/.docker/config.json \
     sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
+#set +x
     # -u ${UID}:${DOCKER_GID} \
 
 docker logs -f ${SAS_BUILD_CONTAINER_NAME}
