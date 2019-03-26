@@ -58,6 +58,7 @@ const (
 	Pushed     State = 10 // Image has finished pushing to the provided registry
 )
 
+// DOCKER_API_VERSION is the minimum version of the API we support
 const DOCKER_API_VERSION = "1.37"
 
 // Container defines the attributes for a single host
@@ -697,7 +698,7 @@ func (container *Container) AddFileToContext(externalPath string, contextPath st
 	}
 
 	if container.ContextWriter == nil {
-		return errors.New("Could not create docker context. Archive context writer is nil.")
+		return errors.New("could not create docker context. Archive context writer is nil")
 	}
 	container.ContextWriter.WriteHeader(header)
 
