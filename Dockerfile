@@ -11,4 +11,10 @@ WORKDIR /sas-container-recipes
 
 ENV GOCACHE /tmp/cache
 
+COPY addons ./addons
+COPY samples ./samples
+COPY tests ./tests
+COPY util ./util
+COPY *.yml *.go ./ 
+
 ENTRYPOINT ["/usr/local/go/bin/go", "run", "main.go", "container.go", "order.go"]

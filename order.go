@@ -45,8 +45,8 @@ import (
 	"time"
 )
 
-// Format <year>.<week>.<month>
-const RECIPE_VERSION = "19.0.4"
+// Format <year>.<month>.<numbered release>
+const RECIPE_VERSION = "19.04.0"
 
 // Used to wget the corresponding sas-orchestration tool version
 // example: 34 = version 3.4
@@ -105,6 +105,7 @@ type SoftwareOrder struct {
 	// │   └── entitlement_certificate.pfx
 	// ├── license
 	// │   └── SASViyaV0300_XXXXXX_Linux_x86-64.txt
+	// │   └── SASViyaV0300_XXXXXX_XXXXXXXX_Linux_x86-64.jwt
 	// └── order.oom
 	SOEZipPath string // Used to load licenses
 	OrderOOM   struct {
@@ -115,9 +116,10 @@ type SoftwareOrder struct {
 			Orderables []string `json:"orderables"`
 		} `json:"metaRepo"`
 	}
-	CA          []byte
-	Entitlement []byte
-	License     []byte
+	CA             []byte
+	Entitlement    []byte
+	License        []byte
+	MeteredLicense []byte
 }
 
 // For reading ~/.docker/config.json
@@ -146,6 +148,10 @@ type ConfigMap struct {
 	Secrets     []string `yaml:"secrets"`     // Default: empty
 	Roles       []string `yaml:"roles"`       // Additional ansible roles to run
 	Volumes     []string `yaml:"volumes"`     // Default: log:/opt/sas/viya/config/var/log
+	Resources   struct {
+		Limits   []string `yaml:"limits"`
+		Requests []string `yaml:"requests"`
+	} `yaml:"resources"`
 }
 
 // Once the SOE zip file path has been provided then load all the Software Order's details
@@ -168,6 +174,25 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 
 	order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
 	if err := os.MkdirAll(order.BuildPath+"manifests", 0744); err != nil {
+		return order, err
+	}
+	symlinkCommand := fmt.Sprintf("cd builds && rm -rf %s && ln -s %s-%s %s", order.DeploymentType, order.DeploymentType, order.TimestampTag, order.DeploymentType)
+	cmd := exec.Command("sh", "-c", symlinkCommand)
+	stderr, err := cmd.StderrPipe()
+	if err := cmd.Start(); err != nil {
+		log.Fatal(err)
+	}
+
+	slurp, _ := ioutil.ReadAll(stderr)
+	fmt.Printf("%s\n", slurp)
+
+	if err := cmd.Wait(); err != nil {
+		return order, err
+	}
+	//order.WriteLog(true, symlinkCommand)
+	//_, err := exec.Command("sh", "-c", symlinkCommand).Output()
+	//order.WriteLog(true, out)
+	if err != nil {
 		return order, err
 	}
 	order.LogPath = order.BuildPath + "/build.log"
@@ -789,8 +814,10 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 		}
 		readCloser.Close()
 
-		if strings.Contains(zippedFile.Name, "licenses") {
+		if strings.Contains(zippedFile.Name, "Linux_x86-64.txt") {
 			order.License = fileBytes
+		} else if strings.Contains(zippedFile.Name, "Linux_x86-64.jwt") {
+			order.MeteredLicense = fileBytes
 		} else if strings.Contains(zippedFile.Name, "SAS_CA_Certificate.pem") {
 			order.CA = fileBytes
 		} else if strings.Contains(zippedFile.Name, "entitlement_certificate.pem") {
@@ -804,7 +831,7 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 	}
 
 	// Make sure all required files were loaded into the order
-	if len(order.License) == 0 || len(order.CA) == 0 || len(order.Entitlement) == 0 {
+	if len(order.License) == 0 || len(order.MeteredLicense) == 0 || len(order.CA) == 0 || len(order.Entitlement) == 0 {
 		fail <- "Unable to parse all content from SOE zip"
 	}
 
@@ -1127,14 +1154,15 @@ func (order *SoftwareOrder) GenerateManifests() error {
 		if len(container.Config.Resources.Limits) > 0 && len(container.Config.Resources.Requests) > 0 {
 			resources += "    resources:"
 			if len(container.Config.Resources.Limits) > 0 {
-				resources += "\n"
+				resources += "\n      limits:"
 				for _, item := range container.Config.Resources.Limits {
-					resources += "    - " + item + "\n"
+					resources += "\n      - " + item
 				}
 			}
-			if len(container.Config.Resources.Limits) > 0 {
+			if len(container.Config.Resources.Requests) > 0 {
+				resources += "\n      requests:"
 				for _, item := range container.Config.Resources.Requests {
-					resources += "    - " + item + "\n"
+					resources += "\n      - " + item
 				}
 			}
 		}
@@ -1145,53 +1173,56 @@ func (order *SoftwareOrder) GenerateManifests() error {
 		containerSection += environment
 		containerSection += secrets
 		containerSection += volumes
-		// containerSection += resources
+		containerSection += resources
 		containerVarSections = append(containerVarSections, containerSection)
 	}
 
 	// Put together the final vars file
 	// TODO: clean this up
 	vars := fmt.Sprintf(`
+PROJECT_NAME: sas-viya
 SECURE_CONSUL: false
 TLS_ENABLED: false
-SAS_K8S_NAMESPACE: %s
-SAS_K8S_INGRESS_PATH: %s
-SAS_K8S_INGRESS_DOMAIN: %s
-CAS_VIRTUAL_HOST: %s
+SAS_K8S_NAMESPACE: sas-viya
+SAS_K8S_INGRESS_DOMAIN: company.com
 docker_tag: %s
 SAS_MANIFEST_DIR: manifests/
 DEPLOYMENT_LABEL: sas-viya
 DISABLE_CONSUL_HTTP_PORT: false
-sas_cas_mode: "{{ cas_mode | default('smp') }}"
 orchestration_root: /ansible/roles/
 METAREPO_CERT_DIR: /ansible
 SAS_CONFIG_ROOT: /opt/sas/viya/home/
+`,
+		order.TagOverride)
 
+	// Write a temp file
+	varsDeploymentFilePath := order.BuildPath + "vars_deployment.yml"
+	err := ioutil.WriteFile(varsDeploymentFilePath, []byte(vars), 0644)
+	if err != nil {
+		return err
+	}
+
+	serviceSettings := fmt.Sprintf(`
 settings:
   base: %s
   project_name: sas-viya
   k8s_namespace:
     name: %s
 `,
-		order.DockerNamespace,
-		order.VirtualHost,
-		order.VirtualHost,
-		order.VirtualHost,
-		order.TagOverride,
 		order.BaseImage,
 		order.DockerNamespace)
 
-	vars += "services:\n"
+	serviceSettings += "services:\n"
 	for _, section := range containerVarSections {
-		vars += section + "\n"
+		serviceSettings += section + "\n"
 	}
 	registries := fmt.Sprintf("registries: \n  docker-registry:\n    url: %s \n    namespace: %s",
 		order.DockerRegistry, order.DockerNamespace)
-	vars += registries
+	serviceSettings += registries
 
 	// Write a temp file
-	varsFilePath := order.BuildPath + "manifest-vars.yml"
-	err := ioutil.WriteFile(varsFilePath, []byte(vars), 0755)
+	serviceSettingsFilePath := order.BuildPath + "manifest-vars.yml"
+	err = ioutil.WriteFile(serviceSettingsFilePath, []byte(serviceSettings), 0644)
 	if err != nil {
 		return err
 	}
@@ -1199,9 +1230,9 @@ settings:
 	// TODO: clean this up
 	playbook := `
 # Manifests can be re-generated without re-building:
-# 1. Edit values in the 'manifest-vars.yml' file.
+# 1. Edit values in the 'vars_usermods.yml' file.
 # 2. Run 'ansible-playbook generate_manifests.yml'.
-# 3. Navigate to 'manifests/kubernetes/' to find the new deployment files.
+# 3. Navigate to '{{ SAS_MANIFEST_DIR }}/kubernetes/' to find the new deployment files.
 #
 # DO NOT EDIT - This playbook is generated by order.go
 ---
@@ -1210,8 +1241,13 @@ settings:
   connection: local
 
   vars:
+    SAS_MANIFEST_DIR: manifests
+    SAS_K8S_NAMESPACE: sas-viya
+    SAS_K8S_INGRESS_DOMAIN: company.com
 
   vars_files:
+  - vars_deployment.yml
+  - vars_usermods.yml
   - manifest-vars.yml
 
   roles:
@@ -1224,8 +1260,45 @@ settings:
 		return err
 	}
 
+	// If the user provided a sitedefault.yml file copy it over or copy the default version
+	if _, err := os.Stat("sitedefault.yml"); !os.IsNotExist(err) {
+		input, err := ioutil.ReadFile("sitedefault.yml")
+		if err != nil {
+			return err
+		}
+
+		err = ioutil.WriteFile(order.BuildPath+"sitedefault.yml", input, 0644)
+		if err != nil {
+			return err
+		}
+	}
+
+	varsDestPath := fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath)
+	// If the user provided a vars_usremods.yml file copy it over or copy the default version
+	if _, err := os.Stat("vars_usermods.yml"); os.IsNotExist(err) {
+		input, err := ioutil.ReadFile("util/vars_usermods.yml")
+		if err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(varsDestPath, input, 0644)
+		if err != nil {
+			fmt.Println("Error creating", varsDestPath)
+			return err
+		}
+	} else {
+		input, err := ioutil.ReadFile("vars_usermods.yml")
+		if err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(varsDestPath, input, 0644)
+		if err != nil {
+			fmt.Println("Error creating", varsDestPath)
+			return err
+		}
+	}
+
 	// Run the playbook locally to generate the Kubernetes manifests
-	manifestsCommand := fmt.Sprintf("ansible-playbook -vvv %sgenerate_manifests.yml", order.BuildPath)
+	manifestsCommand := fmt.Sprintf("ansible-playbook --connection=local --inventory 127.0.0.1, %sgenerate_manifests.yml -vv", order.BuildPath)
 	result, err := exec.Command("sh", "-c", manifestsCommand).Output()
 	if err != nil {
 		result := string(result) + "\n" + err.Error() + "\n"
@@ -1321,7 +1394,37 @@ func (order *SoftwareOrder) ShowBuildSummary() {
 	fmt.Println(lineSeparator)
 	order.WriteLog(false, lineSeparator)
 
-	manifestInstructions := fmt.Sprintf("\nKubernetes manifests have been created: `%s`\nUse `kubectl create -f <directory>` or `kubectl replace -f <directory>` to deploy.\n", order.BuildPath+"manifests/")
+	// TODO: Make the list of directories reflective of the manifests generated.
+	//       In a TLS build there will be an account type. Also, the "manifests"
+	//       directory and Kubernetes namespaces are changeable. Should probably
+	//       have a way to discover this information so it is reflects in the data
+	//       given to the user.
+	symlinkBuildPath := fmt.Sprintf("builds/%s/manifests", order.DeploymentType)
+	manifestInstructions := fmt.Sprintf(`
+Kubernetes manifests have been created: %s
+
+To deploy a new environment run the below commands
+
+Create the Kuberenetes namespace:
+
+kubectl apply -f %s/kubernetes/namespace/
+
+Then create the following Kubernetes objects:
+
+kubectl -n sas-viya apply -f %s/kubernetes/ingress && \
+kubectl -n sas-viya apply -f %s/kubernetes/configmaps && \
+kubectl -n sas-viya apply -f %s/kubernetes/secrets && \
+kubectl -n sas-viya apply -f %s/kubernetes/services && \
+kubectl -n sas-viya apply -f %s/kubernetes/deployments
+`,
+		order.BuildPath+"manifests/",
+		symlinkBuildPath,
+		symlinkBuildPath,
+		symlinkBuildPath,
+		symlinkBuildPath,
+		symlinkBuildPath,
+		symlinkBuildPath)
+
 	fmt.Println(manifestInstructions)
 	order.WriteLog(false, manifestInstructions)
 }

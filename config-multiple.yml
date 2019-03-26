@@ -49,12 +49,12 @@ sas-casserver-primary:
   - "5571:5571"
   - "8777:8777"
   environment:
-  - "SERVICE_NAME=cascontroller"
   - "CASENV_ADMIN_USER=sasdemo"
-  - "CASENV_CAS_VIRTUAL_HOST={{ CAS_VIRTUAL_HOST }}"
   - "CASENV_CAS_VIRTUAL_PROTO=http"
+  - "CASENV_CAS_VIRTUAL_HOST={{ PROJECT_NAME }}.{{ SAS_K8S_NAMESPACE }}.{{ SAS_K8S_INGRESS_DOMAIN }}"
   - "CASENV_CASDATADIR=/cas/data"
   - "CASENV_CASPERMSTORE=/cas/permstore"
+  - "CASCFG_MODE=smp"
   resources:
     limits:
     - "memory=12000Mi"
