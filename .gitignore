@@ -1,5 +1,8 @@
 sas-container-recipes
+sitedefault.yml
+vars_usremods.yml
 builds/
+logs/
 **/sas-orchestration
 **/sas_viya_playbook/
 **/*.retry

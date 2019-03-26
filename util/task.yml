@@ -18,3 +18,21 @@
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
 
+- name: Fix path for temp directory
+  shell: |
+    if [[ -f /etc/init.d/sas-{{ DEPLOYMENT_ID }}-datamining-{{ INSTANCE_ID }} ]]; then
+        mkdir {{ SAS_CONFIG_ROOT }}/tmp/sas-datamining
+        chown {{ INSTALL_USER }}:{{ INSTALL_GROUP }} {{ SAS_CONFIG_ROOT }}/tmp/sas-datamining
+    fi
+    if [[ -f /etc/init.d/sas-{{ DEPLOYMENT_ID }}-decisionmanager-{{ INSTANCE_ID }} ]]; then
+        mkdir {{ SAS_CONFIG_ROOT }}/tmp/sas-decisionmanager
+        chown {{ INSTALL_USER }}:{{ INSTALL_GROUP }} {{ SAS_CONFIG_ROOT }}/tmp/sas-decisionmanager
+    fi
+    if [[ -f /etc/init.d/sas-{{ DEPLOYMENT_ID }}-modelmanager-{{ INSTANCE_ID }} ]]; then
+        mkdir {{ SAS_CONFIG_ROOT }}/tmp/sas-modelmanager
+        chown {{ INSTALL_USER }}:{{ INSTALL_GROUP }} {{ SAS_CONFIG_ROOT }}/tmp/sas-modelmanager
+    fi
+    if [[ -f /etc/init.d/sas-{{ DEPLOYMENT_ID }}-workflowmanager-{{ INSTANCE_ID }} ]]; then
+        mkdir {{ SAS_CONFIG_ROOT }}/tmp/sas-workflowmanager
+        chown {{ INSTALL_USER }}:{{ INSTALL_GROUP }} {{ SAS_CONFIG_ROOT }}/tmp/sas-workflowmanager
+    fi

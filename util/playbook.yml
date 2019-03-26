@@ -3,8 +3,16 @@
 - name: Install a role that's included in the config.yml
   hosts: 127.0.0.1
   connection: local
+  pre_tasks:
+  - name: Pull down the certs
+    shell: |
+      curl -o /ansible/SAS_CA_Certificate.pem {{ PLAYBOOK_SRV }}/cacert/
+      curl -o /ansible/entitlement_certificate.pem {{ PLAYBOOK_SRV }}/entitlement/
   roles:
   - "{{ layer }}"
+  post_tasks:
+  - name: Remove the certs
+    shell: rm /ansible/SAS_CA_Certificate.pem /ansible/entitlement_certificate.pem
   vars_files:
   - vars.yml
   - all.yml
