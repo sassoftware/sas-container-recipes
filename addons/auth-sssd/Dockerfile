@@ -55,7 +55,6 @@ RUN set -e; \
             --update; \
         sed -i '/^account.*required.*pam_unix.so$/a account     required      pam_exec.so \/usr\/local\/bin\/mkhomedir_helper.sh' /etc/pam.d/password-auth; \
         sed -i '/^session.*optional.*pam_sss.so$/a session     optional      pam_mkhomedir.so' /etc/pam.d/system-auth; \
-        rm --verbose --recursive --force *; \
         yum clean all; \
         rm --verbose --recursive --force /root/.cache /var/cache/yum; \
     elif [ "$PLATFORM" = "suse" ]; then \
@@ -72,7 +71,7 @@ RUN set -e; \
     else \
         echo; echo "####### [ERROR] : Unknown platform of \"$PLATFORM\" passed in"; echo; \
         exit 1; \
-    fi
+    fi && rm --verbose --recursive --force sssd*
 
 
 COPY sssd_pre_deploy.sh /tmp/000_sssd_pre_deploy.sh
