@@ -531,7 +531,7 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 				}
 			}
 		}
-		if labelRecipeAddons {
+		if labelRecipeAddons == true {
 			dockerfile += "LABEL sas.recipe.addons=\"true\""
 		}
 	}
