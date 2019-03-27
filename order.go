@@ -423,6 +423,28 @@ func (order *SoftwareOrder) LoadCommands() error {
 		if len(spaceDelimList) < len(commaDelimList) {
 			order.AddOns = commaDelimList
 		}
+
+		// Ensure that the addon names exist in the addons/ directory
+		addonList, err := ioutil.ReadDir("addons/")
+		if err != nil {
+			return err
+		}
+		addonNames := []string{}
+		for _, item := range addonList {
+			addonNames = append(addonNames, item.Name())
+		}
+		for _, addon := range order.AddOns {
+			addonExists := false
+			for _, name := range addonNames {
+				if name == addon {
+					addonExists = true
+				}
+			}
+			if !addonExists {
+				return errors.New(fmt.Sprintf("`--addon` \"%s\" does not exist", addon))
+			}
+		}
+
 		order.WriteLog(true, "Building with addons", order.AddOns)
 	}
 
