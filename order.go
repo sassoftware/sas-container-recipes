@@ -45,17 +45,18 @@ import (
 	"time"
 )
 
-// Format <year>.<month>.<numbered release>
-const RECIPE_VERSION = "19.04.0"
+// RecipeVersioin format <year>.<month>.<numbered release>
+const RecipeVersioin = "19.04.0"
 
-// Used to wget the corresponding sas-orchestration tool version
+// SasViyaVersion is used to wget the corresponding sas-orchestration tool version
 // example: 34 = version 3.4
-const SAS_VIYA_VERSION = "34"
+const SasViyaVersion = "34"
 
-// Path to the configuration file that's used to load custom container attributes
+// ConfigPath is the path to the configuration file that's used to load custom container attributes
 // NOTE: this path changes to config-<deployment-type>.yml
-var CONFIG_PATH = "config-full.yml"
+var ConfigPath = "config-full.yml"
 
+// SoftwareOrder is the structure to hold the order information.
 type SoftwareOrder struct {
 
 	// Build arguments and flags (see order.LoadCommands for details)
@@ -122,7 +123,7 @@ type SoftwareOrder struct {
 	MeteredLicense []byte
 }
 
-// For reading ~/.docker/config.json
+// Registry is ror reading ~/.docker/config.json
 // example:
 //{
 //    "auths": {
@@ -139,7 +140,7 @@ type Registry struct {
 	} `json:"auths"`
 }
 
-// Each container has a configmap which define Docker layers.
+// ConfigMap each container has a configmap which define Docker layers.
 // A static configmap.yml file is parsed and all containers
 // that do not have static values are set to the defaults
 type ConfigMap struct {
@@ -154,7 +155,7 @@ type ConfigMap struct {
 	} `yaml:"resources"`
 }
 
-// Once the SOE zip file path has been provided then load all the Software Order's details
+// NewSoftwareOrder once the SOE zip file path has been provided then load all the Software Order's details
 // Note: All sub-processes of this function are essential to the build process.
 //       If any of these steps return an error then the entire process will be exited.
 func NewSoftwareOrder() (*SoftwareOrder, error) {
@@ -298,7 +299,7 @@ func (order *SoftwareOrder) Serve() {
 	http.Serve(listener, nil)
 }
 
-// Multiplexer for writing logs.
+// WriteLog is multiplexer for writing logs.
 // Write any number of object info to the build log file and/or to standard output
 func (order *SoftwareOrder) WriteLog(writeToStdout bool, contentBlocks ...interface{}) {
 	// Write each block to standard output
@@ -322,7 +323,7 @@ func (order *SoftwareOrder) WriteLog(writeToStdout bool, contentBlocks ...interf
 	order.Log.Write([]byte("\n"))
 }
 
-// Return the output of how many and which containers have been built
+// GetIntermediateStatus returns the output of how many and which containers have been built
 // out of the total number of builds.
 // This is displayed after a container finishes its build process.
 func (order *SoftwareOrder) GetIntermediateStatus(progress chan string) {
@@ -346,7 +347,7 @@ func (order *SoftwareOrder) GetIntermediateStatus(progress chan string) {
 		strings.Join(finishedContainers, ", "), strings.Join(remainingContainers, ", "))
 }
 
-// Recieve flags and arguments, parse them, and load them into the order
+// LoadCommands recieves flags and arguments, parse them, and load them into the order
 func (order *SoftwareOrder) LoadCommands() error {
 	// Required arguments
 	license := flag.String("zip", "", "")
@@ -364,14 +365,14 @@ func (order *SoftwareOrder) LoadCommands() error {
 	deploymentType := flag.String("type", "single", "")
 	skipMirrorValidation := flag.Bool("skip-mirror-url-validation", false, "")
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
-	tagOverride := flag.String("tag", RECIPE_VERSION+"-"+order.TimestampTag, "")
+	tagOverride := flag.String("tag", RecipeVersioin+"-"+order.TimestampTag, "")
 
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU()
 	workerCount := flag.Int("workers", defaultWorkerCount, "")
 	order.WorkerCount = *workerCount
 	if *workerCount == 0 || *workerCount > defaultWorkerCount {
-		err := errors.New("Invalid '--worker' count, must be less than or equal to the number of CPU cores that are free and permissible in your cgroup configuration.")
+		err := errors.New("invalid '--worker' count, must be less than or equal to the number of CPU cores that are free and permissible in your cgroup configuration")
 		return err
 	}
 
@@ -382,7 +383,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 	flag.Parse()
 	if *version == true {
-		fmt.Println("SAS Container Recipes v" + RECIPE_VERSION)
+		fmt.Println("SAS Container Recipes v" + RecipeVersioin)
 		os.Exit(0)
 	}
 
@@ -399,14 +400,14 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Always require a license
 	if *license == "" {
-		err := errors.New("A software order email (SOE) '--license' file is required.")
+		err := errors.New("a software order email (SOE) '--license' file is required")
 		return err
 	}
 	order.SOEZipPath = *license
 
 	// Always require a deployment type
 	if *deploymentType != "multiple" && *deploymentType != "full" && *deploymentType != "single" {
-		err := errors.New("A valid '--type' is required: choose between single, multiple, or full.")
+		err := errors.New("a valid '--type' is required: choose between single, multiple, or full")
 		return err
 	}
 	order.DeploymentType = strings.ToLower(*deploymentType)
@@ -438,14 +439,14 @@ func (order *SoftwareOrder) LoadCommands() error {
 	// A mirror is optional, except in the case of using an opensuse base image
 	order.MirrorURL = *mirrorURL
 	if len(order.MirrorURL) == 0 && order.DeploymentType == "single" && order.Platform == "suse" {
-		return errors.New("A --mirror-url argument is required for a base suse single container.")
+		return errors.New("a --mirror-url argument is required for a base suse single container")
 	}
 
 	// Optional: override the standard tag format
 	order.TagOverride = *tagOverride
 	validTagRegex := regexp.MustCompile("^[_A-z0-9]*([_A-z0-9\\-\\.]*)$")
 	if len(order.TagOverride) > 0 && !validTagRegex.Match([]byte(order.TagOverride)) {
-		return errors.New("The --tag argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
+		return errors.New("the --tag argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
 	}
 
 	// The next arguments do not apply to the single deployment type
@@ -455,7 +456,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Require a docker namespace for multi and full
 	if *dockerNamespace == "" {
-		err := errors.New("A '--docker-namespace' argument is required.")
+		err := errors.New("a '--docker-namespace' argument is required")
 		return err
 	}
 	order.DockerNamespace = *dockerNamespace
@@ -466,7 +467,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Require a docker registry for multi and full
 	if *dockerRegistry == "" {
-		err := errors.New("A '--docker-registry-url' argument is required.")
+		err := errors.New("a '--docker-registry-url' argument is required")
 		return err
 	}
 	order.DockerRegistry = *dockerRegistry
@@ -565,7 +566,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 		BaseImage:     order.BaseImage,
 	}
 
-	dockerConnection, err := client.NewClientWithOpts(client.WithVersion(DOCKER_API_VERSION))
+	dockerConnection, err := client.NewClientWithOpts(client.WithVersion(DockerAPIVersion))
 	if err != nil {
 		debugMessage := "Unable to connect to Docker daemon. Ensure Docker is installed and the service is started. "
 		return errors.New(debugMessage + err.Error())
@@ -643,7 +644,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	return readDockerStream(buildResponseStream.Body, &container, true, nil)
 }
 
-// Start each container build concurrently and report the results
+// Build starts each container build concurrently and report the results
 func (order *SoftwareOrder) Build() error {
 
 	// Handle single container build and output of docker run instructions
@@ -722,7 +723,6 @@ func (order *SoftwareOrder) Build() error {
 			order.WriteLog(true, progress)
 		}
 	}
-	return nil
 }
 
 // Get the names of each individual host to be created
@@ -780,7 +780,7 @@ func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 	return containers, nil
 }
 
-// Once the path to the Software Order Email (SOE) zip file has been provided then unzip it
+// LoadLicense once the path to the Software Order Email (SOE) zip file has been provided then unzip it
 // and load the content into the SoftwareOrder struct for use in the build process.
 func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, done chan int) {
 	progress <- "Reading Software Order Email Zip ..."
@@ -841,7 +841,7 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 	done <- 1
 }
 
-// Ensure the Docker client is accessible and pull the specified base image from Docker Hub
+// LoadDocker ensures the Docker client is accessible and pull the specified base image from Docker Hub
 func (order *SoftwareOrder) LoadDocker(progress chan string, fail chan string, done chan int) {
 
 	// Make sure Docker is able to connect
@@ -865,7 +865,7 @@ func (order *SoftwareOrder) LoadDocker(progress chan string, fail chan string, d
 	done <- 1
 }
 
-// Run a simple curl on the mirror URL to see if it's accessible.
+// TestMirror runs a simple curl on the mirror URL to see if it's accessible.
 // This is a preliminary check so an error is less likely to occur once the build starts
 //
 // NOTE: this does not support a local registry filesystem path
@@ -892,7 +892,7 @@ func (order *SoftwareOrder) TestMirror(progress chan string, fail chan string, d
 	done <- 1
 }
 
-// Run a simple curl on the registry to see if it's accessible.
+// TestRegistry runs a simple curl on the registry to see if it's accessible.
 // This is a preliminary check so an error is less likely to occur after the build, once the built images are being pushed
 func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string, done chan int) {
 	if order.DeploymentType == "single" {
@@ -922,7 +922,7 @@ func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string,
 	done <- 1
 }
 
-// Load the registry auth from $USERHOME/.docker/config.json
+// LoadRegistryAuth loads the registry auth from $USERHOME/.docker/config.json
 func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
 	userObject, err := user.Current()
 	if err != nil {
@@ -961,7 +961,7 @@ func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
 	done <- 1
 }
 
-// Use the orchestration tool to generate an Ansible playbook from the Software Order Email Zip
+// LoadPlaybook uses the orchestration tool to generate an Ansible playbook from the Software Order Email Zip
 func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string, done chan int) {
 
 	// Check to see if the tool exists
@@ -1025,7 +1025,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 			for _, target := range order.BuildOnly {
 				// Container's name is in the --build-only list
 				if strings.ToLower(strings.TrimSpace(target)) == strings.ToLower(strings.TrimSpace(container.Name)) {
-					totalMatchesFound += 1
+					totalMatchesFound++
 					matchFound = true
 				}
 			}
@@ -1045,7 +1045,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	done <- 1
 }
 
-// Concurrently load all container's configurations if the container is staged to be built
+// Prepare concurrently loads all container's configurations if the container is staged to be built
 func (order *SoftwareOrder) Prepare() error {
 	// Ignore this in the single container
 	if order.DeploymentType == "single" {
@@ -1059,7 +1059,7 @@ func (order *SoftwareOrder) Prepare() error {
 	workerCount := 0
 	for _, container := range order.Containers {
 		if container.Status != DoNotBuild {
-			workerCount += 1
+			workerCount++
 			go func(container *Container, progress chan string, fail chan string) {
 				container.Status = Loading
 				err := container.Prebuild(progress)
@@ -1077,7 +1077,7 @@ func (order *SoftwareOrder) Prepare() error {
 	for {
 		select {
 		case <-done:
-			doneCount += 1
+			doneCount++
 			if doneCount == workerCount {
 				// Generate the Kubernetes manifests since we have all the details to do so before the build
 				// Note: This is a time saver, though the manifests are not valid if the images
@@ -1096,7 +1096,7 @@ func (order *SoftwareOrder) Prepare() error {
 	}
 }
 
-// Run the generate_manifests playbook to output Kubernetes configs
+// GenerateManifests runs the generate_manifests playbook to output Kubernetes configs
 func (order *SoftwareOrder) GenerateManifests() error {
 
 	// Write a vars file to disk so it can be used by the playbook
@@ -1317,8 +1317,7 @@ func getOrchestrationTool() error {
 	}
 
 	// HTTP GET the file
-	fileURL := fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/lax/sas-orchestration-linux.tgz",
-		SAS_VIYA_VERSION)
+	fileURL := fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/lax/sas-orchestration-linux.tgz", SasViyaVersion)
 	resp, err := http.Get(fileURL)
 	if err != nil {
 		return errors.New("Cannot fetch sas-orchestration tool. support.sas.com must be accessible, " + err.Error())
@@ -1348,7 +1347,7 @@ func getOrchestrationTool() error {
 	return nil
 }
 
-// Remove all temporary build files: sas_viya_playbook and all Docker contexts (tar files) in the /tmp directory
+// Finish removes all temporary build files: sas_viya_playbook and all Docker contexts (tar files) in the /tmp directory
 func (order *SoftwareOrder) Finish() {
 	order.EndTime = time.Now()
 	// TODO
@@ -1362,7 +1361,7 @@ func bytesToGB(bytes int64) string {
 	return fmt.Sprintf("%.2f GB", float64(bytes)/float64(1000000000))
 }
 
-// Calculate all metrics and display them in a table.
+// ShowBuildSummary calculates all metrics and display them in a table.
 func (order *SoftwareOrder) ShowBuildSummary() {
 
 	// Special case where the single deployment does not use the order.Containers list
