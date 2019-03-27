@@ -352,10 +352,11 @@ echo "Building Docker Build Container"
 echo "==============================="
 echo
 
+mkdir -p ${PWD}/builds
+
 DOCKER_GID=$(getent group docker|awk -F: '{print $3}')
 USER_GID=$(id -g)
 
-set -x
 docker build  \
     --label sas.recipe=true \
     --label sas.recipe.builder.version=${SAS_DOCKER_TAG} \
