@@ -42,7 +42,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Container State
+// State of the Container
 type State int
 
 // Note: this omits 0 and 1 to prevent evaluation to True or False
@@ -58,9 +58,10 @@ const (
 	Pushed     State = 10 // Image has finished pushing to the provided registry
 )
 
+// DOCKER_API_VERSION is the minimum version of the API we support
 const DOCKER_API_VERSION = "1.37"
 
-// Defines the attributes for a single host
+// Container defines the attributes for a single host
 type Container struct {
 	// Reference to the parent SOE
 	SoftwareOrder *SoftwareOrder
@@ -92,7 +93,7 @@ type Container struct {
 	ImageSize  int64     // Set after the build process by the Docker client ImageList command
 }
 
-// Each container has a configmap which define Docker layers.
+// ContainerConfig each container has a configmap which define Docker layers.
 // A static configmap.yml file is parsed and all containers
 // that do not have static values are set to the defaults
 // (see container.GetConfig).
@@ -115,7 +116,7 @@ type effectedImage struct {
 
 // Provide a human readable output of a container's configurations
 func (config *ContainerConfig) String() string {
-	return fmt.Sprintf("\n\n[CONFIGURATION]\n[Ports] %s\n[Environment] %s\n[Roles] %s\n[Volumes] %s\n[Resources] %s\n\n",
+	return fmt.Sprintf("\n\n[CONFIGURATION]\n[Ports] %s\n[Environment] %s\n[Roles] %s\n[Volumes] %s\n[Resources Limits] %s\n[Resources Requests] %s\n\n",
 		strings.Join(config.Ports, ", "),
 		strings.Join(config.Environment, ", "),
 		strings.Join(config.Roles, ", "),
@@ -125,14 +126,14 @@ func (config *ContainerConfig) String() string {
 	)
 }
 
-// Used by the docker image build process to decode the string channel
+// DockerResponse is used by the docker image build process to decode the string channel
 type DockerResponse struct {
 	Stream string      `json:"stream"`      // Shows up in an Image Build response
 	Status string      `json:"status"`      // Shows up in an Image Push response
 	Error  interface{} `json:"errorDetail"` // Only shows if there's an error image build response
 }
 
-// Write any number of object info to the container's log file
+// WriteLog writes any number of object info to the container's log file
 func (container *Container) WriteLog(contentBlocks ...interface{}) {
 	// Write the filename and line number
 	_, fullFilePath, fileCallerLineNumber, _ := runtime.Caller(1)
@@ -149,12 +150,12 @@ func (container *Container) WriteLog(contentBlocks ...interface{}) {
 	container.Log.Write([]byte("\n"))
 }
 
-// Get the sas-viya-<name>
+// GetName gets the sas-viya-<name>
 func (container *Container) GetName() string {
 	return "sas-viya-" + strings.ToLower(container.Name)
 }
 
-// Get a the <recipe_version>-<date>-<time> format
+// GetTag gets the <recipe_version>-<date>-<time> format
 func (container *Container) GetTag() string {
 	// Use the "--tag" argument if provided
 	if len(container.SoftwareOrder.TagOverride) > 0 {
@@ -166,14 +167,14 @@ func (container *Container) GetTag() string {
 		container.SoftwareOrder.TimestampTag)
 }
 
-// Get a <registry>/<namespace>/sas-viya-<name> format
+// GetWholeImageName gets a <registry>/<namespace>/sas-viya-<name> format
 func (container *Container) GetWholeImageName() string {
 	return container.SoftwareOrder.DockerRegistry +
 		"/" + container.SoftwareOrder.DockerNamespace +
 		"/" + container.GetName() + ":" + container.GetTag()
 }
 
-// Loads the configmap of all static container attributes
+// GetConfig loads the configmap of all static container attributes
 func (container *Container) GetConfig() error {
 	result := make(map[string]ContainerConfig)
 
@@ -254,13 +255,13 @@ func (container *Container) GetConfig() error {
 	return nil
 }
 
-// Used by the Container struct to create a filesystem tree
+// File is used by the Container struct to create a filesystem tree
 type File struct {
 	Name    string
 	Content []byte
 }
 
-// Perform all pre-build steps after the playbook has been parsed
+// Prebuild performs all pre-build steps after the playbook has been parsed
 func (container *Container) Prebuild(progress chan string) error {
 	// Open an individual Docker client connection
 	dockerConnection, err := client.NewClientWithOpts(client.WithVersion(DOCKER_API_VERSION))
@@ -281,7 +282,7 @@ func (container *Container) Prebuild(progress chan string) error {
 	return nil
 }
 
-// Load the Software Order's details to create build arguments
+// GetBuildArgs loads the Software Order's details to create build arguments
 // Note: The Docker api requires BuildArgs to be a string pointer instead of just a string
 func (container *Container) GetBuildArgs() {
 	buildArgs := make(map[string]*string)
@@ -293,7 +294,7 @@ func (container *Container) GetBuildArgs() {
 	container.BuildArgs = buildArgs
 }
 
-// Interface with the Docker client to run an image build
+// Build interfaces with the Docker client to run an image build
 func (container *Container) Build(progress chan string) error {
 	// Open the context payload created in pre-build so it can be passed to the Docker client
 	dockerBuildContext, err := os.Open(container.DockerContextPath)
@@ -343,7 +344,7 @@ func (container *Container) Push(progress chan string) error {
 		container.SoftwareOrder.Verbose, progress)
 }
 
-// Helper function for container.Build and container.Push
+// readDockerStream is a helper function for container.Build and container.Push
 // Read the response stream from a Docker client API call
 func readDockerStream(responseStream io.ReadCloser,
 	container *Container, verbose bool, progress chan string) error {
@@ -416,7 +417,7 @@ LABEL sas.recipe="true" \
       sas.layer.%s="true"
 `
 
-// Create a Dockerfile by reading the container's configuration
+// CreateDockerfile creates a Dockerfile by reading the container's configuration
 func (container *Container) CreateDockerfile() (string, error) {
 	// Grab the config and start formatting the Dockerfile
 	dockerfile := fmt.Sprintf(dockerfileFromBase, "sas-viya-"+container.Name, container.BaseImage) + "\n"
@@ -474,13 +475,16 @@ func readAddonConf(fileName string) (map[string]effectedImage, error) {
 	return imageData, nil
 }
 
-// Adds any corresponding addon lines to a Dockerfile
+// appendAddonLines adds any corresponding addon lines to a Dockerfile
 // Helper function utilized by all the deployment types
 func appendAddonLines(name string, dockerfile string, addons []string) (string, error) {
 
 	// This function now reads an addon_config.yml file in the addon directory to determine
 	// which containers are affected by the Dockerfiles.
 	if len(addons) > 0 {
+
+		// If we add an addon to a container then set to True and we add sas.recipe.addons=true to the image
+		labelRecipeAddons := false
 		for _, addon := range addons {
 			addonPath := "addons/" + addon + "/"
 			images, err := readAddonConf(addonPath + "addon_config.yml")
@@ -494,9 +498,13 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 				continue
 			}
 
+			labelRecipeAddons = true
+
 			// Read the addon's Dockerfile and only grab the RUN, ADD, COPY, USER, lines
 			dockerfile += "\n# AddOn(s)"
 			dockerfile += "\n# " + addon + "\n"
+			dockerfile += "LABEL sas.recipe.addons." + addon + "=\"true\"\n"
+
 			bytes, _ := ioutil.ReadFile(addonPath + targetImage.Dockerfile)
 			lines := strings.Split(string(bytes), "\n")
 			for index, line := range lines {
@@ -523,12 +531,15 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 				}
 			}
 		}
+		if labelRecipeAddons == true {
+			dockerfile += "LABEL sas.recipe.addons=\"true\""
+		}
 	}
 
 	return dockerfile, nil
 }
 
-// Create a sub-directory within the builds directory, set the log path, and the Docker context path
+// CreateBuildDirectory creates a sub-directory within the builds directory, set the log path, and the Docker context path
 func (container *Container) CreateBuildDirectory() error {
 	// Create the tar file on the build machine
 	container.BuildPath = container.SoftwareOrder.BuildPath + container.GetName()
@@ -554,7 +565,7 @@ func (container *Container) CreateBuildDirectory() error {
 	return nil
 }
 
-// Go through each item in the container's docker context and write the file's content to the tar file.
+// CreateDockerContext goes through each item in the container's docker context and write the file's content to the tar file.
 // Follow the Container directory structure (files/*, tasks/*, templates/*, vars/*)
 func (container *Container) CreateDockerContext() error {
 	err := container.CreateBuildDirectory()
@@ -741,7 +752,7 @@ func (container *Container) CreateDockerContext() error {
 	return nil
 }
 
-// Writes to the container's tar file, provided EITHER externalPath or fileBytes
+// AddFileToContext writes to the container's tar file, provided EITHER externalPath or fileBytes
 //
 // externalPath: the absolute path on the build machine
 // contextPath:  absolute path to where the file should go inside the Docker context (internal path)
@@ -768,7 +779,7 @@ func (container *Container) AddFileToContext(externalPath string, contextPath st
 	}
 
 	if container.ContextWriter == nil {
-		return errors.New("Could not create docker context. Archive context writer is nil.")
+		return errors.New("could not create docker context. Archive context writer is nil")
 	}
 	container.ContextWriter.WriteHeader(header)
 
@@ -785,7 +796,7 @@ func (container *Container) AddFileToContext(externalPath string, contextPath st
 	return nil
 }
 
-// Add all item in a directory, and its child items, to the Docker context.
+// AddDirectoryToContext adds all item in a directory, and its child items, to the Docker context.
 //
 // externalPath is the path on the build machine
 // contextPath is where the file should go inside the Docker context
@@ -834,7 +845,7 @@ func (container *Container) AddDirectoryToContext(externalPath string, contextPa
 	return nil
 }
 
-// Shut down open file handles and client connections
+// Finish shuts down open file handles and client connections
 func (container *Container) Finish() error {
 	err := container.DockerClient.Close()
 	if err != nil {
