@@ -351,29 +351,33 @@ echo "==============================="
 echo "Building Docker Build Container"
 echo "==============================="
 echo
+
+DOCKER_GID=$(getent group docker|awk -F: '{print $3}')
+USER_GID=$(id -g)
+
+set -x
 docker build  \
     --label sas.recipe=true \
     --label sas.recipe.builder.version=${SAS_DOCKER_TAG} \
-    -t sas-container-recipes-builder:${SAS_DOCKER_TAG} \
-    -f Dockerfile \
+    --build-arg USER_UID=${UID} \
+    --build-arg DOCKER_GID=${DOCKER_GID} \
+    --tag sas-container-recipes-builder:${SAS_DOCKER_TAG} \
+    --file Dockerfile \
     .
-
-DOCKER_GID=$(getent group docker|awk -F: '{print $3}')
 echo
 echo "=============================="
 echo "Running Docker Build Container"
 echo "=============================="
 echo
-#set -x
+
 docker run -d \
     --name ${SAS_BUILD_CONTAINER_NAME} \
+    -u ${UID}:${DOCKER_GID} \
     -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
     -v ${PWD}/builds:/sas-container-recipes/builds \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    -v ${HOME}/.docker/config.json:/root/.docker/config.json \
+    -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
     sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
-#set +x
-    # -u ${UID}:${DOCKER_GID} \
 
 docker logs -f ${SAS_BUILD_CONTAINER_NAME}
 
