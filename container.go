@@ -116,7 +116,7 @@ type effectedImage struct {
 
 // Provide a human readable output of a container's configurations
 func (config *ContainerConfig) String() string {
-	return fmt.Sprintf("\n\n[CONFIGURATION]\n[Ports] %s\n[Environment] %s\n[Roles] %s\n[Volumes] %s\n[Resources] %s\n\n",
+	return fmt.Sprintf("\n\n[CONFIGURATION]\n[Ports] %s\n[Environment] %s\n[Roles] %s\n[Volumes] %s\n[Resources Limits] %s\n[Resources Requests] %s\n\n",
 		strings.Join(config.Ports, ", "),
 		strings.Join(config.Environment, ", "),
 		strings.Join(config.Roles, ", "),
