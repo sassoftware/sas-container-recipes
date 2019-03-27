@@ -482,6 +482,9 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 	// This function now reads an addon_config.yml file in the addon directory to determine
 	// which containers are affected by the Dockerfiles.
 	if len(addons) > 0 {
+
+		// If we add an addon to a container then set to True and we add sas.recipe.addons=true to the image
+		labelRecipeAddons := false
 		for _, addon := range addons {
 			addonPath := "addons/" + addon + "/"
 			images, err := readAddonConf(addonPath + "addon_config.yml")
@@ -494,6 +497,8 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 			if !targetFound {
 				continue
 			}
+
+			labelRecipeAddons = true
 
 			// Read the addon's Dockerfile and only grab the RUN, ADD, COPY, USER, lines
 			dockerfile += "\n# AddOn(s)"
@@ -525,6 +530,9 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 					}
 				}
 			}
+		}
+		if labelRecipeAddons == true {
+			dockerfile += "LABEL sas.recipe.addons=\"true\""
 		}
 	}
 
