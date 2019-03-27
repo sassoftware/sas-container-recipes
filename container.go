@@ -33,6 +33,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -486,8 +487,7 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 		// If we add an addon to a container then set to True and we add sas.recipe.addons=true to the image
 		labelRecipeAddons := false
 		for _, addon := range addons {
-			addonPath := "addons/" + addon + "/"
-			images, err := readAddonConf(addonPath + "addon_config.yml")
+			images, err := readAddonConf(addon + "addon_config.yml")
 			if err != nil {
 				return "", err
 			}
@@ -505,8 +505,9 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 			dockerfile += "\n# " + addon + "\n"
 			dockerfile += "LABEL sas.recipe.addons." + addon + "=\"true\"\n"
 
-			bytes, _ := ioutil.ReadFile(addonPath + targetImage.Dockerfile)
+			bytes, _ := ioutil.ReadFile(addon + targetImage.Dockerfile)
 			lines := strings.Split(string(bytes), "\n")
+			endsWithSlashRe := regexp.MustCompile("\\\\s*")
 			for index, line := range lines {
 				line = strings.TrimSpace(line)
 				if len(line) == 0 {
@@ -516,6 +517,7 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 				if strings.HasPrefix(line, "RUN ") ||
 					strings.HasPrefix(line, "ADD ") ||
 					strings.HasPrefix(line, "ARG") ||
+					strings.HasPrefix(line, "WORKDIR") ||
 					strings.HasPrefix(line, "COPY ") {
 					dockerfile += line + "\n"
 
@@ -523,7 +525,7 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 					if strings.Contains(line, "\\") {
 						for _, nextLine := range lines[index+1:] {
 							dockerfile += nextLine + "\n"
-							if !strings.Contains(nextLine, "\\") {
+							if !endsWithSlashRe.MatchString(nextLine) {
 								break
 							}
 						}
@@ -710,8 +712,7 @@ func (container *Container) CreateDockerContext() error {
 
 	// Handle the addons -- Each addon has a config file that specifies which container it affects.
 	for _, addon := range container.SoftwareOrder.AddOns {
-		addonPath := "addons/" + addon + "/"
-		images, err := readAddonConf(addonPath + "addon_config.yml")
+		images, err := readAddonConf(addon + "addon_config.yml")
 		if err != nil {
 			return err
 		}
@@ -723,7 +724,7 @@ func (container *Container) CreateDockerContext() error {
 		}
 
 		// Add the files to the top level of the docker context
-		err = container.AddDirectoryToContext("addons/"+addon+"/", "", "")
+		err = container.AddDirectoryToContext(addon, "", "")
 		if err != nil {
 			return err
 		}

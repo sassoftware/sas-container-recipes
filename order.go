@@ -418,12 +418,29 @@ func (order *SoftwareOrder) LoadCommands() error {
 		order.AddOns = []string{}
 	} else {
 		// Accept a list of addon names delimited by a space or a comma
-		spaceDelimList := strings.Split(strings.TrimSpace(*addons), " ")
-		commaDelimList := strings.Split(strings.TrimSpace(*addons), ",")
-		order.AddOns = spaceDelimList
-		if len(spaceDelimList) < len(commaDelimList) {
-			order.AddOns = commaDelimList
+		spaces, _ := regexp.Compile("[ ,]+") // math spaces or commas
+		addonString := spaces.ReplaceAllString(strings.TrimSpace(*addons), " ")
+
+		addonList := strings.Split(addonString, " ")
+		for _, addon := range addonList {
+
+			addonPath := addon
+
+			// if addon does not exist at specified path, check addons/ADDON.
+			// If addons/ADDON does not exist, return an error
+			if _, err := os.Stat(addonPath); err != nil {
+				// Try with 'addons/'
+				addonPath = "addons/" + addonPath
+				if _, err = os.Stat(addonPath); err != nil {
+					return fmt.Errorf("Addon %s could not be found", addon)
+				}
+			}
+			if !strings.HasSuffix(addonPath, "/") {
+				addonPath = addonPath + "/"
+			}
+			order.AddOns = append(order.AddOns, addonPath)
 		}
+
 		order.WriteLog(true, "Building with addons", order.AddOns)
 	}
 
@@ -601,8 +618,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 
 	// Add files from the addons directory to the build context
 	for _, addon := range order.AddOns {
-		// TODO: WIP
-		err := container.AddDirectoryToContext("addons/"+addon+"/", "", "")
+		err := container.AddDirectoryToContext(addon, "", "")
 		if err != nil {
 			return errors.New("Unable to place addon files into Docker context. " + err.Error())
 		}
