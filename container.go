@@ -503,7 +503,10 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 			// Read the addon's Dockerfile and only grab the RUN, ADD, COPY, USER, lines
 			dockerfile += "\n# AddOn(s)"
 			dockerfile += "\n# " + addon + "\n"
-			addonName := strings.Replace(addon, "addons/", "", -1)
+
+			// addonPath is a split out of the addon var, which includes the path to the addons.
+			addonName := filepath.Base(addon)
+
 			dockerfile += "LABEL sas.recipe.addons." + addonName + "=\"true\"\n"
 
 			bytes, _ := ioutil.ReadFile(addon + targetImage.Dockerfile)
