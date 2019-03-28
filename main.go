@@ -128,11 +128,10 @@ const usage = `
           default: false
 
       --build-only "<container-name> <container-name> ..."
-          Build specific containers by providing a comma or space separated list of container names in quotes.
+          Build specific containers by providing a comma or space separated list of container names, no "sas-viya-" prefix, in quotes.
+		  [WARNING] This is meant for developers that require specific small components to rapidly be build.
 
-		  WARNING: This is meant for developers that require specific small components to rapidly be build.
-
-            example: --build-only "consul" or --build-only "consul httpproxy"
+            example: --build-only "consul" or --build-only "consul httpproxy sas-casserver-primary"
 
       --version
           Print the SAS Container Recipes version and exit.
