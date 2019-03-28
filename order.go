@@ -45,8 +45,8 @@ import (
 	"time"
 )
 
-// RecipeVersioin format <year>.<month>.<numbered release>
-const RecipeVersioin = "19.04.0"
+// RecipeVersion format <year>.<month>.<numbered release>
+const RecipeVersion = "19.04.0"
 
 // SasViyaVersion is used to wget the corresponding sas-orchestration tool version
 // example: 34 = version 3.4
@@ -365,7 +365,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	deploymentType := flag.String("type", "single", "")
 	skipMirrorValidation := flag.Bool("skip-mirror-url-validation", false, "")
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
-	tagOverride := flag.String("tag", RecipeVersioin+"-"+order.TimestampTag, "")
+	tagOverride := flag.String("tag", RecipeVersion+"-"+order.TimestampTag, "")
 
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU()
@@ -383,7 +383,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 	flag.Parse()
 	if *version == true {
-		fmt.Println("SAS Container Recipes v" + RecipeVersioin)
+		fmt.Println("SAS Container Recipes v" + RecipeVersion)
 		os.Exit(0)
 	}
 

@@ -164,7 +164,7 @@ func (container *Container) GetTag() string {
 	}
 
 	return fmt.Sprintf("%s-%s",
-		strings.TrimSpace(RecipeVersioin),
+		strings.TrimSpace(RecipeVersion),
 		container.SoftwareOrder.TimestampTag)
 }
 
@@ -455,7 +455,7 @@ func (container *Container) CreateDockerfile() (string, error) {
 	}
 
 	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Name)
-	dockerfile += "\n" + fmt.Sprintf(dockerfileLabels, RecipeVersioin, container.Name, container.Name)
+	dockerfile += "\n" + fmt.Sprintf(dockerfileLabels, RecipeVersion, container.Name, container.Name)
 	return dockerfile, nil
 }
 
