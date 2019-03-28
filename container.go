@@ -305,6 +305,8 @@ func (container *Container) Build(progress chan string) error {
 
 	// Set the payload to send to the Docker client
 	container.GetBuildArgs()
+	extraHosts := make([]string, 0)
+	extraHosts = append(extraHosts, "sas-container-recipes-builder:"+container.SoftwareOrder.BuilderIP)
 	buildOptions := types.ImageBuildOptions{
 		Context:     dockerBuildContext,
 		Tags:        []string{container.GetWholeImageName()},
@@ -312,6 +314,7 @@ func (container *Container) Build(progress chan string) error {
 		BuildArgs:   container.BuildArgs,
 		Remove:      true,
 		ForceRemove: true,
+		ExtraHosts:  extraHosts,
 	}
 
 	// Build the image and get the response

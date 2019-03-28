@@ -128,11 +128,25 @@ const usage = `
           default: false
 
       --build-only "<container-name> <container-name> ..."
-          Build specific containers by providing a comma or space separated list of container names in quotes.
+          Build specific containers by providing a comma or space separated list of container names, no "sas-viya-" prefix, in quotes.
+		  [WARNING] This is meant for developers that require specific small components to rapidly be build.
 
-		  WARNING: This is meant for developers that require specific small components to rapidly be build.
+            example: --build-only "consul" or --build-only "consul httpproxy sas-casserver-primary"
 
-            example: --build-only "consul" or --build-only "consul httpproxy"
+      --skip-mirror-url-validation
+          Skips validating the mirror URL from the --mirror-url flag.
+          default: false
+
+      --skip-docker-url-validation
+          Skip verifying the Docker registry URL.
+          default: false
+
+      --builder-port <integer>
+          Port to listen on and serve entitlement and CA certificates from. Serving certificates is required to avoid leaving sensitive order data in the layers.
+
+          WARNING: Changing this between builds will cause your layer cache to be busted.
+
+          default: 1976
 
       --version
           Print the SAS Container Recipes version and exit.

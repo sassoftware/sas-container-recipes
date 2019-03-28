@@ -19,6 +19,8 @@
 package main
 
 import (
+	"encoding/base64"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
@@ -90,6 +92,9 @@ type SoftwareOrder struct {
 	RegistryAuth string                // Used to push and pull from/to a regitry
 	BuildPath    string                // Kubernetes manifests are generated and placed into this location
 	CertBaseURL  string                // The URL that the build containers will use to fetch their CA and entitlement certs
+	InDocker     bool                  // If we are running in a docker container
+	BuilderIP    string                // IP of where images are being built to be used for generic hostname lookup for builder
+	BuilderPort  string                // Port for serving certificate requests for builds
 
 	// Metrics
 	StartTime      time.Time
@@ -165,6 +170,11 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 
 	if err := order.LoadCommands(); err != nil {
 		return order, err
+	}
+
+	order.InDocker = true
+	if _, err := os.Stat("/.dockerenv"); err != nil {
+		order.InDocker = false
 	}
 
 	// Point to custom configuration yaml files
@@ -272,24 +282,22 @@ func getIPAddr() (string, error) {
 // Serve up the entitlement and CA cert on a random port from the host so
 // the contents of these files don't exist in any docker layer or history.
 func (order *SoftwareOrder) Serve() {
-	listener, err := net.Listen("tcp", ":0")
+
+	builderIP, err := getIPAddr()
 	if err != nil {
-		panic(err)
+		panic("Could not determine hostname or host IP: " + err.Error())
 	}
-	hostAndPort := listener.Addr().String()
-	parts := strings.Split(hostAndPort, ":")
-	port, err := strconv.Atoi(parts[len(parts)-1])
-	if err != nil {
-		panic(err)
-	}
-	hostIP, err := getIPAddr()
+	order.BuilderIP = builderIP
+
+	listener, err := net.Listen("tcp", ":"+order.BuilderPort)
 	if err != nil {
 		panic(err)
 	}
 
 	// Serve only two endpoints to receive the entitlement and CA
-	order.WriteLog(true, fmt.Sprintf("Serving license and entitlement on %s:%d", hostIP, port))
-	order.CertBaseURL = fmt.Sprintf("http://%s:%d", hostIP, port)
+	order.WriteLog(true, fmt.Sprintf("Serving license and entitlement on sas-container-recipes-builder:%s (%s)", order.BuilderPort, order.BuilderIP))
+	order.CertBaseURL = fmt.Sprintf("http://sas-container-recipes-builder:%s", order.BuilderPort)
+
 	http.HandleFunc("/entitlement/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, string(order.Entitlement))
 	})
@@ -366,6 +374,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	skipMirrorValidation := flag.Bool("skip-mirror-url-validation", false, "")
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
 	tagOverride := flag.String("tag", RecipeVersion+"-"+order.TimestampTag, "")
+	builderPort := flag.String("builder-port", "1976", "")
 
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU()
@@ -489,6 +498,8 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 	order.DockerRegistry = *dockerRegistry
 
+	order.BuilderPort = *builderPort
+
 	// The deployment type utilizes the order.BuildOnly list
 	// Note: the 'full' deployment type builds everything, omitting the --build-only argument
 	if order.DeploymentType == "multiple" {
@@ -514,7 +525,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 		if len(spaceDelimList) < len(commaDelimList) {
 			order.BuildOnly = commaDelimList
 		}
-		order.WriteLog(true, "Building only:", order.BuildOnly)
 	}
 
 	order.VirtualHost = *virtualHost
@@ -971,8 +981,19 @@ func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
 	config = strings.Replace(config, "\"", "", -1)
 	config = strings.Replace(config, "\n", "", -1)
 	config = strings.Replace(config, "\t", "", -1)
+	authInfoBytes, _ := base64.StdEncoding.DecodeString(config)
+	authInfo := strings.Split(string(authInfoBytes), ":")
+	auth := struct {
+		Username string
+		Password string
+	}{
+		Username: authInfo[0],
+		Password: authInfo[1],
+	}
 
-	order.RegistryAuth = config
+	authBytes, _ := json.Marshal(auth)
+
+	order.RegistryAuth = base64.StdEncoding.EncodeToString(authBytes)
 
 	done <- 1
 }
@@ -1030,19 +1051,20 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	}
 	progress <- "Finished fetching the container list"
 
-	// Handle --build-only without modifying the order's container attributes
-	numberOfBuilds := len(order.Containers)
+	// Handle --build-only options without modifying the order's container attributes
 	if len(order.BuildOnly) > 0 {
 
 		// If the image is not in the --build-only list then set its status to Do Not Build
-		totalMatchesFound := 0
+		imageNameMatches := []string{} // Image names that are provided in the --build-only argument and exist in the software order
+		imageNameOptions := []string{} // Image names that are in the software order
 		for index, container := range order.Containers {
 			matchFound := false
-			for _, target := range order.BuildOnly {
-				// Container's name is in the --build-only list
-				if strings.ToLower(strings.TrimSpace(target)) == strings.ToLower(strings.TrimSpace(container.Name)) {
-					totalMatchesFound++
+			imageNameOptions = append(imageNameOptions, container.Name)
+			for _, targetName := range order.BuildOnly {
+				if container.Name == targetName {
+					// Container's name is in the --build-only list
 					matchFound = true
+					imageNameMatches = append(imageNameMatches, container.Name)
 				}
 			}
 			if !matchFound {
@@ -1050,11 +1072,10 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 			}
 		}
 
-		// Make sure there is at least 1 image going to be built
-		numberOfBuilds = totalMatchesFound
-		if len(order.BuildOnly) != numberOfBuilds {
-			// TODO: show which containers do not apply to the software order
-			fail <- "One or more of the chosen --build-only containers do not exist"
+		// Make sure there is at least 1 image that's going to be built
+		if len(order.BuildOnly) != len(imageNameMatches) {
+			order.WriteLog(true, fmt.Sprintf("\nSelected Image Builds: %s\nAvailable Image Builds: %s\n", order.BuildOnly, imageNameOptions))
+			fail <- "One or more of the chosen --build-only containers do not exist. "
 		}
 	}
 
@@ -1368,7 +1389,9 @@ func (order *SoftwareOrder) Finish() {
 	order.EndTime = time.Now()
 	// TODO
 	//for _, container := range order.Containers {
-	//	container.Finish()
+	//	if container.Status != DoNotBuild {
+	//		container.Finish()
+	//	}
 	//}
 }
 
