@@ -179,6 +179,11 @@ function usage() {
             default: \${recipe_project_version}-\${datetime}-\${last_commit_sha1}
             example: 18.12.0-20181209115304-b197206
 
+      ---builder-port
+          The port to listen on when serving entitlement and CA certificates to the images that are being built.
+          Changing this between builds will prevent Docker layer caching.
+            default: 8080
+
       -h|--help
           Prints out this message. Other resources:
             GitHub Issues for questions, features, and bug reports:
@@ -286,6 +291,11 @@ while [[ $# -gt 0 ]]; do
             export SAS_DOCKER_TAG="$1"
             shift # past value
             ;;
+        --builder-port)
+            shift # past argument
+            export BUILDER_PORT="$1"
+            shift # past value
+            ;;
         *) # Ignore everything that isn't a valid arg
             shift
     ;;
@@ -317,6 +327,10 @@ fi
 
 if [[ ${CHECK_MIRROR_URL} == false ]]; then
     run_args="${run_args} --skip-mirror-url-validation"
+fi
+
+if [[ -n ${BUILDER_PORT} ]]; then
+    run_args="${run_args} --builder-port ${BUILDER_PORT}"
 fi
 
 #

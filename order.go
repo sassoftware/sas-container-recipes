@@ -91,6 +91,9 @@ type SoftwareOrder struct {
 	RegistryAuth string                // Used to push and pull from/to a regitry
 	BuildPath    string                // Kubernetes manifests are generated and placed into this location
 	CertBaseURL  string                // The URL that the build containers will use to fetch their CA and entitlement certs
+	InDocker     bool                  // If we are running in a docker container
+	BuilderIP    string                // IP of where images are being built to be used for generic hostname lookup for builder
+	BuilderPort  string                // Port for serving certificate requests for builds
 
 	// Metrics
 	StartTime      time.Time
@@ -166,6 +169,11 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 
 	if err := order.LoadCommands(); err != nil {
 		return order, err
+	}
+
+	order.InDocker = true
+	if _, err := os.Stat("/.dockerenv"); err != nil {
+		order.InDocker = false
 	}
 
 	// Point to custom configuration yaml files
@@ -273,24 +281,22 @@ func getIPAddr() (string, error) {
 // Serve up the entitlement and CA cert on a random port from the host so
 // the contents of these files don't exist in any docker layer or history.
 func (order *SoftwareOrder) Serve() {
-	listener, err := net.Listen("tcp", ":0")
+
+	builderIP, err := getIPAddr()
 	if err != nil {
-		panic(err)
+		panic("Could not determine hostname or host IP: " + err.Error())
 	}
-	hostAndPort := listener.Addr().String()
-	parts := strings.Split(hostAndPort, ":")
-	port, err := strconv.Atoi(parts[len(parts)-1])
-	if err != nil {
-		panic(err)
-	}
-	hostIP, err := getIPAddr()
+	order.BuilderIP = builderIP
+
+	listener, err := net.Listen("tcp", ":"+order.BuilderPort)
 	if err != nil {
 		panic(err)
 	}
 
 	// Serve only two endpoints to receive the entitlement and CA
-	order.WriteLog(true, fmt.Sprintf("Serving license and entitlement on %s:%d", hostIP, port))
-	order.CertBaseURL = fmt.Sprintf("http://%s:%d", hostIP, port)
+	order.WriteLog(true, fmt.Sprintf("Serving license and entitlement on sas-container-recipes-builder:%s (%s)", order.BuilderPort, order.BuilderIP))
+	order.CertBaseURL = fmt.Sprintf("http://sas-container-recipes-builder:%s", order.BuilderPort)
+
 	http.HandleFunc("/entitlement/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, string(order.Entitlement))
 	})
@@ -367,6 +373,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	skipMirrorValidation := flag.Bool("skip-mirror-url-validation", false, "")
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
 	tagOverride := flag.String("tag", RECIPE_VERSION+"-"+order.TimestampTag, "")
+	builderPort := flag.String("builder-port", "8080", "")
 
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU()
@@ -489,6 +496,8 @@ func (order *SoftwareOrder) LoadCommands() error {
 		return err
 	}
 	order.DockerRegistry = *dockerRegistry
+
+	order.BuilderPort = *builderPort
 
 	// The deployment type utilizes the order.BuildOnly list
 	// Note: the 'full' deployment type builds everything, omitting the --build-only argument
