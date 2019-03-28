@@ -1051,8 +1051,8 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 		}
 
 		// Make sure there is at least 1 image that's going to be built
-		order.WriteLog(true, fmt.Sprintf("Building Selected Images: %s, Available Images: %s", order.BuildOnly, imageNameMatches))
 		if len(order.BuildOnly) != len(imageNameMatches) {
+			order.WriteLog(true, fmt.Sprintf("\nSelected Image Builds: %s\nAvailable Image Builds: %s\n", order.BuildOnly, imageNameOptions))
 			fail <- "One or more of the chosen --build-only containers do not exist. "
 		}
 	}
