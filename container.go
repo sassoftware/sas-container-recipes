@@ -69,14 +69,14 @@ type Container struct {
 
 	// Basic default attributes set on creation
 	Status    State  // See `type State` above
-	Name      string // Hostname (sas-viya-<host>)
+	Name      string // Hostname without a project name prefix - such as httpproxy, sas-casserver-primary, consul
 	Tag       string // Use container.GetTag or container.GetWholeImageName instead
 	BaseImage string // Set by the order's --base-image argument
 	IsStatic  bool   // Set by the CreateDockerContext function. Determined by the existance of the util/static-roles-<deployment>/<container-name> directory
 
 	// Builder attributes
 	BuildArgs         map[string]*string // Arguments that are passed into the Docker builder https://docs.docker.com/engine/reference/commandline/build/
-	BuildPath         string             // Path to the inner container build directory: builds/<deployment-type>-<date>-<time>/sas-viya-<name>/
+	BuildPath         string             // Path to the inner container build directory: builds/<deployment-type>-<date>-<time>/<project_name>-<container_name>/
 	ContextWriter     *tar.Writer        // Writes to a tar file that's passed to the Docker daemon as the build context
 	Dockerfile        string             // Generated from the container's included roles
 	DockerContext     *os.File           // Payload sent to the Docker builder, includes all files and the Dockerfile for the build
@@ -151,9 +151,9 @@ func (container *Container) WriteLog(contentBlocks ...interface{}) {
 	container.Log.Write([]byte("\n"))
 }
 
-// GetName gets the sas-viya-<name>
+// GetName gets the <project_name>-<name>
 func (container *Container) GetName() string {
-	return "sas-viya-" + strings.ToLower(container.Name)
+	return container.SoftwareOrder.ProjectName + "-" + strings.ToLower(container.Name)
 }
 
 // GetTag gets the <recipe_version>-<date>-<time> format
@@ -168,7 +168,7 @@ func (container *Container) GetTag() string {
 		container.SoftwareOrder.TimestampTag)
 }
 
-// GetWholeImageName gets a <registry>/<namespace>/sas-viya-<name> format
+// GetWholeImageName gets a <registry>/<namespace>/<project_name>-<container_name> format
 func (container *Container) GetWholeImageName() string {
 	return container.SoftwareOrder.DockerRegistry +
 		"/" + container.SoftwareOrder.DockerNamespace +
@@ -421,7 +421,7 @@ LABEL sas.recipe="true" \
 // CreateDockerfile creates a Dockerfile by reading the container's configuration
 func (container *Container) CreateDockerfile() (string, error) {
 	// Grab the config and start formatting the Dockerfile
-	dockerfile := fmt.Sprintf(dockerfileFromBase, "sas-viya-"+container.Name, container.BaseImage) + "\n"
+	dockerfile := fmt.Sprintf(dockerfileFromBase, container.SoftwareOrder.ProjectName+"-"+container.Name, container.BaseImage) + "\n"
 
 	// For each role add to the result. Also add the container.Name role (self).
 	dockerfile += "\n# Generated image includes the following Ansible roles, with the "
@@ -706,7 +706,7 @@ func (container *Container) CreateDockerContext() error {
 
 		// Add some extra variables to every role
 		otherVars := "ANSIBLE_CONTAINER: true\n"
-		otherVars += "PROJECT_NAME: \"sas-viya\"\n"
+		otherVars += fmt.Sprintf("PROJECT_NAME: \"%s\"\n", container.SoftwareOrder.ProjectName)
 		container.AddFileToContext("extravars.yml", "extravars.yml", []byte(otherVars))
 	}
 

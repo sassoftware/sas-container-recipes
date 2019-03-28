@@ -118,6 +118,11 @@ const usage = `
       --tag <value>
           Override the default tag formatted as "19.0.4-2019-03-18-09-49-38"
                                             ( <recipe-version> - <date> - <time> )
+
+	  --project-name <value>
+		  Provide a prefix for the image names and deployments.
+		  By default the image names are formatted as "sas-viya-<image_name",
+		  such as "sas-viya-httpproxy", "sas-viya-consul", etc.
     
       --workers <integer>
           Specify the number of CPU cores to allocate for the build process.
