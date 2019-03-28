@@ -561,7 +561,7 @@ function docker_run_sas_services()
         for logdir in $(ls -1 "/var/log/sas/${SASDEPLOYID}"); do
             if [ "${logdir}" != "all-services" ]; then
                 logfile=$(ls -1r "/var/log/sas/${SASDEPLOYID}/${logdir}/${SASINSTANCE}/" | head -n 1 )
-                if [ -f "${logfile}" ]; then
+                if [ -f "/var/log/sas/${SASDEPLOYID}/${logdir}/${SASINSTANCE}/${logfile}" ]; then
                     tail -f --verbose "/var/log/sas/${SASDEPLOYID}/${logdir}/${SASINSTANCE}/${logfile}" |
                         awk '/^==> / {a=substr($0, 5, length-8); next}
                                      {print a":"$0}' &
