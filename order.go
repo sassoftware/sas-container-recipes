@@ -19,6 +19,8 @@
 package main
 
 import (
+	"encoding/base64"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
@@ -970,8 +972,19 @@ func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
 	config = strings.Replace(config, "\"", "", -1)
 	config = strings.Replace(config, "\n", "", -1)
 	config = strings.Replace(config, "\t", "", -1)
+	authInfoBytes, _ := base64.StdEncoding.DecodeString(config)
+	authInfo := strings.Split(string(authInfoBytes), ":")
+	auth := struct {
+		Username string
+		Password string
+	}{
+		Username: authInfo[0],
+		Password: authInfo[1],
+	}
 
-	order.RegistryAuth = config
+	authBytes, _ := json.Marshal(auth)
+
+	order.RegistryAuth = base64.StdEncoding.EncodeToString(authBytes)
 
 	done <- 1
 }
