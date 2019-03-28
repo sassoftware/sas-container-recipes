@@ -422,7 +422,7 @@ function make_ansible_yamls() {
     if [[ -n ${CAS_VIRTUAL_HOST} ]]; then
         sed ${sed_i_option} "s|{{ CAS_VIRTUAL_HOST }}|${CAS_VIRTUAL_HOST}|" container.yml
     else
-        sed ${sed_i_option} "s|{{ CAS_VIRTUAL_HOST }}|sas-viya|" container.yml
+        sed ${sed_i_option} "s|{{ CAS_VIRTUAL_HOST }}|sas-viya.sas-viya.company.com|" container.yml
     fi
 }
 
