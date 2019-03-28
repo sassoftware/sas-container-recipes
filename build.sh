@@ -182,7 +182,7 @@ function usage() {
       ---builder-port
           The port to listen on when serving entitlement and CA certificates to the images that are being built.
           Changing this between builds will prevent Docker layer caching.
-            default: 8080
+            default: 1976
 
       -h|--help
           Prints out this message. Other resources:

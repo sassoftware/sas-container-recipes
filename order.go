@@ -373,7 +373,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	skipMirrorValidation := flag.Bool("skip-mirror-url-validation", false, "")
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
 	tagOverride := flag.String("tag", RECIPE_VERSION+"-"+order.TimestampTag, "")
-	builderPort := flag.String("builder-port", "8080", "")
+	builderPort := flag.String("builder-port", "1976", "")
 
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU()
