@@ -168,6 +168,11 @@ function usage() {
             Options: [ redhat ]
             Default: redhat
 
+      -j|--project-name <value>
+          Provide a prefix for the image names and deployments.
+          By default the image names are formatted as \"sas-viya-<image_name>\",
+          such as \"sas-viya-httpproxy\", \"sas-viya-consul\", etc.
+
       -d|--skip-docker-url-validation
           Skips validating the Docker registry URL
 
@@ -281,6 +286,11 @@ while [[ $# -gt 0 ]]; do
             export CAS_VIRTUAL_HOST="$1"
             shift # past value
             ;;
+        -j|--project-name)
+            shift # past argument
+            export PROJECT_NAME="$1"
+            shift # past value
+            ;;
         -s|--sas-docker-tag)
             shift # past argument
             export SAS_DOCKER_TAG="$1"
@@ -299,6 +309,7 @@ run_args="${run_args} --docker-registry-url ${DOCKER_REGISTRY_URL}"
 run_args="${run_args} --docker-namespace ${DOCKER_REGISTRY_NAMESPACE}"
 run_args="${run_args} --tag ${SAS_DOCKER_TAG}"
 run_args="${run_args} --base-image ${BASEIMAGE}:${BASETAG}"
+run_args="${run_args} --project-name ${PROJECT_NAME}"
 
 if [[ -n ${ADDONS} ]]; then
     ADDONS=${ADDONS## } # remove trailing space
@@ -335,6 +346,7 @@ echo "  BASETAG                         = ${BASETAG}"
 echo "  Mirror URL                      = ${SAS_RPM_REPO_URL}"
 echo "  Validate Mirror URL             = ${CHECK_MIRROR_URL}"
 echo "  Platform                        = ${PLATFORM}"
+echo "  Project Name                    = ${PROJECT_NAME}"
 echo "  Deployment Data Zip             = ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
 echo "  Addons                          = ${ADDONS## }"
 echo "  Docker registry URL             = ${DOCKER_REGISTRY_URL}"
