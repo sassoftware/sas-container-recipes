@@ -387,13 +387,22 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Allow for quick exit if only viewing the --version or --help
 	flag.Usage = func() {
-		fmt.Println(usage)
+		usageDocPath := "docs/usage.txt"
+		usage, err := ioutil.ReadFile(usageDocPath)
+		if err != nil {
+			fmt.Println("Unable to find usage file " + usageDocPath)
+		} else {
+			fmt.Println(string(usage))
+		}
 		os.Exit(0)
 	}
 	flag.Parse()
 	if *version == true {
 		fmt.Println("SAS Container Recipes v" + RecipeVersion)
 		os.Exit(0)
+	}
+	if len(os.Args) == 1 {
+		flag.Usage()
 	}
 
 	order.Verbose = *verbose
