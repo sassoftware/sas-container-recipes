@@ -59,8 +59,8 @@ const (
 	Pushed     State = 10 // Image has finished pushing to the provided registry
 )
 
-// DOCKER_API_VERSION is the minimum version of the API we support
-const DOCKER_API_VERSION = "1.37"
+// DockerAPIVersion is the minimum version of the API we support
+const DockerAPIVersion = "1.37"
 
 // Container defines the attributes for a single host
 type Container struct {
@@ -164,7 +164,7 @@ func (container *Container) GetTag() string {
 	}
 
 	return fmt.Sprintf("%s-%s",
-		strings.TrimSpace(RECIPE_VERSION),
+		strings.TrimSpace(RecipeVersion),
 		container.SoftwareOrder.TimestampTag)
 }
 
@@ -265,7 +265,7 @@ type File struct {
 // Prebuild performs all pre-build steps after the playbook has been parsed
 func (container *Container) Prebuild(progress chan string) error {
 	// Open an individual Docker client connection
-	dockerConnection, err := client.NewClientWithOpts(client.WithVersion(DOCKER_API_VERSION))
+	dockerConnection, err := client.NewClientWithOpts(client.WithVersion(DockerAPIVersion))
 	if err != nil {
 		debugMessage := "Unable to connect to Docker daemon. Ensure Docker is installed and the service is started. "
 		return errors.New(debugMessage + err.Error())
@@ -305,6 +305,8 @@ func (container *Container) Build(progress chan string) error {
 
 	// Set the payload to send to the Docker client
 	container.GetBuildArgs()
+	extraHosts := make([]string, 0)
+	extraHosts = append(extraHosts, "sas-container-recipes-builder:"+container.SoftwareOrder.BuilderIP)
 	buildOptions := types.ImageBuildOptions{
 		Context:     dockerBuildContext,
 		Tags:        []string{container.GetWholeImageName()},
@@ -312,6 +314,7 @@ func (container *Container) Build(progress chan string) error {
 		BuildArgs:   container.BuildArgs,
 		Remove:      true,
 		ForceRemove: true,
+		ExtraHosts:  extraHosts,
 	}
 
 	// Build the image and get the response
@@ -455,7 +458,7 @@ func (container *Container) CreateDockerfile() (string, error) {
 	}
 
 	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Name)
-	dockerfile += "\n" + fmt.Sprintf(dockerfileLabels, RECIPE_VERSION, container.Name, container.Name)
+	dockerfile += "\n" + fmt.Sprintf(dockerfileLabels, RecipeVersion, container.Name, container.Name)
 	return dockerfile, nil
 }
 
@@ -503,7 +506,11 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 			// Read the addon's Dockerfile and only grab the RUN, ADD, COPY, USER, lines
 			dockerfile += "\n# AddOn(s)"
 			dockerfile += "\n# " + addon + "\n"
-			dockerfile += "LABEL sas.recipe.addons." + addon + "=\"true\"\n"
+
+			// addonPath is a split out of the addon var, which includes the path to the addons.
+			addonName := filepath.Base(addon)
+
+			dockerfile += "LABEL sas.recipe.addons." + addonName + "=\"true\"\n"
 
 			bytes, _ := ioutil.ReadFile(addon + targetImage.Dockerfile)
 			lines := strings.Split(string(bytes), "\n")

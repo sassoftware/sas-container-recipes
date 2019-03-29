@@ -138,6 +138,21 @@ const usage = `
 
             example: --build-only "consul" or --build-only "consul httpproxy sas-casserver-primary"
 
+      --skip-mirror-url-validation
+          Skips validating the mirror URL from the --mirror-url flag.
+          default: false
+
+      --skip-docker-url-validation
+          Skip verifying the Docker registry URL.
+          default: false
+
+      --builder-port <integer>
+          Port to listen on and serve entitlement and CA certificates from. Serving certificates is required to avoid leaving sensitive order data in the layers.
+
+          WARNING: Changing this between builds will cause your layer cache to be busted.
+
+          default: 1976
+
       --version
           Print the SAS Container Recipes version and exit.
 
