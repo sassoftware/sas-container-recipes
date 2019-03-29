@@ -25,24 +25,18 @@ The following software and hardware requirements are for the machine that is use
 | --- | --- | --- | --- |
 | Docker | Community Edition or Enterprise Edition, Docker 17.06 or later | Community Edition or Enterprise Edition, Docker 17.06 or later | Community Edition or Enterprise Edition, Docker 17.06 or later |
 | Docker storage driver <sup>1</sup>  | overlay2 | overlay2 | overlay2 |
-| Operating system | Linux or Mac <sup>2</sup> | Linux or Mac <sup>2</sup> | Linux or Mac <sup>2</sup> |
-| Java | n/a | Java 1.8 | Java 1.8 | 
-| Ansible | n/a | Ansible 2.7.8+ | Ansible 2.7.8+ |
-| Docker registry | (Optional) Access to a Docker registry | Access to a Docker registry is required. <sup>3</sup> | Access to a Docker registry is required. <sup>3</sup> |  
-| Kubernetes |(Optional) Kubernetes 1.10 or later and kubectl installed | Kubernetes 1.10 or later and kubectl installed <sup>4</sup>| Kubernetes 1.10 or later and kubectl installed <sup>4</sup>| 
+| Operating system | Linux | Linux | Linux |
+| Docker registry | (Optional) Access to a Docker registry | Access to a Docker registry is required. <sup>2</sup> | Access to a Docker registry is required. <sup>2</sup> |  
 | Disk space | Approximately 15-20 GB of free disk space in the /var/lib/docker directory | Approximately 50 GB of free disk space in the /var/lib/docker directory | Approximately 50 GB of free disk space in the /var/lib/docker directory | 
-| Cores | Minimum 2 <sup>5</sup> | Minimum 2, Optimal 4 <sup>6</sup> | Minimum 2, Optimal 10 or more <sup>6</sup> | 
-| RAM | 8GB (minimum) |  8GB (minimum) | 8GB (minimum) |
+| Cores | Minimum 2 | Minimum 2, Optimal 4 <sup>3</sup> | Minimum 2, Optimal 10 or more <sup>3</sup> | 
+| RAM | 4 GB (minimum) |  4 GB (minimum) | 4 GB (minimum) |
 | Internet access| Required | Required | Required | 
 
 **Notes:**
 
 - <sup>1</sup> Use of overlay is not supported.
-- <sup>2</sup> Windows is not supported.
-- <sup>3</sup> The build process will push built Docker images automatically to the Docker registry. Before running build.sh, log on to docker.registry.company.com and make sure that the $HOME/.docker/config.json file is filled in correctly.
-- <sup>4</sup> Required for the deployment step but not required for the build step.
-- <sup>5</sup> If you plan to use a single machine to build and run a single image, refer to the core requirements in the Run Machine Requirements table below.
-- <sup>6</sup> The optimal build time occurs when the number of cores is equal to the amount of containers being built. A full deployment may have 10 or more containers. The number of containers varies based on your software order.
+- <sup>2</sup> The build process will push built Docker images automatically to the Docker registry. Before running build.sh, log on to docker.registry.company.com and make sure that the $HOME/.docker/config.json file is filled in correctly.
+- <sup>3</sup> The optimal build time occurs when the number of cores is equal to the amount of containers being built. A full deployment may have 10 or more containers. The number of containers varies based on your software order.
 
 ### Run Machine Requirements
 
