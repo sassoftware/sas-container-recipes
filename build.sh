@@ -1,4 +1,9 @@
 #!/bin/bash -e
+# 
+# build.sh
+# Creates a container to run the SAS Container Recipes tool.
+# Run `./build.sh --help` or see `docs/usage.txt` for details.
+#
 #
 # Copyright 2018 SAS Institute Inc.
 #
@@ -15,16 +20,21 @@
 # limitations under the License.
 #
 
-# How to have a script log against itself that supports Linux and MacOS
-# https://stackoverflow.com/questions/3173131/redirect-copy-of-stdout-to-log-file-from-within-bash-script-itself/5200754#5200754
-# For now, we will only log on a linux system. A MacOS system will skip the logging.
+# Allow running only `./build.sh` to show --help output
+function usage() {
+	cat docs/usage.txt
+}
+if [ $# -eq 0 ] ; then
+	usage
+	exit 0
+fi
 
+# Display logs only in Linux. 
+# Logging on MacOS is currently not supported. 
 set -e
-
 if [[ -n ${SAS_DEBUG} ]]; then
     set -x
 fi
-
 unameSystem="$(uname -s)"
 case "${unameSystem}" in
     Linux*)     OPERATING_SYSTEM=linux;;
@@ -32,8 +42,9 @@ case "${unameSystem}" in
     *)          echo "[WARN] : Unknown system: ${unameSystem}. Will assume Linux."
 esac
 
-function sas_container_recipes_shutdown()
-{
+
+
+function sas_container_recipes_shutdown() {
     echo
     echo "================================"
     echo "Shutting down SAS recipe process"
@@ -49,44 +60,17 @@ function sas_container_recipes_shutdown()
 
     exit 1
 }
-
-function usage() {
-	cat docs/usage.txt
-}
-
 trap sas_container_recipes_shutdown SIGTERM
 trap sas_container_recipes_shutdown SIGINT
 
-#
-# Set some defaults
-#
 
-sas_datetime=$(date "+%Y%m%d%H%M%S")
-SAS_RECIPE_VERSION=$(cat docs/VERSION)
-sas_sha1=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
-run_args=""
-
-[[ -z ${OPERATING_SYSTEM+x} ]]              && OPERATING_SYSTEM=linux
-[[ -z ${SAS_RECIPE_TYPE+x} ]]               && SAS_RECIPE_TYPE=single
-[[ -z ${BASEIMAGE+x} ]]                     && BASEIMAGE=centos
-[[ -z ${BASETAG+x} ]]                       && BASETAG=7
-[[ -z ${PLATFORM+x} ]]                      && PLATFORM=redhat
-[[ -z ${SAS_VIYA_CONTAINER+x} ]]            && SAS_VIYA_CONTAINER="viya-single-container"
-[[ -z ${SAS_RPM_REPO_URL+x} ]]              && SAS_RPM_REPO_URL=https://ses.sas.download/ses/
-[[ -z ${PROJECT_NAME+x} ]]                  && PROJECT_NAME=sas-viya
-[[ -z ${SAS_VIYA_DEPLOYMENT_DATA_ZIP+x} ]]  && SAS_VIYA_DEPLOYMENT_DATA_ZIP="SAS_Viya_deployment_data.zip"
-[[ -z ${SAS_DOCKER_TAG+x} ]]                && SAS_DOCKER_TAG=${SAS_RECIPE_VERSION}-${sas_datetime}-${sas_sha1}
-
-CHECK_DOCKER_URL=true
-CHECK_MIRROR_URL=true
-# Use command line options if they have been provided. This overrides environment settings,
+# Parse command arguments and flags
 while [[ $# -gt 0 ]]; do
     key="$1"
     case ${key} in
         -h|--help)
             shift
             usage
-            echo
             exit 0
             ;;
         -i|--baseimage)
@@ -163,18 +147,47 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-run_args="${run_args} --mirror-url ${SAS_RPM_REPO_URL}"
-run_args="${run_args} --zip /$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP})"
-run_args="${run_args} --type ${SAS_RECIPE_TYPE}"
-run_args="${run_args} --docker-registry-url ${DOCKER_REGISTRY_URL}"
-run_args="${run_args} --docker-namespace ${DOCKER_REGISTRY_NAMESPACE}"
-run_args="${run_args} --tag ${SAS_DOCKER_TAG}"
-run_args="${run_args} --base-image ${BASEIMAGE}:${BASETAG}"
+# Set some defaults
+SAS_BUILD_CONTAINER_NAME="sas-container-recipes-builder-${SAS_DOCKER_TAG}"
+SAS_BUILD_CONTAINER_TAG=${sas_recipe_version}-${datetime}-${git_sha}
+CHECK_DOCKER_URL=true
+CHECK_MIRROR_URL=true
+datetime=$(date "+%Y%m%d%H%M%S")
+sas_recipe_version=$(cat docs/VERSION)
+git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
+
+# Pass each argument if it exists. Allow the sas-container-recipes binary to catch any missing
+# arguments that are required and fill in the default values of those that are not provided.
+run_args=""
+if [[ -n ${SAS_RPM_REPO_URL} ]]; then
+	run_args="${run_args} --mirror-url ${SAS_RPM_REPO_URL}"
+fi
+
+if [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
+	run_args="${run_args} --zip /$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP})"
+fi
+
+if [[ -n ${SAS_RECIPE_TYPE} ]]; then
+	run_args="${run_args} --type ${SAS_RECIPE_TYPE}"
+fi
+
+if [[ -n ${DOCKER_REGISTRY_URL} ]]; then
+	run_args="${run_args} --docker-registry-url ${DOCKER_REGISTRY_URL}"
+fi
+
+if [[ -n ${DOCKER_REGISTRY_NAMESPACE} ]]; then
+	run_args="${run_args} --docker-namespace ${DOCKER_REGISTRY_NAMESPACE}"
+fi 
+
+if [[ -n ${SAS_DOCKER_TAG} ]]; then
+	run_args="${run_args} --tag ${SAS_DOCKER_TAG}"
+fi 
+
+if [[ -n ${BASEIMAGE} ]]; then
+	run_args="${run_args} --base-image ${BASEIMAGE}:${BASETAG}"
+fi
 
 if [[ -n ${ADDONS} ]]; then
-    ADDONS=${ADDONS## } # remove trailing space
-    ADDONS=${ADDONS//  /} # replace multiple spaces with a single space
-    ADDONS=${ADDONS// /,} # replace spaces with a comma
     run_args="${run_args} --addons ${ADDONS}"
 fi
 
@@ -194,9 +207,6 @@ if [[ -n ${BUILDER_PORT} ]]; then
     run_args="${run_args} --builder-port ${BUILDER_PORT}"
 fi
 
-#
-# Run
-#
 
 echo
 echo "=============="
@@ -220,32 +230,29 @@ echo "  Tag SAS will apply              = ${SAS_DOCKER_TAG}"
 echo "  Build run args                  = ${run_args## }"
 echo
 
-SAS_BUILD_CONTAINER_NAME="sas-container-recipes-builder-${SAS_DOCKER_TAG}"
+
 echo
 echo "==============================="
 echo "Building Docker Build Container"
 echo "==============================="
 echo
-
-mkdir -p ${PWD}/builds
-
 DOCKER_GID=$(getent group docker|awk -F: '{print $3}')
 USER_GID=$(id -g)
-
-docker build  \
+mkdir -p ${PWD}/builds
+docker build . \
     --label sas.recipe=true \
     --label sas.recipe.builder.version=${SAS_DOCKER_TAG} \
     --build-arg USER_UID=${UID} \
     --build-arg DOCKER_GID=${DOCKER_GID} \
     --tag sas-container-recipes-builder:${SAS_DOCKER_TAG} \
     --file Dockerfile \
-    .
+
+
 echo
 echo "=============================="
 echo "Running Docker Build Container"
 echo "=============================="
 echo
-
 docker run -d \
     --name ${SAS_BUILD_CONTAINER_NAME} \
     -u ${UID}:${DOCKER_GID} \
@@ -257,8 +264,8 @@ docker run -d \
 
 docker logs -f ${SAS_BUILD_CONTAINER_NAME}
 
-# find exit status
-build_container_exit_status=$(docker inspect ${SAS_BUILD_CONTAINER_NAME} --format='{{.State.ExitCode}}')
 
+# Clean up and exit
+build_container_exit_status=$(docker inspect ${SAS_BUILD_CONTAINER_NAME} --format='{{.State.ExitCode}}')
 docker rm ${SAS_BUILD_CONTAINER_NAME}
 exit ${build_container_exit_status}
