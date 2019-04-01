@@ -219,6 +219,10 @@ func (container *Container) GetConfig() error {
 				container.SoftwareOrder.CA))
 			targetConfig.Environment[index] = "SAS_CA_CERT=" + encodedCA
 		}
+		if strings.Contains(strings.ToLower(environment), "consul_key_value_data_enc=") {
+			encodedSitedefault := string(base64.StdEncoding.EncodeToString(container.SoftwareOrder.SiteDefault))
+			targetConfig.Environment[index] = "CONSUL_KEY_VALUE_DATA_ENC=" + encodedSitedefault
+		}
 	}
 
 	// --- ADD DEFAULT VALUES  ---
