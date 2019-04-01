@@ -128,7 +128,7 @@ type SoftwareOrder struct {
 	License        []byte
 	MeteredLicense []byte
 
-	SiteDefault    []byte
+	SiteDefault []byte
 }
 
 // Registry is ror reading ~/.docker/config.json
@@ -378,13 +378,12 @@ func (order *SoftwareOrder) LoadCommands() error {
 	mirrorURL := flag.String("mirror-url", "", "")
 	verbose := flag.Bool("verbose", false, "")
 	buildOnly := flag.String("build-only", "", "")
-	tagOverride := flag.String("tag", RECIPE_VERSION+"-"+order.TimestampTag, "")
+	tagOverride := flag.String("tag", RecipeVersion+"-"+order.TimestampTag, "")
 	projectName := flag.String("project-name", "sas-viya", "")
 	deploymentType := flag.String("type", "single", "")
 	version := flag.Bool("version", false, "")
 	skipMirrorValidation := flag.Bool("skip-mirror-url-validation", false, "")
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
-	tagOverride := flag.String("tag", RecipeVersion+"-"+order.TimestampTag, "")
 	builderPort := flag.String("builder-port", "1976", "")
 
 	// By default detect the cpu core count and utilize all of them
