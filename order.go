@@ -169,7 +169,11 @@ type ConfigMap struct {
 func NewSoftwareOrder() (*SoftwareOrder, error) {
 	order := &SoftwareOrder{}
 	order.StartTime = time.Now()
+
 	order.TimestampTag = string(order.StartTime.Format("2006-01-02-15-04-05"))
+	if len(order.TagOverride) > 0 {
+		order.TimestampTag = order.TagOverride
+	}
 
 	if err := order.LoadCommands(); err != nil {
 		return order, err
@@ -474,7 +478,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Detect the platform based on the image
 	order.BaseImage = *baseImage
-	if strings.Contains(order.BaseImage, "opensuse") {
+	if strings.Contains(order.BaseImage, "suse") {
 		order.Platform = "suse"
 	} else {
 		// By default use rpm + yum
@@ -495,7 +499,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Optional: override the "sas-viya-" prefix in image names and in the deployment
 	order.ProjectName = *projectName
-	if len(order.ProjectName) > 0 && !regexNoSpecialCharacters.Match([]byte(order.TagOverride)) {
+	if len(order.ProjectName) > 0 && !regexNoSpecialCharacters.Match([]byte(order.ProjectName)) {
 		return errors.New("The --project-name argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
 	}
 

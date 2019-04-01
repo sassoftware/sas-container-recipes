@@ -404,7 +404,7 @@ RUN if [ "$PLATFORM" = "redhat" ]; then \
 		echo -e "minrate=1" >> /etc/yum.conf; \
 		echo -e "timeout=300" >> /etc/yum.conf; \
     elif [ "$PLATFORM" = "suse" ]; then \
-        zypper install --no-confirm ansible && rm -rf /var/cache/zypp; \
+        zypper install --no-confirm ansible curl && rm -rf /var/cache/zypp; \
 	else \
 		echo -e "Platform $PLATFORM not supported"; \
 		exit 1; \
