@@ -940,7 +940,6 @@ func (order *SoftwareOrder) TestMirror(progress chan string, fail chan string, d
 		if err != nil {
 			fail <- err.Error()
 		}
-		defer response.Body.Close()
 		if response.StatusCode != 200 {
 			fail <- "Invalid mirror URL " + err.Error()
 		}
