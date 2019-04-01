@@ -127,6 +127,8 @@ type SoftwareOrder struct {
 	Entitlement    []byte
 	License        []byte
 	MeteredLicense []byte
+
+	SiteDefault    []byte
 }
 
 // Registry is ror reading ~/.docker/config.json
@@ -231,6 +233,9 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 
 	workerCount++
 	go order.LoadRegistryAuth(fail, done)
+
+	workerCount++
+	go order.LoadSiteDefault(progress, fail, done)
 
 	if !order.SkipDockerValidation {
 		workerCount++
@@ -901,6 +906,23 @@ func (order *SoftwareOrder) LoadDocker(progress chan string, fail chan string, d
 	done <- 1
 }
 
+// LoadSiteDefault will load the user provided sitedefault.yml file if available.
+func (order *SoftwareOrder) LoadSiteDefault(progress chan string, fail chan string, done chan int) {
+	progress <- "Reading sitedefault.yml ..."
+
+	// If the user provided a sitedefault.yml file copy it over or copy the default version
+	if _, err := os.Stat("sitedefault.yml"); !os.IsNotExist(err) {
+		order.SiteDefault, err = ioutil.ReadFile("sitedefault.yml")
+		if err != nil {
+			fail <- "Unable to open sitedefault.yml:" + err.Error()
+		}
+		progress <- "Finished loading sitedefault.yml"
+	} else {
+		progress <- "Skipping loading sitedefault.yml"
+	}
+	done <- 1
+}
+
 // TestMirror runs a simple curl on the mirror URL to see if it's accessible.
 // This is a preliminary check so an error is less likely to occur once the build starts
 //
@@ -1146,6 +1168,8 @@ func (order *SoftwareOrder) Prepare() error {
 // GenerateManifests runs the generate_manifests playbook to output Kubernetes configs
 func (order *SoftwareOrder) GenerateManifests() error {
 
+	order.WriteLog(true, "Creating deployment manifests ...")
+
 	// Write a vars file to disk so it can be used by the playbook
 	containerVarSections := []string{}
 	for _, container := range order.Containers {
@@ -1308,19 +1332,6 @@ settings:
 		return err
 	}
 
-	// If the user provided a sitedefault.yml file copy it over or copy the default version
-	if _, err := os.Stat("sitedefault.yml"); !os.IsNotExist(err) {
-		input, err := ioutil.ReadFile("sitedefault.yml")
-		if err != nil {
-			return err
-		}
-
-		err = ioutil.WriteFile(order.BuildPath+"sitedefault.yml", input, 0644)
-		if err != nil {
-			return err
-		}
-	}
-
 	varsDestPath := fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath)
 	// If the user provided a vars_usremods.yml file copy it over or copy the default version
 	if _, err := os.Stat("vars_usermods.yml"); os.IsNotExist(err) {
@@ -1354,6 +1365,9 @@ settings:
 		result += fmt.Sprintf("To debug use `cd %s ; ansible-playbook generate_manifests.yml`\n", order.BuildPath)
 		return errors.New(result)
 	}
+
+	order.WriteLog(true, "Finished creating deployment manifests\n")
+
 	return nil
 }
 
