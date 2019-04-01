@@ -43,7 +43,6 @@ case "${unameSystem}" in
 esac
 
 
-
 function sas_container_recipes_shutdown() {
     echo
     echo "================================"
@@ -73,12 +72,12 @@ while [[ $# -gt 0 ]]; do
             usage
             exit 0
             ;;
-        -i|--baseimage)
+        -i|--base-image)
             shift # past argument
             BASEIMAGE="$1"
             shift # past value
             ;;
-        -t|--basetag)
+        -t|--base-tag)
             shift # past argument
             BASETAG="$1"
             shift # past value
@@ -151,7 +150,7 @@ done
 SAS_BUILD_CONTAINER_NAME="sas-container-recipes-builder-${SAS_DOCKER_TAG}"
 SAS_BUILD_CONTAINER_TAG=${sas_recipe_version}-${datetime}-${git_sha}
 CHECK_DOCKER_URL=true
-CHECK_MIRROR_URL=true
+CHECK_MIRROR_URL=false
 datetime=$(date "+%Y%m%d%H%M%S")
 sas_recipe_version=$(cat docs/VERSION)
 git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
