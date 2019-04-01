@@ -70,12 +70,13 @@ type SoftwareOrder struct {
 	DockerRegistry       string
 	DeploymentType       string
 	PlaybookPath         string
+	Platform             string
+	ProjectName          string
+	TagOverride          string
 	AddOns               []string
 	DebugContainers      []string
-	Platform             string
 	WorkerCount          int
 	Verbose              bool
-	TagOverride          string
 	SkipMirrorValidation bool
 	SkipDockerValidation bool
 
@@ -357,6 +358,9 @@ func (order *SoftwareOrder) GetIntermediateStatus(progress chan string) {
 
 // LoadCommands recieves flags and arguments, parse them, and load them into the order
 func (order *SoftwareOrder) LoadCommands() error {
+	// Standard format that arguments must comply with
+	regexNoSpecialCharacters := regexp.MustCompile("^[_A-z0-9]*([_A-z0-9\\-\\.]*)$")
+
 	// Required arguments
 	license := flag.String("zip", "", "")
 	dockerNamespace := flag.String("docker-namespace", "", "")
@@ -369,8 +373,10 @@ func (order *SoftwareOrder) LoadCommands() error {
 	mirrorURL := flag.String("mirror-url", "", "")
 	verbose := flag.Bool("verbose", false, "")
 	buildOnly := flag.String("build-only", "", "")
-	version := flag.Bool("version", false, "")
+	tagOverride := flag.String("tag", RECIPE_VERSION+"-"+order.TimestampTag, "")
+	projectName := flag.String("project-name", "sas-viya", "")
 	deploymentType := flag.String("type", "single", "")
+	version := flag.Bool("version", false, "")
 	skipMirrorValidation := flag.Bool("skip-mirror-url-validation", false, "")
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
 	tagOverride := flag.String("tag", RecipeVersion+"-"+order.TimestampTag, "")
@@ -479,9 +485,14 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Optional: override the standard tag format
 	order.TagOverride = *tagOverride
-	validTagRegex := regexp.MustCompile("^[_A-z0-9]*([_A-z0-9\\-\\.]*)$")
-	if len(order.TagOverride) > 0 && !validTagRegex.Match([]byte(order.TagOverride)) {
-		return errors.New("the --tag argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
+	if len(order.TagOverride) > 0 && !regexNoSpecialCharacters.Match([]byte(order.TagOverride)) {
+		return errors.New("The --tag argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
+	}
+
+	// Optional: override the "sas-viya-" prefix in image names and in the deployment
+	order.ProjectName = *projectName
+	if len(order.ProjectName) > 0 && !regexNoSpecialCharacters.Match([]byte(order.TagOverride)) {
+		return errors.New("The --project-name argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
 	}
 
 	// The next arguments do not apply to the single deployment type
@@ -495,8 +506,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 		return err
 	}
 	order.DockerNamespace = *dockerNamespace
-	validNamespaceRegex := regexp.MustCompile("^[_A-z0-9]*((-|s)*[_A-z0-9])*$")
-	if !validNamespaceRegex.Match([]byte(order.DockerNamespace)) {
+	if !regexNoSpecialCharacters.Match([]byte(order.DockerNamespace)) {
 		return errors.New("The --docker-namespace argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
 	}
 
@@ -1226,7 +1236,7 @@ func (order *SoftwareOrder) GenerateManifests() error {
 	// Put together the final vars file
 	// TODO: clean this up
 	vars := fmt.Sprintf(`
-PROJECT_NAME: sas-viya
+PROJECT_NAME: %s
 SECURE_CONSUL: false
 TLS_ENABLED: false
 SAS_K8S_NAMESPACE: sas-viya
@@ -1239,7 +1249,7 @@ orchestration_root: /ansible/roles/
 METAREPO_CERT_DIR: /ansible
 SAS_CONFIG_ROOT: /opt/sas/viya/home/
 `,
-		order.TagOverride)
+		order.ProjectName, order.TagOverride)
 
 	// Write a temp file
 	varsDeploymentFilePath := order.BuildPath + "vars_deployment.yml"
@@ -1251,11 +1261,12 @@ SAS_CONFIG_ROOT: /opt/sas/viya/home/
 	serviceSettings := fmt.Sprintf(`
 settings:
   base: %s
-  project_name: sas-viya
+  project_name: %s
   k8s_namespace:
     name: %s
 `,
 		order.BaseImage,
+		order.ProjectName,
 		order.DockerNamespace)
 
 	serviceSettings += "services:\n"
