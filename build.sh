@@ -152,13 +152,14 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Set some defaults
+CHECK_DOCKER_URL=true
+CHECK_MIRROR_URL=false
 git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
 datetime=$(date "+%Y%m%d%H%M%S")
 sas_recipe_version=$(cat docs/VERSION)
-SAS_BUILD_CONTAINER_NAME="sas-container-recipes-builder"
+[[ -z ${SAS_DOCKER_TAG+x} ]] && SAS_DOCKER_TAG=${sas_recipe_version}-${datetime}-${git_sha}
+SAS_BUILD_CONTAINER_NAME="sas-container-recipes-builder-${SAS_DOCKER_TAG}"
 SAS_BUILD_CONTAINER_TAG=${sas_recipe_version}-${datetime}-${git_sha}
-CHECK_DOCKER_URL=true
-CHECK_MIRROR_URL=false
 
 # Pass each argument if it exists. Allow the sas-container-recipes binary to catch any missing
 # arguments that are required and fill in the default values of those that are not provided.
@@ -184,7 +185,6 @@ if [[ -n ${DOCKER_REGISTRY_NAMESPACE} ]]; then
 fi 
 
 if [[ -n ${SAS_DOCKER_TAG} ]]; then
-	SAS_BUILD_CONTAINER_NAME="sas-container-recipes-builder-${SAS_DOCKER_TAG}"
 	run_args="${run_args} --tag ${SAS_DOCKER_TAG}"
 fi 
 
