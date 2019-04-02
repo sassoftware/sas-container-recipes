@@ -152,13 +152,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Set some defaults
-SAS_BUILD_CONTAINER_NAME="sas-container-recipes-builder-${SAS_DOCKER_TAG}"
+git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
+datetime=$(date "+%Y%m%d%H%M%S")
+sas_recipe_version=$(cat docs/VERSION)
+SAS_BUILD_CONTAINER_NAME="sas-container-recipes-builder"
 SAS_BUILD_CONTAINER_TAG=${sas_recipe_version}-${datetime}-${git_sha}
 CHECK_DOCKER_URL=true
 CHECK_MIRROR_URL=false
-datetime=$(date "+%Y%m%d%H%M%S")
-sas_recipe_version=$(cat docs/VERSION)
-git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
 
 # Pass each argument if it exists. Allow the sas-container-recipes binary to catch any missing
 # arguments that are required and fill in the default values of those that are not provided.
@@ -184,6 +184,7 @@ if [[ -n ${DOCKER_REGISTRY_NAMESPACE} ]]; then
 fi 
 
 if [[ -n ${SAS_DOCKER_TAG} ]]; then
+	SAS_BUILD_CONTAINER_NAME="sas-container-recipes-builder-${SAS_DOCKER_TAG}"
 	run_args="${run_args} --tag ${SAS_DOCKER_TAG}"
 fi 
 
@@ -192,7 +193,10 @@ if [[ -n ${BASEIMAGE} ]]; then
 fi
 
 if [[ -n ${ADDONS} ]]; then
-    run_args="${run_args} --addons ${ADDONS}"
+	ADDONS=${ADDONS## } # remove trailing space
+	ADDONS=${ADDONS//  /} # replace multiple spaces with a single space
+	ADDONS=${ADDONS// /,} # replace spaces with a comma
+	run_args="${run_args} --addons ${ADDONS}"
 fi
 
 if [[ -n ${CAS_VIRTUAL_HOST} ]]; then
