@@ -72,12 +72,12 @@ while [[ $# -gt 0 ]]; do
             usage
             exit 0
             ;;
-        -i|--base-image)
+        -i|--baseimage)
             shift # past argument
             BASEIMAGE="$1"
             shift # past value
             ;;
-        -t|--base-tag)
+        -t|--basetag)
             shift # past argument
             BASETAG="$1"
             shift # past value
