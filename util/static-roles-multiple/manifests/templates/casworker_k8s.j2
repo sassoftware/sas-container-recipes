@@ -5,8 +5,8 @@ metadata:
 spec:
 {% if custom_services is defined and custom_services %}
 {%   for key,value in custom_services.items() %}
-{%     if key == item.key and value.environment is defined and value.environment %}
-{%       for override in value.environment %}
+{%     if key == item.key and value.deployment_overrides.environment is defined and value.deployment_overrides.environment %}
+{%       for override in value.deployment_overrides.environment %}
 {%         if 'CASCFG_MODE=mpp' in override %}
   replicas: 3
 {%         endif %}
@@ -114,7 +114,7 @@ spec:
 {%   for vol_key,vol_value in custom_volumes.items() %}
 {%     if vol_key == item.key %}
       {{ vol_value | indent(6) }}
-{%-    endif %}
+{%    endif %}
 {%   endfor %}
 {% endif %}
 ...

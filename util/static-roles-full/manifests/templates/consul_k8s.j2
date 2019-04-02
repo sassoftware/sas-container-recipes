@@ -128,7 +128,7 @@ spec:
 {%   for vol_key,vol_value in custom_volumes.items() %}
 {%     if vol_key == item.key %}
       {{ vol_value | indent(6) }}
-{%-    endif %}
+{%    endif %}
 {%   endfor %}
 {% endif %}
       # Needed for TLS configurations
