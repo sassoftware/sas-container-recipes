@@ -1,3 +1,5 @@
+# Creates an environment for running the SAS Container Recipes tool.
+# This Dockerfile is built and run by the `build.sh` script.
 FROM golang:1.12.0
 
 ARG USER_UID=1000
