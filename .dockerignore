@@ -1,0 +1,7 @@
+*.zip
+builds
+build.sh
+logs
+util/sas-orchestration
+.git
+*.swp

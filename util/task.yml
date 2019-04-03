@@ -1,0 +1,38 @@
+---
+# tasks file for SAS Viya service
+
+- name: Load the {{ role_name }} variables
+  include_vars:
+    file: "{{ role_name }}"
+    name: sas_host_group_variables
+
+- name: Install SAS packages
+  include_role:
+    name: sas-install
+
+- name: Copy over entrypoint script
+  template:
+    src: entrypoint
+    dest: "{{ SASHOME }}/bin/{{ role_name|lower }}-entrypoint.sh"
+    mode: "0755"
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+
+- name: Fix path for temp directory
+  shell: |
+    if [[ -f /etc/init.d/sas-{{ DEPLOYMENT_ID }}-datamining-{{ INSTANCE_ID }} ]]; then
+        mkdir {{ SAS_CONFIG_ROOT }}/tmp/sas-datamining
+        chown {{ INSTALL_USER }}:{{ INSTALL_GROUP }} {{ SAS_CONFIG_ROOT }}/tmp/sas-datamining
+    fi
+    if [[ -f /etc/init.d/sas-{{ DEPLOYMENT_ID }}-decisionmanager-{{ INSTANCE_ID }} ]]; then
+        mkdir {{ SAS_CONFIG_ROOT }}/tmp/sas-decisionmanager
+        chown {{ INSTALL_USER }}:{{ INSTALL_GROUP }} {{ SAS_CONFIG_ROOT }}/tmp/sas-decisionmanager
+    fi
+    if [[ -f /etc/init.d/sas-{{ DEPLOYMENT_ID }}-modelmanager-{{ INSTANCE_ID }} ]]; then
+        mkdir {{ SAS_CONFIG_ROOT }}/tmp/sas-modelmanager
+        chown {{ INSTALL_USER }}:{{ INSTALL_GROUP }} {{ SAS_CONFIG_ROOT }}/tmp/sas-modelmanager
+    fi
+    if [[ -f /etc/init.d/sas-{{ DEPLOYMENT_ID }}-workflowmanager-{{ INSTANCE_ID }} ]]; then
+        mkdir {{ SAS_CONFIG_ROOT }}/tmp/sas-workflowmanager
+        chown {{ INSTALL_USER }}:{{ INSTALL_GROUP }} {{ SAS_CONFIG_ROOT }}/tmp/sas-workflowmanager
+    fi

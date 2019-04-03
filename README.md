@@ -12,9 +12,6 @@
 <a href="https://kubernetes.io/">
     <img src="https://img.shields.io/badge/Kubernetes-1.0+-blue.svg?&style=for-the-badge&colorA=0b5788"
         alt="Kubernetes Version"></a>
-<a href="https://github.com/ansible/ansible-container" alt="Ansible Container">
-    <img src="https://img.shields.io/badge/Ansible%20Container-0.9+-lightgrey.svg?&style=for-the-badge" 
-        alt="Ansible Container Version"/></a>
 </div>
 
 <br>
@@ -39,9 +36,9 @@ or get [SAS License Assistance](https://support.sas.com/en/technical-support/lic
 If you have not purchased SAS Software but would like to give it a try, 
 please check out our [Free Software Trials](https://www.sas.com/en_us/trials.html).
     
-2. Download the latest <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes Releases">
-        <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&" alt="Latest Release"/></a> 
-or `git clone git@github.com:sassoftware/sas-container-recipes.git`
+2. Download the latest `sas-container-recipes` binary and download then un-archive the latest code archive (zip or tgz) <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes Releases">
+        <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&" alt="Latest Release"/></a>.
+If you would like to compile the binary yourself then see (CONTRIBUTING.md)[https://github.com/sassoftware/sas-container-recipes/blob/master/CONTRIBUTING.md] file for instructions.
 
 3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
@@ -73,7 +70,7 @@ Run the following to create a user 'sasdemo' with the password 'sasdemo' for pro
 A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
 is recommended for all build commands.
 ```
- ./build.sh --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
+ ./sas-container-recipes --type single --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
 ```                         
 
 ### Run the Container
@@ -117,20 +114,19 @@ your users with the features that they require.
 ### Prerequisites
 
 - A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux or Mac must be installed on the build machine
-- Python2 with python-pip2 and virtualenv or Python3 and python-pip3 must be installed on the build machine
 - `java-1.8.0-openjdk` or another Java Runtime Environment (1.8.x) must be installed on the build machine
-- **Access to a Docker registry:** The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
-- Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed: required for the run step but not required for the build step.
+- `ansible` must be installed on the build machine
+- **Access to a Docker registry:** The build process will push built Docker images automatically to the Docker registry. Before running `sas-container-recipes` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
+- Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed: required for the deployment step but not required for the build step.
 - **Strongly recommended:** A local mirror of the SAS software. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
 
-### Build Examples
-
-Examples of running `build.sh` to build multiple containers are provided below. A non-root user is recommended for all build commands.
+### How to Build
+Examples of running sas-container-recipes to build multiple containers are provided below. A non-root user is recommended for all build commands.
 
 **Example: Programming-Only Deployment, Mulitple Containers**
 
 ```    
-  ./build.sh \
+  ./sas-container-recipes \
   --type multiple \
   --zip /path/to/SAS_Viya_deployment_data.zip \
   --docker-registry-namespace myuniquename \
@@ -142,7 +138,7 @@ Examples of running `build.sh` to build multiple containers are provided below. 
 **Example: Full Deployment, Multiple Containers**
 
 ```
-  ./build.sh \
+  ./sas-container-recipes \
   --type full \
   --zip /path/to/SAS_Viya_deployment_data.zip \
   --docker-registry-namespace myuniquename \
@@ -151,15 +147,17 @@ Examples of running `build.sh` to build multiple containers are provided below. 
   --addons "addons/auth-sssd"
 ```
 
-**build.sh Arguments**
+**sas-container-recipes Arguments**
 
 ```
 # Required Arguments
 
-  --type [multiple | full]
+  --type [multiple | full | single]
     sets the deployment type.
+
+    single  : SAS Viya programming-only container started with a `docker run` command
     multiple: SAS Viya programming-only deployment, multiple containers using Kubernetes
-    full: SAS Viya full deployment, multiple containers using Kubernetes.
+    full    : SAS Viya full deployment, multiple containers using Kubernetes.
 
   --zip <value>
     specifies the path to the SAS_Viya_deployment_data.zip file, which is from your Software Order Email (SOE).
@@ -189,33 +187,22 @@ Examples of running `build.sh` to build multiple containers are provided below. 
     https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
     Example: --addons \"addons/auth-sssd addons/access-postgres\"
 
-  --baseimage <value>
-    specifies the Docker image from which the SAS images will build on top of
-    Default: centos
+  --workers <integer>
+    Specify the number of CPU cores to allocate for the build process.
+    default: Utilize all cores on the build machine
 
-  --basetag <value>
-    specifies the Docker tag for the base image that is being used.
-    Default: latest
+  --base-image <value>
+    specifies the Docker image and version from which the SAS images will build on top of
+    Default: centos:7
 
   --mirror-url <value>
     specifies the location of the mirror URL. See the Mirror Manager guide at
     https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
-  --platform <value>
-    specifies the type of distribution of the image defined by the \"baseimage\" option.
-    Options: [ redhat ]
-    Default: redhat
-
-  --skip-docker-url-validation
-    skips validating the Docker registry URL.
-
-  --skip-mirror-url-validation
-    skips validating the mirror URL from the --mirror-url flag.
-
-  --sas-docker-tag
+  --tag
     specifies the tag to apply to the images before pushing to the Docker registry.
-    Default: ${recipe_project_version}-${datetime}-${last_commit_sha1}
-    Example: 18.12.0-20181209115304-b197206
+    Default: <recipe_version> - <date> - <time>
+    Example: 19.0.4-2019-03-18-09-49-38
 ```
 
 ### Running Multiple Containers

@@ -22,28 +22,21 @@ The software and hardware requirements for one or more machines (infrastructure)
 The following software and hardware requirements are for the machine that is used to build single or multiple SAS Viya images.
 
 | **Software and Hardware** | **Build a Single Image** | **Build Multiple Images** |
-| --- | --- | --- | 
+| --- | --- | --- |
 | Docker | Community Edition or Enterprise Edition, Docker 17.06 or later | Community Edition or Enterprise Edition, Docker 17.06 or later |
-| Docker storage driver <sup>1</sup>  | overlay2 | overlay2 | 
-| Operating system | Any type of Linux operating system or Mac <sup>2</sup> | Any type of Linux operating system or Mac. <sup>2</sup> |
-| Java | n/a | Java 1.8 | 
-| Python | n/a | Python 2.7 or Python 3.5|
-| pip and virtualenv | n/a | Both pip and virtualenv are required. <sup>3</sup> |
-| Docker registry | (Optional) Access to a Docker registry | Access to a Docker registry is required. <sup>4</sup> | 
-| Kubernetes |(Optional) Kubernetes 1.10 or later and kubectl installed | Kubernetes 1.10 or later and kubectl installed <sup>5</sup>| 
+| Docker storage driver <sup>1</sup>  | overlay2 | overlay2 |
+| Operating system | Linux | Linux |
+| Docker registry | (Optional) Access to a Docker registry | Access to a Docker registry is required. <sup>2</sup> |  
 | Disk space | Approximately 15-20 GB of free disk space in the /var/lib/docker directory | Approximately 50 GB of free disk space in the /var/lib/docker directory | 
-| Cores | 2 (minimum) <sup>6</sup> | 2 (minimum)  | 
-| RAM | 8GB (minimum) |  8GB (minimum) | 
-| Internet access| Required | Required |
+| Cores | Minimum 2 | **Programming-only deployment:** Minimum 2, Optimal 4 <sup>3</sup> <br> **Full deployment:** Minimum 2, Optimal 10 or more <sup>3</sup>| 
+| RAM | 4 GB (minimum) |  4 GB (minimum) |
+| Internet access| Required | Required | 
 
 **Notes:**
 
 - <sup>1</sup> Use of overlay is not supported.
-- <sup>2</sup> Windows is not supported.
-- <sup>3</sup> Python2 with python-pip2 and virtualenv, or Python3 and python-pip3.
-- <sup>4</sup> The build process will push built Docker images automatically to the Docker registry. Before running build.sh, log on to docker.registry.company.com and make sure that the $HOME/.docker/config.json file is filled in correctly.
-- <sup>5</sup> Required for the deployment step but not required for the build step.
-- <sup>6</sup> If you plan to use a single machine to build and run a single image, refer to the core requirements in the Run Machine Requirements table below.
+- <sup>2</sup> The build process will push built Docker images automatically to the Docker registry. Before running build.sh, log on to docker.registry.company.com and make sure that the $HOME/.docker/config.json file is filled in correctly.
+- <sup>3</sup> The optimal build time occurs when the number of cores is equal to the number of containers that are being built. The number of containers varies based on your software order.
 
 ### Run Machine Requirements
 

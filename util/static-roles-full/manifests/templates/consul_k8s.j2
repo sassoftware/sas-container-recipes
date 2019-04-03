@@ -1,0 +1,152 @@
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: {{ settings.project_name }}-{{ item.key }}
+spec:
+  serviceName: "{{ settings.project_name }}-{{ item.key }}"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ settings.project_name }}-{{ item.key }}
+        domain: {{ settings.project_name }}
+    spec:
+{% if SECURE_CONSUL %}
+      serviceAccountName: {{ settings.project_name }}-account
+{% else %}
+      # Required for TLS configurations
+      #serviceAccountName: {{ settings.project_name }}-account
+{% endif %}
+      subdomain: {{ settings.project_name }}-subdomain
+      containers:
+      - name: {{ settings.project_name }}-{{ item.key }}
+{% for regkey,regvalue in registries.items() %}
+        image: {{ regvalue.url }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
+{% endfor %}
+        imagePullPolicy: Always
+{% if item.value.ports is defined and item.value.ports %}
+        ports:
+{%   for ports in item.value.ports %}
+        - containerPort: {{ ports.split(':')[0] }}
+{%   endfor %}
+{% endif %}
+        env:
+        - name: DEPLOYMENT_NAME
+          value: "{{ settings.project_name }}"
+        - name: CACERTS_CONFIGMAP
+          value: "{{ settings.project_name }}-cacerts-configmap"
+        - name: VAULT_TOKENS_CONFIGMAP
+          value: consul-tokens-configmap
+        - name: VAULT_SERVICES_CONFIGMAP
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: vault_services_configmap
+        - name: SASSERVICES_CONFIGMAP
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: sas_services_configmap
+        - name: CONSUL_HTTP_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: consul_http_addr
+        - name: SAS_ANCHORS_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: sas_anchors_dir
+        - name: VAULT_TOKEN_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-consul
+              key: vault_token_dir
+        - name: CONSUL_SERVICE_NAME
+          value: {{ settings.project_name }}-{{ item.key }}
+{% if item.value.environment is defined and item.value.environment %}
+{%   for environment in item.value.environment %}
+        - name: {{ environment.split('=')[0] }}
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-{{ item.key }}
+              key: {{ environment.split('=')[0] | lower }}
+{%   endfor %}
+{% endif %}
+{% for secrets in services.consul.secrets %}
+{%   if 'CONSUL_HTTP_TOKEN' not in secrets %}
+        - name: {{ secrets.split('=')[0] }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ settings.project_name }}-{{ item.key }}
+              key: {{ secrets.split('=')[0] | lower }}
+{%   endif %}
+{% endfor %}
+{% if item.value.resources is defined and item.value.resources %}
+        resources:
+{%   for key,value in item.value.resources.items() %}
+          {{ key }}:
+{%     for items in value %}
+            {{ items.split('=')[0] }}: {{ items.split('=')[1] }}
+{%     endfor %}
+{%   endfor %}
+{% endif %}
+        volumeMounts:
+{% if item.value.volumes is defined and item.value.volumes %}
+{%   for volumes in item.value.volumes %}
+        - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
+          mountPath: {{ volumes.split('=')[1] }}
+{%   endfor %}
+{% endif %}
+{% if custom_volume_mounts is defined and custom_volume_mounts %}
+{%   for mount_key,mount_value in custom_volume_mounts.items() %}
+{%     if mount_key == item.key %}
+        {{ mount_value | indent(8) }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+{% if SECURE_CONSUL %}
+        # Required for TLS HA configurations comment out existing empty dir volumeMount
+        #- name: consul-persistent-storage
+        #  mountPath: /consul/config
+        #- name: consul-persistent-storage
+        #  mountPath: /consul/data
+{% endif %}
+        - name: anchors
+          mountPath: /anchors
+        - name: tokens
+          mountPath: /tokens
+      volumes:
+{% if item.value.volumes is defined and item.value.volumes %}
+{%   for volumes in item.value.volumes %}
+      - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
+        emptyDir: {}
+{%   endfor %}
+{% endif %}
+{% if custom_volumes is defined and custom_volumes %}
+{%   for vol_key,vol_value in custom_volumes.items() %}
+{%     if vol_key == item.key %}
+      {{ vol_value | indent(6) }}
+{%    endif %}
+{%   endfor %}
+{% endif %}
+      # Needed for TLS configurations
+      - name: tokens
+        configMap:
+          name: consul-tokens-configmap
+      - name: anchors
+        configMap:
+          name: {{ settings.project_name }}-cacerts-configmap
+  # Persistent storage required for TLS HA configurations
+  # volumeClaimTemplates:
+  # - metadata:
+  #       name: consul-persistent-storage
+  #   spec:
+  #     accessModes:
+  #     - ReadWriteOnce
+  #     resources:
+  #       requests:
+  #         storage: 1Gi
+  #     storageClassName: managed-nfs-storage
+...

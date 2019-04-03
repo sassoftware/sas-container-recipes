@@ -77,7 +77,7 @@ RUN set -e; \
     sed -i "s/@PLATFORM@/$PLATFORM/" /tmp/jpy3_post_deploy.sh; \
     pip3 --no-cache-dir install -r /tmp/${PYTHON_REQUIREMENTS}; \
     pip3 --no-cache-dir install https://github.com/sassoftware/python-swat/releases/download/v${SASPYTHONSWAT}/python-swat-${SASPYTHONSWAT}-linux64.tar.gz; \
-    # Log current pip pkg versions
+    # Log current pip pkg versions \
     pip3 freeze; \
     jupyter nbextension install --py sas_kernel.showSASLog; \
     jupyter nbextension enable sas_kernel.showSASLog --py; \
