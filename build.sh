@@ -22,11 +22,11 @@
 
 # Allow running only `./build.sh` to show --help output
 function usage() {
-	cat docs/usage.txt
+    cat docs/usage.txt
 }
 if [ $# -eq 0 ] ; then
-	usage
-	exit 0
+    usage
+    exit 0
 fi
 
 # Display logs only in Linux. 
@@ -165,38 +165,38 @@ SAS_BUILD_CONTAINER_TAG=${sas_recipe_version}-${datetime}-${git_sha}
 # arguments that are required and fill in the default values of those that are not provided.
 run_args=""
 if [[ -n ${SAS_RPM_REPO_URL} ]]; then
-	run_args="${run_args} --mirror-url ${SAS_RPM_REPO_URL}"
+    run_args="${run_args} --mirror-url ${SAS_RPM_REPO_URL}"
 fi
 
 if [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
-	run_args="${run_args} --zip /$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP})"
+    run_args="${run_args} --zip /$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP})"
 fi
 
 if [[ -n ${SAS_RECIPE_TYPE} ]]; then
-	run_args="${run_args} --type ${SAS_RECIPE_TYPE}"
+    run_args="${run_args} --type ${SAS_RECIPE_TYPE}"
 fi
 
 if [[ -n ${DOCKER_REGISTRY_URL} ]]; then
-	run_args="${run_args} --docker-registry-url ${DOCKER_REGISTRY_URL}"
+    run_args="${run_args} --docker-registry-url ${DOCKER_REGISTRY_URL}"
 fi
 
 if [[ -n ${DOCKER_REGISTRY_NAMESPACE} ]]; then
-	run_args="${run_args} --docker-namespace ${DOCKER_REGISTRY_NAMESPACE}"
+    run_args="${run_args} --docker-namespace ${DOCKER_REGISTRY_NAMESPACE}"
 fi 
 
 if [[ -n ${SAS_DOCKER_TAG} ]]; then
-	run_args="${run_args} --tag ${SAS_DOCKER_TAG}"
+    run_args="${run_args} --tag ${SAS_DOCKER_TAG}"
 fi 
 
 if [[ -n ${BASEIMAGE} ]]; then
-	run_args="${run_args} --base-image ${BASEIMAGE}:${BASETAG}"
+    run_args="${run_args} --base-image ${BASEIMAGE}:${BASETAG}"
 fi
 
 if [[ -n ${ADDONS} ]]; then
-	ADDONS=${ADDONS## } # remove trailing space
-	ADDONS=${ADDONS//  /} # replace multiple spaces with a single space
-	ADDONS=${ADDONS// /,} # replace spaces with a comma
-	run_args="${run_args} --addons ${ADDONS}"
+    ADDONS=${ADDONS## } # remove trailing space
+    ADDONS=${ADDONS//  /} # replace multiple spaces with a single space
+    ADDONS=${ADDONS// /,} # replace spaces with a comma
+    run_args="${run_args} --addons ${ADDONS}"
 fi
 
 if [[ -n ${CAS_VIRTUAL_HOST} ]]; then
@@ -216,7 +216,7 @@ if [[ -n ${BUILDER_PORT} ]]; then
 fi
 
 if [[ -n ${PROJECT_NAME} ]]; then
-	run_args="${run_args} --project-name ${PROJECT_NAME}"
+    run_args="${run_args} --project-name ${PROJECT_NAME}"
 fi
 
 
