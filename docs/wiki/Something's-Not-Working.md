@@ -1,10 +1,10 @@
 ### Docker fails to push the newly built images to my registry, what are some common causes?
 
-You must first authenticate with your docker registry using `docker login <my-registry>.mydomain.com`. This will prompt you for a username and password (with LDAP if configured) and a file at `~/.docker/config.json` is created to store that credential.
+You must first authenticate with your Docker registry using `docker login <my-registry>.mydomain.com`. This will prompt you for a username and password (with LDAP, if configured) and a file at ~/.docker/config.json is created to store that credential.
 
-For more details on registries see: https://docs.docker.com/registry/
+For information about registries, see [Docker Registry](https://docs.docker.com/registry/).
 
-If a docker error is related to a timeout issue then you may have to set a longer timeout `export DOCKER_CLIENT_TIMEOUT=700`. This may also be an issue with ansible-container, where it would require a change in the conductor template: `echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> ansible-container/container/docker/templates/conductor-local-dockerfile.j2`
+If a Docker error is related to a timeout issue, then you might have to set a longer timeout, such as `export DOCKER_CLIENT_TIMEOUT=700`. The Docker error might also be an issue with ansible-container, which require a change in the conductor template: `echo 'ENV DOCKER_CLIENT_TIMEOUT=600' >> ansible-container/container/docker/templates/conductor-local-dockerfile.j2`
 
 ### When building the Docker image, I see an error about not connecting to the Docker daemon. What should I do?
 
@@ -22,37 +22,30 @@ sudo systemctl status docker
 
 If the process is running, then you might need to run the Docker commands using sudo. For information on running the Docker commands without using sudo, see the [Docker documentation](https://docs.docker.com/v17.12/install/linux/linux-postinstall/).
 
-
 ### What should I do about a warning that displays when building the Docker image?
 
 The following warning can be ignored: 'warning: /var/cache/yum/x86_64/7/**/*.rpm: Header V3 RSA/SHA256 Signature, key ID \<key\>: NOKEY'
 
 This warning indicates that the Gnu Privacy Guard (gpg) key is not available on the host, and it is followed by a call to retrieve the missing key.
 
-
 ### Running the docker build command displays an error about no such file or directory. Why? 
 
 The following can occur: 'COPY failed: stat /var/lib/docker/tmp/docker-builderXXXXXXXXXX/\<file name\>: no such file or directory'
 
-The reason is that the `docker build` command expects a Dockerfile and a build "context," which is a set of files in a specified path or URL. If the files are not present, the Docker build will display the error
-message. To resolve it, make sure that the files are in the directory where the Docker build takes place.
+The reason is that the `docker build` command expects a Dockerfile and a build "context," which is a set of files in a specified path or URL. If the files are not present, the Docker build will display the error message. To resolve it, make sure that the files are in the directory where the Docker build takes place.
 
 **Notes:**
 
-- For this project, the build context is where the files are copied from. In the examples,  `.` represents the build context.  
-- In some recipes, the user is expected to copy the files into the current directory before running the `docker build` command. For example, copying files is required for building the [viya-single-container](viya-programming/viya-single-container/README.md) image and some of the 
-[addon](addons/README.md) images.
-
+- For this project, the build context is where the files are copied from. In the examples, `.` represents the build context.  
+- In some recipes, the user is expected to copy the files into the current directory before running the `docker build` command. For example, copying files is required for building the viya-single-container image and some of the addon images.
 
 ### Docker fails to push the newly built images to my registry, what are some common causes?
 
-You must first authenticate with your docker registry using `docker login <my-registry>.mydomain.com`. This will prompt you for a username and password (with LDAP if configured) and a file at `~/.docker/config.json` is created to store that credential.
-
+You must first authenticate with your docker registry using `docker login <my-registry>.mydomain.com`. This will prompt you for a username and password (with LDAP if configured) and a file at ~/.docker/config.json is created to store that credential.
 
 ### Why is the Ansible playbook failing? 
 
-This error might indicate that Docker is running out of space on the host where the Docker
-daemon is running. To find out if more space is needed, look in the Ansible output for a message similar to the following example:
+This error might indicate that Docker is running out of space on the host where the Docker daemon is running. To find out if more space is needed, look in the Ansible output for a message similar to the following example:
 
 ```
         "Error Summary",
@@ -77,9 +70,9 @@ If the output is _Storage Driver: devicemapper_, then the Device Mapper storage 
 image is typically larger. Possible workarounds to free up space are to change the layer size or to switch to
 the [overlay2 storage driver](https://docs.docker.com/storage/storagedriver/overlayfs-driver/).
 
-### Why do addon installs fail for SuSE based images? 
+### Why do addon installs fail for SuSE-based images? 
 
-If you are seeing an install error during the addon phase for SuSE based images that looks like
+During the addon phase for SuSE-based images, an install error such as the following can display:
 
 ```
 r\nerror]
@@ -89,7 +82,9 @@ r\nerror]
 \nSome of the repositories have not been refreshed because of an error.
 ```
 
-This is because the ide-jupyter-python3 Docker file is defining a repository that is no longer needed. This will cause issues for any layer that requires installing software after the ide-jupyter-python3 is added to the image. To solve this, in the `addons/ide-jupyter-python3/Dockerfile` change the SuSE block to 
+This error indicates that the ide-jupyter-python3 Docker file is defining a repository that is no longer needed, which causes issues for any layer that requires installing software after the ide-jupyter-python3 is added to the image.
+
+To solve this, in the addons/ide-jupyter-python3/Dockerfile, change the SuSE block to the following: 
 
 ```
     elif [ "$PLATFORM" = "suse" ]; then \
@@ -104,4 +99,4 @@ This is because the ide-jupyter-python3 Docker file is defining a repository tha
 
 ```
 
-and re-run the Docker build step using the previous base. This should resolve the issue for later layers.
+Next, re-run the Docker build step using the previous base. This should resolve the issue for later layers.

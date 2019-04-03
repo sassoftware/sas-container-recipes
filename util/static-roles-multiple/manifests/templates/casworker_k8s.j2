@@ -9,6 +9,10 @@ spec:
 {%       for override in value.deployment_overrides.environment %}
 {%         if 'CASCFG_MODE=mpp' in override %}
   replicas: 3
+{%         else %}
+{%           if 'CASCFG_MODE=smp' in override %}
+  replicas: 0
+{%           endif %}
 {%         endif %}
 {%       endfor %}
 {%     endif %}

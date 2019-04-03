@@ -5,7 +5,7 @@ metadata:
   namespace: @REPLACE_ME_WITH_YOUR_K8S_NAMESPACE@
 spec:
   rules:
-  - host: @REPLACE_ME_WITH_YOUR_DOMAIN@
+  - host: sas-viya.@REPLACE_ME_WITH_YOUR_K8S_NAMESPACE@.@REPLACE_ME_WITH_YOUR_DOMAIN@
     http:
       paths:
       - backend:
@@ -13,5 +13,5 @@ spec:
           servicePort: 80
 #  tls:
 #  - hosts:
-#    - @REPLACE_ME_WITH_YOUR_DOMAIN@
+#    - sas-viya.@REPLACE_ME_WITH_YOUR_K8S_NAMESPACE@.@REPLACE_ME_WITH_YOUR_DOMAIN@
 #    secretName: @REPLACE_ME_WITH_TLS_SECRET@

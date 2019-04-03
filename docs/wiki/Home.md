@@ -6,8 +6,8 @@ This wiki contains an in-depth guide about the recipe process, tips, troubleshoo
 - [System Requirements](System-Requirements)
 - [Pre-build Tasks](Pre-build-Tasks)
 - Build and Run Images
-  - [Build and Run SAS Viya Single Container](/Build-and-Run-SAS-Viya-Single-Container)
-  - [Build and Run SAS Viya Multiple Containers](/Build-and-Run-SAS-Viya-Multiple-Containers)
+  - [Build and Run SAS Viya Single Container](Build-and-Run-SAS-Viya-Single-Container)
+  - [Build and Run SAS Viya Multiple Containers](Build-and-Run-SAS-Viya-Multiple-Containers)
 - [Post-run Tasks](Post-run-Tasks)
 - [Validating](validating)
 - [Removing Software](Removing-Software)
