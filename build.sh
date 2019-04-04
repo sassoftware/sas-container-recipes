@@ -152,8 +152,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Set some defaults
-CHECK_DOCKER_URL=true
-CHECK_MIRROR_URL=false
+[[ -z ${CHECK_DOCKER_URL+x} ]] && CHECK_DOCKER_URL=true
+[[ -z ${CHECK_MIRROR_URL+x} ]] && CHECK_MIRROR_URL=false
 git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
 datetime=$(date "+%Y%m%d%H%M%S")
 sas_recipe_version=$(cat docs/VERSION)
