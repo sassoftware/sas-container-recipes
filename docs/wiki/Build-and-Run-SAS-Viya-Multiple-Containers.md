@@ -112,7 +112,8 @@ Building multiple containers on SUSE Linux based images are not currently suppor
 
 ### Logging
 
-The content that is displayed to the console when building is also captured in a log file named `${PWD}/logs/build_sas_container.log`. If a log file exists at the time of the run, the previous file is preserved with a name of `build_sas_container_<date-time stamp>.log`. If problems are encountered during the build process, review the log file or provide it when opening up tickets.
+The content that is displayed to the console when building is also captured in a log file named `builds/multiple/build.log` for a multiple deployment, `builds/full/build.log` for a full deployment, or `builds/single/build.log` for a single deployment. 
+If problems are encountered during the build process, review the log file or provide it when opening up tickets.
  
 ### Errors During Build
 
