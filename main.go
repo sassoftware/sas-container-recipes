@@ -19,17 +19,20 @@
 package main
 
 import (
+	"fmt"
 	"log"
 )
 
 func main() {
 	order, err := NewSoftwareOrder()
 	if err != nil {
+		fmt.Println("")
 		log.Fatal(err)
 	}
 
 	err = order.Build()
 	if err != nil {
+		fmt.Println("")
 		log.Fatal(err)
 	}
 	order.ShowBuildSummary()

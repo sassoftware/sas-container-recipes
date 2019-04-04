@@ -745,7 +745,7 @@ func (order *SoftwareOrder) Build() error {
 	if !order.Verbose {
 		order.WriteLog(true, "[TIP] The '--verbose' flag can be used to view the Docker build layers as they are being created.")
 	}
-	order.WriteLog(true, "[TIP] System resource utilization can be seen by using the `docker stats` command.")
+	order.WriteLog(true, "[TIP] System resource utilization can be seen by using the `docker stats` command.\n")
 
 	// Concurrently start each build process
 	jobs := make(chan *Container, 100)
