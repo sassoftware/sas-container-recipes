@@ -30,6 +30,7 @@ ENV PLATFORM=$PLATFORM
 ARG ANSIBLE_VERSION=2.4.1
 ARG TINI_RPM_NAME=tini_0.18.0.rpm
 ARG TINI_URL=https://github.com/krallin/tini/releases/download/v0.18.0
+#ARG SAS_RPM_REPO_URL=http://vjrgjump.na.sas.com:8321/
 ARG SAS_RPM_REPO_URL=https://ses.sas.download/ses/ 
 
 USER root
@@ -205,7 +206,7 @@ RUN set -e; \
     rm --verbose --recursive --force /opt/sas/viya/config/var/log/sasstudio/default/*; \
     rm --verbose --recursive --force /opt/sas/viya/config/var/log/spawner/default/*; \
     echo; \
-    if [ "$PLATFORM" = "redhat" ] ||  [ "$PLATFORM" = "suse" ]; then \
+    if [ "$PLATFORM" = "redhat" ] || [ "$PLATFORM" = "suse" ]; then \
         echo; echo "####### Remove Text Analytic languages; we will add them back in their own layer"; echo; \
         for txtmin in $(rpm -qa | grep sas-txtmin); do \
             if [[ "${txtmin}" != "sas-txtmineng"* ]] && [[ "${txtmin}" != *"yum"* ]]; then \
