@@ -134,7 +134,7 @@ See the Docker documentation for more options on cleaning up your build system. 
 ## How to Run
 
 ### Kubernetes
-For a programming only build, a set of Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests` and for full build they are at `$PWD/viya-visuals/working/manifests`. Please use the path that matches to your type of build. We will refer to this path as _$MANIFESTS_. 
+For a programming only build, a set of Kubernetes manifests are located at `$PWD/builds/multiple/manifests/` and for full build they are at `$PWD/builds/full/manifests/`. Please use the path that matches to your type of build. We will refer to this path as _$MANIFESTS_. 
 
 For a programming only image, you can update the virtual host information. This will need to be done for working hyperlinks between SASStudio and CAS Monitor in programming only build. Edit the `$MANIFESTS/kubernetes/configmaps/cas.yml` file and update the following line, replacing sas-viya.sas-viya.company.com with the ingress host or desired virtual host information:
 
