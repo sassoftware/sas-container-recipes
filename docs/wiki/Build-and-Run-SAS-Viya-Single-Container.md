@@ -23,7 +23,7 @@
 Before we build the images, here is some information about the different ways that you can modify the configuration of the image.
 
 ### Ansible Overrides
-If you are familiar with SAS Viya configuration and would like to make configuration settings for the SAS Programming Runtime Environnment (SPRE) or the Cloud Analytics Server (CAS) that will be applied to the image when it is being created, edit the `viya-programming/viya-single-container/vars_usermods.yml` file. In the _vars_usermods.yml_ you can add and fill in any of the following content and it will customize the configuration of the container:
+If you are familiar with SAS Viya configuration and would like to make configuration settings for the SAS Programming Runtime Environnment (SPRE) or the Cloud Analytics Server (CAS) that will be applied to the image when it is being created, edit the `util/programming-only-single/vars_usermods.yml` file. In the _vars_usermods.yml_ you can add and fill in any of the following content and it will customize the configuration of the container:
 
 ```
 # The following is the initial Admin user for use with CAS Server Monitor. 
@@ -168,7 +168,7 @@ To see what options `build.sh` takes, run
 build.sh --help
 ```
 
-For single-container, the _addons_, _baseimage_, _basetag_, _mirror-url_, _platform_, type and _zip_ options are used. The _zip_ file will be copied to `viya-programming/viya-single-container/` so the Docker build process can use it.
+For single-container, the _addons_, _baseimage_, _basetag_, _mirror-url_, _platform_, type and _zip_ options are used. The _zip_ file will be copied to `builds/single/` so the Docker build process can use it.
 
 For information on how to manually build as well as add on layers, see [Advanced Building Options](#advanced-building-options).
 
@@ -207,15 +207,14 @@ build.sh \
 ### Advanced Building Options
 #### Running Docker build
 
-If you want to run the Docker build on your own, navigate to the `viya-programming/viya-single-container` directory and run
+If you want to run the Docker build on your own, navigate to the `util/programming-only-single/` directory and run
 
 ```
-docker build \
+docker build . \
 --file Dockerfile \
 --build-arg BASEIMAGE=centos \
 --build-arg BASETAG=7 \
 --build-arg PLATFORM=redhat \
-. \
 --tag viya-single-container
 ```
 
