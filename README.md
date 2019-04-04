@@ -39,8 +39,6 @@ please check out our [Free Software Trials](https://www.sas.com/en_us/trials.htm
 2. Download the latest <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes Releases">
         <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&" alt="Latest Release"/></a> or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
-    -  If you would like to compile the binary yourself then see [CONTRIBUTING.md](https://github.com/sassoftware/sas-container-recipes/blob/master/CONTRIBUTING.md) for instructions.
-
 3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
     a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in a [SAS programming-only deployment running on a single container](https://github.com/sassoftware/sas-container-recipes#for-a-single-user---sas-viya-programming-only-deployment-running-on-a-single-container).
