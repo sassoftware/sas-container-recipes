@@ -136,10 +136,10 @@ See the Docker documentation for more options on cleaning up your build system. 
 ### Kubernetes
 For a programming only build, a set of Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests` and for full build they are at `$PWD/viya-visuals/working/manifests`. Please use the path that matches to your type of build. We will refer to this path as _$MANIFESTS_. 
 
-For a programming only image, you can update the virtual host information. This will need to be done for working hyperlinks between SASStudio and CAS Monitor in programming only build. Edit the `$MANIFESTS/kubernetes/configmaps/cas.yml` file and update the following line:
+For a programming only image, you can update the virtual host information. This will need to be done for working hyperlinks between SASStudio and CAS Monitor in programming only build. Edit the `$MANIFESTS/kubernetes/configmaps/cas.yml` file and update the following line, replacing sas-viya.sas-viya.company.com with the ingress host or desired virtual host information:
 
 ```
-  casenv_cas_virtual_host: "sas-viya"
+  casenv_cas_virtual_host: "sas-viya.sas-viya.company.com"
 ```
 
 The manifests define several paths where data that should persist between restarts can be stored. By default, these paths point to local storage that disappears when Kubernetes pods are deleted. Please update the manifests to support how your site implements persistent storage. It is strongly suggested that you review [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) to evaluate the options for persistence. The manifests that require updates are:
@@ -147,6 +147,7 @@ The manifests define several paths where data that should persist between restar
 * consul (only in the full build)
 * rabbitmq (only in the full build)
 * cas
+* cas-worker
 * sasdatasvrc (only in the full build)
 
 In the case of a full build, each of the containers will also have a volume defined to write logs to. To keep these logs around through pod restarts, this volume should also be mapped to persisted storage.
@@ -156,17 +157,20 @@ To create your deployment, use the manifests created during the build process. I
 A yaml file was created during manifest generation to help with creating the Kubernetes name space. If your user has the ability to create *namespaces* in the Kuberetes environment, run the following, or request your Kuberenetes administrator to create you a name space in the Kubernetes environment:
 
 ```
-kubectl create -f $MANIFESTS/kubernetes/namespace/sas-viya.yml
+kubectl apply -f $MANIFESTS/kubernetes/namespace/sas-viya.yml
 ```
 
-Once a *namespace* is available, run the manifests in the following order. Note that the examples are using *sas-viya* for the Kubernetes namespace. If you created a different *namespace*, please use that value instead of *sas-viya*:
+Once a *namespace* is available, run the manifests in the following order. 
+* The examples are using *sas-viya* for the Kubernetes namespace. If you created a different *namespace*, please use that value instead of *sas-viya*. 
+* Double check the file in the $MANIFESTS/kubernetes/ingress directory to make sure it contains the correct Ingress domain. A default value of company.com is used which will not work in your environment. To change this, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) on how to set it and [(Optional) Regenerating Manifests](post-run-tasks#optional-regenerating-manifests) (a post-run task) on how to regenerate the manifests.
+* If setting up TLS, make sure the TLS section of the file in the $MANIFESTS/kubernetes/ingress directory is configured correctly. See the [Ingress Configuration](Pre-build-Tasks#ingress-configuration) (a pre-build task) for more information.
 
 ```
-kubectl -n sas-viya create -f $MANIFESTS/kubernetes/ingress
-kubectl -n sas-viya create -f $MANIFESTS/kubernetes/configmaps
-kubectl -n sas-viya create -f $MANIFESTS/kubernetes/secrets
-kubectl -n sas-viya create -f $MANIFESTS/kubernetes/services
-kubectl -n sas-viya create -f $MANIFESTS/kubernetes/deployments
+kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/ingress
+kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/configmaps
+kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/secrets
+kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/services
+kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/deployments
 ```
 
 To check the status of the containers, run `kubectl -n sas-viya get pods`. The following example reflects a programming multiple container deployment.
@@ -186,6 +190,10 @@ $ kubectl -n sas-viya get pods
 NAME                                                   READY   STATUS    RESTARTS   AGE
 sas-viya-adminservices-6f4cb4bcc4-2gdw5                1/1     Running   0          2d8h
 sas-viya-advancedanalytics-9cf44bc8d-79qkd             1/1     Running   0          2d8h
+sas-viya-cas-0                                         1/1     Running   0          2d8h
+sas-viya-cas-worker-7b4696c458-59429                   1/1     Running   0          2d7h
+sas-viya-cas-worker-7b4696c458-gzbks                   1/1     Running   0          2d7h
+sas-viya-cas-worker-7b4696c458-kddgj                   1/1     Running   1          2d8h
 sas-viya-casservices-867587f58-2d9sw                   1/1     Running   0          2d8h
 sas-viya-cognitivecomputingservices-5967948d9b-4lgs5   1/1     Running   0          2d8h
 sas-viya-computeserver-0                               1/1     Running   0          2d8h
@@ -205,10 +213,6 @@ sas-viya-programming-0                                 1/1     Running   0      
 sas-viya-rabbitmq-0                                    1/1     Running   0          2d8h
 sas-viya-reportservices-86f8459f6-chh6l                1/1     Running   1          2d8h
 sas-viya-reportviewerservices-79f45fbd5b-nqkf2         1/1     Running   0          2d8h
-sas-viya-cas-0                                         1/1     Running   0          2d8h
-sas-viya-cas-worker-7b4696c458-59429                   1/1     Running   0          2d7h
-sas-viya-cas-worker-7b4696c458-gzbks                   1/1     Running   0          2d7h
-sas-viya-cas-worker-7b4696c458-kddgj                   1/1     Running   1          2d8h
 sas-viya-sasdatasvrc-0                                 1/1     Running   0          2d8h
 sas-viya-scoringservices-6f97f7df86-bc4dh              1/1     Running   0          2d8h
 sas-viya-studioviya-fc7fb4c9b-8wtp4                    1/1     Running   0          2d8h

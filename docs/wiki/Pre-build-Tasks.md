@@ -75,7 +75,7 @@ cat $HOME/.docker/config.json
 
 You can use addons to include extra components in your SAS Viya images. There are addons for authentication, data sources, and integrated development environments (IDE). Only the addons that require pre-build tasks are listed in this section. You can find the addons in sas-container-recipes/addons directory.
 
-For more information, see [Addons](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/Appendix:-Under-the-Hood#addons).
+For more information, see [Addons](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#addons).
 
 ### Host Authentication
 
@@ -224,10 +224,10 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
   name: sas-viya-programming-ingress
-  namespace: sasviya
+  namespace: sas-viya
 spec:
   rules:
-  - host: sas-viya.company.com
+  - host: sas-viya.sas-viya.company.com
     http:
       paths:
       - backend:
@@ -235,7 +235,7 @@ spec:
           servicePort: 80
 #  tls:
 #  - hosts:
-#    - sas-viya.company.com
+#    - sas-viya.sas-viya.company.com
 #    secretName: @REPLACE_ME_WITH_YOUR_CERT@
 ```
 
@@ -246,14 +246,14 @@ You will need to create a key and certificate, and then store it in a Kubernetes
 ```
   tls:
   - hosts:
-    - sas-viya.company.com
+    - sas-viya.sas-viya.company.com
     secretName: sas-tls-secret
 ```
 
 Load the configuration:
 
 ```
-kubectl -n sasviya apply -f ${PWD}/run/programming_ingress.yml
+kubectl -n sas-viya apply -f ${PWD}/run/programming_ingress.yml
 ```
 
 If you cannot set this up yet, you can continue on the deployment process. However, the ingress must be configured to access the environment.
@@ -262,10 +262,10 @@ Later in this documentation, the term _ingress-path_ refers to the host value in
 
 ### Persistence
 
-Several SAS Viya containers will need configured persistence storage in order to make sure that the environment can shut down and start up without losing data.
+Several SAS Viya containers will need persistent storage configured to make sure that the environment can shut down and start up without losing data.
 
-- Decide whether to set up persistence storage.
-- No persistance is the default condition. The default is useful if you are evaluating SAS Viya containers. Otherwise you will probably want to make sure that your Kuberenetes environment is configured for container persistence. For more information, see [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/). 
+- Decide whether to set up persistent storage.
+- No persistance is the default condition. The default is useful if you are evaluating SAS Viya containers. Otherwise you will want to make sure that your Kuberenetes environment is configured for container persistence. For more information, see [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/). 
 
 ### Data Import
 
@@ -285,7 +285,7 @@ When the sitedefault.yml file is present in the viya-visuals directory, the buil
 
 Here are the steps to use sitedefault.yml to set configuration values:
 
-1. Sign on to your Ansible controller with administrator privileges, and locate the viya-visuals/templates/sitedefault_sample.yml file.
+1. Sign on to your build machine with administrator privileges, and locate the viya-visuals/templates/sitedefault_sample.yml file.
 1. Make a copy of sitedefault_sample.yml and name it sitedefault.yml.
 1. Using a text editor, open sitedefault.yml and add values that are valid for your site.
    - For information about the LDAP properties used in sitedefault.yml, see [sas.identities.providers.ldap](https://go.documentation.sas.com/?cdcId=calcdc&cdcVersion=3.4&docsetId=calconfig&docsetTarget=n08000sasconfiguration0admin.htm#n08044sasconfiguration0admin) in _SAS Viya for Linux: Deployment Guide_.
@@ -300,17 +300,21 @@ Here are the steps to use sitedefault.yml to set configuration values:
 When the build script is run, the data from the viya-visuals/templates/sitedefault.yml file will get added to the viya-visuals/working/manifests/kubernetes/configmaps/consul.yml file. On startup of the consul container, the content will get loaded into the SAS configuration store. See the post-run [(Optional) Verify Bulk Loaded Configuration](post-run-tasks#optional-verify-bulk-loaded-configuration) task for confirming the values provided were loaded.
 
 ### Kubernetes Manifest Inputs
-To help with managing changes to the generated manifests, you can provide customizations that will be used when creating the Kubernetes manifests. Copy the viya-visuals/templates/vars_usermods.yml file to viya-visuals/vars_usermods.yml, and then edit the file. You can enter any of the following values and override the defaults:
+To help with managing changes to the generated manifests, you can provide customizations that will be used when creating the Kubernetes manifests. In the templates directory for both viya-programming/viya-multi-container and viya-visuals, there is a vars_usermods.yml file. For your specific deployment, copy the templates/vars_usermods.yml file to either viya-programming/viya-multi-container/vars_usermods.yml or viya-visuals/vars_usermods.yml, and then edit the file. You can enter any of the following values and override the defaults:
 
 ```
-# The directory where manifests will be created. Default is "manifest"
-#SAS_MANIFEST_DIR: manifest
+# The directory where manifests will be created. Default is "manifests"
+#SAS_MANIFEST_DIR: manifests
 
 # The Kubernetes namespace that we are deploying into. Default is "sas-viya"
 #SAS_K8S_NAMESPACE: sas-viya
+```
 
-# The Ingress path for the httpproxy environment. Default is "sas-viya.company.com"
-#SAS_K8S_INGRESS_PATH: sas-viya.company.com
+In order to setup the Ingress paths correctly, update the following to the correct domain:
+
+```
+# Reflects the domain to use when filling in the ingress paths. Default is "company.com"
+#SAS_K8S_INGRESS_DOMAIN: company.com
 ```
 
 By default, the generated manifests will define a CAS SMP environment. If you want to define a CAS MPP environment initially, locate the following section in the viya-visuals/vars_usermods.yml file:

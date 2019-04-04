@@ -501,7 +501,7 @@ The manifest already defined several paths where data that needs to persist betw
 Create the deployment. In this example, we are creating the SAS Programming container in the _sasviya_ Kubernetes namespace. For more information about _namespaces_, see [Kubernetes Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
 
 ```
-kubectl -n sasviya create -f run/programming.yml
+kubectl -n sasviya apply -f run/programming.yml
 ```
 
 In order to make sure things are running like we expect, we will need to list the pods and identify the sas-viya-prgramming pod:
