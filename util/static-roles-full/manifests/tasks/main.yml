@@ -54,16 +54,23 @@
   when: item.key == 'consul' and SECURE_CONSUL | lower == 'true'
   with_dict: '{{ services }}'
 
+# - name: custom_services.items
+  # debug:
+    # msg: "key = {{ custom_services.items() }}"
+  # when: custom_services is defined and custom_services and item.key in custom_services.items() | string
+  # with_dict: '{{ services }}'
+
 # - name: Define custom_services if not defined
-  # set_fact:
-    # name: custom_services
-  # when: custom_services is not defined
+  # debug:
+    # msg: "key = {{ item.key }}"
+  # when: (item.value.environment is defined and item.value.environment) or (custom_services is defined and custom_services and item.key in custom_services.items())
+  # with_dict: '{{ services }}'
 
 - name: Create k8s configmaps
   template:
     src: "k8s_configmap.j2"
     dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/configmaps/cas.yml{% else %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/configmaps/{{ item.key }}.yml{% endif %}"
-  when: (item.value.environment is defined and item.value.environment) or (custom_services is defined and custom_services and item.key in custom_services.items())
+  when: (item.value.environment is defined and item.value.environment) or (custom_services is defined and custom_services and item.key in custom_services.items() | string)
   with_dict: '{{ services }}'
 
 - name: Create k8s secrets
