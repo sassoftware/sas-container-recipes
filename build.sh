@@ -1,5 +1,5 @@
 #!/bin/bash -e
-# 
+#
 # build.sh
 # Creates a container to run the SAS Container Recipes tool.
 # Run `./build.sh --help` or see `docs/usage.txt` for details.
@@ -29,8 +29,8 @@ if [ $# -eq 0 ] ; then
     exit 0
 fi
 
-# Display logs only in Linux. 
-# Logging on MacOS is currently not supported. 
+# Display logs only in Linux.
+# Logging on MacOS is currently not supported.
 set -e
 if [[ -n ${SAS_DEBUG} ]]; then
     set -x
@@ -182,11 +182,11 @@ fi
 
 if [[ -n ${DOCKER_REGISTRY_NAMESPACE} ]]; then
     run_args="${run_args} --docker-namespace ${DOCKER_REGISTRY_NAMESPACE}"
-fi 
+fi
 
 if [[ -n ${SAS_DOCKER_TAG} ]]; then
     run_args="${run_args} --tag ${SAS_DOCKER_TAG}"
-fi 
+fi
 
 if [[ -n ${BASEIMAGE} ]]; then
     run_args="${run_args} --base-image ${BASEIMAGE}:${BASETAG}"
