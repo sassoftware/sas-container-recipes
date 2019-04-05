@@ -294,6 +294,7 @@ func (container *Container) GetBuildArgs() {
 	buildArgs["BASE"] = &container.SoftwareOrder.BaseImage
 	buildArgs["PLATFORM"] = &container.SoftwareOrder.Platform
 	buildArgs["PLAYBOOK_SRV"] = &container.SoftwareOrder.CertBaseURL
+	buildArgs["SAS_RPM_REPO_URL"] = &container.SoftwareOrder.MirrorURL
 
 	container.WriteLog(container.BuildArgs)
 	container.BuildArgs = buildArgs
