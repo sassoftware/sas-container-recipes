@@ -499,7 +499,7 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 			if err != nil {
 				return "", err
 			}
-
+			log.Println("------> Container name: ", name)
 			// If we don't find the image name listed we skip.
 			targetImage, targetFound := images[name]
 			if !targetFound {
