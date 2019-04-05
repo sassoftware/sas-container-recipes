@@ -62,6 +62,12 @@ function sas_container_recipes_shutdown() {
 trap sas_container_recipes_shutdown SIGTERM
 trap sas_container_recipes_shutdown SIGINT
 
+# Set some defaults
+CHECK_DOCKER_URL=true
+CHECK_MIRROR_URL=false
+git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
+datetime=$(date "+%Y%m%d%H%M%S")
+sas_recipe_version=$(cat docs/VERSION)
 
 # Parse command arguments and flags
 while [[ $# -gt 0 ]]; do
@@ -151,12 +157,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Set some defaults
-[[ -z ${CHECK_DOCKER_URL+x} ]] && CHECK_DOCKER_URL=true
-[[ -z ${CHECK_MIRROR_URL+x} ]] && CHECK_MIRROR_URL=false
-git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
-datetime=$(date "+%Y%m%d%H%M%S")
-sas_recipe_version=$(cat docs/VERSION)
 [[ -z ${SAS_DOCKER_TAG+x} ]] && SAS_DOCKER_TAG=${sas_recipe_version}-${datetime}-${git_sha}
 SAS_BUILD_CONTAINER_NAME="sas-container-recipes-builder-${SAS_DOCKER_TAG}"
 SAS_BUILD_CONTAINER_TAG=${sas_recipe_version}-${datetime}-${git_sha}
@@ -218,30 +218,6 @@ fi
 if [[ -n ${PROJECT_NAME} ]]; then
     run_args="${run_args} --project-name ${PROJECT_NAME}"
 fi
-
-
-echo
-echo "=============="
-echo "Variable check"
-echo "=============="
-echo ""
-echo "  Build System OS                 = ${OPERATING_SYSTEM}"
-echo "  Deployment Type                 = ${SAS_RECIPE_TYPE}"
-echo "  BASEIMAGE                       = ${BASEIMAGE}"
-echo "  BASETAG                         = ${BASETAG}"
-echo "  Mirror URL                      = ${SAS_RPM_REPO_URL}"
-echo "  Validate Mirror URL             = ${CHECK_MIRROR_URL}"
-echo "  Platform                        = ${PLATFORM}"
-echo "  Project Name                    = ${PROJECT_NAME}"
-echo "  Deployment Data Zip             = ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
-echo "  Addons                          = ${ADDONS## }"
-echo "  Docker registry URL             = ${DOCKER_REGISTRY_URL}"
-echo "  Docker registry namespace       = ${DOCKER_REGISTRY_NAMESPACE}"
-echo "  Validate Docker registry URL    = ${CHECK_DOCKER_URL}"
-echo "  HTTP Ingress endpoint           = ${CAS_VIRTUAL_HOST}"
-echo "  Tag SAS will apply              = ${SAS_DOCKER_TAG}"
-echo "  Build run args                  = ${run_args## }"
-echo
 
 
 echo

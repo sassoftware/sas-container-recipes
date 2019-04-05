@@ -32,6 +32,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"log"
@@ -62,46 +63,46 @@ var ConfigPath = "config-full.yml"
 type SoftwareOrder struct {
 
 	// Build arguments and flags (see order.LoadCommands for details)
-	LicensePath          string
-	BaseImage            string
-	MirrorURL            string
-	VirtualHost          string
-	DockerNamespace      string
-	DockerRegistry       string
-	DeploymentType       string
-	PlaybookPath         string
-	Platform             string
-	ProjectName          string
-	TagOverride          string
-	AddOns               []string
-	DebugContainers      []string
-	WorkerCount          int
-	Verbose              bool
-	SkipMirrorValidation bool
-	SkipDockerValidation bool
+	LicensePath          string   `yaml:"License Path"`
+	BaseImage            string   `yaml:"Base Image"`
+	MirrorURL            string   `yaml:"Mirror URL"`
+	VirtualHost          string   `yaml:"Virtual Host"`
+	DockerNamespace      string   `yaml:"Docker Namespace"`
+	DockerRegistry       string   `yaml:"Docker Registry"`
+	DeploymentType       string   `yaml:"Deployment Type"`
+	PlaybookPath         string   `yaml:"-"`
+	Platform             string   `yaml:"Platform"`
+	ProjectName          string   `yaml:"Project Name"`
+	TagOverride          string   `yaml:"Tag Override"`
+	AddOns               []string `yaml:"AddOns"`
+	DebugContainers      []string `yaml:"Debug Containers"`
+	WorkerCount          int      `yaml:"Worker Count"`
+	Verbose              bool     `yaml:"Verbose"`
+	SkipMirrorValidation bool     `yaml:"Skip Mirror Validation"`
+	SkipDockerValidation bool     `yaml:"Skip Docker Validation"`
 
 	// Build attributes
-	TimestampTag string                // Allows for datetime on each temp build bfile
-	Containers   map[string]*Container // Individual containers build list
-	BuildOnly    []string              // Only build these specific containers from the whole list
-	Config       map[string]ConfigMap  // Static values and defaults are loaded from the configmap yaml
-	ConfigPath   string                // config-<deployment-type>.yml file for custom or static values
-	Log          *os.File              // File handle for log path
-	LogPath      string                // Path to the build directory with the log file name
-	KVStore      string                // Combines all vars.yaml content
-	BuildContext context.Context       // Background context
-	RegistryAuth string                // Used to push and pull from/to a regitry
-	BuildPath    string                // Kubernetes manifests are generated and placed into this location
-	CertBaseURL  string                // The URL that the build containers will use to fetch their CA and entitlement certs
-	InDocker     bool                  // If we are running in a docker container
-	BuilderIP    string                // IP of where images are being built to be used for generic hostname lookup for builder
-	BuilderPort  string                // Port for serving certificate requests for builds
+	TimestampTag string                `yaml:"Timestamp Tag` // Allows for datetime on each temp build bfile
+	Containers   map[string]*Container `yaml:"-"`            // Individual containers build list
+	BuildOnly    []string              `yaml:"Build Only"`   // Only build these specific containers from the whole list
+	Config       map[string]ConfigMap  `yaml:"-"`            // Static values and defaults are loaded from the configmap yaml
+	ConfigPath   string                `yaml:"Config Path"`  // config-<deployment-type>.yml file for custom or static values
+	Log          *os.File              `yaml:"-"`            // File handle for log path
+	LogPath      string                `yaml:"-"`            // Path to the build directory with the log file name
+	KVStore      string                `yaml:"-"`            // Combines all vars.yaml content
+	BuildContext context.Context       `yaml:"-"`            // Background context
+	RegistryAuth string                `yaml:"-"`            // Used to push and pull from/to a regitry
+	BuildPath    string                `yaml:"-"`            // Kubernetes manifests are generated and placed into this location
+	CertBaseURL  string                `yaml:"-"`            // The URL that the build containers will use to fetch their CA and entitlement certs
+	InDocker     bool                  `yaml:"-"`            // If we are running in a docker container
+	BuilderIP    string                `yaml:"-"`            // IP of where images are being built to be used for generic hostname lookup for builder
+	BuilderPort  string                `yaml:"-"`            // Port for serving certificate requests for builds
 
 	// Metrics
-	StartTime      time.Time
-	EndTime        time.Time
-	TotalBuildSize int64
-	DockerClient   *client.Client // Used to pull the base image and output post-build details
+	StartTime      time.Time      `yaml:"-"`
+	EndTime        time.Time      `yaml:"-"`
+	TotalBuildSize int64          `yaml:"-"`
+	DockerClient   *client.Client `yaml:"-"` // Used to pull the base image and output post-build details
 
 	// License attributes from the Software Order Email (SOE)
 	// SAS_Viya_deployment_data.zip
@@ -114,7 +115,7 @@ type SoftwareOrder struct {
 	// │   └── SASViyaV0300_XXXXXX_Linux_x86-64.txt
 	// │   └── SASViyaV0300_XXXXXX_XXXXXXXX_Linux_x86-64.jwt
 	// └── order.oom
-	SOEZipPath string // Used to load licenses
+	SOEZipPath string `yaml:"-"` // Used to load licenses
 	OrderOOM   struct {
 		OomFormatVersion string `json:"oomFormatVersion"`
 		MetaRepo         struct {
@@ -122,13 +123,13 @@ type SoftwareOrder struct {
 			Rpm        string   `json:"rpm"`
 			Orderables []string `json:"orderables"`
 		} `json:"metaRepo"`
-	}
-	CA             []byte
-	Entitlement    []byte
-	License        []byte
-	MeteredLicense []byte
+	} `yaml:"-"`
+	CA             []byte `yaml:"-"`
+	Entitlement    []byte `yaml:"-"`
+	License        []byte `yaml:"-"`
+	MeteredLicense []byte `yaml:"-"`
 
-	SiteDefault []byte
+	SiteDefault []byte `yaml:"-"`
 }
 
 // Registry is ror reading ~/.docker/config.json
@@ -272,6 +273,15 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	}
 }
 
+// BuildArgumentsSummary gets a human readable version of the command arguments
+// that were supplied to the SoftwareOrder object. This is useful for debugging.
+func (order *SoftwareOrder) BuildArgumentsSummary() string {
+	objectAttributes, _ := yaml.Marshal(order)
+	output := "\n==============\nVariable check\n==============\n"
+	output += string(objectAttributes) + "\n"
+	return output
+}
+
 // Look through the network interfaces and find the machine's non-loopback IP
 func getIPAddr() (string, error) {
 	addrs, err := net.InterfaceAddrs()
@@ -379,7 +389,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	virtualHost := flag.String("virtual-host", "myvirtualhost.mycompany.com", "")
 	addons := flag.String("addons", "", "")
 	baseImage := flag.String("base-image", "centos:7", "")
-	mirrorURL := flag.String("mirror-url", "", "")
+	mirrorURL := flag.String("mirror-url", "https://ses.sas.download/ses/", "")
 	verbose := flag.Bool("verbose", false, "")
 	buildOnly := flag.String("build-only", "", "")
 	tagOverride := flag.String("tag", RecipeVersion+"-"+order.TimestampTag, "")
@@ -472,8 +482,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 			}
 			order.AddOns = append(order.AddOns, addonPath)
 		}
-
-		order.WriteLog(true, "Building with addons", order.AddOns)
 	}
 
 	// Detect the platform based on the image
@@ -666,7 +674,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
-	dockerfile, err := appendAddonLines(container.Name, string(dockerfileStub), container.SoftwareOrder.AddOns)
+	dockerfile, err := appendAddonLines(container.GetName(), string(dockerfileStub), container.SoftwareOrder.AddOns)
 	if err != nil {
 		return err
 	}
@@ -699,6 +707,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 
 // Build starts each container build concurrently and report the results
 func (order *SoftwareOrder) Build() error {
+	order.WriteLog(true, order.BuildArgumentsSummary())
 
 	// Handle single container build and output of docker run instructions
 	if order.DeploymentType == "single" {
