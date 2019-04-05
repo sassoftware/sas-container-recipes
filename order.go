@@ -82,21 +82,21 @@ type SoftwareOrder struct {
 	SkipDockerValidation bool     `yaml:"Skip Docker Validation"`
 
 	// Build attributes
-	TimestampTag string                `yaml:"Timestamp Tag` // Allows for datetime on each temp build bfile
-	Containers   map[string]*Container `yaml:"-"`            // Individual containers build list
-	BuildOnly    []string              `yaml:"Build Only"`   // Only build these specific containers from the whole list
-	Config       map[string]ConfigMap  `yaml:"-"`            // Static values and defaults are loaded from the configmap yaml
-	ConfigPath   string                `yaml:"Config Path"`  // config-<deployment-type>.yml file for custom or static values
-	Log          *os.File              `yaml:"-"`            // File handle for log path
-	LogPath      string                `yaml:"-"`            // Path to the build directory with the log file name
-	KVStore      string                `yaml:"-"`            // Combines all vars.yaml content
-	BuildContext context.Context       `yaml:"-"`            // Background context
-	RegistryAuth string                `yaml:"-"`            // Used to push and pull from/to a regitry
-	BuildPath    string                `yaml:"-"`            // Kubernetes manifests are generated and placed into this location
-	CertBaseURL  string                `yaml:"-"`            // The URL that the build containers will use to fetch their CA and entitlement certs
-	InDocker     bool                  `yaml:"-"`            // If we are running in a docker container
-	BuilderIP    string                `yaml:"-"`            // IP of where images are being built to be used for generic hostname lookup for builder
-	BuilderPort  string                `yaml:"-"`            // Port for serving certificate requests for builds
+	TimestampTag string                `yaml:"Timestamp Tag"` // Allows for datetime on each temp build bfile
+	Containers   map[string]*Container `yaml:"-"`             // Individual containers build list
+	BuildOnly    []string              `yaml:"Build Only"`    // Only build these specific containers from the whole list
+	Config       map[string]ConfigMap  `yaml:"-"`             // Static values and defaults are loaded from the configmap yaml
+	ConfigPath   string                `yaml:"-"`             // config-<deployment-type>.yml file for custom or static values
+	Log          *os.File              `yaml:"-"`             // File handle for log path
+	LogPath      string                `yaml:"-"`             // Path to the build directory with the log file name
+	KVStore      string                `yaml:"-"`             // Combines all vars.yaml content
+	BuildContext context.Context       `yaml:"-"`             // Background context
+	RegistryAuth string                `yaml:"-"`             // Used to push and pull from/to a regitry
+	BuildPath    string                `yaml:"-"`             // Kubernetes manifests are generated and placed into this location
+	CertBaseURL  string                `yaml:"-"`             // The URL that the build containers will use to fetch their CA and entitlement certs
+	InDocker     bool                  `yaml:"-"`             // If we are running in a docker container
+	BuilderIP    string                `yaml:"-"`             // IP of where images are being built to be used for generic hostname lookup for builder
+	BuilderPort  string                `yaml:"-"`             // Port for serving certificate requests for builds
 
 	// Metrics
 	StartTime      time.Time      `yaml:"-"`
