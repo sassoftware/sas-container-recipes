@@ -1,13 +1,9 @@
-#! /bin/bash -e
+#!/bin/sh
 
-# This script will check to make sure the ESP server pubsub port is up and running
-# If we get a response that contains "Connected" then return 0 (healthy)
-# else return 1 (not healthy)
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/sas/viya/home/SASFoundation/sasexe
 
-return_code=1
-nc_test=$(echo "test" | nc -v localhost 31416 2>&1)
-if [[ $nc_test == *"Connected"* ]]; then
-    return_code=0
-fi
+# Run the pubsub port check
+/opt/sas/viya/home/bin/check-pubsub-port.py
 
-exit $return_code
+# Exit based on the code coming from check-pubsub-port.py
+exit $?
