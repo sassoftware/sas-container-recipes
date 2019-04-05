@@ -1,10 +1,10 @@
 ## Contents
 
 - [Optional Configuration](#optional-configuration)
-  - [Use Custom SPRE and CAS Server Settings](#use-custom-spre-and-cas-server-settings)
-  - [Use Configuration Files](#run-using-configuration-files)
-  - [Use Environment Variables](#run-using-environment-variables)
-  - [Precedence](#precedence)
+  - [Use Custom Values to Override the Playbook Settings](#use-custom-values-to-override-the-playbook-settings)
+  - [Use Configuration Files](#use-configuration-files)
+  - [Use Environment Variables](#use-environment-variables)
+  - [Order of Configuration](#order-of-configuration)
 - [How to Build](#how-to-build)
   - [Overview](#overview)
   - [Building on a Red Hat Enterprise Linux Image](#building-on-a-red-hat-enterprise-linux-image)
@@ -144,14 +144,21 @@ When the container starts, the content of each file is appended to the existing 
 ### Use Environment Variables
 You can change the configuration of the CAS server by using environment variables. The CAS container will look for environment variables whose names are preceded by a particular prefix:
 
-* CASCFG_
-  This prefix indicates a `cas.` option, which is included in the casconfig_docker.lua file. These values are a predefined set and cannot be user-created. If CAS sees an option that it does not understand, it will not run.
-* CASENV_
-  This prefix indicates an `env.` option, which is included in the casconfig_docker.lua file.
-* CASSET_
-  This prefix indicates an environment variable that is included in the cas_docker.settings file.
-* CASLLP_
-  This prefix indicates setting the LD_LIBRARY_PATH variable in the cas_docker.settings file.
+**CASCFG_**
+
+This prefix indicates a _cas._ option, which is included in the casconfig_docker.lua file. These values are a predefined set and cannot be user-created. If an option is not recognized by the CAS server, it will not run.
+
+**CASENV_**
+
+This prefix indicates an _env._ option, which is included in the casconfig_docker.lua file.
+
+**CASSET_**
+
+This prefix indicates an environment variable that is included in the cas_docker.settings file.
+
+**CASLLP_**
+
+This prefix indicates setting the LD_LIBRARY_PATH variable in the cas_docker.settings file.
 
 ### Order of Configuration
 The configuration of software follows the order of the methods (configuration files or environment variables) shown below, where the last method used sets the configuration:  
@@ -166,7 +173,7 @@ The configuration of software follows the order of the methods (configuration fi
 
 ### Overview
 
-Use the `build.sh` script in the root of the sas-container-recipes/build.sh directory. You will be able to pass in the base image, tag what you want to build from, and provide any addons to create your custom image. The following examples use a mirror URL, which is [strongly recommended](Tips#create-a-local-mirror-repository).
+Use the `build.sh` script in the root of the directory: sas-container-recipes/build.sh. You will be able to pass in the base image, tag what you want to build from, and provide any addons to create your custom image. The following examples use a mirror repository, which is [strongly recommended](Tips#create-a-local-mirror-repository).
 
 To see what options can be used, run the following:
 
@@ -174,13 +181,13 @@ To see what options can be used, run the following:
 build.sh --help
 ```
 
-For single-container, the _addons_, _baseimage_, _basetag_, _mirror-url_, _platform_, type and _zip_ options are used. The ZIP file will be copied to the builds/single/ directory so that the Docker build process can use it.
+For a single container, the _addons_, _baseimage_, _basetag_, _mirror-url_, _platform_, type and _zip_ options are used. The ZIP file will be copied to the builds/single/ directory so that the Docker build process can use it.
 
 For information about how to manually build as well as add layers, see [Advanced Building Options](#advanced-building-options).
 
 ### Building on a Red Hat Enterprise Linux Image
 
-In the following example, the most recent "CentOS:7" image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
+In the following example, the most recent CentOS:7 image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
 
 To change the base image from which the SAS image will be built to any Red Hat 7 variant, change the values for the `--baseimage` and `--basetag` options. Only images based on Red Hat Enterprise Linux 7 are supported for recipes. If the `--baseimage` and `--basetag` options are not provided, then centos:latest from DockerHub will be used.
 
@@ -196,7 +203,7 @@ build.sh \
 
 ### Building on a SUSE Linux Image
 
-In the following example, the "opensuse/leap:42" image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
+In the following example, the opensuse/leap:42 image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
 
 To change the base image from which the SAS image will be built to any SUSE variant, change the values for the `--baseimage` and `--basetag` options. Currently, opensuse/leap with tags 42.* is supported.
 
@@ -213,7 +220,7 @@ build.sh \
 ### Advanced Building Options
 #### Running Docker build
 
-If you want to run the Docker build explicitly, navigate to the util/programming-only-single/ directory and run the following:
+If you want to run the Docker build explicitly, navigate to the util/programming-only-single directory and run the following:
 
 ```
 docker build . \
@@ -259,17 +266,21 @@ docker run --detach --publish-all --rm --name svc-ide-jupyter-python3 --hostname
 
 The content that is displayed to the console when building is also captured in a log file named ${PWD}/logs/build_sas_container.log.
 
-If a log file exists at the time of the run, then the previous file is preserved with a name of build_sas_container_<date-time stamp>.log. If problems are encountered during the build process, review the log file or provide it when opening a ticket.
+If a log file exists at the time of the run, then the previous file is preserved with a name of build_sas_container_<var>date-time-stamp</var>.log. If problems are encountered during the build process, review the log file or provide it when opening a ticket.
 
 ### Errors During Build
 
 If an error occurred during the build process, it is possible that some intermediate build containers were left behind. To see any images that are a result of the SAS recipe build process, run the following:
 
-`docker images --filter "dangling=true" --filter "label=sas.recipe.version"`
+```
+docker images --filter "dangling=true" --filter "label=sas.recipe.version"
+```
 
 If you encounter any of these you can remove these images by running the following:
 
-`docker rmi $(docker images -q --filter "dangling=true" --filter "label=sas.recipe.version")`
+```
+docker rmi $(docker images -q --filter "dangling=true" --filter "label=sas.recipe.version")
+```
 
 The command between the parentheses returns the image IDs that meet the filter criteria and then will remove those images.
 
@@ -291,7 +302,7 @@ sed -i 's/@REPLACE_ME_WITH_TAG@/<tag>/' ${PWD}/run/launchsas.sh
 cd run
 ```
 
-When the script is run, it will create several directories for you. These are set up either to persist cause data to persist or to help with [configuration](#configuration). 
+When the script is run, it will create several directories for you. These are set up either to cause data to persist or to help with [configuration](#configuration). 
 
 ```
 mkdir -p ${PWD}/sasinside      # Configuration
@@ -343,7 +354,7 @@ viya-single-container:latest
 - `SSL_KEY_NAME` must be the file name of your key.
 - The file provided by `--volume /my/path/to/casigned.cer` is placed inside the container in the /etc/pki/tls/certs/ directory so that it can be used by the HTTPD SSL configuration.
 - The file provided by `--volume /my/path/to/servertls.key` is placed inside the container in the /etc/pki/tls/private/ directory so that it can be used by the HTTPD SSL configuration.
-- HTTPS runs on port 8443 and is published by using the `--publish 8443:443` argument in the Docker run command
+- HTTPS runs on port 8443 and is published by using the `--publish 8443:443` argument in the Docker run command.
 
 ### SAS Batch Server
 
