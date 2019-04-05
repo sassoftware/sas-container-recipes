@@ -7,7 +7,7 @@
   - [Order of Configuration](#order-of-configuration)
 - [How to Build](#how-to-build)
   - [Overview](#overview)
-  - [Building on a Red Hat Enterprise Linux Image](#building-on-a-red-hat-enterprise-linux-image)
+  - [Building on an Image Based on Red Hat Enterprise Linux](#building-on-an-image-based-on-red-hat-enterprise-linux)
   - [Building on a SUSE Linux Image](#building-on-a-suse-linux-image)
   - [Advanced Building Options](#advanced-building-options)
   - [Logging](#logging)
@@ -185,11 +185,15 @@ For a single container, the _addons_, _baseimage_, _basetag_, _mirror-url_, _pla
 
 For information about how to manually build as well as add layers, see [Advanced Building Options](#advanced-building-options).
 
-### Building on a Red Hat Enterprise Linux Image
+### Building on an Image Based on Red Hat Enterprise Linux
+
+The instructions in this section are for Red Hat Enterprise Linux (RHEL) 7 or derivatives, such as CentOS 7.
+
+**Note:** Only images that are based on RHEL 7 can be used for recipes.
 
 In the following example, the most recent CentOS:7 image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
 
-To change the base image from which the SAS image will be built to any Red Hat 7 variant, change the values for the `--baseimage` and `--basetag` options. Only images based on Red Hat Enterprise Linux 7 are supported for recipes. If the `--baseimage` and `--basetag` options are not provided, then centos:latest from DockerHub will be used.
+To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--baseimage` and `--basetag` options. If the `--baseimage` and `--basetag` options are not provided, then centos:latest from DockerHub will be used.
 
 ```
 build.sh \
