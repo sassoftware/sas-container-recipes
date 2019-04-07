@@ -2,7 +2,7 @@
 SAS Container Recipes
 Framework to build SAS Viya Docker images and create deployments using Kubernetes.
 
-Single Container Arguments 
+Single Container Arguments
 --------------------------
 
   Required:
@@ -11,7 +11,7 @@ Single Container Arguments
 		Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
 		If you do not know if your organization has a SAS license then contact
 		https://www.sas.com/en_us/software/how-to-buy.html
-		
+
 		example: /path/to/SAS_Viya_deployment_data.zip
 
   Optional:
@@ -52,7 +52,7 @@ Multi-Container Arguments
 		Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
 		If you do not know if your organization has a SAS license then contact
 		https://www.sas.com/en_us/software/how-to-buy.html
-		
+
 		example: /path/to/SAS_Viya_deployment_data.zip
 
 	--docker-namespace <value>
@@ -69,11 +69,11 @@ Multi-Container Arguments
 
   Optional:
 
-	--virtual-host 
+	--virtual-host
 		The Kubernetes Ingress path that defines the location of the HTTP endpoint.
 		For more details on Ingress see the official Kubernetes documentation at
 		https://kubernetes.io/docs/concepts/services-networking/ingress/
-		
+
 		example: user-myproject.mycluster.com
 
 	--addons [<value> <value>]
@@ -92,8 +92,8 @@ Multi-Container Arguments
 		https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
 	--tag <value>
-		Override the default tag formatted as "19.0.4-2019-03-18-09-49-38"
-										( <recipe-version> - <date> - <time> )
+		Override the default tag formatted as "19.0.4-20190405074255-50645c9"
+										( <recipe-version> - <date time> - <git sha1 > )
 
 	--workers <integer>
 		Specify the number of CPU cores to allocate for the build process.
@@ -120,9 +120,13 @@ Multi-Container Arguments
 	--builder-port <integer>
 		Port to listen on and serve entitlement and CA certificates from. Serving certificates is required to avoid leaving sensitive order data in the layers.
 
-		WARNING: Changing this between builds will cause your layer cache to be busted.
+		WARNING: Changing this between builds will invalidate your layer cache.
 
 		default: 1976
+
+	--genearte-manifests-only
+		Will only build manifests. They will be placed in the /builds/<deployment type> directory.
+		default: false
 
 	--version
 		Print the SAS Container Recipes version and exit.
@@ -136,9 +140,9 @@ Need some more help?
 	For FAQs, troubleshooting, and tips
 		https://github.com/sassoftware/sas-container-recipes/wiki
 	License Assistance
-		https://support.sas.com/en/technical-support/license-assistance.html 
+		https://support.sas.com/en/technical-support/license-assistance.html
 	License Purchases
 		https://www.sas.com/en_us/software/how-to-buy.html
 	Software Trials
-		https://www.sas.com/en_us/trials.html 
+		https://www.sas.com/en_us/trials.html
 
