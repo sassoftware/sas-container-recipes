@@ -740,10 +740,10 @@ func (order *SoftwareOrder) Build() error {
 		}
 		fmt.Println("\n" + fmt.Sprintf(`Run the following to start the container:
 
-	docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=%s \
-	--env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 \
-	--name sas-viya-single-programming-only --hostname %s \
-	sas-viya-single-programming-only:latest
+    docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=%s \
+    --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 \
+    --name sas-viya-single-programming-only --hostname %s \
+    sas-viya-single-programming-only:latest
 `, hostname, hostname))
 
 		return nil
@@ -1536,9 +1536,20 @@ func (order *SoftwareOrder) ShowBuildSummary() {
 		k8s_namespace = "sas-viya"
 	}
 
-	manifestInstructions := fmt.Sprintf(`
+	manifestLocation := fmt.Sprintf(`
 Kubernetes manifests have been created: %s
+That directory is mapped to:            %s
+`,
+		order.BuildPath+"manifests/",
+		symlinkBuildPath)
+	if order.GenerateManifestsOnly {
+		manifestLocation = fmt.Sprintf(`
+Kubernetes manifests have been created: %s
+`,
+			order.BuildPath+"manifests/")
+	}
 
+	manifestInstructions := fmt.Sprintf(`
 To deploy a new environment run the below commands
 
 Create the Kuberenetes namespace:
@@ -1553,7 +1564,6 @@ kubectl -n %s apply -f %s/kubernetes/secrets && \
 kubectl -n %s apply -f %s/kubernetes/services && \
 kubectl -n %s apply -f %s/kubernetes/deployments
 `,
-		order.BuildPath+"manifests/",
 		symlinkBuildPath, k8s_namespace,
 		k8s_namespace, symlinkBuildPath, k8s_namespace,
 		k8s_namespace, symlinkBuildPath,
@@ -1561,6 +1571,8 @@ kubectl -n %s apply -f %s/kubernetes/deployments
 		k8s_namespace, symlinkBuildPath,
 		k8s_namespace, symlinkBuildPath)
 
+	fmt.Println(manifestLocation)
 	fmt.Println(manifestInstructions)
+	order.WriteLog(false, manifestLocation)
 	order.WriteLog(false, manifestInstructions)
 }
