@@ -35,12 +35,24 @@ zypper install java-1_8_0-openjdk
 `mkdir --parents ~/go/{bin,pkg,src/github.com/sassoftware/}`
 `cd ~/go/src/github.com/sassoftware/`
 
-4. Clone the repository into the src/github.com/sassoftware location: 
+4. The package `git`  must be installed so the project files can be cloned from the repository.
+```
+# CentOS & RHEL
+yum install git
+
+# Ubuntu
+apt-get install git
+
+# SUSE
+zypper install git
+```
+
+5. Clone the repository into the src/github.com/sassoftware location: 
   `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
-5. Go into the newly cloned directory: `cd sas-container-recipes`
+6. Go into the newly cloned directory: `cd sas-container-recipes`
 
-6. Fetch any dependencies: `go get ./...`
+7. Fetch any dependencies: `go get ./...`
 
 7. Run the build command, which will result in a binary called `sas-container-recipes`: `go build`
 

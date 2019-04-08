@@ -62,23 +62,24 @@ var ConfigPath = "config-full.yml"
 type SoftwareOrder struct {
 
 	// Build arguments and flags (see order.LoadCommands for details)
-	LicensePath          string
-	BaseImage            string
-	MirrorURL            string
-	VirtualHost          string
-	DockerNamespace      string
-	DockerRegistry       string
-	DeploymentType       string
-	PlaybookPath         string
-	Platform             string
-	ProjectName          string
-	TagOverride          string
-	AddOns               []string
-	DebugContainers      []string
-	WorkerCount          int
-	Verbose              bool
-	SkipMirrorValidation bool
-	SkipDockerValidation bool
+	LicensePath           string
+	BaseImage             string
+	MirrorURL             string
+	VirtualHost           string
+	DockerNamespace       string
+	DockerRegistry        string
+	DeploymentType        string
+	PlaybookPath          string
+	Platform              string
+	ProjectName           string
+	TagOverride           string
+	AddOns                []string
+	DebugContainers       []string
+	WorkerCount           int
+	Verbose               bool
+	SkipMirrorValidation  bool
+	SkipDockerValidation  bool
+	GenerateManifestsOnly bool
 
 	// Build attributes
 	TimestampTag string                // Allows for datetime on each temp build bfile
@@ -186,35 +187,58 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		order.ConfigPath = "config-multiple.yml"
 	}
 
-	order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
-	if err := os.MkdirAll(order.BuildPath+"manifests", 0744); err != nil {
-		return order, err
-	}
-	symlinkCommand := fmt.Sprintf("cd builds && rm -rf %s && ln -s %s-%s %s", order.DeploymentType, order.DeploymentType, order.TimestampTag, order.DeploymentType)
-	cmd := exec.Command("sh", "-c", symlinkCommand)
-	stderr, err := cmd.StderrPipe()
-	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
-	}
+	if !order.GenerateManifestsOnly {
+		order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
+		if err := os.MkdirAll(order.BuildPath+"manifests", 0744); err != nil {
+			return order, err
+		}
+		symlinkCommand := fmt.Sprintf("cd builds && rm -rf %s && ln -s %s-%s %s", order.DeploymentType, order.DeploymentType, order.TimestampTag, order.DeploymentType)
+		cmd := exec.Command("sh", "-c", symlinkCommand)
+		stderr, err := cmd.StderrPipe()
+		if err := cmd.Start(); err != nil {
+			log.Fatal(err)
+		}
 
-	slurp, _ := ioutil.ReadAll(stderr)
-	fmt.Printf("%s\n", slurp)
+		slurp, _ := ioutil.ReadAll(stderr)
+		fmt.Printf("%s\n", slurp)
 
-	if err := cmd.Wait(); err != nil {
-		return order, err
+		if err := cmd.Wait(); err != nil {
+			return order, err
+		}
+		if err != nil {
+			return order, err
+		}
+		order.LogPath = order.BuildPath + "/build.log"
+		logHandle, err := os.Create(order.LogPath)
+		if err != nil {
+			return order, err
+		}
+		order.Log = logHandle
+	} else {
+		// If we are only generating manifests, then use the previous run.
+		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
+
+		// Want to make sure the deployment type directory exists. Trying to protect
+		// against the case where a user tries to generate manifests before they
+		// built anything. Generate manifests only is a second step.
+		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
+			return order, err
+		}
+
+		// Save off the previous build log
+		order.LogPath = order.BuildPath + "/build.log"
+		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s", order.LogPath, order.TimestampTag))
+		if err != nil {
+			return order, err
+		}
+
+		logHandle, err := os.Create(order.LogPath)
+		if err != nil {
+			return order, err
+		}
+		order.Log = logHandle
+
 	}
-	//order.WriteLog(true, symlinkCommand)
-	//_, err := exec.Command("sh", "-c", symlinkCommand).Output()
-	//order.WriteLog(true, out)
-	if err != nil {
-		return order, err
-	}
-	order.LogPath = order.BuildPath + "/build.log"
-	logHandle, err := os.Create(order.LogPath)
-	if err != nil {
-		return order, err
-	}
-	order.Log = logHandle
 
 	// Start a worker pool and wait for all workers to finish
 	workerCount := 0 // Number of goroutines started
@@ -223,28 +247,30 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	progress := make(chan string)
 
 	workerCount++
-	go order.LoadPlaybook(progress, fail, done)
-
-	workerCount++
-	go order.LoadLicense(progress, fail, done)
-
-	workerCount++
-	go order.LoadDocker(progress, fail, done)
-
-	workerCount++
-	go order.LoadRegistryAuth(fail, done)
-
-	workerCount++
 	go order.LoadSiteDefault(progress, fail, done)
 
-	if !order.SkipDockerValidation {
+	if !order.GenerateManifestsOnly {
 		workerCount++
-		go order.TestRegistry(progress, fail, done)
-	}
+		go order.LoadPlaybook(progress, fail, done)
 
-	if !order.SkipMirrorValidation {
 		workerCount++
-		go order.TestMirror(progress, fail, done)
+		go order.LoadLicense(progress, fail, done)
+
+		workerCount++
+		go order.LoadDocker(progress, fail, done)
+
+		workerCount++
+		go order.LoadRegistryAuth(fail, done)
+
+		if !order.SkipDockerValidation {
+			workerCount++
+			go order.TestRegistry(progress, fail, done)
+		}
+
+		if !order.SkipMirrorValidation {
+			workerCount++
+			go order.TestMirror(progress, fail, done)
+		}
 	}
 
 	doneCount := 0
@@ -384,6 +410,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	version := flag.Bool("version", false, "")
 	skipMirrorValidation := flag.Bool("skip-mirror-url-validation", false, "")
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
+	generateManifestsOnly := flag.Bool("generate-manifests-only", false, "")
 	builderPort := flag.String("builder-port", "1976", "")
 
 	// By default detect the cpu core count and utilize all of them
@@ -418,6 +445,9 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.Verbose = *verbose
 	order.SkipMirrorValidation = *skipMirrorValidation
 	order.SkipDockerValidation = *skipDockerValidation
+
+	// See if we the user just wants to generate manifests
+	order.GenerateManifestsOnly=*generateManifestsOnly
 
 	// This is a safeguard for when a user does not use quotes around a multi value argument
 	otherArgs := flag.Args()
@@ -530,12 +560,12 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 	if order.DeploymentType == "full" {
 		order.WriteLog(true, `
-  _______  ______  _____ ____  ___ __  __ _____ _   _ _____  _    _     
- | ____\ \/ /  _ \| ____|  _ \|_ _|  \/  | ____| \ | |_   _|/ \  | |    
- |  _|  \  /| |_) |  _| | |_) || || |\/| |  _| |  \| | | | / _ \ | |    
- | |___ /  \|  __/| |___|  _ < | || |  | | |___| |\  | | |/ ___ \| |___ 
+  _______  ______  _____ ____  ___ __  __ _____ _   _ _____  _    _
+ | ____\ \/ /  _ \| ____|  _ \|_ _|  \/  | ____| \ | |_   _|/ \  | |
+ |  _|  \  /| |_) |  _| | |_) || || |\/| |  _| |  \| | | | / _ \ | |
+ | |___ /  \|  __/| |___|  _ < | || |  | | |___| |\  | | |/ ___ \| |___
  |_____/_/\_\_|   |_____|_| \_\___|_|  |_|_____|_| \_| |_/_/   \_\_____|
-            `)
+			`)
 	}
 
 	// Parse the list of buildOnly arguments
@@ -1129,47 +1159,58 @@ func (order *SoftwareOrder) Prepare() error {
 		return nil
 	}
 
-	// Call a prebuild on each container
-	fail := make(chan string)
-	done := make(chan string)
-	progress := make(chan string)
-	workerCount := 0
-	for _, container := range order.Containers {
-		if container.Status != DoNotBuild {
-			workerCount++
-			go func(container *Container, progress chan string, fail chan string) {
-				container.Status = Loading
-				err := container.Prebuild(progress)
-				if err != nil {
-					container.Status = Failed
-					fail <- container.Name + " prebuild " + err.Error()
-				}
-				done <- container.Name
-			}(container, progress, fail)
-		}
-	}
-
-	// Wait for the worker pool to finish
-	doneCount := 0
-	for {
-		select {
-		case <-done:
-			doneCount++
-			if doneCount == workerCount {
-				// Generate the Kubernetes manifests since we have all the details to do so before the build
-				// Note: This is a time saver, though the manifests are not valid if the images
-				//       fail to build or fail to push to the registry.
-				err := order.GenerateManifests()
-				if err != nil {
-					return err
-				}
-				return nil
+	if !order.GenerateManifestsOnly {
+		// Call a prebuild on each container
+		fail := make(chan string)
+		done := make(chan string)
+		progress := make(chan string)
+		workerCount := 0
+		for _, container := range order.Containers {
+			if container.Status != DoNotBuild {
+				workerCount++
+				go func(container *Container, progress chan string, fail chan string) {
+					container.Status = Loading
+					err := container.Prebuild(progress)
+					if err != nil {
+						container.Status = Failed
+						fail <- container.Name + " prebuild " + err.Error()
+					}
+					done <- container.Name
+				}(container, progress, fail)
 			}
-		case failure := <-fail:
-			order.WriteLog(true, failure)
-		case progress := <-progress:
-			order.WriteLog(true, progress)
 		}
+
+		// Wait for the worker pool to finish
+		doneCount := 0
+		for {
+			select {
+			case <-done:
+				doneCount++
+				if doneCount == workerCount {
+					// Generate the Kubernetes manifests since we have all the details to do so before the build
+					// Note: This is a time saver, though the manifests are not valid if the images
+					//       fail to build or fail to push to the registry.
+					err := order.GenerateManifests()
+					if err != nil {
+						return err
+					}
+					return nil
+				}
+			case failure := <-fail:
+				order.WriteLog(true, failure)
+			case progress := <-progress:
+				order.WriteLog(true, progress)
+			}
+		}
+	} else {
+		// Generate the Kubernetes manifests since we have all the details to do so before the build
+		// Note: This is a time saver, though the manifests are not valid if the images
+		//       fail to build or fail to push to the registry.
+		err := order.GenerateManifests()
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 }
 
@@ -1178,140 +1219,150 @@ func (order *SoftwareOrder) GenerateManifests() error {
 
 	order.WriteLog(true, "Creating deployment manifests ...")
 
-	// Write a vars file to disk so it can be used by the playbook
-	containerVarSections := []string{}
-	for _, container := range order.Containers {
-		if container.Status == DoNotBuild {
-			continue
-		}
-
-		// Ports section
-		ports := "    ports:\n"
-		for _, item := range container.Config.Ports {
-			ports += "    - " + item + "\n"
-		}
-
-		// Environment section
-		environment := "    environment:"
-		if len(container.Config.Environment) > 0 {
-			environment += "\n"
-			for _, item := range container.Config.Environment {
-				environment += "    - " + item + "\n"
+    if !order.GenerateManifestsOnly {
+		// Write a vars file to disk so it can be used by the playbook
+		containerVarSections := []string{}
+		for _, container := range order.Containers {
+			if container.Status == DoNotBuild {
+				continue
 			}
-		} else {
-			environment += " []\n"
-		}
 
-		// Secrets section
-		secrets := "    secrets:"
-		if len(container.Config.Secrets) > 0 {
-			secrets += "\n"
-			for _, item := range container.Config.Secrets {
-				if strings.HasPrefix(strings.ToLower(secrets), "setinit_text_enc") {
-					secrets += "    - " + item + string(order.License) + "\n"
-				} else {
-					secrets += "    - " + item + "\n"
+			// Ports section
+			ports := "    ports:\n"
+			for _, item := range container.Config.Ports {
+				ports += "    - " + item + "\n"
+			}
+
+			// Environment section
+			environment := "    environment:"
+			if len(container.Config.Environment) > 0 {
+				environment += "\n"
+				for _, item := range container.Config.Environment {
+					environment += "    - " + item + "\n"
+				}
+			} else {
+				environment += " []\n"
+			}
+
+			// Secrets section
+			secrets := "    secrets:"
+			if len(container.Config.Secrets) > 0 {
+				secrets += "\n"
+				for _, item := range container.Config.Secrets {
+					if strings.HasPrefix(strings.ToLower(secrets), "setinit_text_enc") {
+						secrets += "    - " + item + string(order.License) + "\n"
+					} else {
+						secrets += "    - " + item + "\n"
+					}
+				}
+			} else {
+				secrets += " []\n"
+			}
+
+			// Volumes section
+			volumes := "    volumes:"
+			if len(container.Config.Volumes) > 0 {
+				volumes += "\n"
+				for _, item := range container.Config.Volumes {
+					volumes += "    - " + item + "\n"
+				}
+			} else {
+				volumes += " []\n"
+			}
+
+			// Resources section
+			resources := ""
+			if len(container.Config.Resources.Limits) > 0 && len(container.Config.Resources.Requests) > 0 {
+				resources += "    resources:"
+				if len(container.Config.Resources.Limits) > 0 {
+					resources += "\n      limits:"
+					for _, item := range container.Config.Resources.Limits {
+						resources += "\n      - " + item
+					}
+				}
+				if len(container.Config.Resources.Requests) > 0 {
+					resources += "\n      requests:"
+					for _, item := range container.Config.Resources.Requests {
+						resources += "\n      - " + item
+					}
 				}
 			}
-		} else {
-			secrets += " []\n"
+
+			// Final formatting for container's section
+			containerSection := "  " + container.Name + ":\n"
+			containerSection += ports
+			containerSection += environment
+			containerSection += secrets
+			containerSection += volumes
+			containerSection += resources
+			containerVarSections = append(containerVarSections, containerSection)
 		}
 
-		// Volumes section
-		volumes := "    volumes:"
-		if len(container.Config.Volumes) > 0 {
-			volumes += "\n"
-			for _, item := range container.Config.Volumes {
-				volumes += "    - " + item + "\n"
-			}
-		} else {
-			volumes += " []\n"
-		}
-
-		// Resources section
-		resources := ""
-		if len(container.Config.Resources.Limits) > 0 && len(container.Config.Resources.Requests) > 0 {
-			resources += "    resources:"
-			if len(container.Config.Resources.Limits) > 0 {
-				resources += "\n      limits:"
-				for _, item := range container.Config.Resources.Limits {
-					resources += "\n      - " + item
-				}
-			}
-			if len(container.Config.Resources.Requests) > 0 {
-				resources += "\n      requests:"
-				for _, item := range container.Config.Resources.Requests {
-					resources += "\n      - " + item
-				}
-			}
-		}
-
-		// Final formatting for container's section
-		containerSection := "  " + container.Name + ":\n"
-		containerSection += ports
-		containerSection += environment
-		containerSection += secrets
-		containerSection += volumes
-		containerSection += resources
-		containerVarSections = append(containerVarSections, containerSection)
-	}
-
-	// Put together the final vars file
-	// TODO: clean this up
-	vars := fmt.Sprintf(`
+		// Put together the final vars file
+		// TODO: clean this up
+		vars := fmt.Sprintf(`
 PROJECT_NAME: %s
-SECURE_CONSUL: false
-TLS_ENABLED: false
-SAS_K8S_NAMESPACE: sas-viya
-SAS_K8S_INGRESS_DOMAIN: company.com
 docker_tag: %s
-SAS_MANIFEST_DIR: manifests/
-DEPLOYMENT_LABEL: sas-viya
+SECURE_CONSUL: false
 DISABLE_CONSUL_HTTP_PORT: false
-orchestration_root: /ansible/roles/
-METAREPO_CERT_DIR: /ansible
-SAS_CONFIG_ROOT: /opt/sas/viya/home/
 `,
 		order.ProjectName, order.TagOverride)
 
-	// Write a temp file
-	varsDeploymentFilePath := order.BuildPath + "vars_deployment.yml"
-	err := ioutil.WriteFile(varsDeploymentFilePath, []byte(vars), 0644)
-	if err != nil {
-		return err
-	}
+		// Write a temp file
+		varsDeploymentFilePath := order.BuildPath + "vars_deployment.yml"
+		err := ioutil.WriteFile(varsDeploymentFilePath, []byte(vars), 0644)
+		if err != nil {
+			return err
+		}
 
-	serviceSettings := fmt.Sprintf(`
+		serviceSettings := fmt.Sprintf(`
 settings:
   base: %s
   project_name: %s
   k8s_namespace:
     name: %s
 `,
-		order.BaseImage,
-		order.ProjectName,
-		order.DockerNamespace)
+			order.BaseImage,
+			order.ProjectName,
+			order.DockerNamespace)
 
-	serviceSettings += "services:\n"
-	for _, section := range containerVarSections {
-		serviceSettings += section + "\n"
-	}
-	registries := fmt.Sprintf("registries: \n  docker-registry:\n    url: %s \n    namespace: %s",
-		order.DockerRegistry, order.DockerNamespace)
-	serviceSettings += registries
+		serviceSettings += "services:\n"
+		for _, section := range containerVarSections {
+			serviceSettings += section + "\n"
+		}
+		registries := fmt.Sprintf("registries: \n  docker-registry:\n    url: %s \n    namespace: %s",
+			order.DockerRegistry, order.DockerNamespace)
+		serviceSettings += registries
 
-	// Write a temp file
-	serviceSettingsFilePath := order.BuildPath + "manifest-vars.yml"
-	err = ioutil.WriteFile(serviceSettingsFilePath, []byte(serviceSettings), 0644)
-	if err != nil {
-		return err
-	}
+		// Write a temp file
+		serviceSettingsFilePath := order.BuildPath + "manifest-vars.yml"
+		err = ioutil.WriteFile(serviceSettingsFilePath, []byte(serviceSettings), 0644)
+		if err != nil {
+			return err
+		}
 
-	// TODO: clean this up
-	playbook := `
+		// Copy over the playbook files that contain configurations
+		copyVarsCommand := fmt.Sprintf("cp %ssas_viya_playbook/vars.yml %svars.yml", order.BuildPath, order.BuildPath)
+		_, err = exec.Command("sh", "-c", copyVarsCommand).Output()
+		if err != nil {
+			return err
+		}
+		copyAllCommand := fmt.Sprintf("cp %ssas_viya_playbook/group_vars/all %sall.yml", order.BuildPath, order.BuildPath)
+		_, err = exec.Command("sh", "-c", copyAllCommand).Output()
+		if err != nil {
+			return err
+		}
+		copySoeDefaultsCommand := fmt.Sprintf("cp %ssas_viya_playbook/internal/soe_defaults.yml %ssoe_defaults.yml", order.BuildPath, order.BuildPath)
+		_, err = exec.Command("sh", "-c", copySoeDefaultsCommand).Output()
+		if err != nil {
+			return err
+		}
+
+		// TODO: clean this up
+		playbook := `
 # Manifests can be re-generated without re-building:
 # 1. Edit values in the 'vars_usermods.yml' file.
-# 2. Run 'ansible-playbook generate_manifests.yml'.
+# 2. Run build.sh passing in the '--generate-manifests-only --sas-docker-tag %s'
 # 3. Navigate to '{{ SAS_MANIFEST_DIR }}/kubernetes/' to find the new deployment files.
 #
 # DO NOT EDIT - This playbook is generated by order.go
@@ -1326,6 +1377,9 @@ settings:
     SAS_K8S_INGRESS_DOMAIN: company.com
 
   vars_files:
+  - all.yml
+  - soe_defaults.yml
+  - vars.yml
   - vars_deployment.yml
   - vars_usermods.yml
   - manifest-vars.yml
@@ -1334,10 +1388,11 @@ settings:
   - ../../util/static-roles-%s/manifests
 ...
 `
-	err = ioutil.WriteFile(order.BuildPath+"generate_manifests.yml",
-		[]byte(fmt.Sprintf(playbook, order.DeploymentType)), 0755)
-	if err != nil {
-		return err
+		err = ioutil.WriteFile(order.BuildPath+"generate_manifests.yml",
+		[]byte(fmt.Sprintf(playbook, order.TagOverride, order.DeploymentType)), 0755)
+		if err != nil {
+			return err
+		}
 	}
 
 	varsDestPath := fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath)
@@ -1368,7 +1423,8 @@ settings:
 	manifestsCommand := fmt.Sprintf("ansible-playbook --connection=local --inventory 127.0.0.1, %sgenerate_manifests.yml -vv", order.BuildPath)
 	result, err := exec.Command("sh", "-c", manifestsCommand).Output()
 	if err != nil {
-		result := string(result) + "\n" + err.Error() + "\n"
+		result := string(result) + "\n" + manifestsCommand + "\n"
+		result += string(result) + "\n" + err.Error() + "\n"
 		result += "Generate Manifests playbook failed.\n"
 		result += fmt.Sprintf("To debug use `cd %s ; ansible-playbook generate_manifests.yml`\n", order.BuildPath)
 		return errors.New(result)
@@ -1436,34 +1492,36 @@ func bytesToGB(bytes int64) string {
 // ShowBuildSummary calculates all metrics and display them in a table.
 func (order *SoftwareOrder) ShowBuildSummary() {
 
-	// Special case where the single deployment does not use the order.Containers list
-	if order.DeploymentType == "single" {
-		order.EndTime = time.Now()
-		fmt.Println(fmt.Sprintf("\nTotal Elapsed Time: %s\n\n", order.EndTime.Sub(order.StartTime).Round(time.Second)))
-		return
-	}
-
-	// Print each container's metrics in a table
-	summaryHeader := fmt.Sprintf("\n%s  Summary  ( %s, %s ) %s", strings.Repeat("-", 23),
-		order.EndTime.Sub(order.StartTime).Round(time.Second),
-		bytesToGB(order.TotalBuildSize),
-		strings.Repeat("-", 23))
-	fmt.Println(summaryHeader)
-	order.WriteLog(false, summaryHeader)
-	for _, container := range order.Containers {
-		if container.Status == Pushed {
-			output := fmt.Sprintf("%s\n\tSize: %s\tBuild Time: %s\tPush Time: %s",
-				container.GetWholeImageName(),
-				bytesToGB(container.ImageSize),
-				container.BuildEnd.Sub(container.BuildStart).Round(time.Second),
-				container.PushEnd.Sub(container.PushStart).Round(time.Second))
-			fmt.Println(output)
-			order.WriteLog(false, output)
+	if !order.GenerateManifestsOnly {
+		// Special case where the single deployment does not use the order.Containers list
+		if order.DeploymentType == "single" {
+			order.EndTime = time.Now()
+			fmt.Println(fmt.Sprintf("\nTotal Elapsed Time: %s\n\n", order.EndTime.Sub(order.StartTime).Round(time.Second)))
+			return
 		}
+
+		// Print each container's metrics in a table
+		summaryHeader := fmt.Sprintf("\n%s  Summary  ( %s, %s ) %s", strings.Repeat("-", 23),
+			order.EndTime.Sub(order.StartTime).Round(time.Second),
+			bytesToGB(order.TotalBuildSize),
+			strings.Repeat("-", 23))
+		fmt.Println(summaryHeader)
+		order.WriteLog(false, summaryHeader)
+		for _, container := range order.Containers {
+			if container.Status == Pushed {
+				output := fmt.Sprintf("%s\n\tSize: %s\tBuild Time: %s\tPush Time: %s",
+					container.GetWholeImageName(),
+					bytesToGB(container.ImageSize),
+					container.BuildEnd.Sub(container.BuildStart).Round(time.Second),
+					container.PushEnd.Sub(container.PushStart).Round(time.Second))
+				fmt.Println(output)
+				order.WriteLog(false, output)
+			}
+		}
+		lineSeparator := strings.Repeat("-", 79)
+		fmt.Println(lineSeparator)
+		order.WriteLog(false, lineSeparator)
 	}
-	lineSeparator := strings.Repeat("-", 79)
-	fmt.Println(lineSeparator)
-	order.WriteLog(false, lineSeparator)
 
 	// TODO: Make the list of directories reflective of the manifests generated.
 	//       In a TLS build there will be an account type. Also, the "manifests"
@@ -1471,31 +1529,50 @@ func (order *SoftwareOrder) ShowBuildSummary() {
 	//       have a way to discover this information so it is reflects in the data
 	//       given to the user.
 	symlinkBuildPath := fmt.Sprintf("builds/%s/manifests", order.DeploymentType)
-	manifestInstructions := fmt.Sprintf(`
-Kubernetes manifests have been created: %s
+	namespaceGrepCommand := fmt.Sprintf("grep '^SAS_K8S_NAMESPACE' %svars_usermods.yml | awk -F ': ' '{ print $2 }'", order.BuildPath)
+	grep_out, _ := exec.Command("sh", "-c", namespaceGrepCommand).Output()
+	k8s_namespace := strings.TrimSuffix(string(grep_out), "\n")
+	if len(k8s_namespace) == 0 {
+		k8s_namespace = "sas-viya"
+	}
 
+	manifestLocation := fmt.Sprintf(`
+Kubernetes manifests have been created: %s
+That directory is mapped to:            %s
+`,
+		order.BuildPath+"manifests/",
+		symlinkBuildPath)
+	if order.GenerateManifestsOnly {
+		manifestLocation = fmt.Sprintf(`
+Kubernetes manifests have been created: %s
+`,
+			order.BuildPath+"manifests/")
+	}
+
+	manifestInstructions := fmt.Sprintf(`
 To deploy a new environment run the below commands
 
 Create the Kuberenetes namespace:
 
-kubectl apply -f %s/kubernetes/namespace/
+kubectl apply -f %s/kubernetes/namespace/%s.yml
 
 Then create the following Kubernetes objects:
 
-kubectl -n sas-viya apply -f %s/kubernetes/ingress && \
-kubectl -n sas-viya apply -f %s/kubernetes/configmaps && \
-kubectl -n sas-viya apply -f %s/kubernetes/secrets && \
-kubectl -n sas-viya apply -f %s/kubernetes/services && \
-kubectl -n sas-viya apply -f %s/kubernetes/deployments
+kubectl -n %s apply -f %s/kubernetes/ingress/%s.yml && \
+kubectl -n %s apply -f %s/kubernetes/configmaps && \
+kubectl -n %s apply -f %s/kubernetes/secrets && \
+kubectl -n %s apply -f %s/kubernetes/services && \
+kubectl -n %s apply -f %s/kubernetes/deployments
 `,
-		order.BuildPath+"manifests/",
-		symlinkBuildPath,
-		symlinkBuildPath,
-		symlinkBuildPath,
-		symlinkBuildPath,
-		symlinkBuildPath,
-		symlinkBuildPath)
+		symlinkBuildPath, k8s_namespace,
+		k8s_namespace, symlinkBuildPath, k8s_namespace,
+		k8s_namespace, symlinkBuildPath,
+		k8s_namespace, symlinkBuildPath,
+		k8s_namespace, symlinkBuildPath,
+		k8s_namespace, symlinkBuildPath)
 
+	fmt.Println(manifestLocation)
 	fmt.Println(manifestInstructions)
+	order.WriteLog(false, manifestLocation)
 	order.WriteLog(false, manifestInstructions)
 }
