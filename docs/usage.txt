@@ -134,9 +134,16 @@ Multi-Container Arguments
     --generate-manifests-only
         Will only build manifests. They will be placed in the /builds/<deployment_type> directory.
         default: false
+        
+        
+Other Commands
+--------------
 
     --version
     	Print the SAS Container Recipes version and exit.
+    	
+    --help
+        Displays details on all required and optional arguments.
 
 
 Need some more help?
@@ -147,9 +154,9 @@ Need some more help?
 	For FAQs, troubleshooting, and tips
 		https://github.com/sassoftware/sas-container-recipes/wiki
 	License Assistance
-		https://support.sas.com/en/technical-support/license-assistance.html 
+		https://support.sas.com/en/technical-support/license-assistance.html
 	License Purchases
 		https://www.sas.com/en_us/software/how-to-buy.html
 	Software Trials
-		https://www.sas.com/en_us/trials.html 
+		https://www.sas.com/en_us/trials.html
 
