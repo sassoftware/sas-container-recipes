@@ -235,10 +235,12 @@ Examples of running sas-container-recipes to build multiple containers are provi
     
     --builder-port <integer>
         Port to listen on and serve entitlement and CA certificates from. Serving certificates is required to avoid leaving sensitive order data in the layers.
-        
-        WARNING: Changing this between builds will cause your layer cache to be busted.
-        
+        WARNING: Changing this between builds will invalidate your layer cache.
         default: 1976
+    
+    --generate-manifests-only
+        Will only build manifests. They will be placed in the /builds/<deployment_type> directory.
+        default: false
     
     --version
         Print the SAS Container Recipes version and exit.
