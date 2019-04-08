@@ -30,13 +30,13 @@ Single Container Arguments
         Specifies the Docker tag for the base image that is being used.
         Default: 7
 
-	--tag <value>
-		Override the default tag formatted as "19.0.4-2019-03-18-09-49-38"
-										( <recipe-version> - <date> - <time> )
-
-	--mirror-url <value>
-		The location of the mirror URL. See the Mirror Manager guide at
-		https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
+    --tag <value>
+    	Override the default tag formatted as "19.0.4-2019-03-18-09-49-38"
+    									( <recipe-version> - <date> - <time> )
+    
+    --mirror-url <value>
+    	The location of the mirror URL. See the Mirror Manager guide at
+    	https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
 
 Multi-Container Arguments
@@ -73,19 +73,19 @@ Multi-Container Arguments
 
   Optional:
 
-	--virtual-host 
-		The Kubernetes Ingress path that defines the location of the HTTP endpoint.
-		For more details on Ingress see the official Kubernetes documentation at
-		https://kubernetes.io/docs/concepts/services-networking/ingress/
-		
-		example: user-myproject.mycluster.com
-
-	--addons "addons/<value> addons/<value> ..."
-		A space or comma separated list of addon names. Each requires additional configuration:
-		See the GitHub Wiki: https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
-		Access Engines: access-greenplum, access-hadoop, access-odbc, access-oracle, access-pcfiles, access-postgres, access-redshift, access-teradata
-		Authentication: auth-sssd, auth-demo
-		Other: ide-jupyter-python3
+    --virtual-host 
+    	The Kubernetes Ingress path that defines the location of the HTTP endpoint.
+    	For more details on Ingress see the official Kubernetes documentation at
+    	https://kubernetes.io/docs/concepts/services-networking/ingress/
+    	
+    	example: user-myproject.mycluster.com
+    
+    --addons "addons/<value> addons/<value> ..."
+    	A space or comma separated list of addon names. Each requires additional configuration:
+    	See the GitHub Wiki: https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
+    	Access Engines: access-greenplum, access-hadoop, access-odbc, access-oracle, access-pcfiles, access-postgres, access-redshift, access-teradata
+    	Authentication: auth-sssd, auth-demo
+    	Other: ide-jupyter-python3
 
     --base-image <value>
         Specifies the Docker image from which the SAS images will build on top of.
