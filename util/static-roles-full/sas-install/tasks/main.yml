@@ -143,6 +143,17 @@
       warn: no
     when: packages_to_install | default([]) | length > 0
 
+  - name: Print out additional packages
+    debug:
+      msg: "zypper --non-interactive --no-gpg-checks install {{ additional_packages_to_install }}"
+    when: additional_packages_to_install is defined and additional_packages_to_install
+
+  - name: Install additional packages
+    command: 'zypper --non-interactive --no-gpg-checks install {{ additional_packages_to_install }}'
+    args:
+      warn: no
+    when: additional_packages_to_install is defined and additional_packages_to_install
+
   when: ansible_os_family == 'Suse'
 
 - name: Remove sas.repo file
