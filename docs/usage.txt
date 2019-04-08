@@ -31,8 +31,8 @@ Single Container Arguments
         Default: 7
 
     --tag <value>
-    	Override the default tag formatted as "19.0.4-2019-03-18-09-49-38"
-    									( <recipe-version> - <date> - <time> )
+    	Override the default tag formatted as "19.0.4-20190405074255-50645c9"
+				    ( <recipe-version> - <date time> - <git sha1 > )
     
     --mirror-url <value>
     	The location of the mirror URL. See the Mirror Manager guide at
@@ -127,11 +127,13 @@ Multi-Container Arguments
     
     --builder-port <integer>
     	Port to listen on and serve entitlement and CA certificates from. Serving certificates is required to avoid leaving sensitive order data in the layers.
+        WARNING: Changing this between builds will invalidate your layer cache.
+        default: 1976
     
-    	WARNING: Changing this between builds will cause your layer cache to be busted.
-    
-    	default: 1976
-    
+    --generate-manifests-only
+        Will only build manifests. They will be placed in the /builds/<deployment_type> directory.
+        default: false
+
     --version
     	Print the SAS Container Recipes version and exit.
 
