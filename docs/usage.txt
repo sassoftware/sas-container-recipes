@@ -101,9 +101,8 @@ Multi-Container Arguments
     
     --tag <value>
         Override the default tag formatted as "19.0.4-20190405074255-50645c9"
-                ( <recipe-version> - <date time> - <git sha1 > )
+                        ( <recipe-version> - <date time> - <git sha1 > )
 
-    
     --workers <integer>
     	Specify the number of CPU cores to allocate for the build process.
     	default: Utilize all cores on the build machine
