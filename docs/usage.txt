@@ -52,23 +52,23 @@ Multi-Container Arguments
         
         default: single
 
-	--zip <value>
-		Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
-		If you do not know if your organization has a SAS license then contact
-		https://www.sas.com/en_us/software/how-to-buy.html
-		
-		example: /path/to/SAS_Viya_deployment_data.zip
-
-	--docker-namespace <value>
-		The namespace in the Docker registry where Docker
-		images will be pushed to. Used to prevent collisions.
-
-		example: mynamespace
-
-	--docker-registry-url <value>
-		URL of the Docker registry where Docker images will be pushed to.
-
-		example: 10.12.13.14:5000 or my-registry.docker.com
+    --zip <value>
+    	Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
+    	If you do not know if your organization has a SAS license then contact
+    	https://www.sas.com/en_us/software/how-to-buy.html
+    	
+    	example: /path/to/SAS_Viya_deployment_data.zip
+    
+    --docker-namespace <value>
+    	The namespace in the Docker registry where Docker
+    	images will be pushed to. Used to prevent collisions.
+    
+    	example: mynamespace
+    
+    --docker-registry-url <value>
+    	URL of the Docker registry where Docker images will be pushed to.
+    
+    	example: 10.12.13.14:5000 or my-registry.docker.com
 
 
   Optional:
