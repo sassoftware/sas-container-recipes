@@ -6,7 +6,7 @@ Single Container Arguments
 
   Required:
 
-	--zip <value>
+    --zip <value>
         Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
         If you do not know if your organization has a SAS license then contact
         https://www.sas.com/en_us/software/how-to-buy.html
@@ -15,7 +15,7 @@ Single Container Arguments
 
   Optional:
 
-	--addons "addons/<value> addons/<value> ..."
+    --addons "addons/<value> addons/<value> ..."
         A space or comma separated list of addon names. Each requires additional configuration:
         See the GitHub Wiki: https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
         Access Engines: access-greenplum, access-hadoop, access-odbc, access-oracle, access-pcfiles, access-postgres, access-redshift, access-teradata
