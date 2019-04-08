@@ -36,9 +36,9 @@ or get [SAS License Assistance](https://support.sas.com/en/technical-support/lic
 If you have not purchased SAS Software but would like to give it a try, 
 please check out our [Free Software Trials](https://www.sas.com/en_us/trials.html).
     
-2. Download the latest `sas-container-recipes` binary and download then un-archive the latest code archive (zip or tgz) <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes Releases">
-        <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&" alt="Latest Release"/></a>.
-If you would like to compile the binary yourself then see (CONTRIBUTING.md)[https://github.com/sassoftware/sas-container-recipes/blob/master/CONTRIBUTING.md] file for instructions.
+2. Download the latest <a href="https://github.com/sassoftware/sas-container-recipes/releases" alt="SAS Container Recipes Releases">
+        <img src="https://img.shields.io/github/release/sassoftware/sas-container-recipes.svg?&colorA=0b5788&colorB=0b5788&style=for-the-badge&" alt="Latest Release"/></a> 
+or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
 3. Choose your flavor and follow the recipe to build, test, and deploy your container(s).
 
@@ -152,57 +152,97 @@ Examples of running sas-container-recipes to build multiple containers are provi
 ```
 # Required Arguments
 
-  --type [multiple | full | single]
-    sets the deployment type.
+    --type [multiple | full | single]
+        Sets the deployment type.
+        single  : SAS Viya programming-only container started with a `docker run` command
+        multiple: SAS Viya programming-only deployment, multiple containers using Kubernetes
+        full    : SAS Viya full deployment, multiple containers using Kubernetes.
+        
+        default: single
 
-    single  : SAS Viya programming-only container started with a `docker run` command
-    multiple: SAS Viya programming-only deployment, multiple containers using Kubernetes
-    full    : SAS Viya full deployment, multiple containers using Kubernetes.
-
-  --zip <value>
-    specifies the path to the SAS_Viya_deployment_data.zip file, which is from your Software Order Email (SOE).
-    Example: /my/path/to/SAS_Viya_deployment_data.zip
+    --zip <value>
+        Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
+        If you do not know if your organization has a SAS license then contact
+        https://www.sas.com/en_us/software/how-to-buy.html
+        
+        example: /path/to/SAS_Viya_deployment_data.zip
     
-  --docker-registry-namespace <value>
-    specifies the namespace in the Docker registry where the Docker images will be pushed. 
-    Use a unique name to prevent collisions.
-    Example: myuniquename
+    --docker-namespace <value>
+        The namespace in the Docker registry where Docker
+        images will be pushed to. Used to prevent collisions.
+        
+        example: mynamespace
+    
+    --docker-registry-url <value>
+        URL of the Docker registry where Docker images will be pushed to.
+        
+        example: 10.12.13.14:5000 or my-registry.docker.com
 
-  --docker-registry-url <value>
-    specifies the URL of the Docker registry where Docker the images will be pushed.
-    Required for Kubernetes.
-    Examples: 10.12.13.14:5000 or myregistry.myhost.com                  
 
 # Optional Arguments 
 
-  --virtual-host
-    specifies the Kubernetes Ingress path that defines the location of the HTTP endpoint.
-    For details about Ingress, see the official Kubernetes documentation at 
-    https://kubernetes.io/docs/concepts/services-networking/ingress/.
-    Example: user-myproject.mylocal.com
+    --virtual-host 
+        The Kubernetes Ingress path that defines the location of the HTTP endpoint.
+        For more details on Ingress see the official Kubernetes documentation at
+        https://kubernetes.io/docs/concepts/services-networking/ingress/
+        
+        example: user-myproject.mycluster.com
+    
+    --addons "addons/<value> addons/<value> ..."
+        A space or comma separated list of addon names. Each requires additional configuration:
+        See the GitHub Wiki: https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
+        Access Engines: access-greenplum, access-hadoop, access-odbc, access-oracle, access-pcfiles, access-postgres, access-redshift, access-teradata
+        Authentication: auth-sssd, auth-demo
+        Other: ide-jupyter-python3
+    
+    --base-image <value>
+        Specifies the Docker image from which the SAS images will build on top of.
+        Default: centos
+    	
+    --base-tag <value>
+        Specifies the Docker tag for the base image that is being used.
+        Default: 7
+    
+    --mirror-url <value>
+        The location of the mirror URL. See the Mirror Manager guide at
+        https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
+    
+    --tag <value>
+        Override the default tag formatted as "19.0.4-2019-03-18-09-49-38"
+                        ( <recipe-version> - <date_time> )
+    
+    --workers <integer>
+        Specify the number of CPU cores to allocate for the build process.
+        default: Utilize all cores on the build machine
+    
+    --verbose
+        Output the result of each Docker layer creation.
+        default: false
+    
+    --build-only "<container-name> <container-name> ..."
+        Build specific containers by providing a comma or space separated list of container names, no "sas-viya-" prefix, in quotes.
+        [WARNING] This is meant for developers that require specific small components to rapidly be build.
+        
+        example: --build-only "consul" or --build-only "consul httpproxy sas-casserver-primary"
+    
+    --skip-mirror-url-validation
+        Skips validating the mirror URL from the --mirror-url flag.
+        default: false
+    
+    --skip-docker-url-validation
+        Skip verifying the Docker registry URL.
+        default: false
+    
+    --builder-port <integer>
+        Port to listen on and serve entitlement and CA certificates from. Serving certificates is required to avoid leaving sensitive order data in the layers.
+        
+        WARNING: Changing this between builds will cause your layer cache to be busted.
+        
+        default: 1976
+    
+    --version
+        Print the SAS Container Recipes version and exit.
 
-  --addons "[<value>] [<value>]"
-    adds one or more software layers to the main SAS image.
-    For more information about addons, see 'Appendix: Under the Hood' in the wiki at 
-    https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
-    Example: --addons \"addons/auth-sssd addons/access-postgres\"
-
-  --workers <integer>
-    Specify the number of CPU cores to allocate for the build process.
-    default: Utilize all cores on the build machine
-
-  --base-image <value>
-    specifies the Docker image and version from which the SAS images will build on top of
-    Default: centos:7
-
-  --mirror-url <value>
-    specifies the location of the mirror URL. See the Mirror Manager guide at
-    https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
-
-  --tag
-    specifies the tag to apply to the images before pushing to the Docker registry.
-    Default: <recipe_version> - <date> - <time>
-    Example: 19.0.4-2019-03-18-09-49-38
 ```
 
 ### Running Multiple Containers
