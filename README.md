@@ -239,10 +239,12 @@ Examples of running sas-container-recipes to build multiple containers are provi
     --generate-manifests-only
         Will only build manifests. They will be placed in the /builds/<deployment_type> directory.
         default: false
-    
-    --version
-        Print the SAS Container Recipes version and exit.
 
+    --version
+    	Print the SAS Container Recipes version and exit.
+    	
+    --help
+    	Displays details on all required and optional arguments.
 ```
 
 ### Running Multiple Containers
