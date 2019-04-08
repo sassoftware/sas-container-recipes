@@ -1,4 +1,3 @@
-
 SAS Container Recipes
 Framework to build SAS Viya Docker images and create deployments using Kubernetes.
 
@@ -16,7 +15,7 @@ Single Container Arguments
 
   Optional:
 
-	--addons [<value> <value>]
+	--addons "addons/<value> addons/<value> ..."
 		A space or comma separated list of addon names. Each requires additional configuration:
 		See the GitHub Wiki: https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
 		Access Engines: access-greenplum, access-hadoop, access-odbc, access-oracle, access-pcfiles, access-postgres, access-redshift, access-teradata
@@ -41,12 +40,13 @@ Multi-Container Arguments
 
   Required:
 
-	--type <value>
-		Choose one of the following deployments.
-		multiple: SAS Viya Programming Multi-Container deployment with Kubernetes
-		full    : SAS Visuals based deployment with Kubernetes.
-
-	Note: the default deployment type is 'single'.
+    --type [multiple | full | single]
+        Sets the deployment type.
+        single  : SAS Viya programming-only container started with a `docker run` command
+        multiple: SAS Viya programming-only deployment, multiple containers using Kubernetes
+        full    : SAS Viya full deployment, multiple containers using Kubernetes.
+        
+        default: single
 
 	--zip <value>
 		Path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
@@ -76,7 +76,7 @@ Multi-Container Arguments
 		
 		example: user-myproject.mycluster.com
 
-	--addons [<value> <value>]
+	--addons "addons/<value> addons/<value> ..."
 		A space or comma separated list of addon names. Each requires additional configuration:
 		See the GitHub Wiki: https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
 		Access Engines: access-greenplum, access-hadoop, access-odbc, access-oracle, access-pcfiles, access-postgres, access-redshift, access-teradata
@@ -84,8 +84,12 @@ Multi-Container Arguments
 		Other: ide-jupyter-python3
 
 	--base-image <value>
-		The Docker image and tag from which the SAS images will build on top of.
-		Default: centos:latest
+        Specifies the Docker image from which the SAS images will build on top of.
+        Default: centos
+		
+	--base-tag <value>
+        Specifies the Docker tag for the base image that is being used.
+        Default: 7
 
 	--mirror-url <value>
 		The location of the mirror URL.See the Mirror Manager guide at
@@ -93,7 +97,7 @@ Multi-Container Arguments
 
 	--tag <value>
 		Override the default tag formatted as "19.0.4-2019-03-18-09-49-38"
-										( <recipe-version> - <date> - <time> )
+					    ( <recipe-version> - <date_time> )
 
 	--workers <integer>
 		Specify the number of CPU cores to allocate for the build process.
