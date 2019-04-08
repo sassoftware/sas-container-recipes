@@ -22,9 +22,13 @@ Single Container Arguments
 		Authentication: auth-sssd, auth-demo
 		Other: ide-jupyter-python3
 
-	--base-image <value>
-		The Docker image and tag from which the SAS images will build on top of
-		Default: centos:latest
+    --base-image <value>
+        Specifies the Docker image from which the SAS images will build on top of.
+        Default: centos
+		
+    --base-tag <value>
+        Specifies the Docker tag for the base image that is being used.
+        Default: 7
 
 	--tag <value>
 		Override the default tag formatted as "19.0.4-2019-03-18-09-49-38"
@@ -83,11 +87,11 @@ Multi-Container Arguments
 		Authentication: auth-sssd, auth-demo
 		Other: ide-jupyter-python3
 
-	--base-image <value>
+    --base-image <value>
         Specifies the Docker image from which the SAS images will build on top of.
         Default: centos
 		
-	--base-tag <value>
+    --base-tag <value>
         Specifies the Docker tag for the base image that is being used.
         Default: 7
 
