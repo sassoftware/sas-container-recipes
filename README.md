@@ -208,9 +208,9 @@ Examples of running sas-container-recipes to build multiple containers are provi
         https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
     
     --tag <value>
-        Override the default tag formatted as "19.0.4-2019-03-18-09-49-38"
-                        ( <recipe-version> - <date_time> )
-    
+        Override the default tag formatted as "19.0.4-20190405074255-50645c9"
+            ( <recipe-version> - <date time> - <git sha1 > )
+
     --workers <integer>
         Specify the number of CPU cores to allocate for the build process.
         default: Utilize all cores on the build machine
