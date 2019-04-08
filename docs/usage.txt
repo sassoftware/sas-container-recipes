@@ -15,7 +15,7 @@ Single Container Arguments
 
   Optional:
 
-    --addons "addons/<value> addons/<value> ..."
+    --addons "<value> <value> ..."
         A space or comma separated list of addon names. Each requires additional configuration:
         See the GitHub Wiki: https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
         Access Engines: access-greenplum, access-hadoop, access-odbc, access-oracle, access-pcfiles, access-postgres, access-redshift, access-teradata
