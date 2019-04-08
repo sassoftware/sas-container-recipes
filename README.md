@@ -131,7 +131,6 @@ Examples of running sas-container-recipes to build multiple containers are provi
   --zip /path/to/SAS_Viya_deployment_data.zip \
   --docker-registry-namespace myuniquename \
   --docker-registry-url myregistry.myhost.com \
-  --virtual-host user-myproject.mylocal.com \
   --addons "addons/auth-demo"
 ```
 
@@ -143,7 +142,6 @@ Examples of running sas-container-recipes to build multiple containers are provi
   --zip /path/to/SAS_Viya_deployment_data.zip \
   --docker-registry-namespace myuniquename \
   --docker-registry-url myregistry.myhost.com \
-  --virtual-host user-myproject.mylocal.com \
   --addons "addons/auth-sssd"
 ```
 
@@ -188,7 +186,7 @@ Examples of running sas-container-recipes to build multiple containers are provi
         
         example: user-myproject.mycluster.com
     
-    --addons "addons/<value> addons/<value> ..."
+    --addons "<value> <value> ..."
         A space or comma separated list of addon names. Each requires additional configuration:
         See the GitHub Wiki: https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
         Access Engines: access-greenplum, access-hadoop, access-odbc, access-oracle, access-pcfiles, access-postgres, access-redshift, access-teradata
