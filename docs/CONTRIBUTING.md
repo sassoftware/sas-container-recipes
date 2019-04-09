@@ -1,49 +1,5 @@
 ## Contributing
 
-#### Compiling the sas-container-recipes binary 
-1. The SAS Container Recipes tool is written in the Go programming
-  language which can be installed by visiting https://golang.org/doc/install .
-
-```
-# CentOS & RHEL
-yum install golang
-
-# Ubuntu
-apt-get install golang-go
-
-# SUSE
-zypper install go
-```
-
-2. The package `java-1.8.0-openjdk` or another Java Runtime Environment 
-  (1.8.x) must be installed since the SAS Container Recipes tool utilizes
-some features of the `sas-orchestration` tool.
-
-```
-# CentOS & RHEL
-yum install java-1.8.0-openjdk
-
-# Ubuntu
-apt-get install openjdk-7-jre
-
-# SUSE
-zypper install java-1_8_0-openjdk
-```
-	
-3. Create the directory structure for developing in Go and 
-  go into the src/github.com/sassoftware directory:
-`mkdir --parents ~/go/{bin,pkg,src/github.com/sassoftware/}`
-`cd ~/go/src/github.com/sassoftware/`
-
-4. Clone the repository into the src/github.com/sassoftware location: 
-  `git clone git@github.com:sassoftware/sas-container-recipes.git`
-
-5. Go into the newly cloned directory: `cd sas-container-recipes`
-
-6. Fetch any dependencies: `go get ./...`
-
-7. Run the build command, which will result in a binary called `sas-container-recipes`: `go build`
-
 #### Reporting Security Issues
 We take security seriously. If you discover a security issue then please 
 **DO NOT** file a public issue, instead send a report to 

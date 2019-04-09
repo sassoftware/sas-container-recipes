@@ -37,4 +37,6 @@
   - { src: sas-espserver, dest: "{{ SASHOME }}/bin/sas-espserver" }
   - { src: register_esp.sh, dest: "{{ SASHOME }}/bin/register_esp.sh" }
   - { src: unregister_esp.sh, dest: "{{ SASHOME }}/bin/unregister_esp.sh" }
+  - { src: check-pubsub-port.sh, dest: "{{ SASHOME }}/bin/check-pubsub-port.sh" }
+  - { src: check-pubsub-port.py, dest: "{{ SASHOME }}/bin/check-pubsub-port.py" }
   - { src: sas-viya-espserver-default, dest: "/etc/init.d/sas-viya-espserver-default" }

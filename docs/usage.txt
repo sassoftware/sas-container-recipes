@@ -1,7 +1,7 @@
 SAS Container Recipes
 Framework to build SAS Viya Docker images and create deployments using Kubernetes.
 
-Single Container Arguments 
+Single Container Arguments
 --------------------------
 
   Required:

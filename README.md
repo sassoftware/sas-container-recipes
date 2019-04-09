@@ -70,7 +70,7 @@ Run the following to create a user 'sasdemo' with the password 'sasdemo' for pro
 A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
 is recommended for all build commands.
 ```
- ./sas-container-recipes --type single --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
+ ./build.sh --type single --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
 ```                         
 
 ### Run the Container
@@ -116,17 +116,17 @@ your users with the features that they require.
 - A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux or Mac must be installed on the build machine
 - `java-1.8.0-openjdk` or another Java Runtime Environment (1.8.x) must be installed on the build machine
 - `ansible` must be installed on the build machine
-- **Access to a Docker registry:** The build process will push built Docker images automatically to the Docker registry. Before running `sas-container-recipes` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
+- **Access to a Docker registry:** The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
 - Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed: required for the deployment step but not required for the build step.
 - **Strongly recommended:** A local mirror of the SAS software. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
 
 ### How to Build
-Examples of running sas-container-recipes to build multiple containers are provided below. A non-root user is recommended for all build commands.
+Examples of running `build.sh` to build multiple containers are provided below. A non-root user is recommended for all build commands.
 
 **Example: Programming-Only Deployment, Mulitple Containers**
 
 ```    
-  ./sas-container-recipes \
+  ./build.sh \
   --type multiple \
   --zip /path/to/SAS_Viya_deployment_data.zip \
   --docker-registry-namespace myuniquename \
@@ -137,7 +137,7 @@ Examples of running sas-container-recipes to build multiple containers are provi
 **Example: Full Deployment, Multiple Containers**
 
 ```
-  ./sas-container-recipes \
+  ./build.sh \
   --type full \
   --zip /path/to/SAS_Viya_deployment_data.zip \
   --docker-registry-namespace myuniquename \
@@ -145,7 +145,7 @@ Examples of running sas-container-recipes to build multiple containers are provi
   --addons "addons/auth-sssd"
 ```
 
-**sas-container-recipes Arguments**
+**build.sh Arguments**
 
 ```
 # Required Arguments
