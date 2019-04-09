@@ -124,7 +124,7 @@ Multi-Container Arguments
 
 		default: 1976
 
-	--genearte-manifests-only
+	--generate-manifests-only
 		Will only build manifests. They will be placed in the /builds/<deployment type> directory.
 		default: false
 
