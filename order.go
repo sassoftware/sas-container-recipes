@@ -708,7 +708,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) (Container, error
 	container.GetBuildArgs()
 	buildOptions := types.ImageBuildOptions{
 		Context:    dockerBuildContext,
-		Tags:       []string{container.GetName()},
+		Tags:       []string{container.GetWholeImageName()},
 		Dockerfile: "Dockerfile",
 		BuildArgs:  container.BuildArgs,
 	}
@@ -731,6 +731,7 @@ func (order *SoftwareOrder) Build() error {
 		if err != nil {
 			return err
 		}
+		singleContainer.Status = Built
 
 		// Optional: push to registry if a registry and namespace was provided
 		if len(order.DockerRegistry) > 0 && len(order.DockerNamespace) > 0 {
@@ -739,6 +740,7 @@ func (order *SoftwareOrder) Build() error {
 				return err
 			}
 		}
+		singleContainer.Status = Pushed
 
 		// TODO: this does not use the Fully Qualified Domain Name
 		hostname, err := os.Hostname()

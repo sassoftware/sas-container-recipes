@@ -168,8 +168,14 @@ func (container *Container) GetTag() string {
 		container.SoftwareOrder.TimestampTag)
 }
 
-// GetWholeImageName gets a <registry>/<namespace>/<project_name>-<container_name> format
+// GetWholeImageName gets a <registry>/<namespace>/<project_name>-<container_name>
+// format if it has a Docker namespace and Docker registry.
+// Otherwise return the <container_name>:<tag> format.
 func (container *Container) GetWholeImageName() string {
+	if len(container.SoftwareOrder.DockerNamespace) == 0 ||
+		len(container.SoftwareOrder.DockerRegistry) == 0 {
+		return container.GetName() + ":" + container.GetTag()
+	}
 	return container.SoftwareOrder.DockerRegistry +
 		"/" + container.SoftwareOrder.DockerNamespace +
 		"/" + container.GetName() + ":" + container.GetTag()
@@ -347,6 +353,9 @@ func (container *Container) Push(progress chan string) error {
 	if progress != nil {
 		progress <- progressMessage
 	} else {
+		// Support non-concurrent message output
+		fmt.Println("\n")
+		log.Println(progressMessage)
 		container.WriteLog(progressMessage)
 	}
 	pushResponseStream, err := container.DockerClient.ImagePush(container.SoftwareOrder.BuildContext,
