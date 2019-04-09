@@ -399,8 +399,17 @@ ARG PLATFORM
 ARG PLAYBOOK_SRV
 ENV PLATFORM=$PLATFORM ANSIBLE_CONFIG=/ansible/ansible.cfg ANSIBLE_CONTAINER=true
 RUN mkdir --parents /opt/sas/viya/home/{lib/envesntl,bin}
-RUN yum install --assumeyes ansible && rm -rf /root/.cache /var/cache/yum && \
-    echo "\nminrate=1\ntimeout=300" >> /etc/yum.conf
+RUN if [ "$PLATFORM" = "redhat" ]; then \
+        yum install --assumeyes ansible; \
+		rm -rf /root/.cache /var/cache/yum; \
+		echo -e "minrate=1" >> /etc/yum.conf; \
+		echo -e "timeout=300" >> /etc/yum.conf; \
+    elif [ "$PLATFORM" = "suse" ]; then \
+        zypper install --no-confirm ansible curl && rm -rf /var/cache/zypp; \
+	else \
+		echo -e "Platform $PLATFORM not supported"; \
+		exit 1; \
+    fi
 ADD *.yml *.cfg /ansible/
 ADD roles /ansible/roles
 `

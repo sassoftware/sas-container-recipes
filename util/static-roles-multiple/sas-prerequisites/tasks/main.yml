@@ -37,12 +37,8 @@
       state: "present"
       disable_gpg_check: yes
     with_items:
-    - initscripts
     - which
     - acl
-    - libpng12
-    - libXp
-    - libXmu
     - net-tools
     - xterm
     - numactl # ESM
