@@ -86,8 +86,12 @@ After the container is built then instructions for how to run the image will be 
  sas-viya-programming:<VERSION-TAG>  
 ```
 Use the `docker images` command to see what images were built and what the most recent tag is (example: tag `19.0.1-20190109112555-48f98d8`).
-Once the docker run command is completed, use docker ps to list the running container.  
-Finally go to the address `http://<myhostname>:8081` and start using SAS Studio!
+Once the docker run command is completed, use `docker ps` to list the running container. 
+
+### Log on to SAS Studio
+Go to the address `http://<myhostname>:8081` and start using SAS Studio!
+
+<img src="docs/sas-logon-screen.png" alt="SAS Logon Screen" style="width: 80%; height: 80%; object-fit: contain;">
 
 For more info see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki).
 
@@ -170,7 +174,7 @@ The build process creates Kubernetes manifests that you use to run multiple cont
 
 For information about using the manifests, see [Build and Run SAS Viya Multiple Containers](https://github.com/sassoftware/sas-container-recipes/wiki/Build-and-Run-SAS-Viya-Multiple-Containers).
 
-## Log on to SAS Studio ##
+### Log on to SAS Studio
 
 After the containers are running, users can sign on to SAS Studio.
 
@@ -191,7 +195,7 @@ Here are some examples of how to log on:
 
   `https://ingress-path/SASStudioV`
 
-<img src="docs/sas-logon-screen.png" alt="SAS Logon Screen" style="width: 100%; height: 100%; object-fit: contain;">
+<img src="docs/sas-logon-screen.png" alt="SAS Logon Screen" style="width: 80%; height: 80%; object-fit: contain;">
 
 <br>
 
