@@ -343,7 +343,12 @@ func (container *Container) Push(progress chan string) error {
 	}
 	container.Status = Pushing
 	container.WriteLog("----- Starting Docker Push -----")
-	progress <- "Pushing to Docker registry: " + container.GetWholeImageName() + " ... "
+	progressMessage := "Pushing to Docker registry: " + container.GetWholeImageName() + " ... "
+	if progress != nil {
+		progress <- progressMessage
+	} else {
+		container.WriteLog(progressMessage)
+	}
 	pushResponseStream, err := container.DockerClient.ImagePush(container.SoftwareOrder.BuildContext,
 		container.GetWholeImageName(), types.ImagePushOptions{RegistryAuth: container.SoftwareOrder.RegistryAuth})
 	if err != nil {
@@ -420,7 +425,7 @@ ENTRYPOINT ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/%s-entrypoint.sh"]
 
 // Each Ansible role is a RUN layer
 const dockerfileRunLayer = `# %s role
-RUN ansible-playbook --verbose /ansible/playbook.yml --extra-vars layer=%s --extra-vars PLAYBOOK_SRV=${PLAYBOOK_SRV}
+RUN ansible-playbook -vv /ansible/playbook.yml --extra-vars layer=%s --extra-vars PLAYBOOK_SRV=${PLAYBOOK_SRV}
 `
 
 const dockerfileAddDynamicRole = `# Add the %s specific role
