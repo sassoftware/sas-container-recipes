@@ -2,8 +2,10 @@
 # Addon config file.
 # List out containers and the dockerfile that updates the container that is being built.
 httpproxy:
-  dockerfile: Dockerfile_http
+  dockerfile: [Dockerfile_http]
 computeserver:
-  dockerfile: Dockerfile
+  dockerfile: [Dockerfile]
 programming:
-  dockerfile: Dockerfile
+  dockerfile: [Dockerfile]
+single-programming-only:
+  dockerfiles: [Dockerfile, Dockerfile_http]

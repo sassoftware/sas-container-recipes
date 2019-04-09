@@ -1,9 +1,11 @@
 ---
 # Addon config file.
-# List out containers and the dockerfile that updates the container that is being built.
+# List out containers and the dockerfiles that updates the container that is being built.
 computeserver:
-  dockerfile: Dockerfile
+  dockerfiles: [Dockerfile]
 programming:
-  dockerfile: Dockerfile
+  dockerfiles: [Dockerfile]
 sas-casserver-primary:
-  dockerfile: Dockerfile
+  dockerfiles: [Dockerfile]
+single-programming-only:
+  dockerfiles: [Dockerfile]
