@@ -1,6 +1,7 @@
 sas-container-recipes
 sitedefault.yml
 vars_usremods.yml
+Makefile
 builds/
 logs/
 **/sas-orchestration
