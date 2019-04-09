@@ -405,7 +405,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	virtualHost := flag.String("virtual-host", "myvirtualhost.mycompany.com", "")
 	addons := flag.String("addons", "", "")
 	baseImage := flag.String("base-image", "centos:7", "")
-	mirrorURL := flag.String("mirror-url", "", "")
+	mirrorURL := flag.String("mirror-url", "https://ses.sas.download/ses/", "")
 	verbose := flag.Bool("verbose", false, "")
 	buildOnly := flag.String("build-only", "", "")
 	tagOverride := flag.String("tag", RecipeVersion+"-"+order.TimestampTag, "")
