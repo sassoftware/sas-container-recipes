@@ -91,7 +91,7 @@ Once the docker run command is completed, use `docker ps` to list the running co
 ### Log on to SAS Studio
 Go to the address `http://<myhostname>:8081` and start using SAS Studio!
 
-<img src="docs/sas-logon-screen.png" alt="SAS Logon Screen" style="width: 80%; height: 80%; object-fit: contain;">
+<img src="docs/sas-logon-screen-sasdemo.png" alt="SAS Logon Screen" style="width: 80%; height: 80%; object-fit: contain;">
 
 For more info see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki).
 
