@@ -78,19 +78,19 @@
     src: "domain-service_k8s.j2"
     dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/services/domain-service.yml"
 
-- name: Create ESP metered billing k8s service
-  template:
-    src: "esp_metered_billing_k8s_services.j2"
-    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/services/esp_metered_billing.yml"
-  when: item.key == 'espserver'
-  with_dict: '{{ services }}'
+# - name: Create ESP metered billing k8s service
+  # template:
+    # src: "esp_metered_billing_k8s_services.j2"
+    # dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/services/esp_metered_billing.yml"
+  # when: item.key == 'espserver'
+  # with_dict: '{{ services }}'
 
-- name: Create ESP run time k8s service
-  template:
-    src: "esp_run_time_k8s_services.j2"
-    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/services/esp_run_time.yml"
-  when: item.key == 'espserver'
-  with_dict: '{{ services }}'
+# - name: Create ESP run time k8s service
+  # template:
+    # src: "esp_run_time_k8s_services.j2"
+    # dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/services/esp_run_time.yml"
+  # when: item.key == 'espserver'
+  # with_dict: '{{ services }}'
 
 - name: Create pets k8s services 
   template:
@@ -106,19 +106,19 @@
   when: item.key == 'consul'
   with_dict: '{{ services }}'
 
-- name: Create ESP metered billing k8s manifest
-  template:
-    src: "esp_metered_billing_k8s.j2"
-    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/deployments/esp_metered_billing.yml"
-  when: item.key == 'espserver'
-  with_dict: '{{ services }}'
+# - name: Create ESP metered billing k8s manifest
+  # template:
+    # src: "esp_metered_billing_k8s.j2"
+    # dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/deployments/esp_metered_billing.yml"
+  # when: item.key == 'espserver'
+  # with_dict: '{{ services }}'
 
-- name: Create ESP run-time k8s manifest
-  template:
-    src: "esp_run_time_k8s.j2"
-    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/deployments/esp_run_time.yml"
-  when: item.key == 'espserver'
-  with_dict: '{{ services }}'
+# - name: Create ESP run-time k8s manifest
+  # template:
+    # src: "esp_run_time_k8s.j2"
+    # dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/deployments/esp_run_time.yml"
+  # when: item.key == 'espserver'
+  # with_dict: '{{ services }}'
 
 - name: Create pets k8s manifest
   template:
