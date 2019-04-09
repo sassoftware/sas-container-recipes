@@ -70,7 +70,7 @@ Run the following to create a user 'sasdemo' with the password 'sasdemo' for pro
 A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
 is recommended for all build commands.
 ```
- ./build.sh --type single --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "addons/auth-demo"
+ ./build.sh --type single --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "auth-demo"
 ```                         
 
 ### Run the Container
@@ -89,7 +89,8 @@ Use the `docker images` command to see what images were built and what the most 
 Once the docker run command is completed, use `docker ps` to list the running container. 
 
 ### Log on to SAS Studio
-Go to the address `http://<myhostname>:8081` and start using SAS Studio!
+Go to the address `http://<myhostname>:8081` and start using SAS Studio! 
+The `--addons "auth-demo"` build argument created a default user with the username 'sasdemo' and the password 'sasdemo' for product evaluation.
 
 <img src="docs/sas-logon-screen-sasdemo.png" alt="SAS Logon Screen" style="width: 80%; height: 80%; object-fit: contain;">
 
