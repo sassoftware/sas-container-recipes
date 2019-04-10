@@ -1218,9 +1218,13 @@ func (order *SoftwareOrder) Prepare() error {
 // GenerateManifests runs the generate_manifests playbook to output Kubernetes configs
 func (order *SoftwareOrder) GenerateManifests() error {
 
+	if len(order.BuildOnly) > 0 {
+		return nil
+	}
+
 	order.WriteLog(true, "Creating deployment manifests ...")
 
-    if !order.GenerateManifestsOnly {
+	if !order.GenerateManifestsOnly {
 		// Write a vars file to disk so it can be used by the playbook
 		containerVarSections := []string{}
 		for _, container := range order.Containers {
