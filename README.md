@@ -146,10 +146,10 @@ Examples of running `build.sh` to build multiple containers are provided below. 
 ```
 
 Here's a summary of what this command does:
-- Multiple Docker images are created (`--type multiple`) based on the entitlement to software from the Software Order Email zip  (`--zip /path/to/SAS_Viya_deployment_data.zip`)
-- The images are pushed to the namespace in the Docker Registry (`--docker-registry-namespace myuniquename`), which is located at the Docker registry URL (`--docker-registry-url myregistry.myhost.com`)
-- The ingress path (`--virtual-host user-myproject.mylocal.com`) provides the HTTP and HTTPS routes from outside the Kubernetes cluster to services within the cluster
-- The auth-demo addon (`--addons "auth-demo"`) adds a default user access the SAS Logon webpage. A list of all addons is available on the [project GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood).
+- Multiple Docker images for a programming-only deployment are created (`--type multiple`). The software that is deployed is determined by the software entitlement that is provided in the ZIP file from the Software Order Email (`--zip /path/to/SAS_Viya_deployment_data.zip`).
+- The images are pushed to the namespace in the Docker Registry (`--docker-registry-namespace myuniquename`), which is located at the Docker registry URL (`--docker-registry-url myregistry.myhost.com`).
+- The ingress path (`--virtual-host user-myproject.mylocal.com`) provides the HTTP and HTTPS routes from outside the Kubernetes cluster to services within the cluster.
+- A default user is added (`--addons "auth-demo"`), which can be used to log on to SAS Studio. A list of all addons is available in the [project GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood).
 
 
 #### Example Two: Full Deployment, Multiple Containers
@@ -164,10 +164,10 @@ Here's a summary of what this command does:
 ```
 
 Here's a summary of what this command does:
-- Several Docker images are created (`--type full`) based on the entitlement to software from the Software Order Email zip  (`--zip /path/to/SAS_Viya_deployment_data.zip`)
-- The images are pushed to the namespace in the Docker Registry (`--docker-registry-namespace myuniquename`), which is located at the Docker registry URL (`--docker-registry-url myregistry.myhost.com`)
-- The ingress path (`--virtual-host user-myproject.mylocal.com`) provides the HTTP and HTTPS routes from outside the Kubernetes cluster to services within the cluster
-- The auth-sssd addon (`--addons "auth-sssd"`) provides LDAP authentication on the SAS Logon webpage. A list of all addons is available on the [project GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood).
+- Multiple Docker images for a full deployment are created (`--type full`). The software that is deployed is determined by the software entitlement that is provided in the ZIP file from the Software Order Email (`--zip /path/to/SAS_Viya_deployment_data.zip`).
+- The images are pushed to the namespace in the Docker Registry (`--docker-registry-namespace myuniquename`), which is located at the Docker registry URL (`--docker-registry-url myregistry.myhost.com`).
+- The ingress path (`--virtual-host user-myproject.mylocal.com`) provides the HTTP and HTTPS routes from outside the Kubernetes cluster to services within the cluster.
+- SSSD is configured inside the container (`--addons "auth-sssd"`) to allow the container authentication to connect to LDAP or Active Directory. A list of all addons is available in the [project GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood).
 
 ### Running Multiple Containers
 
