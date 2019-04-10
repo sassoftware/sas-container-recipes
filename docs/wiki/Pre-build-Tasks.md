@@ -300,7 +300,7 @@ Here are the steps to use sitedefault.yml to set configuration values:
 When the build script is run, the data from the sitedefault.yml file will get added to the builds/full/manifests/kubernetes/configmaps/consul.yml file. On startup of the consul container, the content will get loaded into the SAS configuration store. See the post-run [(Optional) Verify Bulk Loaded Configuration](post-run-tasks#optional-verify-bulk-loaded-configuration) task for confirming the values provided were loaded.
 
 ### Kubernetes Manifest Inputs
-To help with managing changes to the generated manifests, you can provide customizations that will be used when creating the Kubernetes manifests. In the `util/` directory there is a `vars_usermods.yml` file. For your specific deployment, copy the `vars_usermods.yml` file to the main sas-container-recipes project directory and then edit the file. You can enter any of the following values and override the defaults:
+To help with managing changes to the generated manifests, you can provide customizations that will be used when creating the Kubernetes manifests. In the `util/` directory there is a `vars_usermods.yml` file. For your specific deployment, copy the `vars_usermods.yml` file to the sas-container-recipes project directory and then edit the file. You can enter any of the following values and override the defaults:
 
 ```
 # The directory where manifests will be created. Default is "manifests"
