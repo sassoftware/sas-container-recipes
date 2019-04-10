@@ -27,7 +27,13 @@ For more information see [SAS for Containers](http://support.sas.com/rnd/contain
 
 ## Quick Start
 Use the instructions on this page to quickly build and launch SAS Viya containers. 
-For more extensive infomation about building and launching SAS Viya containers, see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki)
+For more extensive infomation about building and launching SAS Viya containers, 
+see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki)
+For either single or multiple containers, addons found in 
+[the addons directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) 
+can enhance the base SAS Viya images with SAS/ACCESS, LDAP configuration, and more. 
+For each addon, review the [Appendix](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#addons)
+for important information and any possible prerequisite requirements.
 
 1. Locate your SAS Viya for Linux Software Order Email (SOE) and retrieve the 
 `SAS_Viya_deployment_data.zip` file from it. Not sure if your organization 
@@ -46,7 +52,6 @@ or `git clone git@github.com:sassoftware/sas-container-recipes.git`
 
     b. If you would like an environment suitable for collaborative data science work, then you may be interested in a SAS programming-only deployment or a SAS Viya full [deployment on multiple containers](https://github.com/sassoftware/sas-container-recipes#for-one-or-more-users---sas-viya-programming-only-or-sas-viya-full-deployment-running-on-multiple-containers).
 
-    c. For either single or multiple containers, addons found in the [addons/ directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) can enhance the base SAS Viya images with SAS/ACCESS, LDAP configuration, and more. For each addon, review the [Appendix](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#addons) for important information and any possible prerequisite requirements.
 
 <br>
 
@@ -119,10 +124,8 @@ your users with the features that they require.
 ### Prerequisites
 
 - A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux or Mac must be installed on the build machine
-- `java-1.8.0-openjdk` or another Java Runtime Environment (1.8.x) must be installed on the build machine
-- `ansible` must be installed on the build machine
-- **Access to a Docker registry:** The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
-- Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed: required for the deployment step but not required for the build step.
+- Access to a Docker registry: The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
+- Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed (required for the deployment step but not required for the build step)
 - **Strongly recommended:** A local mirror of the SAS software. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
 
 ### How to Build
@@ -170,8 +173,8 @@ Here's a summary of what this command does:
 
 The build process creates Kubernetes manifests that you use to run multiple containers. 
 
-   * For a SAS Viya programming-only deployment, the Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests`
-   * For a SAS Viya full deployment, the Kubernetes manifests are located at `$PWD/viya-visuals/working/manifests`
+   * For a SAS Viya programming-only deployment, the Kubernetes manifests are located at `builds/multiple/manifests/`
+   * For a SAS Viya full deployment, the Kubernetes manifests are located at `builds/full/manifests/`
 
 For information about using the manifests, see [Build and Run SAS Viya Multiple Containers](https://github.com/sassoftware/sas-container-recipes/wiki/Build-and-Run-SAS-Viya-Multiple-Containers).
 
