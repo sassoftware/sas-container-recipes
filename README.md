@@ -149,7 +149,7 @@ Here's a summary of what this command does:
 - Multiple Docker images are created (`--type multiple`) based on the entitlement to software from the Software Order Email zip  (`--zip /path/to/SAS_Viya_deployment_data.zip`)
 - The images are pushed to the namespace in the Docker Registry (`--docker-registry-namespace myuniquename`), which is located at the Docker registry URL (`--docker-registry-url myregistry.myhost.com`)
 - The ingress path (`--virtual-host user-myproject.mylocal.com`) provides the HTTP and HTTPS routes from outside the Kubernetes cluster to services within the cluster
-- The auth-demo addon (`--addons "auth-demo"`) adds a default user access the SAS Logon webpage
+- The auth-demo addon (`--addons "auth-demo"`) adds a default user access the SAS Logon webpage. A list of all addons is available on the [project GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood).
 
 
 #### Example Two: Full Deployment, Multiple Containers
@@ -167,7 +167,7 @@ Here's a summary of what this command does:
 - Several Docker images are created (`--type full`) based on the entitlement to software from the Software Order Email zip  (`--zip /path/to/SAS_Viya_deployment_data.zip`)
 - The images are pushed to the namespace in the Docker Registry (`--docker-registry-namespace myuniquename`), which is located at the Docker registry URL (`--docker-registry-url myregistry.myhost.com`)
 - The ingress path (`--virtual-host user-myproject.mylocal.com`) provides the HTTP and HTTPS routes from outside the Kubernetes cluster to services within the cluster
-- The auth-sssd addon (`--addons "auth-sssd"`) provides LDAP authentication on the SAS Logon webpage
+- The auth-sssd addon (`--addons "auth-sssd"`) provides LDAP authentication on the SAS Logon webpage. A list of all addons is available on the [project GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood).
 
 ### Running Multiple Containers
 
