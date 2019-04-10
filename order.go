@@ -302,11 +302,11 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 // that were supplied to the SoftwareOrder object. This is useful for debugging.
 func (order *SoftwareOrder) BuildArgumentsSummary() string {
 	objectAttributes, _ := yaml.Marshal(order)
-	output := "\n" + strings.Repeat("=", 20) + "\n"
-	output += "Build Variables\n"
-	output += strings.Repeat("=", 20) + "\n"
+	output := "\n" + strings.Repeat("=", 50) + "\n"
+	output += "\t\tBuild Variables\n"
+	output += strings.Repeat("=", 50) + "\n"
 	output += string(objectAttributes)
-	output += strings.Repeat("=", 20) + "\n"
+	output += strings.Repeat("=", 50) + "\n"
 	return output
 }
 

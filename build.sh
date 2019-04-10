@@ -62,13 +62,6 @@ function sas_container_recipes_shutdown() {
 trap sas_container_recipes_shutdown SIGTERM
 trap sas_container_recipes_shutdown SIGINT
 
-# Set some defaults
-CHECK_DOCKER_URL=true
-CHECK_MIRROR_URL=false
-git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
-datetime=$(date "+%Y%m%d%H%M%S")
-sas_recipe_version=$(cat docs/VERSION)
-
 # Parse command arguments and flags
 while [[ $# -gt 0 ]]; do
     key="$1"
