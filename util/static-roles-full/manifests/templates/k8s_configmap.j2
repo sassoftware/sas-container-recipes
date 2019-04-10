@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-{% if "sas-casserver-primary" in item.key %}
+{% if item.key == "sas-casserver-primary" %}
   name: {{ settings.project_name }}-cas
 {% else %}
   name: {{ settings.project_name }}-{{ item.key }}
@@ -11,8 +11,8 @@ data:
 {% if custom_services is defined and custom_services %}
   # Writing out user defined variables
 {%   for key,value in custom_services.items() %}
-{%     if key == item.key and value.environment is defined and value.environment %}
-{%       for override in value.environment %}
+{%     if key == item.key and value.deployment_overrides.environment is defined and value.deployment_overrides.environment %}
+{%       for override in value.deployment_overrides.environment %}
 {%         set cm_key = override.split('=')[0] + '=' %}
 {%         if item.key == 'espserver' and 'ESPENV' in override %}
   {{ override.split('=')[0] | lower }}: '{{ override.split('=')[0] }}="{{ override | replace( cm_key, '', 1) }}"'
@@ -31,9 +31,9 @@ data:
 {%       if vars.update({'found': False}) %} {% endif %}
 {%       if item.key in custom_services %}
 {%         for key,value in custom_services.items() %}
-{%           if key == item.key and value.environment is defined and value.environment %}
+{%           if key == item.key and value.deployment_overrides.environment is defined and value.deployment_overrides.environment %}
 {%             set cm_key = environment.split('=')[0] + '=' %}
-{%             for override in value.environment %}
+{%             for override in value.deployment_overrides.environment %}
 {%               if cm_key in override %}
 {%                 if vars.update({'found': True}) %} {% endif %}
 {%               else %}
