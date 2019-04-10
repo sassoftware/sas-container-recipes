@@ -152,7 +152,7 @@ spec:
 {%               endif %}
 {%             endfor %}
 {%             if not vars.found %}
-{%               if 'CONSUL_HTTP_TOKEN' not in override %}
+{%               if 'CONSUL_HTTP_TOKEN' not in secrets %}
         - name: {{ secrets.split('=')[0] }}
           valueFrom:
             secretKeyRef:
@@ -163,7 +163,7 @@ spec:
 {%           endif %}
 {%         endfor %}
 {%       else %}
-{%         if 'CONSUL_HTTP_TOKEN' not in override %}
+{%         if 'CONSUL_HTTP_TOKEN' not in secrets %}
         - name: {{ secrets.split('=')[0] }}
           valueFrom:
             secretKeyRef:
