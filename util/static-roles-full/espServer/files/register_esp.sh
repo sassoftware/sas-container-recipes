@@ -178,7 +178,9 @@ ${BOOTSTRAP_CMD} agent check register \
     --service-id "esp-${SASTENANT}-${SASINSTANCE}-pubsub" \
     --id "esp-${SASTENANT}-${SASINSTANCE}-pubsub" \
     --name "esppubsub"  \
-    --tcp "${SAS_CURRENT_HOST}:${ESP_PUBSUB_PORT}" --interval 60s --timeout 5s
+    --interval 60s --timeout 5s \
+    --script "${SASHOME}/bin/check-pubsub-port.sh"
+#    --tcp "${SAS_CURRENT_HOST}:${ESP_PUBSUB_PORT}" --interval 60s --timeout 5s
 rc=$?
 
 if [ $rc != 0 ]; then
