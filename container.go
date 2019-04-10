@@ -347,17 +347,17 @@ func (container *Container) Push(progress chan string) error {
 	if container.Status != Built {
 		return nil
 	}
+
+	// A Docker namespace and registry url is optional in the single container deployment type
+	if container.SoftwareOrder.DeploymentType == "single" &&
+		(len(container.SoftwareOrder.DockerNamespace) == 0 ||
+			len(container.SoftwareOrder.DockerRegistry) == 0) {
+		return nil
+	}
+
 	container.Status = Pushing
 	container.WriteLog("----- Starting Docker Push -----")
-	progressMessage := "Pushing to Docker registry: " + container.GetWholeImageName() + " ... "
-	if progress != nil {
-		progress <- progressMessage
-	} else {
-		// Support non-concurrent message output
-		fmt.Println("\n")
-		log.Println(progressMessage)
-		container.WriteLog(progressMessage)
-	}
+	progress <- "Pushing to Docker registry: " + container.GetWholeImageName() + " ... "
 	pushResponseStream, err := container.DockerClient.ImagePush(container.SoftwareOrder.BuildContext,
 		container.GetWholeImageName(), types.ImagePushOptions{RegistryAuth: container.SoftwareOrder.RegistryAuth})
 	if err != nil {
