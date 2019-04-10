@@ -63,7 +63,7 @@
   template:
     src: "k8s_configmap.j2"
     dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/configmaps/cas.yml{% else %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/configmaps/{{ item.key }}.yml{% endif %}"
-  when: (item.value.environment is defined and item.value.environment) or (custom_services is defined and custom_services and item.key in custom_services.items())
+  when: (item.value.environment is defined and item.value.environment) or (custom_services is defined and custom_services and item.key in custom_services.items() | string)
   with_dict: '{{ services }}'
 
 - name: Create k8s secrets
