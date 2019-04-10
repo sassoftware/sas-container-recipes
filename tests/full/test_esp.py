@@ -46,7 +46,10 @@ class TestSmoke():
         time.sleep(1)
         cmd = "exec {} whoami".format(self.TARGET_POD_NAME)
         status,result = self.kubeutilobj.kubectl(cmd, self.NAMESPACE)
-        assert b"root" not in result["output"]
+        error_flag = False
+        if "failure" in status.lower() or b"root" in result["output"]:
+            error_flag = True
+        assert error_flag == False
 
     def test_02_espserver_hostname(self):
         """
