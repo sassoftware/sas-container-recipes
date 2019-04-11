@@ -155,7 +155,7 @@ The version of SAS Studio that you are using depends on which type of deployment
 
 1. To verify that CAS Server Monitor has been successfully deployed, access it by opening a web browser and entering the URL in the address field in one of the following formats:
 
-    - For Docker deployment running on port 80:
+    - For Docker deployment running on port 8443:
 
       `https://docker-host:8443/cas-shared-default-http`  
 

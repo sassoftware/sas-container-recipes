@@ -1,11 +1,10 @@
 ## Contributing
 
 #### Reporting Security Issues
-We take security seriously. If you discover a security issue then please 
-**DO NOT** file a public issue, instead send a report to 
+We take security seriously. To report a security issue, contact us at
 [support@sas.com](mailto:support@sas.com).
 
-#### Reporting Problems or Improvements
+#### Reporting Other Issues or Suggesting Improvements
 Check our [GitHub issues section](https://github.com/sassoftware/sas-container-recipes/issues)
 to see if the problem or suggestion exists before submitting a new issue. When creating a new 
 issue there are options to select a ticket format: "Flag Security Issue", "Report Problem", 

@@ -52,24 +52,24 @@
     kubectl -n sas-viya delete -f run/programming.yml
     ```
 
-    Delete the viya-programming/viya-multi-container objects
+    Delete the multiple deployment objects
 
     ```
-    kubectl -n sas-viya delete -f viya-programming/viya-multi-container/working/manifests/kubernetes/deployments/
-    kubectl -n sas-viya delete -f viya-programming/viya-multi-container/working/manifests/kubernetes/services/
-    kubectl -n sas-viya delete -f viya-programming/viya-multi-container/working/manifests/kubernetes/secrets/
-    kubectl -n sas-viya delete -f viya-programming/viya-multi-container/working/manifests/kubernetes/configmaps/
-    kubectl -n sas-viya delete -f viya-programming/viya-multi-container/working/manifests/kubernetes/ingress/
+    kubectl -n sas-viya delete -f builds/multiple/manifests/kubernetes/deployments/
+    kubectl -n sas-viya delete -f builds/multiple/manifests/manifests/kubernetes/services/
+    kubectl -n sas-viya delete -f builds/multiple/manifests/manifests/kubernetes/secrets/
+    kubectl -n sas-viya delete -f builds/multiple/manifests/manifests/kubernetes/configmaps/
+    kubectl -n sas-viya delete -f builds/multiple/manifests/manifests/kubernetes/ingress/
     ```
 
-    Delete the viya-visuals objects
+    Delete the full deployment objects
 
     ```
-    kubectl -n sas-viya delete -f viya-visuals/working/manifests/kubernetes/deployments/
-    kubectl -n sas-viya delete -f viya-visuals/working/manifests/kubernetes/services/
-    kubectl -n sas-viya delete -f viya-visuals/working/manifests/kubernetes/secrets/
-    kubectl -n sas-viya delete -f viya-visuals/working/manifests/kubernetes/configmaps/
-    kubectl -n sas-viya delete -f viya-visuals/working/manifests/kubernetes/ingress/
+    kubectl -n sas-viya delete -f builds/full/manifests/kubernetes/deployments/
+    kubectl -n sas-viya delete -f builds/full/manifests/kubernetes/services/
+    kubectl -n sas-viya delete -f builds/full/manifests/kubernetes/secrets/
+    kubectl -n sas-viya delete -f builds/full/manifests/kubernetes/configmaps/
+    kubectl -n sas-viya delete -f builds/full/manifests/kubernetes/ingress/
     ```
 
     As the service and pod are removed, messages that indicate success are displayed. Here is an example:

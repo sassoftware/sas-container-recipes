@@ -405,7 +405,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	virtualHost := flag.String("virtual-host", "myvirtualhost.mycompany.com", "")
 	addons := flag.String("addons", "", "")
 	baseImage := flag.String("base-image", "centos:7", "")
-	mirrorURL := flag.String("mirror-url", "", "")
+	mirrorURL := flag.String("mirror-url", "https://ses.sas.download/ses/", "")
 	verbose := flag.Bool("verbose", false, "")
 	buildOnly := flag.String("build-only", "", "")
 	tagOverride := flag.String("tag", RecipeVersion+"-"+order.TimestampTag, "")
@@ -451,7 +451,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.SkipDockerValidation = *skipDockerValidation
 
 	// See if we the user just wants to generate manifests
-	order.GenerateManifestsOnly=*generateManifestsOnly
+	order.GenerateManifestsOnly = *generateManifestsOnly
 
 	// This is a safeguard for when a user does not use quotes around a multi value argument
 	otherArgs := flag.Args()
@@ -533,15 +533,9 @@ func (order *SoftwareOrder) LoadCommands() error {
 		return errors.New("The --project-name argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
 	}
 
-	// The next arguments do not apply to the single deployment type
-	if order.DeploymentType == "single" {
-		return nil
-	}
-
 	// Require a docker namespace for multi and full
-	if *dockerNamespace == "" {
-		err := errors.New("a '--docker-namespace' argument is required")
-		return err
+	if *dockerNamespace == "" && (order.DeploymentType == "multiple" || order.DeploymentType == "full") {
+		return errors.New("a '--docker-namespace' argument is required")
 	}
 	order.DockerNamespace = *dockerNamespace
 	if !regexNoSpecialCharacters.Match([]byte(order.DockerNamespace)) {
@@ -549,10 +543,10 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 
 	// Require a docker registry for multi and full
-	if *dockerRegistry == "" {
-		err := errors.New("a '--docker-registry-url' argument is required")
-		return err
+	if *dockerRegistry == "" && (order.DeploymentType == "multiple" || order.DeploymentType == "full") {
+		return errors.New("a '--docker-registry-url' argument is required")
 	}
+
 	order.DockerRegistry = *dockerRegistry
 
 	order.BuilderPort = *builderPort
@@ -643,7 +637,7 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 // Grab the Dockerfile stub from the utils directory and append any addons
 // then do a docker build with the base image and platform build arguments
 // TODO: using license in RUN layers and mounting as volume?
-func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
+func buildProgrammingOnlySingleContainer(order *SoftwareOrder) (Container, error) {
 	container := Container{
 		Name:          "single-programming-only",
 		SoftwareOrder: order,
@@ -653,7 +647,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	dockerConnection, err := client.NewClientWithOpts(client.WithVersion(DockerAPIVersion))
 	if err != nil {
 		debugMessage := "Unable to connect to Docker daemon. Ensure Docker is installed and the service is started. "
-		return errors.New(debugMessage + err.Error())
+		return container, errors.New(debugMessage + err.Error())
 	}
 	container.DockerClient = dockerConnection
 
@@ -661,59 +655,59 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	resourceDirectory := "util/programming-only-single"
 	err = container.CreateBuildDirectory()
 	if err != nil {
-		return err
+		return container, err
 	}
 	container.DockerContextPath = container.SoftwareOrder.BuildPath + "sas-viya-single-programming-only/build_context.tar"
 	err = container.AddFileToContext(resourceDirectory+"/vars_usermods.yml", "vars_usermods.yml", []byte{})
 	if err != nil {
-		return err
+		return container, err
 	}
 	err = container.AddFileToContext(resourceDirectory+"/entrypoint", "entrypoint", []byte{})
 	if err != nil {
-		return err
+		return container, err
 	}
 	err = container.AddFileToContext(resourceDirectory+"/replace_httpd_default_cert.sh", "replace_httpd_default_cert.sh", []byte{})
 	if err != nil {
-		return err
+		return container, err
 	}
 
 	// TODO: the SOE should not be added to the container. Need to update the Dockerfile to utilize a license volume mount.
 	err = container.AddFileToContext(container.SoftwareOrder.SOEZipPath, "SAS_Viya_deployment_data.zip", []byte{})
 	if err != nil {
-		return err
+		return container, err
 	}
 
 	// Add files from the addons directory to the build context
 	for _, addon := range order.AddOns {
 		err := container.AddDirectoryToContext(addon, "", "")
 		if err != nil {
-			return errors.New("Unable to place addon files into Docker context. " + err.Error())
+			return container, errors.New("Unable to place addon files into Docker context. " + err.Error())
 		}
 	}
 
 	// Add the Dockerfile to the build context
 	dockerfileStub, err := ioutil.ReadFile(resourceDirectory + "/Dockerfile")
 	if err != nil {
-		return err
+		return container, err
 	}
 	dockerfile, err := appendAddonLines(container.Name, string(dockerfileStub), container.SoftwareOrder.AddOns)
 	if err != nil {
-		return err
+		return container, err
 	}
 	err = container.AddFileToContext("", "Dockerfile", []byte(dockerfile))
 	if err != nil {
-		return err
+		return container, err
 	}
 
 	// Set the payload to send to the Docker client
 	dockerBuildContext, err := os.Open(container.DockerContextPath)
 	if err != nil {
-		return err
+		return container, err
 	}
 	container.GetBuildArgs()
 	buildOptions := types.ImageBuildOptions{
 		Context:    dockerBuildContext,
-		Tags:       []string{container.GetName()},
+		Tags:       []string{container.GetWholeImageName()},
 		Dockerfile: "Dockerfile",
 		BuildArgs:  container.BuildArgs,
 	}
@@ -722,9 +716,9 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 		dockerBuildContext,
 		buildOptions)
 	if err != nil {
-		return err
+		return container, err
 	}
-	return readDockerStream(buildResponseStream.Body, &container, true, nil)
+	return container, readDockerStream(buildResponseStream.Body, &container, true, nil)
 }
 
 // Build starts each container build concurrently and report the results
@@ -732,10 +726,20 @@ func (order *SoftwareOrder) Build() error {
 
 	// Handle single container build and output of docker run instructions
 	if order.DeploymentType == "single" {
-		err := buildProgrammingOnlySingleContainer(order)
+		singleContainer, err := buildProgrammingOnlySingleContainer(order)
 		if err != nil {
 			return err
 		}
+		singleContainer.Status = Built
+
+		// Optional: push to registry if a registry and namespace was provided
+		if len(order.DockerRegistry) > 0 && len(order.DockerNamespace) > 0 {
+			err := singleContainer.Push(nil)
+			if err != nil {
+				return err
+			}
+		}
+		singleContainer.Status = Pushed
 
 		// TODO: this does not use the Fully Qualified Domain Name
 		hostname, err := os.Hostname()
@@ -1220,7 +1224,7 @@ func (order *SoftwareOrder) GenerateManifests() error {
 
 	order.WriteLog(true, "Creating deployment manifests ...")
 
-    if !order.GenerateManifestsOnly {
+	if !order.GenerateManifestsOnly {
 		// Write a vars file to disk so it can be used by the playbook
 		containerVarSections := []string{}
 		for _, container := range order.Containers {
@@ -1307,7 +1311,7 @@ docker_tag: %s
 SECURE_CONSUL: false
 DISABLE_CONSUL_HTTP_PORT: false
 `,
-		order.ProjectName, order.TagOverride)
+			order.ProjectName, order.TagOverride)
 
 		// Write a temp file
 		varsDeploymentFilePath := order.BuildPath + "vars_deployment.yml"
@@ -1390,7 +1394,7 @@ settings:
 ...
 `
 		err = ioutil.WriteFile(order.BuildPath+"generate_manifests.yml",
-		[]byte(fmt.Sprintf(playbook, order.TagOverride, order.DeploymentType)), 0755)
+			[]byte(fmt.Sprintf(playbook, order.TagOverride, order.DeploymentType)), 0755)
 		if err != nil {
 			return err
 		}

@@ -168,8 +168,14 @@ func (container *Container) GetTag() string {
 		container.SoftwareOrder.TimestampTag)
 }
 
-// GetWholeImageName gets a <registry>/<namespace>/<project_name>-<container_name> format
+// GetWholeImageName gets a <registry>/<namespace>/<project_name>-<container_name>
+// format if it has a Docker namespace and Docker registry.
+// Otherwise return the <container_name>:<tag> format.
 func (container *Container) GetWholeImageName() string {
+	if len(container.SoftwareOrder.DockerNamespace) == 0 ||
+		len(container.SoftwareOrder.DockerRegistry) == 0 {
+		return container.GetName() + ":" + container.GetTag()
+	}
 	return container.SoftwareOrder.DockerRegistry +
 		"/" + container.SoftwareOrder.DockerNamespace +
 		"/" + container.GetName() + ":" + container.GetTag()
@@ -343,7 +349,15 @@ func (container *Container) Push(progress chan string) error {
 	}
 	container.Status = Pushing
 	container.WriteLog("----- Starting Docker Push -----")
-	progress <- "Pushing to Docker registry: " + container.GetWholeImageName() + " ... "
+	progressMessage := "Pushing to Docker registry: " + container.GetWholeImageName() + " ... "
+	if progress != nil {
+		progress <- progressMessage
+	} else {
+		// Support non-concurrent message output
+		fmt.Println("\n")
+		log.Println(progressMessage)
+		container.WriteLog(progressMessage)
+	}
 	pushResponseStream, err := container.DockerClient.ImagePush(container.SoftwareOrder.BuildContext,
 		container.GetWholeImageName(), types.ImagePushOptions{RegistryAuth: container.SoftwareOrder.RegistryAuth})
 	if err != nil {
@@ -420,7 +434,7 @@ ENTRYPOINT ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/%s-entrypoint.sh"]
 
 // Each Ansible role is a RUN layer
 const dockerfileRunLayer = `# %s role
-RUN ansible-playbook --verbose /ansible/playbook.yml --extra-vars layer=%s --extra-vars PLAYBOOK_SRV=${PLAYBOOK_SRV}
+RUN ansible-playbook -vv /ansible/playbook.yml --extra-vars layer=%s --extra-vars PLAYBOOK_SRV=${PLAYBOOK_SRV}
 `
 
 const dockerfileAddDynamicRole = `# Add the %s specific role
