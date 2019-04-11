@@ -63,40 +63,40 @@ var ConfigPath = "config-full.yml"
 type SoftwareOrder struct {
 
 	// Build arguments and flags (see order.LoadCommands for details)
-	BaseImage             string   `yaml:"Base Image"`
-	MirrorURL             string   `yaml:"Mirror URL"`
-	VirtualHost           string   `yaml:"Virtual Host"`
-	DockerNamespace       string   `yaml:"Docker Namespace"`
-	DockerRegistry        string   `yaml:"Docker Registry"`
-	DeploymentType        string   `yaml:"Deployment Type"`
-	Platform              string   `yaml:"Platform"`
-	ProjectName           string   `yaml:"Project Name"`
-	TagOverride           string   `yaml:"Tag Override"`
-	AddOns                []string `yaml:"AddOns"`
-	DebugContainers       []string `yaml:"Debug Containers"`
-	WorkerCount           int      `yaml:"Worker Count"`
-	Verbose               bool     `yaml:"Verbose"`
-	SkipMirrorValidation  bool     `yaml:"Skip Mirror Validation"`
-	SkipDockerValidation  bool     `yaml:"Skip Docker Validation"`
-	GenerateManifestsOnly bool     `yaml:"Generate Manifests Only"`
+	BaseImage             string   `yaml:"Base Image              "`
+	MirrorURL             string   `yaml:"Mirror URL              "`
+	VirtualHost           string   `yaml:"Virtual Host            "`
+	DockerNamespace       string   `yaml:"Docker Namespace        "`
+	DockerRegistry        string   `yaml:"Docker Registry         "`
+	DeploymentType        string   `yaml:"Deployment Type         "`
+	Platform              string   `yaml:"Platform                "`
+	ProjectName           string   `yaml:"Project Name            "`
+	TagOverride           string   `yaml:"Tag Override            "`
+	AddOns                []string `yaml:"AddOns                  "`
+	DebugContainers       []string `yaml:"Debug Containers        "`
+	WorkerCount           int      `yaml:"Worker Count            "`
+	Verbose               bool     `yaml:"Verbose                 "`
+	SkipMirrorValidation  bool     `yaml:"Skip Mirror Validation  "`
+	SkipDockerValidation  bool     `yaml:"Skip Docker Validation  "`
+	GenerateManifestsOnly bool     `yaml:"Generate Manifests Only "`
 
 	// Build attributes
-	Log          *os.File              `yaml:"-"`            // File handle for log path
-	BuildContext context.Context       `yaml:"-"`            // Background context
-	BuildOnly    []string              `yaml:"Build Only"`   // Only build these specific containers from the whole list
-	Containers   map[string]*Container `yaml:"-"`            // Individual containers build list
-	Config       map[string]ConfigMap  `yaml:"-"`            // Static values and defaults are loaded from the configmap yaml
-	ConfigPath   string                `yaml:"-"`            // config-<deployment-type>.yml file for custom or static values
-	LogPath      string                `yaml:"-"`            // Path to the build directory with the log file name
-	KVStore      string                `yaml:"-"`            // Combines all vars.yaml content
-	RegistryAuth string                `yaml:"-"`            // Used to push and pull from/to a regitry
-	BuildPath    string                `yaml:"-"`            // Kubernetes manifests are generated and placed into this location
-	CertBaseURL  string                `yaml:"-"`            // The URL that the build containers will use to fetch their CA and entitlement certs
-	BuilderIP    string                `yaml:"Builder IP"`   // IP of where images are being built to be used for generic hostname lookup for builder
-	BuilderPort  string                `yaml:"Builder Port"` // Port for serving certificate requests for builds
-	PlaybookPath string                `yaml:"-"`
-	TimestampTag string                `yaml:"Timestamp Tag"` // Allows for datetime on each temp build bfile
-	InDocker     bool                  `yaml:"In Docker"`     // If we are running in a docker container
+	Log          *os.File              `yaml:"-"`                        // File handle for log path
+	BuildContext context.Context       `yaml:"-"`                        // Background context
+	BuildOnly    []string              `yaml:"Build Only              "` // Only build these specific containers from the whole list
+	Containers   map[string]*Container `yaml:"-"`                        // Individual containers build list
+	Config       map[string]ConfigMap  `yaml:"-"`                        // Static values and defaults are loaded from the configmap yaml
+	ConfigPath   string                `yaml:"-"`                        // config-<deployment-type>.yml file for custom or static values
+	LogPath      string                `yaml:"-"`                        // Path to the build directory with the log file name
+	PlaybookPath string                `yaml:"-"`                        // Build path + "sas_viya_playbook"
+	KVStore      string                `yaml:"-"`                        // Combines all vars.yaml content
+	RegistryAuth string                `yaml:"-"`                        // Used to push and pull from/to a regitry
+	BuildPath    string                `yaml:"-"`                        // Kubernetes manifests are generated and placed into this location
+	CertBaseURL  string                `yaml:"-"`                        // The URL that the build containers will use to fetch their CA and entitlement certs
+	BuilderIP    string                `yaml:"Builder IP              "` // IP of where images are being built to be used for generic hostname lookup for builder
+	BuilderPort  string                `yaml:"Builder Port            "` // Port for serving certificate requests for builds
+	TimestampTag string                `yaml:"Timestamp Tag           "` // Allows for datetime on each temp build bfile
+	InDocker     bool                  `yaml:"In Docker               "` // If we are running in a docker container
 
 	// Metrics
 	StartTime      time.Time      `yaml:"-"`
