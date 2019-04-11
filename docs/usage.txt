@@ -18,7 +18,9 @@ Single Container Arguments
     --addons "<value> <value> ..."
         A space or comma separated list of addon names. Each requires additional configuration:
         See the GitHub Wiki: https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
-        Access Engines: access-greenplum, access-hadoop, access-odbc, access-oracle, access-pcfiles, access-postgres, access-redshift, access-teradata
+        Access Engines: access-greenplum, access-hadoop, access-odbc, 
+                        access-oracle, access-pcfiles, access-postgres, 
+                        access-redshift, access-teradata
         Authentication: auth-sssd, auth-demo
         Other: ide-jupyter-python3
 
@@ -32,7 +34,7 @@ Single Container Arguments
 
     --tag <value>
     	Override the default tag formatted as "19.0.4-20190405074255-50645c9"
-				    ( <recipe-version> - <date time> - <git sha1 > )
+    	( <recipe-version> - <date time> - <git sha1 > )
     
     --mirror-url <value>
     	The location of the mirror URL. See the Mirror Manager guide at
