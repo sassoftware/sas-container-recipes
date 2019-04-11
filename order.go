@@ -170,7 +170,11 @@ type ConfigMap struct {
 func NewSoftwareOrder() (*SoftwareOrder, error) {
 	order := &SoftwareOrder{}
 	order.StartTime = time.Now()
+
 	order.TimestampTag = string(order.StartTime.Format("2006-01-02-15-04-05"))
+	if len(order.TagOverride) > 0 {
+		order.TimestampTag = order.TagOverride
+	}
 
 	if err := order.LoadCommands(); err != nil {
 		return order, err
@@ -504,7 +508,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Detect the platform based on the image
 	order.BaseImage = *baseImage
-	if strings.Contains(order.BaseImage, "opensuse") {
+	if strings.Contains(order.BaseImage, "suse") {
 		order.Platform = "suse"
 	} else {
 		// By default use rpm + yum
@@ -525,7 +529,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Optional: override the "sas-viya-" prefix in image names and in the deployment
 	order.ProjectName = *projectName
-	if len(order.ProjectName) > 0 && !regexNoSpecialCharacters.Match([]byte(order.TagOverride)) {
+	if len(order.ProjectName) > 0 && !regexNoSpecialCharacters.Match([]byte(order.ProjectName)) {
 		return errors.New("The --project-name argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
 	}
 
@@ -771,8 +775,7 @@ func (order *SoftwareOrder) Build() error {
 	if !order.Verbose {
 		order.WriteLog(true, "[TIP] The '--verbose' flag can be used to view the Docker build layers as they are being created.")
 	}
-	order.WriteLog(true, "[TIP] System resource utilization can be seen by using the `docker stats` command.")
-	fmt.Println("")
+	order.WriteLog(true, "[TIP] System resource utilization can be seen by using the `docker stats` command.\n")
 
 	// Concurrently start each build process
 	jobs := make(chan *Container, 100)
@@ -796,7 +799,6 @@ func (order *SoftwareOrder) Build() error {
 				return nil
 			}
 		case failure := <-fail:
-			order.WriteLog(true, failure)
 			return errors.New(failure)
 		case progress := <-progress:
 			order.WriteLog(true, progress)
@@ -979,7 +981,6 @@ func (order *SoftwareOrder) TestMirror(progress chan string, fail chan string, d
 		if err != nil {
 			fail <- err.Error()
 		}
-		defer response.Body.Close()
 		if response.StatusCode != 200 {
 			fail <- "Invalid mirror URL " + err.Error()
 		}
@@ -1217,9 +1218,13 @@ func (order *SoftwareOrder) Prepare() error {
 // GenerateManifests runs the generate_manifests playbook to output Kubernetes configs
 func (order *SoftwareOrder) GenerateManifests() error {
 
+	if len(order.BuildOnly) > 0 {
+		return nil
+	}
+
 	order.WriteLog(true, "Creating deployment manifests ...")
 
-    if !order.GenerateManifestsOnly {
+	if !order.GenerateManifestsOnly {
 		// Write a vars file to disk so it can be used by the playbook
 		containerVarSections := []string{}
 		for _, container := range order.Containers {

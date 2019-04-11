@@ -72,12 +72,12 @@ while [[ $# -gt 0 ]]; do
             usage
             exit 0
             ;;
-        -i|--baseimage)
+        -i|--baseimage|--base-image)
             shift # past argument
             BASEIMAGE="$1"
             shift # past value
             ;;
-        -t|--basetag)
+        -t|--basetag|--base-tag)
             shift # past argument
             BASETAG="$1"
             shift # past value
@@ -148,6 +148,11 @@ while [[ $# -gt 0 ]]; do
         --generate-manifests-only)
             shift # past argument
             export GENERATE_MANIFESTS_ONLY=true
+            ;;
+        -b|--build-only)
+            shift # past argument
+            export BUILD_ONLY="$1"
+            shift # past value
             ;;
         *) # Ignore everything that isn't a valid arg
             shift
@@ -238,6 +243,9 @@ if [[ -n ${PROJECT_NAME} ]]; then
     run_args="${run_args} --project-name ${PROJECT_NAME}"
 fi
 
+if [[ -n ${BUILD_ONLY} ]]; then
+    run_args="${run_args} --build-only ${BUILD_ONLY}"
+fi
 
 echo
 echo "=============="

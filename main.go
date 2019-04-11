@@ -19,12 +19,14 @@
 package main
 
 import (
+	"fmt"
 	"log"
 )
 
 func main() {
 	order, err := NewSoftwareOrder()
 	if err != nil {
+		fmt.Println("")
 		log.Fatal(err)
 	}
 

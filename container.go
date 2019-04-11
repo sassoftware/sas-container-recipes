@@ -112,7 +112,7 @@ type ContainerConfig struct {
 
 // effectedImage holdes the docker file that will need to be applied to the container
 type effectedImage struct {
-	Dockerfile string
+	Dockerfiles []string
 }
 
 // Provide a human readable output of a container's configurations
@@ -399,8 +399,17 @@ ARG PLATFORM
 ARG PLAYBOOK_SRV
 ENV PLATFORM=$PLATFORM ANSIBLE_CONFIG=/ansible/ansible.cfg ANSIBLE_CONTAINER=true
 RUN mkdir --parents /opt/sas/viya/home/{lib/envesntl,bin}
-RUN yum install --assumeyes ansible && rm -rf /root/.cache /var/cache/yum && \
-    echo "\nminrate=1\ntimeout=300" >> /etc/yum.conf
+RUN if [ "$PLATFORM" = "redhat" ]; then \
+        yum install --assumeyes ansible; \
+		rm -rf /root/.cache /var/cache/yum; \
+		echo -e "minrate=1" >> /etc/yum.conf; \
+		echo -e "timeout=300" >> /etc/yum.conf; \
+    elif [ "$PLATFORM" = "suse" ]; then \
+        zypper install --no-confirm ansible curl && rm -rf /var/cache/zypp; \
+	else \
+		echo -e "Platform $PLATFORM not supported"; \
+		exit 1; \
+    fi
 ADD *.yml *.cfg /ansible/
 ADD roles /ansible/roles
 `
@@ -517,28 +526,31 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 
 			dockerfile += "LABEL sas.recipe.addons." + addonName + "=\"true\"\n"
 
-			bytes, _ := ioutil.ReadFile(addon + targetImage.Dockerfile)
-			lines := strings.Split(string(bytes), "\n")
-			endsWithSlashRe := regexp.MustCompile("\\\\s*")
-			for index, line := range lines {
-				line = strings.TrimSpace(line)
-				if len(line) == 0 {
-					continue
-				}
+			// This will need to loop through list.
+			for _, addonDockerfile := range targetImage.Dockerfiles {
+				bytes, _ := ioutil.ReadFile(addon + addonDockerfile)
+				lines := strings.Split(string(bytes), "\n")
+				endsWithSlashRe := regexp.MustCompile("\\\\s*")
+				for index, line := range lines {
+					line = strings.TrimSpace(line)
+					if len(line) == 0 {
+						continue
+					}
 
-				if strings.HasPrefix(line, "RUN ") ||
-					strings.HasPrefix(line, "ADD ") ||
-					strings.HasPrefix(line, "ARG") ||
-					strings.HasPrefix(line, "WORKDIR") ||
-					strings.HasPrefix(line, "COPY ") {
-					dockerfile += line + "\n"
+					if strings.HasPrefix(line, "RUN ") ||
+						strings.HasPrefix(line, "ADD ") ||
+						strings.HasPrefix(line, "ARG") ||
+						strings.HasPrefix(line, "WORKDIR") ||
+						strings.HasPrefix(line, "COPY ") {
+						dockerfile += line + "\n"
 
-					// If there's a "\" then it's a multi-line command
-					if strings.Contains(line, "\\") {
-						for _, nextLine := range lines[index+1:] {
-							dockerfile += nextLine + "\n"
-							if !endsWithSlashRe.MatchString(nextLine) {
-								break
+						// If there's a "\" then it's a multi-line command
+						if strings.Contains(line, "\\") {
+							for _, nextLine := range lines[index+1:] {
+								dockerfile += nextLine + "\n"
+								if !endsWithSlashRe.MatchString(nextLine) {
+									break
+								}
 							}
 						}
 					}
