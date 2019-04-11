@@ -534,9 +534,8 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 
 	// Require a docker namespace for multi and full
-	if *dockerNamespace == "" && order.DeploymentType != "multiple" && order.DeploymentType != "full" {
-		err := errors.New("a '--docker-namespace' argument is required")
-		return err
+	if *dockerNamespace == "" && (order.DeploymentType == "multiple" || order.DeploymentType == "full") {
+		return errors.New("a '--docker-namespace' argument is required")
 	}
 	order.DockerNamespace = *dockerNamespace
 	if !regexNoSpecialCharacters.Match([]byte(order.DockerNamespace)) {
@@ -544,10 +543,10 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 
 	// Require a docker registry for multi and full
-	if *dockerRegistry == "" && order.DeploymentType != "multiple" && order.DeploymentType != "full" {
-		err := errors.New("a '--docker-registry-url' argument is required")
-		return err
+	if *dockerRegistry == "" && (order.DeploymentType == "multiple" || order.DeploymentType == "full") {
+		return errors.New("a '--docker-registry-url' argument is required")
 	}
+
 	order.DockerRegistry = *dockerRegistry
 
 	order.BuilderPort = *builderPort
