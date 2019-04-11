@@ -1,0 +1,16 @@
+---
+test_name: "Deployment Smoke Test I"
+kubernetes_deploy:
+  - kube_resource: "secret"
+    config_yaml: "manifests/kubernetes/secrets/"
+  - kube_resource: "configmap"
+    config_yaml: "manifests/kubernetes/configmaps/"
+  - kube_resource: "ingress"
+    config_yaml: "manifests/kubernetes/ingress/"
+  - kube_resource: "deployment"
+    config_yaml: "manifests/kubernetes/deployments/"
+  - kube_resource: "service"
+    config_yaml: "manifests/kubernetes/services/"
+local_test:
+  test_run_vars: []
+  test_filename: "tests/multiple"
