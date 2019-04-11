@@ -93,10 +93,10 @@ type SoftwareOrder struct {
 	RegistryAuth string                `yaml:"-"`                        // Used to push and pull from/to a regitry
 	BuildPath    string                `yaml:"-"`                        // Kubernetes manifests are generated and placed into this location
 	CertBaseURL  string                `yaml:"-"`                        // The URL that the build containers will use to fetch their CA and entitlement certs
-	BuilderIP    string                `yaml:"Builder IP              "` // IP of where images are being built to be used for generic hostname lookup for builder
-	BuilderPort  string                `yaml:"Builder Port            "` // Port for serving certificate requests for builds
+	BuilderIP    string                `yaml:"-"`                        // IP of where images are being built to be used for generic hostname lookup for builder
+	BuilderPort  string                `yaml:"-"`                        // Port for serving certificate requests for builds
 	TimestampTag string                `yaml:"Timestamp Tag           "` // Allows for datetime on each temp build bfile
-	InDocker     bool                  `yaml:"In Docker               "` // If we are running in a docker container
+	InDocker     bool                  `yaml:"-"`                        // If we are running in a docker container
 
 	// Metrics
 	StartTime      time.Time      `yaml:"-"`
@@ -596,6 +596,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	order.VirtualHost = *virtualHost
 
+	order.WriteLog(true, order.BuildArgumentsSummary())
 	return nil
 }
 
@@ -739,8 +740,6 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 
 // Build starts each container build concurrently and report the results
 func (order *SoftwareOrder) Build() error {
-	order.WriteLog(true, order.BuildArgumentsSummary())
-
 	// Handle single container build and output of docker run instructions
 	if order.DeploymentType == "single" {
 		err := buildProgrammingOnlySingleContainer(order)
