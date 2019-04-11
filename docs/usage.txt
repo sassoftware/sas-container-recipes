@@ -85,7 +85,9 @@ Multi-Container Arguments
     --addons "<value> <value> ..."
     	A space or comma separated list of addon names. Each requires additional configuration:
     	See the GitHub Wiki: https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
-    	Access Engines: access-greenplum, access-hadoop, access-odbc, access-oracle, access-pcfiles, access-postgres, access-redshift, access-teradata
+    	Access Engines: access-greenplum, access-hadoop, access-odbc, 
+    	                access-oracle, access-pcfiles, access-postgres, 
+    	                access-redshift, access-teradata
     	Authentication: auth-sssd, auth-demo
     	Other: ide-jupyter-python3
 
