@@ -28,8 +28,8 @@ The following software and hardware requirements are for the machine that is use
 | Operating system | Linux | Linux |
 | Docker registry | (Optional) Access to a Docker registry | Access to a Docker registry is required. <sup>2</sup> |  
 | Disk space | Approximately 15-20 GB of free disk space in the /var/lib/docker directory | Approximately 50 GB of free disk space in the /var/lib/docker directory | 
-| Cores | Minimum 2 | **Programming-only deployment:** Minimum 2, Optimal 4 <sup>3</sup> <br> **Full deployment:** Minimum 2, Optimal 10 or more <sup>3</sup>| 
-| RAM | 4 GB (minimum) |  4 GB (minimum) |
+| Cores | 2 minimum | Programming-only deployment: 2 minimum, 4 is optimal <sup>3</sup> <br> Full deployment: 2 minimum, 10 or more is optimal <sup>3</sup>| 
+| RAM | 4 GB minimum |  4 GB minimum |
 | Internet access| Required | Required | 
 
 **Notes:**
@@ -44,10 +44,10 @@ The following software and hardware requirements are for the one or more machine
 
 | **Software and Hardware** | **Run a Single Image** | **Run Multiple Images** |
 | --- | --- | --- |
-| Docker | Community Edition or Enterprise Edition, Docker 17.06 or later. Using `docker run` is required. | Community Edition or Enterprise Edition, Docker 17.06 or later |  
-| Kubernetes | Kubernetes 1.10 or later and kubectl installed | Kubernetes 1.10 or later and kubectl installed | 
-| Cores | 4 (minimum) | 6 (minimum) for a programming-only deployment or 8 (minimum) for a full deployment  | 
-| RAM | 8GB (minimum) | 10 GB (minimum) for a programming-only deployment or 80 GB (minimum) for a full deployment |  
+| Docker | Community Edition or Enterprise Edition, Docker 17.06 or later | Community Edition or Enterprise Edition, Docker 17.06 or later |  
+| Kubernetes | (Optional) Kubernetes 1.10 or later and kubectl installed | Kubernetes 1.10 or later and kubectl installed | 
+| Cores | 4 minimum |  Programming-only deployment: 6 minimum <br> Full deployment: 8 minimum  | 
+| RAM | 8 GB minimum |  Programming-only deployment: 10 GB minimum <br> Full deployment: 80 GB minimum |  
 
 ## Data Source Requirements
 

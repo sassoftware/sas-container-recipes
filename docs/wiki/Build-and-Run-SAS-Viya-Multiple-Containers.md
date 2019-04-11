@@ -112,8 +112,11 @@ Building multiple containers on SUSE Linux based images are not currently suppor
 
 ### Logging
 
-The content that is displayed to the console when building is also captured in a log file named `${PWD}/logs/build_sas_container.log`. If a log file exists at the time of the run, the previous file is preserved with a name of `build_sas_container_<date-time stamp>.log`. If problems are encountered during the build process, review the log file or provide it when opening up tickets.
- 
+The content that is displayed to the console when building is also captured in 
+a log file named `builds/multiple/build.log` for a multiple deployment, 
+`builds/full/build.log` for a full deployment, or `builds/single/build.log` for a single deployment. 
+If problems are encountered during the build process, review the log file or provide it when opening up tickets.
+
 ### Errors During Build
 
 If there was an error during the build process there is a chance some intermediate build containers were left behind. To see any images that are a result of the SAS recipe build process, run:
@@ -134,7 +137,7 @@ See the Docker documentation for more options on cleaning up your build system. 
 ## How to Run
 
 ### Kubernetes
-For a programming only build, a set of Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests` and for full build they are at `$PWD/viya-visuals/working/manifests`. Please use the path that matches to your type of build. We will refer to this path as _$MANIFESTS_. 
+For a programming only build, a set of Kubernetes manifests are located at `$PWD/builds/multiple/manifests/` and for full build they are at `$PWD/builds/full/manifests/`. Please use the path that matches to your type of build. We will refer to this path as _$MANIFESTS_. 
 
 For a programming only image, you can update the virtual host information. This will need to be done for working hyperlinks between SASStudio and CAS Monitor in programming only build. Edit the `$MANIFESTS/kubernetes/configmaps/cas.yml` file and update the following line, replacing sas-viya.sas-viya.company.com with the ingress host or desired virtual host information:
 
@@ -154,7 +157,7 @@ In the case of a full build, each of the containers will also have a volume defi
 
 To create your deployment, use the manifests created during the build process. In this example, we are deploying into the _sas-viya_ Kubernetes namespace. For more information about _namespaces_, see [Kubernetes Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
 
-A yaml file was created during manifest generation to help with creating the Kubernetes name space. If your user has the ability to create *namespaces* in the Kuberetes environment, run the following, or request your Kuberenetes administrator to create you a name space in the Kubernetes environment:
+A yaml file was created during manifest generation to help with creating the Kubernetes namespace. If your user has the ability to create *namespaces* in the Kuberetes environment, run the following, or request your Kuberenetes administrator to create a namespace for you in the Kubernetes environment:
 
 ```
 kubectl apply -f $MANIFESTS/kubernetes/namespace/sas-viya.yml
