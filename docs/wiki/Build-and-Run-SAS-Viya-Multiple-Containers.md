@@ -6,7 +6,7 @@
   - [Precedence](#precedence)
 - [How to Build](#how-to-build)
   - [Overview](#overview)
-  - [Building on a Red Hat Enterprise Linux Image](#building-on-a-red-hat-enterprise-linux-image)
+  - [Building on an Image Based on Red Hat Enterprise Linux](#building-on-an-image-based-on-red-hat-enterprise-linux)
   - [Building on a SUSE Linux Image](#building-on-a-suse-linux-image)
   - [Logging](#logging)
   - [Errors During Build](#errors-during-build)
@@ -72,7 +72,7 @@ In some cases, addons may change the httpproxy container as well. This will only
 
 To add to the base images, see [Advanced Building Options](#advanced-building-options).
 
-### Building on a Red Hat Enterprise Linux Image
+### Building on an Image Based on Red Hat Enterprise Linux ###
 
 The following example builds multiple containers for the SAS Viya programming-only deployment. This will pull down the most recent "CentOS:7" image from DockerHub and adds the `addons/auth-sssd` and  `addons/access-odbc` layers once the main SAS Viya images are built. If more addons are desired, add to the space delimited list. Make sure that the list is encapsulated in double quotes.
 
