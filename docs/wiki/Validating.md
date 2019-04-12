@@ -2,7 +2,7 @@
 
 - [Validate a Docker Deployment](#validate-a-docker-deployment)
 - [Validate a Kubernetes Deployment](#validate-a-kubernetes-deployment)
-- [Log On to Your Version of SAS Studio](#log-on-to-your-version-of-sas-studio)
+- [Sign In to Your Version of SAS Studio](#sign-in-to-your-version-of-sas-studio)
 - [Access SAS Environment Manager](#access-sas-environment-manager)
 - [Access SAS Logon and SAS Drive](#access-sas-logon-and-sas-drive)
 - [Access CAS Server Monitor](#access-cas-server-monitor)
@@ -99,14 +99,14 @@ kubectl replace -f -
 
 After you run the command, delete the sas-viya-programming pod. Removing the pod forces the creation of a new sas-viya-programming pod. The new pod will provide additional information about the pod start, which can be reviewed by using the kubectl logs command.
 
-## Log On to Your Version of SAS Studio
+## Sign In to Your Version of SAS Studio
 
-Log on to SAS Studio to ensure that your default version of SAS Studio has been deployed correctly and is working.
+Sign in to SAS Studio to ensure that your default version of SAS Studio has been deployed correctly and is working.
 
 The version of SAS Studio that you are using depends on which type of deployment that you performed:
 
 - If you deployed a programming-only environment, then your environment contains SAS Studio 4.4.
-- If you deployed a full environment, then your environment contains both SAS Studio 4.4 and SAS Studio 5.1. By default, you will log into SAS Studio 5.1.
+- If you deployed a full environment, then your environment contains both SAS Studio 4.4 and SAS Studio 5.1. By default, you will sign into SAS Studio 5.1.
 
 1. Open SAS Studio from a URL with one of the following formats:
 
@@ -122,11 +122,11 @@ The version of SAS Studio that you are using depends on which type of deployment
 
       `https://ingress-path/SASStudioV`
 
-1. Log on using the credentials for your operating system account.
+1. Sign in using the credentials for your operating system account.
 
 **Notes:** 
 
-- To log off from SAS Studio, click **Sign Out** on the toolbar. Do not use the **Back** button on your web browser.
+- To sign out from SAS Studio, click **Sign Out** on the toolbar. Do not use the **Back** button on your web browser.
 - Make a note of the correct URL for your environment to share with any other users of your SAS Viya software.
 
 ## Access SAS Environment Manager
@@ -183,7 +183,7 @@ The version of SAS Studio that you are using depends on which type of deployment
 
 1. Review the topic and copy the code within the topic to your clipboard.
 
-1. Go to SAS Studio and [make sure that you are logged on](#log-on-to-your-version-of-sas-studio).
+1. Go to SAS Studio and [make sure that you are signed in](#sign-in-to-your-version-of-sas-studio).
 
 1. Perform one of the following steps:
 
