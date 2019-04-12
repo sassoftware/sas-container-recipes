@@ -1,9 +1,9 @@
 ## Contents
 
-- [Configuration](#configuration)
-  - [Running Using Configuration by Convention](#running-using-configuration-by-convention)
-  - [Running using Environment Variables](#running-using-environment-variables)
-  - [Precedence](#precedence)
+- [Optional Configuration](#optional-configuration)
+  - [Using Configuration Files](#using-configuration-files)
+  - [Using Environment Variables](#using-environment-variables)
+  - [Order of Configuration](#order-of-configuration)
 - [How to Build](#how-to-build)
   - [Overview](#overview)
   - [Building on an Image Based on Red Hat Enterprise Linux](#building-on-an-image-based-on-red-hat-enterprise-linux)
@@ -13,12 +13,12 @@
 - [How to Run](#how-to-run)
   - [Kubernetes](#kubernetes)
 
-## Configuration
+## Optional Configuration
 
-Before we build the images, here is some information about the different ways that you can modify the configuration of the image.
+Before you build the images and run the container, read about the different ways that you can modify the configuration of the image.
 
-### Running Using Configuration by Convention
-You can provide configuration files that the container will process as it starts. To accomplish this task, map a volume to `/sasinside` in the container. The contents of that directory would contain any of the following files:
+### Using Configuration by Convention
+You can provide configuration files that the container will process as it starts. To use configuration files, map a volume to the /sasinside directory in the container. The contents of that directory can include one or more of the following files:
 
 * casconfig_usermods.lua
 * cas_usermods.settings
@@ -30,53 +30,74 @@ You can provide configuration files that the container will process as it starts
 * workspaceserver_usremods.sh
 * sasstudio_usermods.properties
 
-If any of these files are found, then the contents are appended to the existing usermods file. A change to the files in the `/sasinside` directory would not change the behavior of a running system. Only on a restart would the behavior change.
+When the container starts, the content of each file is appended to the existing usermods file.
 
-### Running Using Environment Variables
-For CAS, you can change the configuration of the container by using environment variables. The CAS container will look for environment variables of a certain prefix:
+**Note:** A change to the files in the /sasinside directory does not change the configuration of a running system. A restart is required to change the configuration of a running system.
 
-* CASCFG_ - An environment variable with this prefix translates to a `cas.` option which ends up in the `casconfig_docker.lua` file. These values are a predefined set and cannot be made up. If CAS sees an option that it does not understand, it will not run.
-* CASENV_ - An environment variable with this prefix translates to a `env.` option which ends up in the casconfig_docker.lua. These values can be anything.
-* CASSET_ - An environment variable with this prefix translates to an environment variable which ends up in `cas_docker.settings`. These values can be anything.
-* CASLLP_ - An environment variable with this prefix translates to setting the _LD_LIBRARY_PATH_ in `cas_docker.settings`. These values can be anything.
+### Using Environment Variables
+You can change the configuration of the CAS server by using environment variables. The CAS container will look for environment variables whose names are preceded by a particular prefix:
 
-### Precedence
-Here is the order of precedence from least to greatest (the last listed variables winning prioritization):
+**CASCFG_**
 
-* files from `/tmp`
-* files from `/sasinisde`
+This prefix indicates a _cas._ option, which is included in the casconfig_docker.lua file. These values are a predefined set and cannot be user-created. If an option is not recognized by the CAS server, it will not run.
+
+**CASENV_**
+
+This prefix indicates an _env._ option, which is included in the casconfig_docker.lua file.
+
+**CASSET_**
+
+This prefix indicates an environment variable that is included in the cas_docker.settings file.
+
+**CASLLP_**
+
+This prefix indicates setting the LD_LIBRARY_PATH variable in the cas_docker.settings file.
+
+### Order of Configuration
+The configuration of software follows the order of the methods (configuration files or environment variables) shown below, where the last method used sets the configuration:  
+
+* files in the /tmp directory
+* files in the /sasinside the directory
 * environment variables
 
 ## How to Build
 ### Overview
-Use the `build.sh` script in the root of the directory: `sas-container-recipes/build.sh`. You will be able to pass in the base image and tag that you want to build from as well as providing any addons to create your custom image. The following examples use a mirror URL, which is [strongly recommended](Tips#create-a-local-mirror-repository).
 
-To see what options `build.sh` takes, run
+Use the `build.sh` script in the root of the directory: sas-container-recipes/build.sh. You will be able to pass in the base image, tag what you want to build from, and provide any addons to create your custom image. The following examples use a mirror repository, which is [strongly recommended](Tips#create-a-local-mirror-repository).
+
+To see what options can be used, run the following:
 
 ```
 build.sh --help
 ```
 
-The `build.sh` script will validate several of the settings that are needed to help with the deployment process. The _docker-registry-url_ and _docker-registry-namespace_ are expected. If these values are not provided then the script will exit early until they are provided.
+The `build.sh` script will validate several of the settings that are needed to help with the deployment process. The _docker-registry-url_ and _docker-registry-namespace_ arguments are expected. If these arguments are not provided, then the script will exit early until they are provided.
 
-The _docker-registry-url_ and _docker-registry-namespace_ are used so that the process can push the containers to the Docker registry with a specific Docker tag. This same information is then used to generate the Kubernetes manifests. 
+The _docker-registry-url_ and _docker-registry-namespace_ arguments are used so that the process can push the containers to the Docker registry with a specific Docker tag. This same information is then used to generate the Kubernetes manifests. 
 
-The `--virtual-host` option points to the ingress hostname that is representing the end point for the sas-viya-httpproxy container. This is an optional parameter for programming. The value can be changed or added post running of `build.sh` and prior to deploying the images to Kubernetes. Without updating post build, hyperlinks between SASStudio and CAS Monitor will not work for the programming deployment. Full deployment has Environment Manager and virtual-host has no impact. 
+The _virtual-host_ argument points to the ingress hostname that represents the end point for the sas-viya-httpproxy container. This is an optional parameter for the programming-only deployment. The value can be changed or added after `build.sh` is run but before the images are deployed to Kubernetes.
+
+**Note:** If the value for virtual-host is not updated after the build, then the UI links between SAS Studio and CAS Monitor will not work for a programming-only deployment. The virtual-host argument has no impact on a full deployment.
 
 Passing in `--addons` will follow a convention to automatically add the layers to the correct SAS images. 
-* Addons that begin with _auth_ will be added to the computeserver, programming and cas containers
-* Addons that begin with _access_ will be added to the computeserver, programming and cas  containers
+
+* Addons that begin with _auth_ will be added to the computeserver, programming, and cas containers
+* Addons that begin with _access_ will be added to the computeserver, programming, and cas  containers
 * Addons that begin with _ide_ will be added to the programming containers
 
-In some cases, addons may change the httpproxy container as well. This will only be if the addon contains a _Dockerfile_http_ file. One can see an example of this in the _ide-jpuyter-python3_ addon.
+In some cases, addons might change the httpproxy container. The httpproxy container might change only if the addon contains a _Dockerfile_http_ file. An example is the _ide-jpuyter-python3_ addon.
 
 To add to the base images, see [Advanced Building Options](#advanced-building-options).
 
 ### Building on an Image Based on Red Hat Enterprise Linux ###
 
-The following example builds multiple containers for the SAS Viya programming-only deployment. This will pull down the most recent "CentOS:7" image from DockerHub and adds the `addons/auth-sssd` and  `addons/access-odbc` layers once the main SAS Viya images are built. If more addons are desired, add to the space delimited list. Make sure that the list is encapsulated in double quotes.
+The instructions in this section are for Red Hat Enterprise Linux (RHEL) 7 or derivatives, such as CentOS 7.
 
-To change the base image from which we will build the SAS Viya image, change the values for the `--baseimage` and `--basetag` options. Only Red Hat Enterprise Linux 7 based images are supported for recipes. 
+**Note:** Only images that are based on RHEL 7 can be used for recipes.
+
+In the following example, the most recent "CentOS:7" image is pulled from DockerHub and multiple images of a programming-only deployment are built, including the addons/auth-sssd and  addons/access-odbc layers. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
+
+To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--baseimage` and `--basetag` arguments. Only Red Hat Enterprise Linux 7 based images are supported for recipes. 
 
 ```
 build.sh \
@@ -90,7 +111,7 @@ build.sh \
 --addons "addons/auth-sssd addons/access-odbc"
 ```
 
-Here is an example to build multiple containers for the SAS Viya full deployment.
+Here is an example to build multiple containers for a full deployment.
 
 ```
 build.sh \
@@ -104,17 +125,20 @@ build.sh \
 --addons "addons/auth-sssd addons/access-odbc"
 ```
 
-The building of the SAS Viya images could take several hours to complete. Once the process is done you will have 3 (programming only) to around 25 (full) Docker images local on your build machine as well as in the Docker registry that you provided. An example set of manifests are also provided which is covered in [How to Run](#how-to-run).
+Building multiple images could take several hours to complete. After the process has completed, you will have 3 (programming-only) to around 25 (full) Docker images that are local on your build machine, as well as in the Docker registry that you provided. An example set of manifests is also provided, which is covered in [How to Run](#how-to-run).
 
 ### Building on a SUSE Linux Image
 
-Building multiple containers on SUSE Linux based images are not currently supported.
+Building multiple containers on SUSE Linux-based images are not currently supported.
 
 ### Logging
 
-The content that is displayed to the console when building is also captured in 
-a log file named `builds/multiple/build.log` for a multiple deployment, 
-`builds/full/build.log` for a full deployment, or `builds/single/build.log` for a single deployment. 
+When building images, the content that is displayed to the console is captured in one of the following files:
+
+- builds/multiple/build.log for a `--type multiple` build
+- builds/full/build.log for a `--type multiple` build
+- builds/single/build.log for a `--type single` build
+
 If problems are encountered during the build process, review the log file or provide it when opening up tickets.
 
 ### Errors During Build
