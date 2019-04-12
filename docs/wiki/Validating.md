@@ -87,6 +87,8 @@ NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
 sas-programming         1/1     1            1           11d
 ```
 
+**Tip:** Run the command from the directory where the sas-programming.yml file is located. For a programming-only deployment, the Kubernetes manifests are located at $PWD/builds/multiple/manifests/ and for a full deployment, the manifests are located at $PWD/builds/full/manifests/.
+
 If you do not get the results that you expect, run the following command to enable the DEBUG option to provide more information:
 
 **Note:** Enter the command on a single line. Multiple lines are used here to improve readability.
