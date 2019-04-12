@@ -26,16 +26,15 @@ For more information see [SAS for Containers](http://support.sas.com/rnd/contain
 <br>
 
 ## Quick Start
-Use the instructions on this page to quickly build and launch SAS Viya containers. 
-For more extensive infomation about building and launching SAS Viya containers, 
-see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki)
-For either single or multiple containers, addons found in 
-[the addons directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) 
-can enhance the base SAS Viya images with SAS/ACCESS, LDAP configuration, and more. 
-For each addon, review the [Appendix](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#addons)
-for important information and any possible prerequisite requirements.
+Use the following instructions to quickly build and launch SAS Viya containers. 
+For extensive information about building and running SAS Viya containers, 
+see the [documentation wiki](https://github.com/sassoftware/sas-container-recipes/wiki).
+For single and multiple containers, addons found in the 
+[addons directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) 
+can enhance the base SAS Viya images with SAS/ACCESS software, LDAP configuration, and more. 
+For information about how to use the addons and any prerequisites, see the [documentation about addons](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#addons).
 
-1. Locate your SAS Viya for Linux Software Order Email (SOE) and retrieve the 
+1. Locate your SAS Viya for Linux Software Order Email (SOE), and retrieve the 
 `SAS_Viya_deployment_data.zip` file from it. Not sure if your organization 
 purchased SAS Software? [Contact Us](https://www.sas.com/en_us/software/how-to-buy.html) 
 or get [SAS License Assistance](https://support.sas.com/en/technical-support/license-assistance.html). 
@@ -51,7 +50,6 @@ or `git clone git@github.com:sassoftware/sas-container-recipes.git`
     a. If you are looking for an environment tailored towards individual data scientists and developers, you will be interested in a [SAS programming-only deployment running on a single container](https://github.com/sassoftware/sas-container-recipes#for-a-single-user---sas-viya-programming-only-deployment-running-on-a-single-container).
 
     b. If you would like an environment suitable for collaborative data science work, then you may be interested in a SAS programming-only deployment or a SAS Viya full [deployment on multiple containers](https://github.com/sassoftware/sas-container-recipes#for-one-or-more-users---sas-viya-programming-only-or-sas-viya-full-deployment-running-on-multiple-containers).
-
 
 <br>
 
@@ -71,9 +69,9 @@ which provides in-memory analytics for symmetric multi-processing (SMP).
 
 ### Build the Image
 
-Run the following to create a user 'sasdemo' with the password 'sasdemo' for product evaluation.
+Run the following command to build the the container image and add a 'sasdemo' user to it for signing into SAS Studio when the container is running. The sasdemo user will have the password 'sasdemo'.
 A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
-is recommended for all build commands.
+is recommended for executing the build command.
 ```
  ./build.sh --type single --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "auth-demo"
 ```                         
@@ -90,16 +88,17 @@ After the container is built then instructions for how to run the image will be 
  --name sas-viya-programming \
  sas-viya-programming:<VERSION-TAG>  
 ```
-Use the `docker images` command to see what images were built and what the most recent tag is (example: tag `19.0.1-20190109112555-48f98d8`).
+Use the `docker images` command to see the images that were built and the most recent tag (example: tag `19.0.1-20190109112555-48f98d8`).
 Once the docker run command is completed, use `docker ps` to list the running container. 
 
-### Log on to SAS Studio
+### Sign In to SAS Studio
 Go to the address `http://<myhostname>:8081` and start using SAS Studio! 
-The `--addons "auth-demo"` build argument created a default user with the username 'sasdemo' and the password 'sasdemo' for product evaluation.
+
+Sign in with the 'sasdemo' user name and 'sasdemo' password that was created during the build.
 
 <img src="docs/sas-logon-screen-sasdemo.png" alt="SAS Logon Screen" style="width: 80%; height: 80%; object-fit: contain;">
 
-For more info see the [GitHub Project Wiki Page](https://github.com/sassoftware/sas-container-recipes/wiki).
+For more information, see the [documentation wiki](https://github.com/sassoftware/sas-container-recipes/wiki).
 
 <br>
 
@@ -112,29 +111,28 @@ For more info see the [GitHub Project Wiki Page](https://github.com/sassoftware/
 Use these instructions to build multiple Docker images and then use the images 
 to create a SAS Viya programming-only or a SAS Viya full deployment in Kubernetes. 
 These deployments can have SMP or massively parallel processing (MPP) CAS servers,
-which provide in-memory analytics, and can be used by one or more users. 
+which provide in-memory analytics and can be used by one or more users. 
 
 A programming-only deployment supports data scientists and programmers who use 
 SAS Studio or direct programming interfaces such as Python or REST APIs. 
-Understand that this type of deployment does not include SAS Drive, 
+Note that a programming-only deployment does not include SAS Drive, 
 SAS Environment Manager, and the complete suite of services that are 
-included with a full deployment. Therefore, make sure that you are providing 
+included with a full deployment. Make sure that you provide 
 your users with the features that they require.
 
 ### Prerequisites
 
-- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux or Mac must be installed on the build machine
+- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux or Mac must be installed on the build machine.
 - Access to a Docker registry: The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
 - Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed (required for the deployment step but not required for the build step)
 - **Strongly recommended:** A local mirror of the SAS software. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
 
 ### How to Build
-Examples of running `build.sh` to build multiple containers are provided below. A non-root user is recommended for all build commands.
+Examples of running `build.sh` to build multiple containers are provided below. A non-root user is recommended for executing the build command.
 
 **See the `docs/usage.txt` file or run `./build.sh --help` for the list of all required and optional arguments.**
 
-
-#### Example One: Programming-Only Deployment, Mulitple Containers
+#### Example One: Programming-Only Deployment, Multiple Containers
 
 ```    
   ./build.sh \
@@ -149,8 +147,7 @@ Here's a summary of what this command does:
 - Multiple Docker images for a programming-only deployment are created (`--type multiple`). The software that is deployed is determined by the software entitlement that is provided in the ZIP file from the Software Order Email (`--zip /path/to/SAS_Viya_deployment_data.zip`).
 - The images are pushed to the namespace in the Docker Registry (`--docker-registry-namespace myuniquename`), which is located at the Docker registry URL (`--docker-registry-url myregistry.myhost.com`).
 - The ingress path (`--virtual-host user-myproject.mylocal.com`) provides the HTTP and HTTPS routes from outside the Kubernetes cluster to services within the cluster.
-- A default user is added (`--addons "auth-demo"`), which can be used to log on to SAS Studio. A list of all addons is available in the [project GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood).
-
+- A default user and password are added (`--addons "auth-demo"`), which can be used to sign in to SAS Studio.
 
 #### Example Two: Full Deployment, Multiple Containers
 
@@ -167,7 +164,9 @@ Here's a summary of what this command does:
 - Multiple Docker images for a full deployment are created (`--type full`). The software that is deployed is determined by the software entitlement that is provided in the ZIP file from the Software Order Email (`--zip /path/to/SAS_Viya_deployment_data.zip`).
 - The images are pushed to the namespace in the Docker Registry (`--docker-registry-namespace myuniquename`), which is located at the Docker registry URL (`--docker-registry-url myregistry.myhost.com`).
 - The ingress path (`--virtual-host user-myproject.mylocal.com`) provides the HTTP and HTTPS routes from outside the Kubernetes cluster to services within the cluster.
-- SSSD is configured inside the container (`--addons "auth-sssd"`) to allow the container authentication to connect to LDAP or Active Directory. A list of all addons is available in the [project GitHub Wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood).
+- SSSD is configured inside the container (`--addons "auth-sssd"`) to allow the container authentication to connect to LDAP or Active Directory.
+
+**Note:** Before you use the auth-sssd addon, refer to the [documentation wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#auth-sssd) for information about prerequisites and how to use it.
 
 ### Running Multiple Containers
 
@@ -178,14 +177,14 @@ The build process creates Kubernetes manifests that you use to run multiple cont
 
 For information about using the manifests, see [Build and Run SAS Viya Multiple Containers](https://github.com/sassoftware/sas-container-recipes/wiki/Build-and-Run-SAS-Viya-Multiple-Containers).
 
-### Log on to SAS Studio
+### Sign In to SAS Studio
 
 After the containers are running, users can sign on to SAS Studio.
 
 - If you deployed a programming-only environment, then your environment contains SAS Studio 4.4.
-- If you deployed a full environment, then your environment contains both SAS Studio 4.4 and SAS Studio 5.1. By default, you will log on to SAS Studio 5.1.
+- If you deployed a full environment, then your environment contains both SAS Studio 4.4 and SAS Studio 5.1. By default, you will sign in to SAS Studio 5.1.
 
-Here are some examples of how to log on:
+Here are some examples of how to sign in:
 
 - For SAS Studio 4.4 via Docker run without TLS:
 
@@ -209,7 +208,7 @@ Here are some examples of how to log on:
 
 ## Additional Resources
 
-- [Wiki: Documentation](https://github.com/sassoftware/sas-container-recipes/wiki)
+- [Documentation wiki](https://github.com/sassoftware/sas-container-recipes/wiki)
 - [Issues: Questions and Project Improvements](https://github.com/sassoftware/sas-container-recipes/issues)
 - [Kubernetes Documentation](https://kubernetes.io/docs/home/)
 - [Docker Documentation](https://docs.docker.com/)
