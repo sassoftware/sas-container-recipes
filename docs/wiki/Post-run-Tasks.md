@@ -210,7 +210,9 @@ If the deployment manifests that were generated in the working/manifests directo
         -e 'ansible_python_interpreter=/usr/bin/python'
     ```
     
-1. New manifests will be generated.
+1. New manifests will be generated. 
+
+**Note:** The path to the directory in which the manifests are added includes a timestamp as part of its name, such as builds/multiple-2019-04-10-15-27-56/manifests/.
 
 ## (Optional) Converting an Environment from CAS SMP to CAS MPP
 
