@@ -21,7 +21,6 @@
 #
 
 # Allow running only `./build.sh` to show --help output
-set -x
 function usage() {
     cat docs/usage.txt
 }
@@ -239,7 +238,6 @@ if [[ -n ${PROJECT_NAME} ]]; then
     run_args="${run_args} --project-name ${PROJECT_NAME}"
 fi
 
-exec > >(tee -a build_sas_container-${SAS_RECIPE_TYPE}.log) 2>&1
 
 echo
 echo "=============="
