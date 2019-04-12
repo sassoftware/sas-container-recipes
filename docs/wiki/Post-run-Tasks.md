@@ -190,7 +190,7 @@ SAS Viya supports encrypted connections between the LDAP client and server. To c
 
 If the deployment manifests that were generated in the working/manifests directory did not contain everything that is needed, or need to be updated, you can regenerate the manifests post build. Here are the steps:
 
-1. Change to the sas-container-recipes/viya-visuals/working/ directory.
+1. Change to the sas-container-recipes/builds/full/ directory.
 1. If you need to provide custom configuration, edit the vars_usermods.yml file in the /working directory. For more information, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task).
 1. Get the Docker tag for the images that were built.
 
@@ -216,7 +216,7 @@ If the deployment manifests that were generated in the working/manifests directo
 
 By default, the CAS deployment is set up as SMP. If a MPP environment is needed, perform one of the following steps:
 
-* If you have not yet deployed the environment, regenerate manifests. See [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) for information about editing the viya-visuals/vars_usermods.yml file to support MPP mode.
+* If you have not yet deployed the environment, regenerate manifests. See [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) for information about editing the vars_usermods.yml file to support MPP mode.
 * If you have already deployed the environment:
     1. Scale down the controller to 0: 
 
