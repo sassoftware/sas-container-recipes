@@ -573,14 +573,17 @@ func (container *Container) CreateBuildDirectory() error {
 	if err != nil {
 		return err
 	}
+
+	// Setup logging
 	container.LogPath = container.BuildPath + "/log.txt"
 	logFile, err := os.Create(container.LogPath)
 	if err != nil {
 		return err
 	}
 	container.Log = logFile
-	buildContextTarName := "build_context.tar"
 
+	// Setup the docker context writer
+	buildContextTarName := "build_context.tar"
 	container.DockerContextPath = container.BuildPath + "/" + buildContextTarName
 	finalTarFile, err := os.Create(container.DockerContextPath)
 	if err != nil {

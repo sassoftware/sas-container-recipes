@@ -164,22 +164,61 @@ type ConfigMap struct {
 	} `yaml:"resources"`
 }
 
+// SetupBuildDirectory creates a unique isolated directory for the Software Order
+// based on the deployment and time stamp. It also configures logging.
+func (order *SoftwareOrder) SetupBuildDirectory() error {
+	if order.GenerateManifestsOnly {
+		// Save off the previous build log
+		order.LogPath = order.BuildPath + "/build.log"
+		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s",
+			order.LogPath, order.TimestampTag))
+		if err != nil {
+			return err
+		}
+		logHandle, err := os.Create(order.LogPath)
+		if err != nil {
+			return err
+		}
+		order.Log = logHandle
+	} else {
+		// Create an isolated build directory with a unique timestamp
+		order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
+		if err := os.MkdirAll(order.BuildPath+"manifests", 0744); err != nil {
+			return err
+		}
+
+		// Start a new build log inside the isolated build directory
+		order.LogPath = order.BuildPath + "/build.log"
+		logHandle, err := os.Create(order.LogPath)
+		if err != nil {
+			return err
+		}
+		order.Log = logHandle
+	}
+	return nil
+}
+
 // NewSoftwareOrder once the SOE zip file path has been provided then load all the Software Order's details
 // Note: All sub-processes of this function are essential to the build process.
 //       If any of these steps return an error then the entire process will be exited.
 func NewSoftwareOrder() (*SoftwareOrder, error) {
 	order := &SoftwareOrder{}
 	order.StartTime = time.Now()
-
 	order.TimestampTag = string(order.StartTime.Format("2006-01-02-15-04-05"))
 	if len(order.TagOverride) > 0 {
 		order.TimestampTag = order.TagOverride
 	}
 
+	// Parse the command arguments and setup logging
 	if err := order.LoadCommands(); err != nil {
 		return order, err
 	}
+	if err := order.SetupBuildDirectory(); err != nil {
+		return order, err
+	}
+	order.WriteLog(true, order.BuildArgumentsSummary())
 
+	// Determine if the binary is being run inside the sas-container-recipes-builder
 	order.InDocker = true
 	if _, err := os.Stat("/.dockerenv"); err != nil {
 		order.InDocker = false
@@ -192,32 +231,24 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	}
 
 	if !order.GenerateManifestsOnly {
-		order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
-		if err := os.MkdirAll(order.BuildPath+"manifests", 0744); err != nil {
-			return order, err
-		}
-		symlinkCommand := fmt.Sprintf("cd builds && rm -rf %s && ln -s %s-%s %s", order.DeploymentType, order.DeploymentType, order.TimestampTag, order.DeploymentType)
+		// Symbolically link the most recent time stamped build directory to a shorter name
+		// For example, 'full-2019-04-09-13-37-40' can be referred to as simply 'full'
+		symlinkCommand := fmt.Sprintf("cd builds && rm -rf %s && ln -s %s-%s %s",
+			order.DeploymentType, order.DeploymentType,
+			order.TimestampTag, order.DeploymentType)
 		cmd := exec.Command("sh", "-c", symlinkCommand)
 		stderr, err := cmd.StderrPipe()
 		if err := cmd.Start(); err != nil {
 			log.Fatal(err)
 		}
-
-		slurp, _ := ioutil.ReadAll(stderr)
-		fmt.Printf("%s\n", slurp)
-
+		result, err := ioutil.ReadAll(stderr)
+		if err != nil {
+			return order, err
+		}
+		fmt.Printf("%s\n", result)
 		if err := cmd.Wait(); err != nil {
 			return order, err
 		}
-		if err != nil {
-			return order, err
-		}
-		order.LogPath = order.BuildPath + "/build.log"
-		logHandle, err := os.Create(order.LogPath)
-		if err != nil {
-			return order, err
-		}
-		order.Log = logHandle
 	} else {
 		// If we are only generating manifests, then use the previous run.
 		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
@@ -228,19 +259,6 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
 			return order, err
 		}
-
-		// Save off the previous build log
-		order.LogPath = order.BuildPath + "/build.log"
-		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s", order.LogPath, order.TimestampTag))
-		if err != nil {
-			return order, err
-		}
-
-		logHandle, err := os.Create(order.LogPath)
-		if err != nil {
-			return order, err
-		}
-		order.Log = logHandle
 
 	}
 
@@ -550,7 +568,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Require a docker namespace for multi and full
 	if *dockerNamespace == "" {
-		err := errors.New("a '--docker-namespace' argument is required")
+		err := errors.New("The '--docker-namespace' argument is required")
 		return err
 	}
 	order.DockerNamespace = *dockerNamespace
@@ -560,7 +578,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Require a docker registry for multi and full
 	if *dockerRegistry == "" {
-		err := errors.New("a '--docker-registry-url' argument is required")
+		err := errors.New("The '--docker-registry-url' argument is required")
 		return err
 	}
 	order.DockerRegistry = *dockerRegistry
@@ -596,7 +614,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	order.VirtualHost = *virtualHost
 
-	order.WriteLog(true, order.BuildArgumentsSummary())
 	return nil
 }
 
