@@ -7,7 +7,7 @@ We take security seriously. To report a security issue, contact us at
 #### Reporting Other Issues or Suggesting Improvements
 Check our [GitHub issues section](https://github.com/sassoftware/sas-container-recipes/issues)
 to see if the problem or suggestion exists before submitting a new issue. When creating a new 
-issue there are options to select a ticket format: "Flag Security Issue", "Report Problem", 
+issue, there are options to select a ticket format: "Flag Security Issue", "Report Problem", 
 or "Suggest Improvement". These standard ticket templates assist in communicating all relevant
 details, or you can select "Open a regular issue" to skip the ticket formats.
 
