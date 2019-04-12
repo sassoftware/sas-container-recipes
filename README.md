@@ -208,7 +208,7 @@ Here are some examples of how to sign in:
 
 ## Additional Resources
 
-- [Documentation wiki](https://github.com/sassoftware/sas-container-recipes/wiki)
+- [Wiki: documentation](https://github.com/sassoftware/sas-container-recipes/wiki)
 - [Issues: Questions and Project Improvements](https://github.com/sassoftware/sas-container-recipes/issues)
 - [Kubernetes Documentation](https://kubernetes.io/docs/home/)
 - [Docker Documentation](https://docs.docker.com/)
