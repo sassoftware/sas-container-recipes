@@ -39,7 +39,8 @@ The addons that you choose depends on your needs and the software that you have 
     | **File Name** | **Purpose** |
     | --- | --- |
     | greenplum_sasserver.sh | The file contains environment variables that are required so that the Greenplum code executes properly. Update this file with your Greenplum client library version number. |
-    | acgreenplum.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Foundation to confirm that SAS/ACCESS Interface to Greenplum is configured correctly. | 
+    | acgreenplum.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Foundation to confirm that SAS/ACCESS Interface to Greenplum is configured correctly. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
 
 - **How To Use**
 
@@ -92,6 +93,7 @@ The addons that you choose depends on your needs and the software that you have 
     | --- | --- |
     | achadoop.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. The code expects the Hadoop configuration and JAR files to be available at /hadoop and uses SAS Foundation to confirm that SAS/ACCESS Interface to Hadoop is configured correctly. |
     | dchadoop.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. The code expects the Hadoop configuration and JAR files to be available at /hadoop and uses SAS Cloud Analytic Services to confirm that SAS Data Connector to Hadoop is configured correctly. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
 
 - **How To Use**
 
@@ -140,6 +142,7 @@ The addons that you choose depends on your needs and the software that you have 
     | odbc_sasserver.sh | This file contains environment variables that are required so that ODBC code is executed properly. |
     | acodbc.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Foundation to confirm that  SAS/ACCESS Interface to ODBC is configured correctly. |
     | dcodbc.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Cloud Analytic Services to validate that the SAS Data Connector to ODBC is configured correctly. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
 
 - **How To Use**
 
@@ -190,6 +193,7 @@ SAS/ACCESS Interface to Oracle. A user must provide:
     | oracle_sasserver.sh | This file contains environment variables that are required so that the Oracle code executes properly. Update this file with your Oracle client library version number. |
     | acoracle.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table. The code uses SAS Foundation to validate that SAS/ACCESS Interface to Oracle is configured correctly. |
     | dcoracle.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table. The code uses SAS Cloud Analytic Services (CAS) to validate that the Data Connector to Oracle is configured correctly.   |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
 
 - **How To Use**
 
@@ -234,6 +238,7 @@ SAS/ACCESS Interface to PC Files.
     | --- | --- |
     | acpcfiles.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates a table and writes its contents to file and uses SAS Foundation to confirm that  SAS/ACCESS Interface to PC Files is working. |
     | dcpcfiles.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates a table, write its contents to file, and then reads the file contents back into SAS Cloud Analytic Services (CAS). The code uses CAS to validate that the SAS Data Connector to PC Files is working. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
 
 - **How To Use**
 
@@ -276,6 +281,7 @@ SAS/ACCESS Interface to PostgreSQL.
     | --- | --- |
     | acpostgres.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Foundation to confirm that SAS/ACCESS Interface to PostgreSQL is configured correctly. |
     | dcpostgres.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Cloud Analytic Services to confirm that the SAS Data Connector to PostgreSQL is configured correctly. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
 
 - **How To Use**
 
@@ -320,6 +326,7 @@ SAS/ACCESS Interface to Amazon Redshift.
     | --- | --- |
     | acredshift.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Foundation to confirm that SAS/ACCESS Interface to Amazon Redshift is configured correctly. |
     | dcredshift.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Cloud Analytic Services to confirm that SAS Data Connector to Amazon Redshift is configured correctly. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
 
 - **How To Use**
 
@@ -364,6 +371,7 @@ SAS/ACCESS Interface to Amazon Redshift.
     | terdata_cas.settings<br/>teradata_sasserver.sh | Files for SAS Cloud Analytic Services (CAS) and the SAS Workspace Server that are required to configure ODBC and Teradata libraries. |
     | acteradata.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Foundation to confirm that  SAS/ACCESS Interface to Teradata is configured correctly. |
     | dcteradata.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses CAS to confirm that the SAS Data Connector to Teradata is configured correctly. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
 
 - **How To Use**
 
@@ -405,6 +413,7 @@ SAS/ACCESS Interface to Amazon Redshift.
     | **File Name** | **Purpose** |
     | --- | --- |
     | demo_pre_deploy.sh  | A file that ends up in /tmp and will be run by the entrypoint in the script. This will create a user upon startup of the conainer.  |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
 
 - **How To Use**
 
@@ -466,8 +475,9 @@ SAS/ACCESS Interface to Amazon Redshift.
     | --- | --- |
     | Dockerfile | Defines the packages that need to be installed and copies other files from this directory to the image. |
     | example_sssd.conf | A file that contains a template sssd configuration, which should reflect an organization's configuration. You need to provide a valid, tested, sssd.conf for this work. |
-    | sssd_mkhomedir_helper.sh | When a users's home directory does not exist, this script will create one. 
-    | sssd_pre_deploy.sh | A required file that starts sssd and is called by the main entrypoint script.
+    | sssd_mkhomedir_helper.sh | When a users's home directory does not exist, this script will create one. |
+    | sssd_pre_deploy.sh | A required file that starts sssd and is called by the main entrypoint script. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
 
 - **How To Use**
 
