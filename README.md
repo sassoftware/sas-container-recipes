@@ -186,10 +186,6 @@ After the containers are running, users can sign on to SAS Studio.
 
 Here are some examples of how to sign in:
 
-- For SAS Studio 4.4 via Docker run without TLS:
-
-  `https://docker-host:8081/SASStudio`
-
 - For SAS Studio 4.4 via Kubernetes:
 
   `https://ingress-path/SASStudio`
