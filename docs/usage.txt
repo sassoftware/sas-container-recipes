@@ -16,7 +16,7 @@ Single Container
 
     --addons "<value> <value> ..."
         Adds one or more software layers. 
-        Usage: To list mulitple addons, a space or comma is required between each addon.
+        Usage: To list multiple addons, a space or comma is required between each addon.
         Prerequisites: Some addons require additional configuration. For more information, see
         https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
         SAS/ACCESS engine addons: access-greenplum, access-hadoop, access-odbc, 
@@ -80,7 +80,7 @@ Multiple Containers
     
     --addons "<value> <value> ..."
         Adds one or more software layers. 
-        Usage: To list mulitple addons, a space or comma is required between each addon.
+        Usage: To list multiple addons, a space or comma is required between each addon.
         Prerequisites: Some addons require additional configuration. For more information, see
         https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
         SAS/ACCESS engine addons: access-greenplum, access-hadoop, access-odbc, 
@@ -117,7 +117,7 @@ Multiple Containers
     --build-only "<container-name> <container-name> ..."
     	Specifies the name of containers.
     	[CAUTION] This argument is intended to re-build small components quickly.
-        Usage: To list mulitple names, a space or comma is required between each container name.
+        Usage: To list multiple names, a space or comma is required between each container name.
         DO NOT use "sas-viya-" as a prefix for names.         
         Examples:
           --build-only "consul"
@@ -154,18 +154,18 @@ Help and Version
     	
 
 Need more help?
-	Learn more about this project:
+    Learn more about this project:
 		https://github.com/sassoftware/sas-container-recipes/
-	General questions and bug reports from the community:
+    General questions and bug reports from the community:
 		https://github.com/sassoftware/sas-container-recipes/issues
-	Documentation, FAQs, troubleshooting, and more:
+    Documentation, FAQs, troubleshooting, and more:
 		https://github.com/sassoftware/sas-container-recipes/wiki
-	SAS License Assistance:
+    SAS License Assistance:
 		https://support.sas.com/en/technical-support/license-assistance.html
-	License Purchases:
+    License Purchases:
 		https://www.sas.com/en_us/software/how-to-buy.html
     SAS Technical Support (license required):
         https://support.sas.com/en/technical-support.html
-	Free Software Trials:
+    Free Software Trials:
 		https://www.sas.com/en_us/trials.html
 
