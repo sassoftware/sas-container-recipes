@@ -11,7 +11,6 @@
   - [Logging](#logging)
   - [Errors During the Build](#errors-during-the-build)
 - [How to Run](#how-to-run)
-  - [Kubernetes](#kubernetes)
 
 ## Optional Configuration
 
@@ -66,7 +65,7 @@ The configuration of software follows the order of the methods (configuration fi
 
 Use the `build.sh` script in the root of the directory: sas-container-recipes/build.sh. You will be able to pass in the base image, tag what you want to build from, and provide any addons to create your custom images. 
 
-***Note:*** The following examples use a mirror repository, which is [strongly recommended](Tips#create-a-local-mirror-repository).
+**Note:** The following examples use a mirror repository, which is [strongly recommended](Tips#create-a-local-mirror-repository).
 
 To see what options can be used, run the following:
 
@@ -162,9 +161,12 @@ See the Docker documentation for options that clean up your build system. Here a
 
 ## How to Run
 
-### Kubernetes
+Locate the Kubernetes manifests, which were created during the build.
 
-For a programming-only deployment, a set of Kubernetes manifests are located at $PWD/builds/multiple/manifests/.  For a full deployment the manifests are located at $PWD/builds/full/manifests/. Make sure that you use the path that matches the type of build. In this documentation, the path is referred to as $MANIFESTS. 
+- For a programming-only deployment, the manifests are located at $PWD/builds/multiple/manifests/.
+- For a full deployment the manifests are located at $PWD/builds/full/manifests/.
+
+**Note:** In this documentation, the path to the manifests is referred to as $MANIFESTS. When you run commands that include the path, make sure that you use the path that matches your deployment type, as shown above.
 
 For a programming-only deployment, you must update the virtual host information. Edit the $MANIFESTS/kubernetes/configmaps/cas.yml file, and update the following line by replacing _sas-viya.sas-viya.company.com_ with the ingress host or desired virtual-host information:
 
@@ -174,7 +176,7 @@ For a programming-only deployment, you must update the virtual host information.
 
 The manifests define several paths where data that should persist between restarts can be stored. By default, these paths point to local storage that will be removed after Kubernetes pods are deleted. Update the manifests to support how your site implements persistent storage
 
-***Tip:*** Review [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) to evaluate the options for persistence.
+**Tip:** Review [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) to evaluate the options for persistence.
 
 The following manifests that must be updated:
 
@@ -204,7 +206,7 @@ kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/services
 kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/deployments
 ```
 
-***Notes:***
+**Notes:**
 
 * The examples use _sas-viya_ for the namespace. If you created a different namespace, use that value. 
 * Make sure that the file in the $MANIFESTS/kubernetes/ingress directory contains the correct Ingress domain. An example value _company.com_ is used by default, which will not work in your environment. To change the value, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) for information about how to set it, and then see [(Optional) Regenerating Manifests](post-run-tasks#optional-regenerating-manifests) (a post-run task) for information about how to regenerate the manifests.
@@ -292,4 +294,4 @@ Getting service info from consul...
 sas-services completed in 00:00:17
 ```
 
-Depending on how ingress has been configured, either `http://ingress-path` or `https://ingress-path` can be reached. The https URL is used in the examples in this documentation. However, if you did not configure the ingress for https, substitute http in the provided examples.
+Depending on how ingress has been configured, either `http://ingress-path` or `https://ingress-path` can be reached. The examples in this documentation use https. However, if you did not configure the ingress for https, use http.
