@@ -1,9 +1,9 @@
 ## Contents
 
 - [Optional Configuration](#optional-configuration)
-  - [Use Custom Values to Override the Playbook Settings](#use-custom-values-to-override-the-playbook-settings)
-  - [Use Configuration Files](#use-configuration-files)
-  - [Use Environment Variables](#use-environment-variables)
+  - [Using Custom Values to Override the Playbook Settings](#using-custom-values-to-override-the-playbook-settings)
+  - [Using Configuration Files](#using-configuration-files)
+  - [Using Environment Variables](#using-environment-variables)
   - [Order of Configuration](#order-of-configuration)
 - [How to Build](#how-to-build)
   - [Overview](#overview)
@@ -13,16 +13,16 @@
   - [Logging](#logging)
   - [Errors During Build](#errors-during-build)
 - [How to Run](#how-to-run)
-  - [Docker](#docker)
-  - [Enabling SSL/TLS](#enabling-ssltls)
-  - [SAS Batch Server](#sas-batch-server)
-  - [Kubernetes](#kubernetes)
+  - [Using Docker](#using-docker)
+    - [(Optional) Enabling SSL/TLS](#optional-enabling-ssltls)
+    - [(Optional) Using SAS Batch Server](#optional-using-sas-batch-server)
+  - [Using Kubernetes](#using-kubernetes)
 
 ## Optional Configuration
 
-Before you build the images and run the container, read about the different ways that you can modify the configuration of the image.
+Before you build the images and run the container, read about the different ways that you can modify the configuration.
 
-### Use Custom Values to Override the Playbook Settings
+### Using Custom Values to Override the Playbook Settings
 You can override the default configuration settings for the SAS Programming Runtime Environment (SPRE) and the SAS Cloud Analytic Services (CAS) server that are applied to the image when it is being created. To set these configuration values, edit the util/programming-only-single/vars_usermods.yml file.
 
 ```
@@ -36,7 +36,6 @@ You can override the default configuration settings for the SAS Programming Runt
 # collection above.
 
 #casenv_admin_user: 
-
 
 #### CAS Specific ####
 # Anything in this list will end up in the cas.settings file
@@ -124,7 +123,7 @@ SPAWNER_CONFIGURATION:
   #2: 'OPTION value'
 ```
 
-### Use Configuration Files
+### Using Configuration Files
 You can provide configuration files that the container will process as it starts. To use configuration files, map a volume to the /sasinside directory in the container. The contents of that directory can include one or more of the following files:
 
 * casconfig_usermods.lua
@@ -141,7 +140,7 @@ When the container starts, the content of each file is appended to the existing 
 
 **Note:** A change to the files in the /sasinside directory does not change the configuration of a running system. A restart is required to change the configuration of a running system.
 
-### Use Environment Variables
+### Using Environment Variables
 You can change the configuration of the CAS server by using environment variables. The CAS container will look for environment variables whose names are preceded by a particular prefix:
 
 **CASCFG_**
@@ -173,15 +172,17 @@ The configuration of software follows the order of the methods (configuration fi
 
 ### Overview
 
-Use the `build.sh` script in the root of the directory: sas-container-recipes/build.sh. You will be able to pass in the base image, tag what you want to build from, and provide any addons to create your custom image. The following examples use a mirror repository, which is [strongly recommended](Tips#create-a-local-mirror-repository).
+Use the `build.sh` script in the root of the directory: sas-container-recipes/build.sh. You will be able to pass in the base image, tag what you want to build from, and provide any addons to create your custom image.
 
-To see what options can be used, run the following:
+**Note:** The following examples use a mirror repository, which is [strongly recommended](Tips#create-a-local-mirror-repository).
+
+To see what arguments can be used, run the following:
 
 ```
 build.sh --help
 ```
 
-For a single container, the _addons_, _baseimage_, _basetag_, _mirror-url_, _platform_, type and _zip_ options are used. The ZIP file will be copied to the builds/single/ directory so that the Docker build process can use it.
+For a single container, the `--addons`, `--baseimage`, `--basetag`, `--mirror-url`, `--platform`, `--type` and `--zip` arguments are used. The ZIP file will be copied to the builds/single/ directory so that the Docker build process can use it.
 
 For information about how to manually build as well as add layers, see [Advanced Building Options](#advanced-building-options).
 
@@ -193,7 +194,7 @@ The instructions in this section are for Red Hat Enterprise Linux (RHEL) 7 or de
 
 In the following example, the most recent CentOS:7 image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
 
-To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--baseimage` and `--basetag` options. If the `--baseimage` and `--basetag` options are not provided, then centos:latest from DockerHub will be used.
+To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--baseimage` and `--basetag` arguments. If the `--baseimage` and `--basetag` arguments are not provided, then centos:latest from DockerHub will be used.
 
 ```
 build.sh \
@@ -209,7 +210,7 @@ build.sh \
 
 In the following example, the opensuse/leap:42 image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
 
-To change the base image from which the SAS image will be built to any SUSE variant, change the values for the `--baseimage` and `--basetag` options. Currently, opensuse/leap with tags 42.* is supported.
+To change the base image from which the SAS image will be built to any SUSE variant, change the values for the `--baseimage` and `--basetag` arguments. Currently, opensuse/leap with tags 42.* is supported.
 
 ```
 build.sh \
@@ -288,16 +289,18 @@ docker rmi $(docker images -q --filter "dangling=true" --filter "label=sas.recip
 
 The command between the parentheses returns the image IDs that meet the filter criteria and then will remove those images.
 
-See the Docker documentation for options that clean up your build system. Here are some specific topics:
+**Tip:** For information about how to clean up your build system, see the following Docker documentation:
 
 - To remove all unused data, see [docker system prune](https://docs.docker.com/engine/reference/commandline/system_prune/).
 - To remove images, see [docker image rm](https://docs.docker.com/engine/reference/commandline/image_rm/).
 
 ## How to Run
 
-### Docker
+### Using Docker
 
-In the root of the directory there is a samples directory that contains a sample script that runs the `docker run` command. To use this script, copy the file, and then edit it so that it matches your environment. Replace `<tag>` with the value that you want to use.
+In the root of the directory, locate the /samples/viya-single-container/example_launchsas.sh file, which contains the `docker run` command. Copy the file, and then edit it so that it matches your environment. 
+
+Here is example of running the script:
 
 ```
 mkdir -p ${PWD}/run
@@ -305,6 +308,8 @@ cp samples/viya-single-container/example_launchsas.sh ${PWD}/run/launchsas.sh
 sed -i 's/@REPLACE_ME_WITH_TAG@/<tag>/' ${PWD}/run/launchsas.sh
 cd run
 ```
+
+**Note:** Replace _<tag>_ with the value that you want to use.
 
 When the script is run, it will create several directories for you. These are set up either to cause data to persist or to help with [configuration](#configuration). 
 
@@ -336,7 +341,7 @@ sas-services completed in 00:00:00
 
 At this point, `http://docker-host` is reachable.
 
-#### Enabling SSL/TLS
+#### (Optional) Enabling SSL/TLS
 A certificate and key can be passed into the Docker image to encrypt traffic between the single container and the client.
 
 Example:
@@ -360,7 +365,7 @@ viya-single-container:latest
 - The file provided by `--volume /my/path/to/servertls.key` is placed inside the container in the /etc/pki/tls/private/ directory so that it can be used by the HTTPD SSL configuration.
 - HTTPS runs on port 8443 and is published by using the `--publish 8443:443` argument in the Docker run command.
 
-### SAS Batch Server
+#### (Optional) Using SAS Batch Server
 
 The container can be run using the SAS batch server. It is assumed that the SAS program is not in the container but will be made available to the container
 at run time.
@@ -482,7 +487,7 @@ total 72
 -rw-r--r--. 1 user   users   20 Aug 28 17:44 javainfo.sas
 ```
 
-### Kubernetes
+### Using Kubernetes
 
 Before you run the SAS Viya programming-only image in Kubernetes, you must push that image to a Docker registry that the Kubernetes environment has access to.
 
@@ -547,4 +552,4 @@ kubectl -n sasviya exec -it sas-viya-programming-<uuid> -- /etc/init.d/sas-viya-
 sas-services completed in 00:00:00
 ```
 
-Depending on how the ingress has been configured, either http://ingress-path or https://ingress-path can be reached. The https URL is used in this documentation. However, if you did not configure the ingress for https, substitute http in the provided examples.
+Depending on how the ingress has been configured, either http://ingress-path or https://ingress-path can be reached. The examples in this documentation use https. However, if you did not configure the ingress for https, use http.
