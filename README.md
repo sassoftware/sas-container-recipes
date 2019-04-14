@@ -73,7 +73,7 @@ Run the following command to build the the container image and add a 'sasdemo' u
 A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
 is recommended for executing the build command.
 ```
- ./build.sh --type single --zip ~/my/path/to/SAS_Viya_deployment_data.zip --addons "auth-demo"
+ ./build.sh --type single --zip ~/path/to/SAS_Viya_deployment_data.zip --addons "auth-demo"
 ```                         
 
 ### Run the Container
@@ -144,10 +144,10 @@ Examples of running `build.sh` to build multiple containers are provided below. 
 ```
 
 Here's a summary of what this command does:
-- Multiple Docker images for a programming-only deployment are created (`--type multiple`). The software that is deployed is determined by the software entitlement that is provided in the ZIP file from the Software Order Email (`--zip /path/to/SAS_Viya_deployment_data.zip`).
-- The images are pushed to the namespace in the Docker Registry (`--docker-registry-namespace myuniquename`), which is located at the Docker registry URL (`--docker-registry-url myregistry.myhost.com`).
-- The ingress path (`--virtual-host user-myproject.mylocal.com`) provides the HTTP and HTTPS routes from outside the Kubernetes cluster to services within the cluster.
-- A default user and password are added (`--addons "auth-demo"`), which can be used to sign in to SAS Studio.
+- Multiple Docker images for a programming-only deployment are created: `--type multiple`. 
+- The software that is deployed is determined by the software entitlement that is provided in the ZIP file from the Software Order Email: `--zip /path/to/SAS_Viya_deployment_data.zip` .
+- The images are pushed to the namespace in the Docker Registry, which is located at the Docker registry URL: `--docker-registry-namespace myuniquename`, `--docker-registry-url myregistry.myhost.com`.
+- A default user and password are added, which can be used to sign in to SAS Studio: `--addons "auth-demo"`.
 
 #### Example Two: Full Deployment, Multiple Containers
 
@@ -161,10 +161,10 @@ Here's a summary of what this command does:
 ```
 
 Here's a summary of what this command does:
-- Multiple Docker images for a full deployment are created (`--type full`). The software that is deployed is determined by the software entitlement that is provided in the ZIP file from the Software Order Email (`--zip /path/to/SAS_Viya_deployment_data.zip`).
-- The images are pushed to the namespace in the Docker Registry (`--docker-registry-namespace myuniquename`), which is located at the Docker registry URL (`--docker-registry-url myregistry.myhost.com`).
-- The ingress path (`--virtual-host user-myproject.mylocal.com`) provides the HTTP and HTTPS routes from outside the Kubernetes cluster to services within the cluster.
-- SSSD is configured inside the container (`--addons "auth-sssd"`) to allow the container authentication to connect to LDAP or Active Directory.
+- Multiple Docker images for a full deployment are created: `--type full`.
+- The software that is deployed is determined by the software entitlement that is provided in the ZIP file from the Software Order Email: `--zip /path/to/SAS_Viya_deployment_data.zip`.
+- The images are pushed to the namespace in the Docker Registry, which is located at the Docker registry URL: `--docker-registry-namespace myuniquename`, `--docker-registry-url myregistry.myhost.com`.
+- SSSD is configured inside the container to allow the container authentication to connect to LDAP or Active Directory: `--addons "auth-sssd"`.
 
 **Note:** Before you use the auth-sssd addon, refer to the [documentation wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#auth-sssd) for information about prerequisites and how to use it.
 
@@ -172,8 +172,8 @@ Here's a summary of what this command does:
 
 The build process creates Kubernetes manifests that you use to run multiple containers. 
 
-   * For a SAS Viya programming-only deployment, the Kubernetes manifests are located at `builds/multiple/manifests/`
-   * For a SAS Viya full deployment, the Kubernetes manifests are located at `builds/full/manifests/`
+   * For a SAS Viya programming-only deployment, the manifests are located at `builds/multiple/manifests/`.
+   * For a SAS Viya full deployment, the manifests are located at `builds/full/manifests/`.
 
 For information about using the manifests, see [Build and Run SAS Viya Multiple Containers](https://github.com/sassoftware/sas-container-recipes/wiki/Build-and-Run-SAS-Viya-Multiple-Containers).
 
