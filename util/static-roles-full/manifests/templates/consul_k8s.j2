@@ -234,8 +234,10 @@ spec:
 {%       endif %}
 {%     endfor %}
 {%   else %}
+{%     for volumes in item.value.volumes %}
         - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
+{%     endfor %}
 {%   endif %}
 {% endif %}
         - name: anchors
@@ -275,8 +277,10 @@ spec:
 {%       endif %}
 {%     endfor %}
 {%   else %}
+{%     for volumes in item.value.volumes %}
       - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
+{%     endfor %}
 {%   endif %}
 {% endif %}
       # Needed for TLS configurations

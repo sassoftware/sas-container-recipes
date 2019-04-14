@@ -74,11 +74,7 @@ spec:
               configMapKeyRef:
                 name: {{ settings.project_name }}-consul
                 key: sas_services_configmap
-{% endif %}        - name: CASCFG_MODE
-          valueFrom:
-            configMapKeyRef:
-              name: {{ settings.project_name }}-cas
-              key: cascfg_mode
+{% endif %}
         - name: SERVICE_NAME
           value: "casworker"
         - name: CASCONTROLLERHOST
@@ -286,8 +282,10 @@ spec:
 {%       endif %}
 {%     endfor %}
 {%   else %}
+{%     for volumes in item.value.volumes %}
         - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
           mountPath: {{ volumes.split('=')[1] }}
+{%     endfor %}
 {%   endif %}
 {% endif %}
         - name: anchors
@@ -295,12 +293,6 @@ spec:
         - name: tokens
           mountPath: /tokens
       volumes:
-{% if item.value.volumes is defined and item.value.volumes %}
-{%   for volumes in item.value.volumes %}
-      - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
-        emptyDir: {}
-{%   endfor %}
-{% endif %}
 {% if custom_services is defined and custom_services %}
       # Writing out user defined volumes
 {%   for key,value in custom_services.items() %}
@@ -333,8 +325,10 @@ spec:
 {%       endif %}
 {%     endfor %}
 {%   else %}
+{%     for volumes in item.value.volumes %}
       - name: {{ settings.project_name }}-cas-worker-{{ volumes.split('=')[0] }}-volume
         emptyDir: {}
+{%     endfor %}
 {%   endif %}
 {% endif %}
       # Needed for TLS configurations
