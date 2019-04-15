@@ -188,16 +188,13 @@ SAS Viya supports encrypted connections between the LDAP client and server. To c
 
 ## (Optional) Regenerating Manifests
 
-If the deployment manifests that were generated in the `builds/full/manifests` 
-directory or the `builds/multiple/manifests` directory did not contain 
-everything that is needed, or need to be updated, you can regenerate 
-the manifests post build. Here are the steps:
+If the deployment manifests that were generated in builds/full/manifests or builds/multiple/manifests need to be updated, perform the following post-build steps to regenerate the manifests without re-running the entire build process. 
 
-1. If you need to provide custom configuration, edit the vars_usermods.yml file in the sas-container-recipes project directory. For more information, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task).
-1. Re-run `build.sh` with the same command arguments that were previously supplied and add the `--generate-manifests-only` flag
-1. New manifests will be generated in the `builds/full/manifests/` or `builds/multiple/manifests/` (depending on your deployment type) without having to re-run the entire build process
+1. (Optional) To provide custom configuration, edit the vars_usermods.yml file in the sas-container-recipes project directory. For more information, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task).
+1. Re-run `build.sh` with the same command arguments that were previously supplied, and add the `--generate-manifests-only` argument.
+1. New manifests will be generated in builds/full/manifests/ or builds/multiple/manifests/, depending on your deployment type.
 
-**Note:** The path to the directory in which the manifests are added includes a timestamp as part of its name, such as builds/multiple-2019-04-10-15-27-56/manifests/.
+**Note:** The symbolic link builds/full/manifests/ or builds/multiple/manifests/ will point to the most recent timestamped directory, such as builds/multiple-2019-04-10-15-27-56/manifests/. If you regenerate the manifests multiple times, more than one timestamped directory will exist.
 
 ## (Optional) Converting an Environment from CAS SMP to CAS MPP
 
