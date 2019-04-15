@@ -1,7 +1,7 @@
 <div align="center">  
 <h1>SAS<sup>®</sup> Viya<sup>®</sup> Container Recipes</h1>
 <img src="docs/sas-container-icon.jpg" alt="SAS Containers Icon" height="200">
-<p>Framework to build SAS Viya Docker images and create deployments using Kubernetes.</p>
+<p>A framework to build SAS Viya Docker images and create deployments using Kubernetes.</p>
 
 <a href="https://www.sas.com/en_us/software/viya.html">
     <img src="https://img.shields.io/badge/SAS%20Viya-3.4-blue.svg?&colorA=0b5788&style=for-the-badge&logoWidth=30&logo=data:image/png;base64,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"
@@ -21,7 +21,7 @@ container, you can provision resources more efficiently to address a wide variet
 of SAS workloads. Select a base SAS recipe and create custom containers 
 with specific products or configurations – e.g, access to data sources, in-database
 code and scoring accelerators, or specific analytic capabilities.
-For more information see [SAS for Containers](http://support.sas.com/rnd/containers/).
+For more information, see [SAS for Containers](http://support.sas.com/rnd/containers/).
 
 <br>
 
@@ -69,16 +69,16 @@ which provides in-memory analytics for symmetric multi-processing (SMP).
 
 ### Build the Image
 
-Run the following command to build the the container image and add a 'sasdemo' user to it for signing into SAS Studio when the container is running. The sasdemo user will have the password 'sasdemo'.
-A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) 
-is recommended for executing the build command.
+Run the following command to build the container image and add a default user name (sasdemo), which can be used for signing in to SAS Studio after the container is running. The password for the sasdemo user name is sasdemo, also. A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) is recommended for executing the build command.
+
 ```
  ./build.sh --type single --zip ~/path/to/SAS_Viya_deployment_data.zip --addons "auth-demo"
 ```                         
 
 ### Run the Container
 
-After the container is built then instructions for how to run the image will be printed out.
+After the container is built, the instructions for running the container will be printed at the end of the build.sh output.
+
 ```
  docker run --detach --rm --hostname sas-viya-programming \
  --env CASENV_CAS_VIRTUAL_HOST=<my_host_address> \
@@ -89,12 +89,14 @@ After the container is built then instructions for how to run the image will be 
  sas-viya-programming:<VERSION-TAG>  
 ```
 Use the `docker images` command to see the images that were built and the most recent tag (example: tag `19.0.1-20190109112555-48f98d8`).
-Once the docker run command is completed, use `docker ps` to list the running container. 
+
+After the docker run command is completed, use `docker ps` to list the running container. 
 
 ### Sign In to SAS Studio
+
 Go to the address `http://<myhostname>:8081` and start using SAS Studio! 
 
-Sign in with the 'sasdemo' user name and 'sasdemo' password that was created during the build.
+Sign in with the **sasdemo** user name and **sasdemo** password that was created during the build.
 
 <img src="docs/sas-logon-screen-sasdemo.png" alt="SAS Logon Screen" style="width: 80%; height: 80%; object-fit: contain;">
 
@@ -122,13 +124,13 @@ your users with the features that they require.
 
 ### Prerequisites
 
-- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce](https://docs.docker.com/install/linux/docker-ce/centos/) (community edition) on Linux or Mac must be installed on the build machine.
-- Access to a Docker registry: The build process will push built Docker images automatically to the Docker registry. Before running `build.sh` do a `docker login docker.registry.company.com` and make sure that the `$HOME/.docker/config.json` is filled in correctly.
-- Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed (required for the deployment step but not required for the build step)
+- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-CE](https://docs.docker.com/install/linux/docker-ce/centos/) (Community Edition) must be installed on the Linux or Mac build machine.
+- Access to a Docker registry: The build process will push built Docker images automatically to the Docker registry. Before you run `build.sh`, run `docker login docker.registry.company.com`, and then make sure that the values in `$HOME/.docker/config.json` are correct.
+- Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed (required for the deployment step but not required for the build step).
 - **Strongly recommended:** A local mirror of the SAS software. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
 
 ### How to Build
-Examples of running `build.sh` to build multiple containers are provided below. A non-root user is recommended for executing the build command.
+Examples of running `build.sh` to build multiple containers are provided below. A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) is recommended for executing the build command.
 
 **See the `docs/usage.txt` file or run `./build.sh --help` for the list of all required and optional arguments.**
 
@@ -147,7 +149,7 @@ Here's a summary of what this command does:
 - Multiple Docker images for a programming-only deployment are created: `--type multiple`. 
 - The software that is deployed is determined by the software entitlement that is provided in the ZIP file from the Software Order Email: `--zip /path/to/SAS_Viya_deployment_data.zip` .
 - The images are pushed to the namespace in the Docker Registry, which is located at the Docker registry URL: `--docker-registry-namespace myuniquename`, `--docker-registry-url myregistry.myhost.com`.
-- A default user and password are added, which can be used to sign in to SAS Studio: `--addons "auth-demo"`.
+- A default user (sasdemo) and password (sasdemo) are added, which can be used to sign in to SAS Studio: `--addons "auth-demo"`.
 
 #### Example Two: Full Deployment, Multiple Containers
 
