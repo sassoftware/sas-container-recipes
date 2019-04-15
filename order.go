@@ -499,10 +499,12 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Always require a license
 	if *license == "" {
-		err := errors.New("a software order email (SOE) '--license' file is required")
-		return err
+		return errors.New("a Software Order Email (SOE) '--zip' file is required")
 	}
 	order.SOEZipPath = *license
+	if !strings.HasSuffix(order.SOEZipPath, ".zip") {
+		return errors.New("the Software Order Email (SOE) argument '--zip' must have the '.zip' suffix.")
+	}
 
 	// Always require a deployment type
 	if *deploymentType != "multiple" && *deploymentType != "full" && *deploymentType != "single" {
