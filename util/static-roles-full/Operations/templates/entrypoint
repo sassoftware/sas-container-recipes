@@ -99,6 +99,13 @@ if [[ -f ${SASPREHOME}/SASFoundation/utilities/bin/apply_license ]]; then
         --command "${SASPREHOME}/SASFoundation/utilities/bin/post_install build_add_cmacros"
 fi
 
+# In some cases a required directory may not exist. Create it so the 
+# mbagent service can start.
+if [[ ! -d ${SASCONFIG}/var/lib/evmsvrops/meter ]]; then
+    mkdir -p ${SASCONFIG}/var/lib/evmsvrops/meter
+    chown sas:sas ${SASCONFIG}/var/lib/evmsvrops
+fi
+
 mkdir -p --mode=0755 ${SASCONFIG}/var/log/evmsvrops/evdm
 chown sas:sas ${SASCONFIG}/var/log/evmsvrops/evdm
 
