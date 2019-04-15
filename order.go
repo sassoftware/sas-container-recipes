@@ -718,7 +718,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) (Container, error
 	if err != nil {
 		return container, err
 	}
-	return container, readDockerStream(buildResponseStream.Body, &container, true, nil)
+	return container, readDockerStream(buildResponseStream.Body, &container, container.SoftwareOrder.Verbose, nil)
 }
 
 // Build starts each container build concurrently and report the results
