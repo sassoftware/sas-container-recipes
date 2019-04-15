@@ -1,24 +1,24 @@
 ## Contents
 
-- [Configuration](#configuration)
-  - [Running Using Configuration by Convention](#running-using-configuration-by-convention)
-  - [Running using Environment Variables](#running-using-environment-variables)
-  - [Precedence](#precedence)
+- [Optional Configuration](#optional-configuration)
+  - [Using Configuration Files](#using-configuration-files)
+  - [Using Environment Variables](#using-environment-variables)
+  - [Order of Configuration](#order-of-configuration)
 - [How to Build](#how-to-build)
   - [Overview](#overview)
-  - [Building on a Red Hat Enterprise Linux Image](#building-on-a-red-hat-enterprise-linux-image)
+  - [Building on an Image Based on Red Hat Enterprise Linux](#building-on-an-image-based-on-red-hat-enterprise-linux)
   - [Building on a SUSE Linux Image](#building-on-a-suse-linux-image)
   - [Logging](#logging)
-  - [Errors During Build](#errors-during-build)
+  - [Errors During the Build](#errors-during-the-build)
 - [How to Run](#how-to-run)
-  - [Kubernetes](#kubernetes)
 
-## Configuration
+## Optional Configuration
 
-Before we build the images, here is some information about the different ways that you can modify the configuration of the image.
+Before you build the images and run the containers, read about the different ways that you can modify the configuration.
 
-### Running Using Configuration by Convention
-You can provide configuration files that the container will process as it starts. To accomplish this task, map a volume to `/sasinside` in the container. The contents of that directory would contain any of the following files:
+### Using Configuration Files
+
+You can provide configuration files that the container will process as it starts. To use configuration files, map a volume to the /sasinside directory in the container. The contents of that directory can include one or more of the following files:
 
 * casconfig_usermods.lua
 * cas_usermods.settings
@@ -30,53 +30,75 @@ You can provide configuration files that the container will process as it starts
 * workspaceserver_usremods.sh
 * sasstudio_usermods.properties
 
-If any of these files are found, then the contents are appended to the existing usermods file. A change to the files in the `/sasinside` directory would not change the behavior of a running system. Only on a restart would the behavior change.
+When the container starts, the content of each file is appended to the existing usermods file.
 
-### Running Using Environment Variables
-For CAS, you can change the configuration of the container by using environment variables. The CAS container will look for environment variables of a certain prefix:
+**Note:** A change to the files in the /sasinside directory does not change the configuration of a running system. A restart is required to change the configuration of a running system.
 
-* CASCFG_ - An environment variable with this prefix translates to a `cas.` option which ends up in the `casconfig_docker.lua` file. These values are a predefined set and cannot be made up. If CAS sees an option that it does not understand, it will not run.
-* CASENV_ - An environment variable with this prefix translates to a `env.` option which ends up in the casconfig_docker.lua. These values can be anything.
-* CASSET_ - An environment variable with this prefix translates to an environment variable which ends up in `cas_docker.settings`. These values can be anything.
-* CASLLP_ - An environment variable with this prefix translates to setting the _LD_LIBRARY_PATH_ in `cas_docker.settings`. These values can be anything.
+### Using Environment Variables
+You can change the configuration of the CAS server by using environment variables. The CAS container will look for environment variables whose names are preceded by a particular prefix:
 
-### Precedence
-Here is the order of precedence from least to greatest (the last listed variables winning prioritization):
+**CASCFG_**
 
-* files from `/tmp`
-* files from `/sasinisde`
+This prefix indicates a _cas._ option, which is included in the casconfig_docker.lua file. These values are a predefined set and cannot be user-created. If an option is not recognized by the CAS server, it will not run.
+
+**CASENV_**
+
+This prefix indicates an _env._ option, which is included in the casconfig_docker.lua file.
+
+**CASSET_**
+
+This prefix indicates an environment variable that is included in the cas_docker.settings file.
+
+**CASLLP_**
+
+This prefix indicates setting the LD_LIBRARY_PATH variable in the cas_docker.settings file.
+
+### Order of Configuration
+The configuration of software follows the order of the methods (configuration files or environment variables) shown below, where the last method used sets the configuration:  
+
+* files in the /tmp directory
+* files in the /sasinside the directory
 * environment variables
 
 ## How to Build
 ### Overview
-Use the `build.sh` script in the root of the directory: `sas-container-recipes/build.sh`. You will be able to pass in the base image and tag that you want to build from as well as providing any addons to create your custom image. The following examples use a mirror URL, which is [strongly recommended](Tips#create-a-local-mirror-repository).
 
-To see what options `build.sh` takes, run
+Use the `build.sh` script in the root of the directory: sas-container-recipes/build.sh. You will be able to pass in the base image, tag what you want to build from, and provide any addons to create your custom images. 
+
+**Note:** The following examples use a mirror repository, which is [strongly recommended](Tips#create-a-local-mirror-repository).
+
+To see what options can be used, run the following:
 
 ```
 build.sh --help
 ```
 
-The `build.sh` script will validate several of the settings that are needed to help with the deployment process. The _docker-registry-url_ and _docker-registry-namespace_ are expected. If these values are not provided then the script will exit early until they are provided.
+The `build.sh` script will validate several of the settings that are needed to help with the deployment process. The `docker-registry-url` and `docker-registry-namespace` arguments are expected. If these arguments are not provided, then the script will exit early until they are provided.
 
-The _docker-registry-url_ and _docker-registry-namespace_ are used so that the process can push the containers to the Docker registry with a specific Docker tag. This same information is then used to generate the Kubernetes manifests. 
+* The `docker-registry-url` and `docker-registry-namespace` arguments are used so that the process can push the containers to the Docker registry with a specific Docker tag. This same information is then used to generate the Kubernetes manifests. 
+* The `virtual-host` argument points to the ingress hostname that represents the end point for the sas-viya-httpproxy container. This is an optional parameter for the programming-only deployment. The value can be changed or added after `build.sh` is run but before the images are deployed to Kubernetes.
 
-The `--virtual-host` option points to the ingress hostname that is representing the end point for the sas-viya-httpproxy container. This is an optional parameter for programming. The value can be changed or added post running of `build.sh` and prior to deploying the images to Kubernetes. Without updating post build, hyperlinks between SASStudio and CAS Monitor will not work for the programming deployment. Full deployment has Environment Manager and virtual-host has no impact. 
+**Note:** If the value for `virtual-host` is not updated after the build, then the user-interface links between SAS Studio and CAS Server Monitor will not work for a programming-only deployment. The `virtual-host` argument has no impact on a full deployment.
 
 Passing in `--addons` will follow a convention to automatically add the layers to the correct SAS images. 
-* Addons that begin with _auth_ will be added to the computeserver, programming and cas containers
-* Addons that begin with _access_ will be added to the computeserver, programming and cas  containers
+
+* Addons that begin with _auth_ will be added to the computeserver, programming, and cas containers
+* Addons that begin with _access_ will be added to the computeserver, programming, and cas containers
 * Addons that begin with _ide_ will be added to the programming containers
 
-In some cases, addons may change the httpproxy container as well. This will only be if the addon contains a _Dockerfile_http_ file. One can see an example of this in the _ide-jpuyter-python3_ addon.
+In some cases, addons might change the httpproxy container. The httpproxy container might change only if the addon contains a _Dockerfile_http_ file. An example is the ide-jpuyter-python3 addon.
 
 To add to the base images, see [Advanced Building Options](#advanced-building-options).
 
-### Building on a Red Hat Enterprise Linux Image
+### Building on an Image Based on Red Hat Enterprise Linux ###
 
-The following example builds multiple containers for the SAS Viya programming-only deployment. This will pull down the most recent "CentOS:7" image from DockerHub and adds the `addons/auth-sssd` and  `addons/access-odbc` layers once the main SAS Viya images are built. If more addons are desired, add to the space delimited list. Make sure that the list is encapsulated in double quotes.
+The instructions in this section are for Red Hat Enterprise Linux (RHEL) 7 or derivatives, such as CentOS 7.
 
-To change the base image from which we will build the SAS Viya image, change the values for the `--baseimage` and `--basetag` options. Only Red Hat Enterprise Linux 7 based images are supported for recipes. 
+**Note:** Only images that are based on RHEL 7 can be used for recipes.
+
+In the following example, the most recent "CentOS:7" image is pulled from DockerHub and multiple images of a programming-only deployment are built, including the addons/auth-sssd and  addons/access-odbc layers. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
+
+To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--baseimage` and `--basetag` arguments. Only Red Hat Enterprise Linux 7 based images are supported for recipes. 
 
 ```
 build.sh \
@@ -90,7 +112,7 @@ build.sh \
 --addons "addons/auth-sssd addons/access-odbc"
 ```
 
-Here is an example to build multiple containers for the SAS Viya full deployment.
+Here is an example to build multiple containers for a full deployment.
 
 ```
 build.sh \
@@ -104,48 +126,59 @@ build.sh \
 --addons "addons/auth-sssd addons/access-odbc"
 ```
 
-The building of the SAS Viya images could take several hours to complete. Once the process is done you will have 3 (programming only) to around 25 (full) Docker images local on your build machine as well as in the Docker registry that you provided. An example set of manifests are also provided which is covered in [How to Run](#how-to-run).
+Building multiple images could take several hours to complete. After the process has completed, you will have 3 (programming-only) to around 25 (full) Docker images that are local on your build machine, as well as in the Docker registry that you provided. An example set of manifests is also provided, which is covered in [How to Run](#how-to-run).
 
 ### Building on a SUSE Linux Image
 
-Building multiple containers on SUSE Linux based images are not currently supported.
+Building multiple containers on SUSE Linux-based images are not currently supported.
 
 ### Logging
 
-The content that is displayed to the console when building is also captured in 
-a log file named `builds/multiple/build.log` for a multiple deployment, 
-`builds/full/build.log` for a full deployment, or `builds/single/build.log` for a single deployment. 
+When building images, the content that is displayed to the console is captured in one of the following files:
+
+- builds/multiple/build.log for a `--type multiple` build
+- builds/full/build.log for a `--type multiple` build
+- builds/single/build.log for a `--type single` build
+
 If problems are encountered during the build process, review the log file or provide it when opening up tickets.
 
-### Errors During Build
+### Errors During the Build
 
-If there was an error during the build process there is a chance some intermediate build containers were left behind. To see any images that are a result of the SAS recipe build process, run:
+If there was an error during the build process, it is possible that some intermediate build containers were left behind. To see any images that are a result of the SAS recipe build process, run the following:
 
 `docker images --filter "dangling=true" --filter "label=sas.recipe.version"`
 
-If you encounter any of these you can remove these images by running:
+If you encounter any of these errors, you can remove these images by running:
 
 `docker rmi $(docker images -q --filter "dangling=true" --filter "label=sas.recipe.version")`
 
-The command between the parentheses returns the image ids that meet the filter and then will remove those images.
+The command between the parentheses returns the image IDs that meet the filter criteria, and then will remove those images.
 
-See the Docker documentation for more options on cleaning up your build system. Here are some specific topics:
+See the Docker documentation for options that clean up your build system. Here are some specific topics:
 
 - To remove all unused data, see [docker system prune](https://docs.docker.com/engine/reference/commandline/system_prune/).
 - To remove images, see [docker image rm](https://docs.docker.com/engine/reference/commandline/image_rm/).
 
 ## How to Run
 
-### Kubernetes
-For a programming only build, a set of Kubernetes manifests are located at `$PWD/builds/multiple/manifests/` and for full build they are at `$PWD/builds/full/manifests/`. Please use the path that matches to your type of build. We will refer to this path as _$MANIFESTS_. 
+Locate the Kubernetes manifests, which were created during the build.
 
-For a programming only image, you can update the virtual host information. This will need to be done for working hyperlinks between SASStudio and CAS Monitor in programming only build. Edit the `$MANIFESTS/kubernetes/configmaps/cas.yml` file and update the following line, replacing sas-viya.sas-viya.company.com with the ingress host or desired virtual host information:
+- For a programming-only deployment, the manifests are located at $PWD/builds/multiple/manifests/.
+- For a full deployment the manifests are located at $PWD/builds/full/manifests/.
+
+**Note:** In this documentation, the path to the manifests is referred to as $MANIFESTS. When you run commands that include the path, make sure that you use the path that matches your deployment type, as shown above.
+
+For a programming-only deployment, you must update the virtual host information. Edit the $MANIFESTS/kubernetes/configmaps/cas.yml file, and update the following line by replacing _sas-viya.sas-viya.company.com_ with the ingress host or desired virtual-host information:
 
 ```
   casenv_cas_virtual_host: "sas-viya.sas-viya.company.com"
 ```
 
-The manifests define several paths where data that should persist between restarts can be stored. By default, these paths point to local storage that disappears when Kubernetes pods are deleted. Please update the manifests to support how your site implements persistent storage. It is strongly suggested that you review [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) to evaluate the options for persistence. The manifests that require updates are:
+The manifests define several paths where data that should persist between restarts can be stored. By default, these paths point to local storage that will be removed after Kubernetes pods are deleted. Update the manifests to support how your site implements persistent storage
+
+**Tip:** Review [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) to evaluate the options for persistence.
+
+The following manifests that must be updated:
 
 * consul (only in the full build)
 * rabbitmq (only in the full build)
@@ -153,20 +186,17 @@ The manifests define several paths where data that should persist between restar
 * cas-worker
 * sasdatasvrc (only in the full build)
 
-In the case of a full build, each of the containers will also have a volume defined to write logs to. To keep these logs around through pod restarts, this volume should also be mapped to persisted storage.
+For a full deployment, each of the containers will also have a volume defined to which logs are written. To retain these logs through pod restarts, this volume should also be mapped to persistent storage.
 
-To create your deployment, use the manifests created during the build process. In this example, we are deploying into the _sas-viya_ Kubernetes namespace. For more information about _namespaces_, see [Kubernetes Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
+To create your deployment, use the manifests that are created during the build process. In the following example, you are deploying into the sas-viya Kubernetes namespace. For more information about namespaces, see [Kubernetes Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
 
-A yaml file was created during manifest generation to help with creating the Kubernetes namespace. If your user has the ability to create *namespaces* in the Kuberetes environment, run the following, or request your Kuberenetes administrator to create a namespace for you in the Kubernetes environment:
+During the manifest generation, a YML file was created that helps with creating the Kubernetes namespace. If your user has the ability to create namespaces in the Kuberetes environment, run the following command, or request that your Kuberenetes administrator create a namespace for you in the Kubernetes environment:
 
 ```
 kubectl apply -f $MANIFESTS/kubernetes/namespace/sas-viya.yml
 ```
 
-Once a *namespace* is available, run the manifests in the following order. 
-* The examples are using *sas-viya* for the Kubernetes namespace. If you created a different *namespace*, please use that value instead of *sas-viya*. 
-* Double check the file in the $MANIFESTS/kubernetes/ingress directory to make sure it contains the correct Ingress domain. A default value of company.com is used which will not work in your environment. To change this, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) on how to set it and [(Optional) Regenerating Manifests](post-run-tasks#optional-regenerating-manifests) (a post-run task) on how to regenerate the manifests.
-* If setting up TLS, make sure the TLS section of the file in the $MANIFESTS/kubernetes/ingress directory is configured correctly. See the [Ingress Configuration](Pre-build-Tasks#ingress-configuration) (a pre-build task) for more information.
+After a namespace is available, run the manifests in the following order: 
 
 ```
 kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/ingress
@@ -176,7 +206,15 @@ kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/services
 kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/deployments
 ```
 
-To check the status of the containers, run `kubectl -n sas-viya get pods`. The following example reflects a programming multiple container deployment.
+**Notes:**
+
+* The examples use _sas-viya_ for the namespace. If you created a different namespace, use that value. 
+* Make sure that the file in the $MANIFESTS/kubernetes/ingress directory contains the correct Ingress domain. An example value _company.com_ is used by default, which will not work in your environment. To change the value, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) for information about how to set it, and then see [(Optional) Regenerating Manifests](post-run-tasks#optional-regenerating-manifests) (a post-run task) for information about how to regenerate the manifests.
+* If you are setting up TLS, make sure that the TLS section of the file in the $MANIFESTS/kubernetes/ingress directory is configured correctly. For more information, see the [Ingress Configuration](Pre-build-Tasks#ingress-configuration) (a pre-build task).
+
+To check the status of the containers, run `kubectl -n sas-viya get pods`
+
+Here is an example for a programming-only deployment:
 
 ```
 kubectl -n sas-viya get pods
@@ -186,7 +224,7 @@ sas-viya-programming-0                          1/1     Running   0          21h
 sas-viya-cas-0                                  1/1     Running   0          21h
 ```
 
-For a full deployment it would look something like:
+Here is an example for a full deployment:
 
 ```
 $ kubectl -n sas-viya get pods
@@ -256,4 +294,4 @@ Getting service info from consul...
 sas-services completed in 00:00:17
 ```
 
-Depending on how ingress has been configured, either `http://ingress-path` or `https://ingress-path` are reachable. We will use the `https` URL going forward but if you did not configure the ingress for https, please substitute http in the provided examples.
+Depending on how ingress has been configured, either `http://ingress-path` or `https://ingress-path` can be reached. The examples in this documentation use https. However, if you did not configure the ingress for https, use http.

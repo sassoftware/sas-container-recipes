@@ -65,24 +65,126 @@ spec:
               key: vault_token_dir
         - name: CONSUL_SERVICE_NAME
           value: {{ settings.project_name }}-{{ item.key }}
+{% if custom_services is defined and custom_services %}
+        # Writing out user defined variables
+{%   for key,value in custom_services.items() %}
+{%     if key == item.key and value.deployment_overrides.environment is defined and value.deployment_overrides.environment %}
+{%       for override in value.deployment_overrides.environment %}
+        - name: {{ override.split('=')[0] }}
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-{{ item.key }}
+              key: {{ override.split('=')[0] | lower }}
+{%       endfor %}
+{%     endif %}
+{%   endfor %}
+{% endif %}
 {% if item.value.environment is defined and item.value.environment %}
-{%   for environment in item.value.environment %}
+        # Writing out pre-defined variables
+{%   if custom_services is defined and custom_services %}
+{%     set vars = {'found': False} %}
+{%     for environment in item.value.environment %}
+{%       if vars.update({'found': False}) %} {% endif %}
+{%       if item.key in custom_services %}
+{%         for key,value in custom_services.items() %}
+{%           if key == item.key and value.deployment_overrides.environment is defined and value.deployment_overrides.environment %}
+{%             set cm_key = environment.split('=')[0] + '=' %}
+{%             for override in value.deployment_overrides.environment %}
+{%               if cm_key in override %}
+{%                 if vars.update({'found': True}) %} {% endif %}
+{%               endif %}
+{%             endfor %}
+{%             if not vars.found %}
         - name: {{ environment.split('=')[0] }}
           valueFrom:
             configMapKeyRef:
               name: {{ settings.project_name }}-{{ item.key }}
               key: {{ environment.split('=')[0] | lower }}
+{%             endif %}
+{%           endif %}
+{%         endfor %}
+{%       else %}
+        - name: {{ environment.split('=')[0] }}
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-{{ item.key }}
+              key: {{ environment.split('=')[0] | lower }}
+{%       endif %}
+{%     endfor %}
+{%   else %}
+{%     for environment in item.value.environment %}
+        - name: {{ environment.split('=')[0] }}
+          valueFrom:
+            configMapKeyRef:
+              name: {{ settings.project_name }}-{{ item.key }}
+              key: {{ environment.split('=')[0] | lower }}
+{%     endfor %}
+{%   endif %}
+{% endif %}
+{% if custom_services is defined and custom_services %}
+        # Writing out user defined secrets
+{%   for key,value in custom_services.items() %}
+{%     if key == item.key and value.deployment_overrides.secrets is defined and value.deployment_overrides.secrets %}
+{%       for override in value.deployment_overrides.secrets %}
+{%         if 'CONSUL_HTTP_TOKEN' not in override %}
+        - name: {{ override.split('=')[0] }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ settings.project_name }}-{{ item.key | lower }}
+              key: {{ override.split('=')[0] | lower }}
+{%         endif %}
+{%       endfor %}
+{%     endif %}
 {%   endfor %}
 {% endif %}
-{% for secrets in services.consul.secrets %}
-{%   if 'CONSUL_HTTP_TOKEN' not in secrets %}
+{% if item.value.secrets is defined and item.value.secrets %}
+{%   if custom_services is defined and custom_services %}
+{%     set vars = {'found': False} %}
+{%     for secrets in item.value.secrets %}
+{%       if vars.update({'found': False}) %} {% endif %}
+{%       if item.key in custom_services %}
+{%         for key,value in custom_services.items() %}
+{%           if key == item.key and value.deployment_overrides.secrets is defined and value.deployment_overrides.environment %}
+{%             set cm_key = secrets.split('=')[0] + '=' %}
+{%             for override in value.deployment_overrides.secrets %}
+{%               if cm_key in override %}
+{%                 if vars.update({'found': True}) %} {% endif %}
+{%               endif %}
+{%             endfor %}
+{%             if not vars.found %}
+{%               if 'CONSUL_HTTP_TOKEN' not in secrets %}
         - name: {{ secrets.split('=')[0] }}
           valueFrom:
             secretKeyRef:
-              name: {{ settings.project_name }}-{{ item.key }}
+              name: {{ settings.project_name }}-{{ item.key | lower }}
               key: {{ secrets.split('=')[0] | lower }}
+{%               endif %}
+{%             endif %}
+{%           endif %}
+{%         endfor %}
+{%       else %}
+{%         if 'CONSUL_HTTP_TOKEN' not in secrets %}
+        - name: {{ secrets.split('=')[0] }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ settings.project_name }}-{{ item.key | lower }}
+              key: {{ secrets.split('=')[0] | lower }}
+{%         endif %}
+{%       endif %}
+{%     endfor %}
+{%   else %}
+        # Writing out pre-defined secrets
+{%     for secrets in item.value.secrets %}
+{%       if 'CONSUL_HTTP_TOKEN' not in secrets %}
+        - name: {{ secrets.split('=')[0] }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ settings.project_name }}-{{ item.key | lower }}
+              key: {{ secrets.split('=')[0] | lower }}
+{%       endif %}
+{%     endfor %}
 {%   endif %}
-{% endfor %}
+{% endif %}
 {% if item.value.resources is defined and item.value.resources %}
         resources:
 {%   for key,value in item.value.resources.items() %}
@@ -93,19 +195,6 @@ spec:
 {%   endfor %}
 {% endif %}
         volumeMounts:
-{% if item.value.volumes is defined and item.value.volumes %}
-{%   for volumes in item.value.volumes %}
-        - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
-          mountPath: {{ volumes.split('=')[1] }}
-{%   endfor %}
-{% endif %}
-{% if custom_volume_mounts is defined and custom_volume_mounts %}
-{%   for mount_key,mount_value in custom_volume_mounts.items() %}
-{%     if mount_key == item.key %}
-        {{ mount_value | indent(8) }}
-{%     endif %}
-{%   endfor %}
-{% endif %}
 {% if SECURE_CONSUL %}
         # Required for TLS HA configurations comment out existing empty dir volumeMount
         #- name: consul-persistent-storage
@@ -113,23 +202,82 @@ spec:
         #- name: consul-persistent-storage
         #  mountPath: /consul/data
 {% endif %}
+{% if custom_services is defined and custom_services %}
+        # Writing out user defined volume mounts
+{%   for key,value in custom_services.items() %}
+{%     if key == item.key and value.deployment_overrides.volume_mounts is defined and value.deployment_overrides.volume_mounts %}
+        {{ value.deployment_overrides.volume_mounts | indent(8) }}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+{% if item.value.volumes is defined and item.value.volumes %}
+        # Writing out pre-defined volume mounts
+{%   if custom_services is defined and custom_services %}
+{%     for volumes in item.value.volumes %}
+{%       if vars.update({'found': False}) %} {% endif %}
+{%       if item.key in custom_services %}
+{%         for key,value in custom_services.items() %}
+{%           if key == item.key and value.deployment_overrides.volume_mounts is defined and value.deployment_overrides.volume_mounts %}
+{%             set cm_key = volumes.split('=')[0] + '-volume' %}
+{%             if cm_key in value.deployment_overrides.volume_mounts %}
+{%               if vars.update({'found': True}) %} {% endif %}
+{%             endif %}
+{%           endif %}
+{%         endfor %}
+{%         if not vars.found %}
+        - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
+          mountPath: {{ volumes.split('=')[1] }}
+{%         endif %}
+{%       else %}
+        - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
+          mountPath: {{ volumes.split('=')[1] }}
+{%       endif %}
+{%     endfor %}
+{%   else %}
+        - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
+          mountPath: {{ volumes.split('=')[1] }}
+{%   endif %}
+{% endif %}
         - name: anchors
           mountPath: /anchors
         - name: tokens
           mountPath: /tokens
       volumes:
-{% if item.value.volumes is defined and item.value.volumes %}
-{%   for volumes in item.value.volumes %}
-      - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
-        emptyDir: {}
+{% if custom_services is defined and custom_services %}
+      # Writing out user defined volumes
+{%   for key,value in custom_services.items() %}
+{%     if key == item.key and value.deployment_overrides.volumes is defined and value.deployment_overrides.volumes %}
+      {{ value.deployment_overrides.volumes | indent(6) }}
+{%     endif %}
 {%   endfor %}
 {% endif %}
-{% if custom_volumes is defined and custom_volumes %}
-{%   for vol_key,vol_value in custom_volumes.items() %}
-{%     if vol_key == item.key %}
-      {{ vol_value | indent(6) }}
-{%    endif %}
-{%   endfor %}
+{% if item.value.volumes is defined and item.value.volumes %}
+      # Writing out pre-defined volumes
+{%   if custom_services is defined and custom_services %}
+{%     for volumes in item.value.volumes %}
+{%       if vars.update({'found': False}) %} {% endif %}
+{%       if item.key in custom_services %}
+{%         for key,value in custom_services.items() %}
+{%           if key == item.key and value.deployment_overrides.volumes is defined and value.deployment_overrides.volumes %}
+{%             set cm_key = volumes.split('=')[0] + '-volume' %}
+{%             if cm_key in value.deployment_overrides.volumes %}
+{%               if vars.update({'found': True}) %} {% endif %}
+{%             endif %}
+{%           endif %}
+{%         endfor %}
+{%         if not vars.found %}
+      - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
+        emptyDir: {}
+{%         endif %}
+{%       else %}
+      - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
+        emptyDir: {}
+{%       endif %}
+{%     endfor %}
+{%   else %}
+      - name: {{ settings.project_name }}-{{ item.key }}-{{ volumes.split('=')[0] }}-volume
+        emptyDir: {}
+{%   endif %}
 {% endif %}
       # Needed for TLS configurations
       - name: tokens
