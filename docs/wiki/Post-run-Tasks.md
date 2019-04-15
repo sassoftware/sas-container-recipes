@@ -194,7 +194,7 @@ If the deployment manifests that were generated in builds/full/manifests or buil
 1. Re-run `build.sh` with the same command arguments that were previously supplied, and add the `--generate-manifests-only` argument.
 1. New manifests will be generated in builds/full/manifests/ or builds/multiple/manifests/, depending on your deployment type.
 
-**Note:** The symbolic link builds/full/manifests/ or builds/multiple/manifests/ will point to the most recent timestamped directory, such as builds/multiple-2019-04-10-15-27-56/manifests/. If you regenerate the manifests multiple times, more than one timestamped directory will exist.
+**Note:** The symbolic link builds/full/manifests/ or builds/multiple/manifests/ will point to the most recent timestamped directory, such as builds/multiple-2019-04-10-15-27-56/manifests/. If you generate the manifests multiple times, more than one timestamped directory will exist.
 
 ## (Optional) Converting an Environment from CAS SMP to CAS MPP
 
