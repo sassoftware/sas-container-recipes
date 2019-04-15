@@ -298,7 +298,7 @@ The command between the parentheses returns the image IDs that meet the filter c
 
 ### Using Docker
 
-In the root of the directory, locate the /samples/viya-single-container/example_launchsas.sh file, which contains the `docker run` command. Copy the file, and then edit it so that it matches your environment. 
+In the root of the directory, locate the samples/viya-single-container/example_launchsas.sh file, which contains the `docker run` command. Copy the file, and then edit it so that it matches your environment. 
 
 Here is example of running the script:
 
