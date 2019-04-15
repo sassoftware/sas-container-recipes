@@ -156,17 +156,16 @@ Help and Version
 
 Need more help?
     Learn more about this project:
-		https://github.com/sassoftware/sas-container-recipes/
+        https://github.com/sassoftware/sas-container-recipes/
     General questions and bug reports from the community:
-		https://github.com/sassoftware/sas-container-recipes/issues
+        https://github.com/sassoftware/sas-container-recipes/issues
     Documentation, FAQs, troubleshooting, and more:
-		https://github.com/sassoftware/sas-container-recipes/wiki
+        https://github.com/sassoftware/sas-container-recipes/wiki
     SAS License Assistance:
-		https://support.sas.com/en/technical-support/license-assistance.html
+        https://support.sas.com/en/technical-support/license-assistance.html
     License Purchases:
-		https://www.sas.com/en_us/software/how-to-buy.html
+        https://www.sas.com/en_us/software/how-to-buy.html
     SAS Technical Support (license required):
         https://support.sas.com/en/technical-support.html
     Free Software Trials:
-		https://www.sas.com/en_us/trials.html
-
+        https://www.sas.com/en_us/trials.html
