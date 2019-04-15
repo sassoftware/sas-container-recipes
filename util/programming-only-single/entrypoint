@@ -833,6 +833,9 @@ fi
 echo "[INFO]  : Replacing default SSL certificate."
 ${SASHOME}/bin/replace_httpd_default_cert.sh
 
+echo "[INFO]  : Merging user-supplied certificates into trust store."
+${SASHOME}/SASSecurityCertificateFramework/bin/sas-merge-certificates.sh ${SASHOME} ${SASCONFIG}
+
 cat > $APACHE_CONF_D/proxy.conf << HTTPD
 RedirectMatch "^/$" /SASStudio
 
