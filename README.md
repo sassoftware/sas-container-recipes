@@ -69,7 +69,7 @@ which provides in-memory analytics for symmetric multi-processing (SMP).
 
 ### Build the Image
 
-Run the following command to build the container image and add a default user ID (sasdemo) and password (sasdemo), which can be used for signing in to SAS Studio after the container is running. A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) is recommended for executing the build command.
+Run the following command to build the container image and add a default user ID (sasdemo) and password (sasdemo), which can be used to sign in to SAS Studio after the container is running. A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) is recommended for executing the build command.
 
 ```
  ./build.sh --type single --zip ~/path/to/SAS_Viya_deployment_data.zip --addons "auth-demo"
