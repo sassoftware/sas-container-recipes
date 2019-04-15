@@ -503,7 +503,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 	order.SOEZipPath = *license
 	if !strings.HasSuffix(order.SOEZipPath, ".zip") {
-		return errors.New("the Software Order Email (SOE) argument '--zip' must have the '.zip' suffix.")
+		return errors.New("the Software Order Email (SOE) argument '--zip' must be a file with the '.zip' extension.")
 	}
 
 	// Always require a deployment type
