@@ -65,11 +65,11 @@ data should be stored in a persistent location outside the container.
 This deployment includes SAS Studio, SAS Workspace Server, and a CAS server,
 which provides in-memory analytics for symmetric multi-processing (SMP).
 
-**A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-ce (community edition)](https://docs.docker.com/install/linux/docker-ce/centos/) is required.**
+**A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-CE (Community Edition)](https://docs.docker.com/install/linux/docker-ce/centos/) is required.**
 
 ### Build the Image
 
-Run the following command to build the container image and add a default user name (sasdemo), which can be used for signing in to SAS Studio after the container is running. The password for the sasdemo user name is sasdemo, also. A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) is recommended for executing the build command.
+Run the following command to build the container image and add a default user ID (sasdemo) and password (sasdemo), which can be used for signing in to SAS Studio after the container is running. A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) is recommended for executing the build command.
 
 ```
  ./build.sh --type single --zip ~/path/to/SAS_Viya_deployment_data.zip --addons "auth-demo"
@@ -77,7 +77,7 @@ Run the following command to build the container image and add a default user na
 
 ### Run the Container
 
-After the container is built, the instructions for running the container will be printed at the end of the build.sh output.
+After the container image is built, the instructions for running the container will be printed at the end of the build.sh output.
 
 ```
  docker run --detach --rm --hostname sas-viya-programming \
@@ -94,9 +94,7 @@ After the docker run command is completed, use `docker ps` to list the running c
 
 ### Sign In to SAS Studio
 
-Go to the address `http://<myhostname>:8081` and start using SAS Studio! 
-
-Sign in with the **sasdemo** user name and **sasdemo** password that was created during the build.
+Go to `http://<myhostname>:8081`, and then sign in with the sasdemo user ID and the sasdemo password to start using SAS Studio! 
 
 <img src="docs/sas-logon-screen-sasdemo.png" alt="SAS Logon Screen" style="width: 80%; height: 80%; object-fit: contain;">
 
@@ -127,12 +125,12 @@ your users with the features that they require.
 - A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-CE](https://docs.docker.com/install/linux/docker-ce/centos/) (Community Edition) must be installed on the Linux or Mac build machine.
 - Access to a Docker registry: The build process will push built Docker images automatically to the Docker registry. Before you run `build.sh`, run `docker login docker.registry.company.com`, and then make sure that the values in `$HOME/.docker/config.json` are correct.
 - Access to a Kubernetes environment and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) installed (required for the deployment step but not required for the build step).
-- **Strongly recommended:** A local mirror of the SAS software. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
+- **Strongly recommended:** Create a local mirror repository of the SAS software. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository). 
 
 ### How to Build
 Examples of running `build.sh` to build multiple containers are provided below. A [non-root user](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user) is recommended for executing the build command.
 
-**See the `docs/usage.txt` file or run `./build.sh --help` for the list of all required and optional arguments.**
+**Tip:** For the list of all required and optional arguments, see the docs/usage.txt file, or run `./build.sh --help` .
 
 #### Example One: Programming-Only Deployment, Multiple Containers
 
@@ -149,7 +147,7 @@ Here's a summary of what this command does:
 - Multiple Docker images for a programming-only deployment are created: `--type multiple`. 
 - The software that is deployed is determined by the software entitlement that is provided in the ZIP file from the Software Order Email: `--zip /path/to/SAS_Viya_deployment_data.zip` .
 - The images are pushed to the namespace in the Docker Registry, which is located at the Docker registry URL: `--docker-registry-namespace myuniquename`, `--docker-registry-url myregistry.myhost.com`.
-- A default user (sasdemo) and password (sasdemo) are added, which can be used to sign in to SAS Studio: `--addons "auth-demo"`.
+- A default user ID (sasdemo) and password (sasdemo) are added, which can be used to sign in to SAS Studio: `--addons "auth-demo"`.
 
 #### Example Two: Full Deployment, Multiple Containers
 
@@ -168,7 +166,7 @@ Here's a summary of what this command does:
 - The images are pushed to the namespace in the Docker Registry, which is located at the Docker registry URL: `--docker-registry-namespace myuniquename`, `--docker-registry-url myregistry.myhost.com`.
 - SSSD is configured inside the container to allow the container authentication to connect to LDAP or Active Directory: `--addons "auth-sssd"`.
 
-**Note:** Before you use the auth-sssd addon, refer to the [documentation wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#auth-sssd) for information about prerequisites and how to use it.
+**Note:** Before you use the auth-sssd addon, see the [documentation wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#auth-sssd) for prerequisite information.
 
 ### Running Multiple Containers
 
