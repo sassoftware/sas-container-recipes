@@ -43,7 +43,7 @@
 
 ### SAS Products and Supporting Components
 
-This wiki provides information for building and running software that is listed in your Software Order Email (SOE), which can include the following:
+This wiki provides information about how to build and run the following SAS Viya software:
 
 - SAS Cloud Analytic Services for SAS Viya 3.4
 - SAS Econometrics 8.3
@@ -60,6 +60,7 @@ This wiki provides information for building and running software that is listed 
 - SAS/QC (on SAS Viya)
 
 **Notes:**
+- Your Software Order Email (SOE) lists products and supporting components to which you are entitled. Other software to which you are entitled, such as SAS Studio, might not be listed in the SOE.
 - If you ordered SAS/ACCESS Interface to PC Files or SAS/ACCESS Interface to PostgreSQL, each is automatically included when you build and run SAS Viya. 
 - Currently, testing has focused on SAS Visual Analytics (on SAS Viya), SAS Visual Data Mining and Machine Learning, SAS Visual Statistics (on SAS Viya), and a subset of the SAS/ACCESS engines supported by SAS Viya. The process described in this guide should also work with other SAS offerings and all supported SAS/ACCESS engines. If you have problems, you can open issues at GitHub for SAS to consider. 
 

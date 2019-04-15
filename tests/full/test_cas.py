@@ -46,7 +46,10 @@ class TestSmoke():
         time.sleep(1)
         cmd = "exec {} whoami".format(self.TARGET_POD_NAME)
         status,result = self.kubeutilobj.kubectl(cmd, self.NAMESPACE)
-        assert b"root" not in result["output"]
+        error_flag = False
+        if "failure" in status.lower() or b"root" in result["output"]:
+            error_flag = True
+        assert error_flag == False
 
     def test_02_hostname(self):
         """
@@ -92,7 +95,9 @@ class TestSmoke():
         for msg in result:
             if isinstance(msg, dict) and 'error' in msg.get("level").lower():
                 error_flag = True
-                logger.debug("ERROR found: %s: %s", msg.get("id"), msg.get("text"))
+                print("ERROR found: %s: %s", msg.get("id"), msg.get("text"))
+        if isinstance(result, str) and "failure" in result.lower():
+            error_flag = True
         assert error_flag == False
 
     def test_06_sasops_env_hostname(self):
@@ -106,7 +111,7 @@ class TestSmoke():
         shorthost = result.get("Host Information").get("Short hostname")
         assert shorthost in self.TARGET_POD_NAME
 
-    def test_06_sasops_services(self):
+    def test_07_sasops_services(self):
         '''
         Ensure sas-ops services list not empty
 
@@ -114,4 +119,8 @@ class TestSmoke():
         result = testutils.ops_services(self.TARGET_POD_NAME, \
                                         self.NAMESPACE, \
                                         self.kubeutilobj)
-        assert isinstance(result, list) and len(result) > 1
+        print(result)
+        error_flag = False
+        if not isinstance(result, list) or len(result) < 1:
+            error_flag = True
+        assert error_flag == False

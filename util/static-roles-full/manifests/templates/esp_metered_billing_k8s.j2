@@ -115,7 +115,6 @@ spec:
           mountPath: /anchors
         - name: tokens
           mountPath: /tokens
-
       volumes:
       - name: {{ settings.project_name }}-esp-metered-billing-db
         emptyDir: {}
@@ -132,6 +131,7 @@ spec:
 {%    endif %}
 {%   endfor %}
 {% endif %}
+      # Needed for TLS configurations
       - name: tokens
         configMap:
           name: consul-tokens-configmap

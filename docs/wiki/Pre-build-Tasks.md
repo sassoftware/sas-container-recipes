@@ -197,7 +197,7 @@ The Dockerfile looks for the Teradata gzip file and runs the setup.bat script to
 ### Ingress Configuration
 To access SAS, you must identify endpoints that allow things outside the Kubernetes environment to talk to the correct endpoints inside the Kubernetes environment. Although this can be done different ways, the trend is to use an Ingress Controller. This document does not explain how to set up the Ingress Controller but it will explain how to set up a specific Ingress configuration to identify the proper endpoints for the SAS containers.
 
-For both the *viya-programming/viya-multi-container* and the *viya-visuals* we have added building the ingress configuration as part of the manifest generation. For *viya-programming/viya-single-container* an example configuration is provided in the *samples* directory:
+For the **multiple and full deployment types** we have added building the ingress configuration as part of the manifest generation. For the **single container deployment** an example configuration is provided in the *samples* directory:
 
 ```
 samples
@@ -279,13 +279,13 @@ If you know the size of files to be imported, then set **Custom max body size** 
 
 ### Bulk Loading of Configuration Values
 
-For a full deployment, you can create a viya-visuals/sitedefault.yml file that is used to bulk load configuration values for multiple services. After the initial deployment, you cannot simply modify sitedefault.yml to change an existing value and deploy the software again. You can modify sitedefault.yml only to set property values that have not already been set. Therefore, SAS recommends that you do not use sitedefault.yml for the initial deployment of your SAS Viya software, except where specifically described in this document.
+For a full deployment, you can create a sitedefault.yml file in the sas-container-recipes project directory that is used to bulk load configuration values for multiple services. After the initial deployment, you cannot simply modify sitedefault.yml to change an existing value and deploy the software again. You can modify sitedefault.yml only to set property values that have not already been set. Therefore, SAS recommends that you do not use sitedefault.yml for the initial deployment of your SAS Viya software, except where specifically described in this document.
 
-When the sitedefault.yml file is present in the viya-visuals directory, the build process will base64 encode the file and put it into the viya-visuals/working/manifests/kubernetes/configmaps/consul.yml file in the consul_key_value_data_enc variable. When the consul container starts, the key-value pairs in consul_key_value_data_enc are bulk loaded into the SAS configuration store.
+When the sitedefault.yml file is present in the sas-container-recipes project directory, the build process will base64 encode the file and put it into the builds/full/manifests/kubernetes/configmaps/consul.yml file in the consul_key_value_data_enc variable. When the consul container starts, the key-value pairs in consul_key_value_data_enc are bulk loaded into the SAS configuration store.
 
 Here are the steps to use sitedefault.yml to set configuration values:
 
-1. Sign on to your build machine with administrator privileges, and locate the viya-visuals/templates/sitedefault_sample.yml file.
+1. Sign on to your build machine with administrator privileges, and locate the util/sitedefault_sample.yml file.
 1. Make a copy of sitedefault_sample.yml and name it sitedefault.yml.
 1. Using a text editor, open sitedefault.yml and add values that are valid for your site.
    - For information about the LDAP properties used in sitedefault.yml, see [sas.identities.providers.ldap](https://go.documentation.sas.com/?cdcId=calcdc&cdcVersion=3.4&docsetId=calconfig&docsetTarget=n08000sasconfiguration0admin.htm#n08044sasconfiguration0admin) in _SAS Viya for Linux: Deployment Guide_.
@@ -296,11 +296,11 @@ Here are the steps to use sitedefault.yml to set configuration values:
     **Some properties require passwords.**<br/>
     If properties with passwords are specified in sitedefault.yml, you must secure the file appropriately. If you chose not to supply the properties in sitedefault.yml, then you can enter them using SAS Environment Manager. Sign in to SAS Environment Manager as sasboot, and follow the instructions in [Configure the Connection to Your Identity Provider](post-run-tasks#configure-the-connection-to-your-identity-provider).
 
-1. When you are finished, save sitedefault.yml and make sure that it resides in the viya-visuals/templates/ directory of the playbook.
-When the build script is run, the data from the viya-visuals/templates/sitedefault.yml file will get added to the viya-visuals/working/manifests/kubernetes/configmaps/consul.yml file. On startup of the consul container, the content will get loaded into the SAS configuration store. See the post-run [(Optional) Verify Bulk Loaded Configuration](post-run-tasks#optional-verify-bulk-loaded-configuration) task for confirming the values provided were loaded.
+1. When you are finished, save sitedefault.yml and make sure that it resides in the sas-container-recipes project directory.
+When the build script is run, the data from the sitedefault.yml file will get added to the builds/full/manifests/kubernetes/configmaps/consul.yml file. On startup of the consul container, the content will get loaded into the SAS configuration store. See the post-run [(Optional) Verify Bulk Loaded Configuration](post-run-tasks#optional-verify-bulk-loaded-configuration) task for confirming the values provided were loaded.
 
 ### Kubernetes Manifest Inputs
-To help with managing changes to the generated manifests, you can provide customizations that will be used when creating the Kubernetes manifests. In the templates directory for both viya-programming/viya-multi-container and viya-visuals, there is a vars_usermods.yml file. For your specific deployment, copy the templates/vars_usermods.yml file to either viya-programming/viya-multi-container/vars_usermods.yml or viya-visuals/vars_usermods.yml, and then edit the file. You can enter any of the following values and override the defaults:
+To help with managing changes to the generated manifests, you can provide customizations that will be used when creating the Kubernetes manifests. In the `util/` directory there is a `vars_usermods.yml` file. For your specific deployment, copy the `vars_usermods.yml` file to the sas-container-recipes project directory and then edit the file. You can enter any of the following values and override the defaults:
 
 ```
 # The directory where manifests will be created. Default is "manifests"
@@ -317,7 +317,7 @@ In order to setup the Ingress paths correctly, update the following to the corre
 #SAS_K8S_INGRESS_DOMAIN: company.com
 ```
 
-By default, the generated manifests will define a CAS SMP environment. If you want to define a CAS MPP environment initially, locate the following section in the viya-visuals/vars_usermods.yml file:
+By default, the generated manifests will define a CAS SMP environment. If you want to define a CAS MPP environment initially, locate the following section in the vars_usermods.yml file:
 
 ```
 #custom_services:
