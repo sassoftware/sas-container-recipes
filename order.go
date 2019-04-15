@@ -168,6 +168,16 @@ type ConfigMap struct {
 // based on the deployment and time stamp. It also configures logging.
 func (order *SoftwareOrder) SetupBuildDirectory() error {
 	if order.GenerateManifestsOnly {
+		// If we are only generating manifests then use the previous run
+		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
+
+		// Want to make sure the deployment type directory exists. Trying to protect
+		// against the case where a user tries to generate manifests before they
+		// built anything. Generate manifests only is a second step.
+		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
+			return err
+		}
+
 		// Save off the previous build log
 		order.LogPath = order.BuildPath + "/build.log"
 		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s",
@@ -180,10 +190,11 @@ func (order *SoftwareOrder) SetupBuildDirectory() error {
 			return err
 		}
 		order.Log = logHandle
+
 	} else {
 		// Create an isolated build directory with a unique timestamp
 		order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
-		if err := os.MkdirAll(order.BuildPath+"manifests", 0744); err != nil {
+		if err := os.MkdirAll(order.BuildPath+"/manifests", 0744); err != nil {
 			return err
 		}
 
@@ -194,6 +205,34 @@ func (order *SoftwareOrder) SetupBuildDirectory() error {
 			return err
 		}
 		order.Log = logHandle
+
+		// Symbolically link the most recent time stamped build directory to a shorter name
+		// For example, 'full-2019-04-09-13-37-40' can be referred to as simply 'full'
+		// Note: This is executing inside the build container, inside a mounted volume,
+		// 		 therefore an os.Symlink() does not work correctly.
+		previousLink := "builds/" + order.DeploymentType
+		if _, err := os.Lstat(previousLink); err == nil {
+			if err := os.Remove(previousLink); err != nil {
+				return err
+			}
+		}
+		symlinkCommand := fmt.Sprintf("cd builds && ln -s %s-%s %s && cd ..",
+			order.DeploymentType, order.TimestampTag, order.DeploymentType)
+		cmd := exec.Command("sh", "-c", symlinkCommand)
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			return err
+		}
+		err = cmd.Start()
+		if err != nil {
+			result, _ := ioutil.ReadAll(stderr)
+			return errors.New(string(result) + "\n" + err.Error())
+		}
+		err = cmd.Wait()
+		if err != nil {
+			result, _ := ioutil.ReadAll(stderr)
+			return errors.New(string(result) + "\n" + err.Error())
+		}
 	}
 	return nil
 }
@@ -228,38 +267,6 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	order.ConfigPath = "config-full.yml"
 	if order.DeploymentType == "multiple" {
 		order.ConfigPath = "config-multiple.yml"
-	}
-
-	if !order.GenerateManifestsOnly {
-		// Symbolically link the most recent time stamped build directory to a shorter name
-		// For example, 'full-2019-04-09-13-37-40' can be referred to as simply 'full'
-		symlinkCommand := fmt.Sprintf("cd builds && rm -rf %s && ln -s %s-%s %s",
-			order.DeploymentType, order.DeploymentType,
-			order.TimestampTag, order.DeploymentType)
-		cmd := exec.Command("sh", "-c", symlinkCommand)
-		stderr, err := cmd.StderrPipe()
-		if err := cmd.Start(); err != nil {
-			log.Fatal(err)
-		}
-		result, err := ioutil.ReadAll(stderr)
-		if err != nil {
-			return order, err
-		}
-		fmt.Printf("%s\n", result)
-		if err := cmd.Wait(); err != nil {
-			return order, err
-		}
-	} else {
-		// If we are only generating manifests, then use the previous run.
-		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
-
-		// Want to make sure the deployment type directory exists. Trying to protect
-		// against the case where a user tries to generate manifests before they
-		// built anything. Generate manifests only is a second step.
-		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
-			return order, err
-		}
-
 	}
 
 	// Start a worker pool and wait for all workers to finish
