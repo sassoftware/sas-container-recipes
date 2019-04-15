@@ -188,31 +188,13 @@ SAS Viya supports encrypted connections between the LDAP client and server. To c
 
 ## (Optional) Regenerating Manifests
 
-If the deployment manifests that were generated in the working/manifests directory did not contain everything that is needed, or need to be updated, you can regenerate the manifests post build. Here are the steps:
+If the deployment manifests that were generated in builds/full/manifests or builds/multiple/manifests need to be updated, perform the following post-build steps to regenerate the manifests without re-running the entire build process. 
 
-1. Change to the sas-container-recipes/builds/full/ directory.
-1. If you need to provide custom configuration, edit the vars_usermods.yml file in the /working directory. For more information, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task).
-1. Get the Docker tag for the images that were built.
+1. (Optional) To provide custom configuration, edit the vars_usermods.yml file in the sas-container-recipes project directory. For more information, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task).
+1. Re-run `build.sh` with the same command arguments that were previously supplied, and add the `--generate-manifests-only` argument.
+1. New manifests will be generated in builds/full/manifests/ or builds/multiple/manifests/, depending on your deployment type.
 
-    ```
-    SAS_DOCKER_TAG=$(grep "image:" manifests/kubernetes/deployments/consul.yml | awk -F':' '{ print $3 }')
-    ```
-    
-1. From the /working directory, run the following from the command prompt
-   
-    ```
-    source ../env/bin/activate
-    ansible-playbook \
-        --connection=local \
-        --inventory 127.0.0.1, \
-        generate_manifests.yml \
-        -e "docker_tag=${SAS_DOCKER_TAG}" \
-        -e 'ansible_python_interpreter=/usr/bin/python'
-    ```
-    
-1. New manifests will be generated. 
-
-**Note:** The path to the directory in which the manifests are added includes a timestamp as part of its name, such as builds/multiple-2019-04-10-15-27-56/manifests/.
+**Note:** The symbolic link builds/full/manifests/ or builds/multiple/manifests/ will point to the most recent timestamped directory, such as builds/multiple-2019-04-10-15-27-56/manifests/. If you generate the manifests multiple times, more than one timestamped directory will exist.
 
 ## (Optional) Converting an Environment from CAS SMP to CAS MPP
 
