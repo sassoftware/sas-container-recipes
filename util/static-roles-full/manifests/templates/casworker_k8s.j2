@@ -4,15 +4,19 @@ metadata:
   name: {{ settings.project_name }}-cas-worker
 spec:
 {% if custom_services is defined and custom_services %}
+{%   if vars.update({'mpp': False}) %} {% endif %}
 {%   for key,value in custom_services.items() %}
 {%     if key == item.key and value.deployment_overrides.environment is defined and value.deployment_overrides.environment %}
 {%       for override in value.deployment_overrides.environment %}
-{%         if 'CASCFG_MODE=mpp' in override %}
-  replicas: 3
-{%         endif %}
+{%         if vars.update({'mpp': True}) %} {% endif %}
 {%       endfor %}
 {%     endif %}
 {%   endfor %}
+{%   if not vars.mpp %}
+  replicas: 0
+{%   else %}
+  replicas: 3
+{%   endif %}
 {% else %}
   replicas: 0
 {% endif %}
@@ -123,17 +127,17 @@ spec:
 {%                 if vars.update({'found': True}) %} {% endif %}
 {%               endif %}
 {%             endfor %}
-{%             if not vars.found %}
-{%               if "SERVICE_NAME" not in environment %}
+{%           endif %}
+{%         endfor %}
+{%         if not vars.found %}
+{%           if "SERVICE_NAME" not in environment %}
         - name: {{ environment.split('=')[0] }}
           valueFrom:
             configMapKeyRef:
               name: {{ settings.project_name }}-cas
               key: {{ environment.split('=')[0] | lower }}
-{%               endif %}
-{%             endif %}
 {%           endif %}
-{%         endfor %}
+{%         endif %}
 {%       else %}
 {%         if "SERVICE_NAME" not in environment %}
         - name: {{ environment.split('=')[0] }}
@@ -200,19 +204,19 @@ spec:
 {%                 if vars.update({'found': True}) %} {% endif %}
 {%               endif %}
 {%             endfor %}
-{%             if not vars.found %}
-{%               if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
+{%           endif %}
+{%         endfor %}
+{%         if not vars.found %}
+{%           if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
         - name: SETINIT_TEXT
-{%               else      %}
+{%           else      %}
         - name: {{ secrets.split('=')[0] }}
-{%               endif     %}
+{%           endif     %}
           valueFrom:
             secretKeyRef:
               name: {{ settings.project_name }}-cas
               key: {{ secrets.split('=')[0] | lower }}
-{%             endif %}
-{%           endif %}
-{%         endfor %}
+{%         endif %}
 {%       else %}
 {%         if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
         - name: SETINIT_TEXT

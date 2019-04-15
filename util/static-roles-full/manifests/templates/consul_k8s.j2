@@ -84,25 +84,25 @@ spec:
 {%   if custom_services is defined and custom_services %}
 {%     set vars = {'found': False} %}
 {%     for environment in item.value.environment %}
+{%       set cm_key = environment.split('=')[0] + '=' %}
 {%       if vars.update({'found': False}) %} {% endif %}
 {%       if item.key in custom_services %}
 {%         for key,value in custom_services.items() %}
 {%           if key == item.key and value.deployment_overrides.environment is defined and value.deployment_overrides.environment %}
-{%             set cm_key = environment.split('=')[0] + '=' %}
 {%             for override in value.deployment_overrides.environment %}
 {%               if cm_key in override %}
 {%                 if vars.update({'found': True}) %} {% endif %}
 {%               endif %}
 {%             endfor %}
-{%             if not vars.found %}
+{%           endif %}
+{%         endfor %}
+{%         if not vars.found %}
         - name: {{ environment.split('=')[0] }}
           valueFrom:
             configMapKeyRef:
               name: {{ settings.project_name }}-{{ item.key }}
               key: {{ environment.split('=')[0] | lower }}
-{%             endif %}
-{%           endif %}
-{%         endfor %}
+{%         endif %}
 {%       else %}
         - name: {{ environment.split('=')[0] }}
           valueFrom:
@@ -141,27 +141,27 @@ spec:
 {%   if custom_services is defined and custom_services %}
 {%     set vars = {'found': False} %}
 {%     for secrets in item.value.secrets %}
+{%       set cm_key = secrets.split('=')[0] + '=' %}
 {%       if vars.update({'found': False}) %} {% endif %}
 {%       if item.key in custom_services %}
 {%         for key,value in custom_services.items() %}
 {%           if key == item.key and value.deployment_overrides.secrets is defined and value.deployment_overrides.environment %}
-{%             set cm_key = secrets.split('=')[0] + '=' %}
 {%             for override in value.deployment_overrides.secrets %}
 {%               if cm_key in override %}
 {%                 if vars.update({'found': True}) %} {% endif %}
 {%               endif %}
 {%             endfor %}
-{%             if not vars.found %}
-{%               if 'CONSUL_HTTP_TOKEN' not in secrets %}
+{%           endif %}
+{%         endfor %}
+{%         if not vars.found %}
+{%           if 'CONSUL_HTTP_TOKEN' not in secrets %}
         - name: {{ secrets.split('=')[0] }}
           valueFrom:
             secretKeyRef:
               name: {{ settings.project_name }}-{{ item.key | lower }}
               key: {{ secrets.split('=')[0] | lower }}
-{%               endif %}
-{%             endif %}
 {%           endif %}
-{%         endfor %}
+{%         endif %}
 {%       else %}
 {%         if 'CONSUL_HTTP_TOKEN' not in secrets %}
         - name: {{ secrets.split('=')[0] }}
@@ -214,11 +214,11 @@ spec:
         # Writing out pre-defined volume mounts
 {%   if custom_services is defined and custom_services %}
 {%     for volumes in item.value.volumes %}
+{%       set cm_key = volumes.split('=')[0] + '-volume' %}
 {%       if vars.update({'found': False}) %} {% endif %}
 {%       if item.key in custom_services %}
 {%         for key,value in custom_services.items() %}
 {%           if key == item.key and value.deployment_overrides.volume_mounts is defined and value.deployment_overrides.volume_mounts %}
-{%             set cm_key = volumes.split('=')[0] + '-volume' %}
 {%             if cm_key in value.deployment_overrides.volume_mounts %}
 {%               if vars.update({'found': True}) %} {% endif %}
 {%             endif %}
@@ -257,11 +257,11 @@ spec:
       # Writing out pre-defined volumes
 {%   if custom_services is defined and custom_services %}
 {%     for volumes in item.value.volumes %}
+{%       set cm_key = volumes.split('=')[0] + '-volume' %}
 {%       if vars.update({'found': False}) %} {% endif %}
 {%       if item.key in custom_services %}
 {%         for key,value in custom_services.items() %}
 {%           if key == item.key and value.deployment_overrides.volumes is defined and value.deployment_overrides.volumes %}
-{%             set cm_key = volumes.split('=')[0] + '-volume' %}
 {%             if cm_key in value.deployment_overrides.volumes %}
 {%               if vars.update({'found': True}) %} {% endif %}
 {%             endif %}

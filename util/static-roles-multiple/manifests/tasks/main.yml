@@ -63,7 +63,7 @@
 - name: Create pets k8s manifest
   template:
     src: "pets_k8s.j2"
-    dest: "{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/deployments/{{ item.key }}.yml"
+    dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/deployments/cas.yml{% else %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/deployments/{{ item.key }}.yml{% endif %}"
   when: item.key in 'httpproxy, pgpoolc, programming, rabbitmq, sas-casserver-primary, sasdatasvrc'
   with_dict: '{{ services }}'
 

@@ -79,19 +79,19 @@ spec:
 {%                 if vars.update({'found': True}) %} {% endif %}
 {%               endif %}
 {%             endfor %}
-{%             if not vars.found %}
+{%           endif %}
+{%         endfor %}
+{%         if not vars.found %}
         - name: {{ environment.split('=')[0] }}
           valueFrom:
             configMapKeyRef:
-{%               if item.key == "sas-casserver-primary" %}
+{%           if item.key == "sas-casserver-primary" %}
               name: {{ settings.project_name }}-cas
-{%               else %}
+{%           else %}
               name: {{ settings.project_name }}-{{ item.key }}
-{%               endif %}
-              key: {{ environment.split('=')[0] | lower }}
-{%             endif %}
 {%           endif %}
-{%         endfor %}
+              key: {{ environment.split('=')[0] | lower }}
+{%         endif %}
 {%       else %}
         - name: {{ environment.split('=')[0] }}
           valueFrom:
@@ -154,23 +154,23 @@ spec:
 {%                 if vars.update({'found': True}) %} {% endif %}
 {%               endif %}
 {%             endfor %}
-{%             if not vars.found %}
-{%               if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
-        - name: SETINIT_TEXT
-{%               else      %}
-        - name: {{ secrets.split('=')[0] }}
-{%               endif     %}
-          valueFrom:
-            secretKeyRef:
-{%               if item.key == "sas-casserver-primary" %}
-              name: {{ settings.project_name }}-cas
-{%               else %}
-              name: {{ settings.project_name }}-{{ item.key | lower }}
-{%               endif %}
-              key: {{ secrets.split('=')[0] | lower }}
-{%             endif %}
 {%           endif %}
 {%         endfor %}
+{%         if not vars.found %}
+{%           if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
+        - name: SETINIT_TEXT
+{%           else      %}
+        - name: {{ secrets.split('=')[0] }}
+{%           endif     %}
+          valueFrom:
+            secretKeyRef:
+{%           if item.key == "sas-casserver-primary" %}
+              name: {{ settings.project_name }}-cas
+{%           else %}
+              name: {{ settings.project_name }}-{{ item.key | lower }}
+{%           endif %}
+              key: {{ secrets.split('=')[0] | lower }}
+{%         endif %}
 {%       else %}
 {%         if secrets.split('=')[0] == 'SETINIT_TEXT_ENC' %}
         - name: SETINIT_TEXT
