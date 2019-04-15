@@ -117,7 +117,7 @@ Multiple Containers
     
     --build-only "<container-name> <container-name> ..."
     	Specifies the name of containers.
-    	[CAUTION] This argument is intended to re-build small components quickly.
+    	[NOTE] This argument is intended to re-build small components quickly.
         Usage: To list multiple names, a space or comma is required between each container name.
         DO NOT use "sas-viya-" as a prefix for names.         
         Examples:
@@ -135,11 +135,12 @@ Multiple Containers
     --builder-port <integer>
     	Specifies the port to listen on and from which to serve entitlement and CA certificates. 
     	Serving certificates is required to avoid leaving sensitive order data in the layers.
-        WARNING: Changing the value between builds will invalidate your layer cache.
+        [CAUTION] Changing the value between builds will invalidate your layer cache.
         Default: 1976
     
     --generate-manifests-only
         Builds the Kubernetes manifests only.
+        Prerequisite: Can be used with the --type multiple or --type full argument.        
         Manifests are added to the /builds/<deployment_type> directory.
         Default: false
         
