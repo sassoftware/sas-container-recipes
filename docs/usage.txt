@@ -74,7 +74,7 @@ Multiple Containers
 
     --virtual-host 
     	Specifies the Kubernetes Ingress path that defines the location of the HTTP endpoint.
-        Prerequisite: Can be used with the --type multiple argument only.
+        Usage: Can be used with the --type multiple argument only.
     	For more details about Ingress, see the Kubernetes documentation at
     	https://kubernetes.io/docs/concepts/services-networking/ingress/
     	Example: user-myproject.mycluster.com
@@ -140,7 +140,7 @@ Multiple Containers
     
     --generate-manifests-only
         Builds the Kubernetes manifests only.
-        Prerequisite: Can be used with the --type multiple or --type full argument.        
+        Usage: Can be used with the --type multiple or --type full argument.        
         Manifests are added to the /builds/<deployment_type> directory.
         Default: false
         
