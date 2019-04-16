@@ -84,7 +84,7 @@ type SoftwareOrder struct {
 	// Build attributes
 	TimestampTag string                // Allows for datetime on each temp build bfile
 	Containers   map[string]*Container // Individual containers build list
-	BuildOnly    []string              // Only build these specific containers from the whole list
+	BuildOnly    []string              // Only build these specific containers if they're in the list of entitled containers. The 'multiple' deployment type utilizes this to build only 3 images.
 	Config       map[string]ConfigMap  // Static values and defaults are loaded from the configmap yaml
 	ConfigPath   string                // config-<deployment-type>.yml file for custom or static values
 	Log          *os.File              // File handle for log path
@@ -1221,11 +1221,6 @@ func (order *SoftwareOrder) Prepare() error {
 
 // GenerateManifests runs the generate_manifests playbook to output Kubernetes configs
 func (order *SoftwareOrder) GenerateManifests() error {
-
-	if len(order.BuildOnly) > 0 {
-		return nil
-	}
-
 	order.WriteLog(true, "Creating deployment manifests ...")
 
 	if !order.GenerateManifestsOnly {
