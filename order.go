@@ -658,15 +658,21 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) (Container, error
 		return container, err
 	}
 	container.DockerContextPath = container.SoftwareOrder.BuildPath + "sas-viya-single-programming-only/build_context.tar"
-	err = container.AddFileToContext(resourceDirectory+"/vars_usermods.yml", "vars_usermods.yml", []byte{})
-	if err != nil {
-		return container, err
-	}
 	err = container.AddFileToContext(resourceDirectory+"/entrypoint", "entrypoint", []byte{})
 	if err != nil {
 		return container, err
 	}
 	err = container.AddFileToContext(resourceDirectory+"/replace_httpd_default_cert.sh", "replace_httpd_default_cert.sh", []byte{})
+	if err != nil {
+		return container, err
+	}
+
+	// Check for a custom vars_usermods file in top level project directory
+	usermodsFilePath := "util/vars_usermods.yml"
+	if _, err := os.Stat("vars_usermods.yml"); !os.IsNotExist(err) {
+		usermodsFilePath = "vars_usermods.yml"
+	}
+	err = container.AddFileToContext(usermodsFilePath, "vars_usermods.yml", []byte{})
 	if err != nil {
 		return container, err
 	}
@@ -1404,28 +1410,19 @@ settings:
 		}
 	}
 
-	varsDestPath := fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath)
-	// If the user provided a vars_usremods.yml file copy it over or copy the default version
-	if _, err := os.Stat("vars_usermods.yml"); os.IsNotExist(err) {
-		input, err := ioutil.ReadFile("util/vars_usermods.yml")
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(varsDestPath, input, 0644)
-		if err != nil {
-			fmt.Println("Error creating", varsDestPath)
-			return err
-		}
-	} else {
-		input, err := ioutil.ReadFile("vars_usermods.yml")
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(varsDestPath, input, 0644)
-		if err != nil {
-			fmt.Println("Error creating", varsDestPath)
-			return err
-		}
+	// If the user provided a vars_usermods.yml file then copy it
+	// into the build directory or use the default file
+	usermodsFilePath := "util/vars_usermods.yml"
+	if _, err := os.Stat("vars_usermods.yml"); !os.IsNotExist(err) {
+		usermodsFilePath = "vars_usermods.yml"
+	}
+	input, err := ioutil.ReadFile(usermodsFilePath)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath), input, 0644)
+	if err != nil {
+		return err
 	}
 
 	// Run the playbook locally to generate the Kubernetes manifests
@@ -1435,7 +1432,7 @@ settings:
 		result := string(result) + "\n" + manifestsCommand + "\n"
 		result += string(result) + "\n" + err.Error() + "\n"
 		result += "Generate Manifests playbook failed.\n"
-		result += fmt.Sprintf("To debug use `cd %s ; ansible-playbook generate_manifests.yml`\n", order.BuildPath)
+		result += fmt.Sprintf("To debug use `cd %s ; ansible-playbook -vv generate_manifests.yml`\n", order.BuildPath)
 		return errors.New(result)
 	}
 
