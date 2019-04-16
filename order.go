@@ -266,6 +266,9 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		workerCount++
 		go order.LoadRegistryAuth(fail, done)
 
+		workerCount++
+		go order.LoadUsermods(progress, fail, done)
+
 		if !order.SkipDockerValidation {
 			workerCount++
 			go order.TestRegistry(progress, fail, done)
@@ -637,7 +640,7 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 // Grab the Dockerfile stub from the utils directory and append any addons
 // then do a docker build with the base image and platform build arguments
 // TODO: using license in RUN layers and mounting as volume?
-func buildProgrammingOnlySingleContainer(order *SoftwareOrder) (Container, error) {
+func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	container := Container{
 		Name:          "single-programming-only",
 		SoftwareOrder: order,
@@ -647,7 +650,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) (Container, error
 	dockerConnection, err := client.NewClientWithOpts(client.WithVersion(DockerAPIVersion))
 	if err != nil {
 		debugMessage := "Unable to connect to Docker daemon. Ensure Docker is installed and the service is started. "
-		return container, errors.New(debugMessage + err.Error())
+		return errors.New(debugMessage + err.Error())
 	}
 	container.DockerClient = dockerConnection
 
@@ -655,115 +658,67 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) (Container, error
 	resourceDirectory := "util/programming-only-single"
 	err = container.CreateBuildDirectory()
 	if err != nil {
-		return container, err
+		return err
 	}
 	container.DockerContextPath = container.SoftwareOrder.BuildPath + "sas-viya-single-programming-only/build_context.tar"
 	err = container.AddFileToContext(resourceDirectory+"/entrypoint", "entrypoint", []byte{})
 	if err != nil {
-		return container, err
+		return err
 	}
 	err = container.AddFileToContext(resourceDirectory+"/replace_httpd_default_cert.sh", "replace_httpd_default_cert.sh", []byte{})
 	if err != nil {
-		return container, err
+		return err
 	}
-
-	// Check for a custom vars_usermods file in top level project directory
-	usermodsFilePath := "util/vars_usermods.yml"
-	if _, err := os.Stat("vars_usermods.yml"); !os.IsNotExist(err) {
-		usermodsFilePath = "vars_usermods.yml"
-	}
-	err = container.AddFileToContext(usermodsFilePath, "vars_usermods.yml", []byte{})
+	err = container.AddFileToContext(order.BuildPath+"/vars_usermods.yml", "vars_usermods.yml", []byte{})
 	if err != nil {
-		return container, err
+		return err
 	}
 
 	// TODO: the SOE should not be added to the container. Need to update the Dockerfile to utilize a license volume mount.
 	err = container.AddFileToContext(container.SoftwareOrder.SOEZipPath, "SAS_Viya_deployment_data.zip", []byte{})
 	if err != nil {
-		return container, err
+		return err
 	}
 
 	// Add files from the addons directory to the build context
 	for _, addon := range order.AddOns {
 		err := container.AddDirectoryToContext(addon, "", "")
 		if err != nil {
-			return container, errors.New("Unable to place addon files into Docker context. " + err.Error())
+			return errors.New("Unable to place addon files into Docker context. " + err.Error())
 		}
 	}
 
 	// Add the Dockerfile to the build context
 	dockerfileStub, err := ioutil.ReadFile(resourceDirectory + "/Dockerfile")
 	if err != nil {
-		return container, err
+		return err
 	}
 	dockerfile, err := appendAddonLines(container.Name, string(dockerfileStub), container.SoftwareOrder.AddOns)
 	if err != nil {
-		return container, err
+		return err
 	}
 	err = container.AddFileToContext("", "Dockerfile", []byte(dockerfile))
 	if err != nil {
-		return container, err
+		return err
 	}
 
-	// Set the payload to send to the Docker client
-	dockerBuildContext, err := os.Open(container.DockerContextPath)
-	if err != nil {
-		return container, err
+	// Make the software order only build the image that was created in this function
+	for _, item := range order.Containers {
+		item.Status = DoNotBuild
 	}
-	container.GetBuildArgs()
-	buildOptions := types.ImageBuildOptions{
-		Context:    dockerBuildContext,
-		Tags:       []string{container.GetWholeImageName()},
-		Dockerfile: "Dockerfile",
-		BuildArgs:  container.BuildArgs,
-	}
-	buildResponseStream, err := container.DockerClient.ImageBuild(
-		container.SoftwareOrder.BuildContext,
-		dockerBuildContext,
-		buildOptions)
-	if err != nil {
-		return container, err
-	}
-	return container, readDockerStream(buildResponseStream.Body, &container, container.SoftwareOrder.Verbose, nil)
+	container.Status = Loaded
+	order.Containers[container.Name] = &container
+	return nil
 }
 
 // Build starts each container build concurrently and report the results
 func (order *SoftwareOrder) Build() error {
-
-	// Handle single container build and output of docker run instructions
 	if order.DeploymentType == "single" {
-		singleContainer, err := buildProgrammingOnlySingleContainer(order)
+		err := getProgrammingOnlySingleContainer(order)
 		if err != nil {
 			return err
 		}
-		singleContainer.Status = Built
-
-		// Optional: push to registry if a registry and namespace was provided
-		if len(order.DockerRegistry) > 0 && len(order.DockerNamespace) > 0 {
-			err := singleContainer.Push(nil)
-			if err != nil {
-				return err
-			}
-		}
-		singleContainer.Status = Pushed
-
-		// TODO: this does not use the Fully Qualified Domain Name
-		hostname, err := os.Hostname()
-		if err != nil {
-			return err
-		}
-		fmt.Println("\n" + fmt.Sprintf(`Run the following to start the container:
-
-    docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=%s \
-    --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 \
-    --name sas-viya-single-programming-only --hostname %s \
-    sas-viya-single-programming-only:latest
-`, hostname, hostname))
-
-		return nil
 	}
-
-	// Handle all other deployment types
 	numberOfBuilds := 0
 	for _, container := range order.Containers {
 		if container.Status == Loaded {
@@ -782,10 +737,7 @@ func (order *SoftwareOrder) Build() error {
 		// Use the plural "processes" instead of "process"
 		order.WriteLog(true, "Starting "+strconv.Itoa(numberOfBuilds)+" build processes ... (this may take several minutes)")
 	}
-	if !order.Verbose {
-		order.WriteLog(true, "[TIP] The '--verbose' flag can be used to view the Docker build layers as they are being created.")
-	}
-	order.WriteLog(true, "[TIP] System resource utilization can be seen by using the `docker stats` command.\n")
+	order.WriteLog(true, "[TIP] System resource utilization can be seen by using the `docker stats` command.")
 
 	// Concurrently start each build process
 	jobs := make(chan *Container, 100)
@@ -1405,21 +1357,6 @@ settings:
 		}
 	}
 
-	// If the user provided a vars_usermods.yml file then copy it
-	// into the build directory or use the default file
-	usermodsFilePath := "util/vars_usermods.yml"
-	if _, err := os.Stat("vars_usermods.yml"); !os.IsNotExist(err) {
-		usermodsFilePath = "vars_usermods.yml"
-	}
-	input, err := ioutil.ReadFile(usermodsFilePath)
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath), input, 0644)
-	if err != nil {
-		return err
-	}
-
 	// Run the playbook locally to generate the Kubernetes manifests
 	manifestsCommand := fmt.Sprintf("ansible-playbook --connection=local --inventory 127.0.0.1, %sgenerate_manifests.yml -vv", order.BuildPath)
 	result, err := exec.Command("sh", "-c", manifestsCommand).Output()
@@ -1434,6 +1371,34 @@ settings:
 	order.WriteLog(true, "Finished creating deployment manifests\n")
 
 	return nil
+}
+
+// If the user provided a vars_usermods.yml file then copy it
+// into the build directory or copy the default usermods file
+func (order *SoftwareOrder) LoadUsermods(progress chan string, fail chan string, done chan int) {
+	usermodsFileName := "vars_usermods.yml"
+	usermodsFilePath := "util/" + usermodsFileName
+	if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
+		progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
+		usermodsFilePath = usermodsFileName
+	}
+	input, err := ioutil.ReadFile(usermodsFilePath)
+	if err != nil {
+		fail <- err.Error()
+		return
+	}
+
+	// Workaround for single container always requiring this variable somewhere in the usermods
+	if order.DeploymentType == "single" {
+		input = []byte(string(input) + "\nrecipe_override: True\n")
+	}
+
+	err = ioutil.WriteFile(fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath), input, 0644)
+	if err != nil {
+		fail <- err.Error()
+		return
+	}
+	done <- 1
 }
 
 // Download the orchestration tool locally if it is not in the util directory
@@ -1491,16 +1456,29 @@ func bytesToGB(bytes int64) string {
 }
 
 // ShowBuildSummary calculates all metrics and display them in a table.
-func (order *SoftwareOrder) ShowBuildSummary() {
+func (order *SoftwareOrder) ShowBuildSummary() error {
+	if order.DeploymentType == "single" {
+
+		// TODO: this does not use the Fully Qualified Domain Name
+		hostname, err := os.Hostname()
+		if err != nil {
+			return err
+		}
+		fmt.Println("\n" + fmt.Sprintf(`Run the following to start the container:
+
+docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=%s \
+--env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 \
+--name sas-viya-single-programming-only --hostname %s \
+sas-viya-single-programming-only:latest
+	`, hostname, hostname))
+
+		order.EndTime = time.Now()
+		fmt.Println(fmt.Sprintf("\nTotal Elapsed Time: %s\n", order.EndTime.Sub(order.StartTime).Round(time.Second)))
+		return nil
+	}
 
 	if !order.GenerateManifestsOnly {
 		// Special case where the single deployment does not use the order.Containers list
-		if order.DeploymentType == "single" {
-			order.EndTime = time.Now()
-			fmt.Println(fmt.Sprintf("\nTotal Elapsed Time: %s\n\n", order.EndTime.Sub(order.StartTime).Round(time.Second)))
-			return
-		}
-
 		// Print each container's metrics in a table
 		summaryHeader := fmt.Sprintf("\n%s  Summary  ( %s, %s ) %s", strings.Repeat("-", 23),
 			order.EndTime.Sub(order.StartTime).Round(time.Second),
@@ -1576,4 +1554,6 @@ kubectl -n %s apply -f %s/kubernetes/deployments
 	fmt.Println(manifestInstructions)
 	order.WriteLog(false, manifestLocation)
 	order.WriteLog(false, manifestInstructions)
+
+	return nil
 }
