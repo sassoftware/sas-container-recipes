@@ -1,5 +1,5 @@
-# A user should not edit this file. Copy this file, place it in the 
-# sas-container-recipes project directory, and add any overrides that are desired.
+# Copy this file, place it in the sas-container-recipes project directory, 
+# and add any overrides that are desired.
 # See https://github.com/sassoftware/sas-container-recipes/wiki/Pre-build-Tasks#kubernetes-manifest-inputs
 
 # The directory where manifests will be created. Default is "manifests"
