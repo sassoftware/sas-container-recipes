@@ -50,13 +50,27 @@
       yum install -y {{ METAREPO_SOE_ORDERABLE }}
     when: ( METAREPO_INSTALL | bool ) == true
 
-  # Install SAS SPRE
+  - name: See if YUM Group for SPRE is available
+    shell: |
+      yum grouplist "Gold Layer YUM Group for SPRE"
+    ignore_errors: True
+    register: group_search
+
   - name: Print out yum group fact
     debug:
-      msg: 'yum install --assumeyes "@Gold Layer YUM Group for SPRE" "@SAS Program Runtime Environment"'
+      var: group_search
 
-  - name: Update and install SAS groups
-    command: 'yum install --assumeyes "@Gold Layer YUM Group for SPRE" "@SAS Program Runtime Environment"'
+  - block:
+  
+    # Install SAS SPRE
+    - name: Print out yum group fact
+      debug:
+        msg: 'yum install --assumeyes "@Gold Layer YUM Group for SPRE" "@SAS Program Runtime Environment"'
+
+    - name: Update and install SAS groups
+      command: 'yum install --assumeyes "@Gold Layer YUM Group for SPRE" "@SAS Program Runtime Environment"'
+
+    when: '"Available Groups" in group_search.stdout'
 
   - name: Uninstall the SAS repository definitions
     shell: |

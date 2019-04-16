@@ -72,15 +72,17 @@ for script in $(grep -l CUSTOM_LD_LIBRARY_PATH /opt/sas/viya/home/bin/*); do
 done
 
 if [[ -f /etc/init.d/sas-viya-espvm-default ]]; then
-    config_file_size=$(wc -l < ${SASHOME}/share/esp/whitelabel/config.yml)
-    if (( $config_file_size > 0 )); then
-        ${SASHOME}/sas-bootstrap-config \
-            --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token \
-            kv \
-            bulkload \
-            --force \
-            --site-default \
-            --yaml ${SASHOME}/share/esp/whitelabel/config.yml
+    if [[ -f ${SASHOME}/share/esp/whitelabel/config.yml ]]; then
+        config_file_size=$(wc -l < ${SASHOME}/share/esp/whitelabel/config.yml)
+        if (( $config_file_size > 0 )); then
+            ${SASHOME}/sas-bootstrap-config \
+                --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token \
+                kv \
+                bulkload \
+                --force \
+                --site-default \
+                --yaml ${SASHOME}/share/esp/whitelabel/config.yml
+        fi
     fi
 fi
 

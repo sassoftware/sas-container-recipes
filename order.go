@@ -1222,6 +1222,10 @@ func (order *SoftwareOrder) Prepare() error {
 // GenerateManifests runs the generate_manifests playbook to output Kubernetes configs
 func (order *SoftwareOrder) GenerateManifests() error {
 
+	if len(order.BuildOnly) > 0 {
+		return nil
+	}
+
 	order.WriteLog(true, "Creating deployment manifests ...")
 
 	if !order.GenerateManifestsOnly {
