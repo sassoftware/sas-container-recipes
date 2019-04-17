@@ -163,16 +163,6 @@ done
 # Set some defaults
 [[ -z ${CHECK_DOCKER_URL+x} ]]        && CHECK_DOCKER_URL=true
 [[ -z ${CHECK_MIRROR_URL+x} ]]        && CHECK_MIRROR_URL=false
-[[ -z ${GENERATE_MANIFESTS_ONLY+x} ]] && GENERATE_MANIFESTS_ONLY=false
-
-if [[ $GENERATE_MANIFESTS_ONLY == "true" ]] && [[ -z ${SAS_DOCKER_TAG+x} ]]; then
-    last_built_tag="<value>"
-    if [[ -n $SAS_RECIPE_TYPE ]]; then
-        last_built_tag=$(grep "docker_tag" builds/${SAS_RECIPE_TYPE}/vars_deployment.yml | awk -F": " '{ print $2 }')
-    fi
-    export SAS_DOCKER_TAG=${last_built_tag}
-    echo "[INFO] : Setting the Docker tag to '$SAS_DOCKER_TAG'"
-fi
 
 git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
 datetime=$(date "+%Y%m%d%H%M%S")
@@ -194,6 +184,10 @@ fi
 
 if [[ -n ${SAS_RECIPE_TYPE} ]]; then
     run_args="${run_args} --type ${SAS_RECIPE_TYPE}"
+fi
+
+if [[ -n ${GENERATE_MANIFESTS_ONLY} ]]; then
+    run_args="${run_args} --generate-manifests-only"
 fi
 
 if [[ -n ${DOCKER_REGISTRY_URL} ]]; then

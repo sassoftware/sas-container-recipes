@@ -453,14 +453,24 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.SkipMirrorValidation = *skipMirrorValidation
 	order.SkipDockerValidation = *skipDockerValidation
 
-	// See if we the user just wants to generate manifests
-	order.GenerateManifestsOnly = *generateManifestsOnly
-
 	// This is a safeguard for when a user does not use quotes around a multi value argument
 	otherArgs := flag.Args()
 	if len(otherArgs) > 0 {
 		progressString := "WARNING: one or more arguments were not parsed. Quotes are required for multi-value arguments."
 		order.WriteLog(true, progressString)
+	}
+
+	// Always require a deployment type
+	if *deploymentType != "multiple" && *deploymentType != "full" && *deploymentType != "single" {
+		err := errors.New("a valid '--type' is required: choose between single, multiple, or full")
+		return err
+	}
+	order.DeploymentType = strings.ToLower(*deploymentType)
+
+	// Require only a deployment type to re-generate manifests
+	order.GenerateManifestsOnly = *generateManifestsOnly
+	if order.GenerateManifestsOnly {
+		return nil
 	}
 
 	// Always require a license
@@ -469,13 +479,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 		return err
 	}
 	order.SOEZipPath = *license
-
-	// Always require a deployment type
-	if *deploymentType != "multiple" && *deploymentType != "full" && *deploymentType != "single" {
-		err := errors.New("a valid '--type' is required: choose between single, multiple, or full")
-		return err
-	}
-	order.DeploymentType = strings.ToLower(*deploymentType)
 
 	// Optional: Parse the list of addons
 	*addons = strings.TrimSpace(*addons)
@@ -1046,7 +1049,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	// TODO: error handling, passing info back from the build command
 	progress <- "Generating playbook for order ..."
 	generatePlaybookCommand := fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz", order.SOEZipPath, order.BuildPath)
-	if order.DeploymentType == "multiple"{
+	if order.DeploymentType == "multiple" {
 		generatePlaybookCommand = fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --deployment-type programming", order.SOEZipPath, order.BuildPath)
 	}
 	_, err = exec.Command("sh", "-c", generatePlaybookCommand).Output()

@@ -139,9 +139,12 @@ Multiple Containers
         Default: 1976
 
     --generate-manifests-only
-        Builds the Kubernetes manifests only.
-        Usage: Works with the --type multiple or --type full argument.
+        Re-generates the Kubernetes manifests and does not re-build the containers.
         Manifests are added to the /builds/<deployment_type> directory.
+        Only the '--type' argument is required with this flag.
+        Examples:
+         `./build.sh --type multiple --generate-manifests-only`
+         `./build.sh --type full --generate-manifests-only`
         Default: false
 
 

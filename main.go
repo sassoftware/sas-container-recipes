@@ -35,8 +35,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		order.ShowBuildSummary()
-	} else {
-		order.ShowBuildSummary()
 	}
+	order.ShowBuildSummary()
 }
