@@ -841,11 +841,13 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 
 	if _, err := os.Stat(order.SOEZipPath); os.IsNotExist(err) {
 		fail <- err.Error()
+		return
 	}
 
 	zipped, err := zip.OpenReader(order.SOEZipPath)
 	if err != nil {
-		fail <- err.Error()
+		fail <- "Could not read the file specified by the `--zip` argument. This must be a valid Software Order Email (SOE) zip file.\n" + err.Error()
+		return
 	}
 	defer zipped.Close()
 
