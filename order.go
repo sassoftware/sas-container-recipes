@@ -32,6 +32,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"log"
@@ -62,47 +63,46 @@ var ConfigPath = "config-full.yml"
 type SoftwareOrder struct {
 
 	// Build arguments and flags (see order.LoadCommands for details)
-	LicensePath           string
-	BaseImage             string
-	MirrorURL             string
-	VirtualHost           string
-	DockerNamespace       string
-	DockerRegistry        string
-	DeploymentType        string
-	PlaybookPath          string
-	Platform              string
-	ProjectName           string
-	TagOverride           string
-	AddOns                []string
-	DebugContainers       []string
-	WorkerCount           int
-	Verbose               bool
-	SkipMirrorValidation  bool
-	SkipDockerValidation  bool
-	GenerateManifestsOnly bool
+	BaseImage             string   `yaml:"Base Image              "`
+	MirrorURL             string   `yaml:"Mirror URL              "`
+	VirtualHost           string   `yaml:"Virtual Host            "`
+	DockerNamespace       string   `yaml:"Docker Namespace        "`
+	DockerRegistry        string   `yaml:"Docker Registry         "`
+	DeploymentType        string   `yaml:"Deployment Type         "`
+	Platform              string   `yaml:"Platform                "`
+	ProjectName           string   `yaml:"Project Name            "`
+	TagOverride           string   `yaml:"Tag Override            "`
+	AddOns                []string `yaml:"AddOns                  "`
+	DebugContainers       []string `yaml:"Debug Containers        "`
+	WorkerCount           int      `yaml:"Worker Count            "`
+	Verbose               bool     `yaml:"Verbose                 "`
+	SkipMirrorValidation  bool     `yaml:"Skip Mirror Validation  "`
+	SkipDockerValidation  bool     `yaml:"Skip Docker Validation  "`
+	GenerateManifestsOnly bool     `yaml:"Generate Manifests Only "`
 
 	// Build attributes
-	TimestampTag string                // Allows for datetime on each temp build bfile
-	Containers   map[string]*Container // Individual containers build list
-	BuildOnly    []string              // Only build these specific containers if they're in the list of entitled containers. The 'multiple' deployment type utilizes this to build only 3 images.
-	Config       map[string]ConfigMap  // Static values and defaults are loaded from the configmap yaml
-	ConfigPath   string                // config-<deployment-type>.yml file for custom or static values
-	Log          *os.File              // File handle for log path
-	LogPath      string                // Path to the build directory with the log file name
-	KVStore      string                // Combines all vars.yaml content
-	BuildContext context.Context       // Background context
-	RegistryAuth string                // Used to push and pull from/to a regitry
-	BuildPath    string                // Kubernetes manifests are generated and placed into this location
-	CertBaseURL  string                // The URL that the build containers will use to fetch their CA and entitlement certs
-	InDocker     bool                  // If we are running in a docker container
-	BuilderIP    string                // IP of where images are being built to be used for generic hostname lookup for builder
-	BuilderPort  string                // Port for serving certificate requests for builds
+	Log          *os.File              `yaml:"-"`                        // File handle for log path
+	BuildContext context.Context       `yaml:"-"`                        // Background context
+	BuildOnly    []string              `yaml:"Build Only              "` // Only build these specific containers if they're in the list of entitled containers. The 'multiple' deployment type utilizes this to build only 3 images.
+	Containers   map[string]*Container `yaml:"-"`                        // Individual containers build list
+	Config       map[string]ConfigMap  `yaml:"-"`                        // Static values and defaults are loaded from the configmap yaml
+	ConfigPath   string                `yaml:"-"`                        // config-<deployment-type>.yml file for custom or static values
+	LogPath      string                `yaml:"-"`                        // Path to the build directory with the log file name
+	PlaybookPath string                `yaml:"-"`                        // Build path + "sas_viya_playbook"
+	KVStore      string                `yaml:"-"`                        // Combines all vars.yaml content
+	RegistryAuth string                `yaml:"-"`                        // Used to push and pull from/to a regitry
+	BuildPath    string                `yaml:"-"`                        // Kubernetes manifests are generated and placed into this location
+	CertBaseURL  string                `yaml:"-"`                        // The URL that the build containers will use to fetch their CA and entitlement certs
+	BuilderIP    string                `yaml:"-"`                        // IP of where images are being built to be used for generic hostname lookup for builder
+	BuilderPort  string                `yaml:"-"`                        // Port for serving certificate requests for builds
+	TimestampTag string                `yaml:"Timestamp Tag           "` // Allows for datetime on each temp build bfile
+	InDocker     bool                  `yaml:"-"`                        // If we are running in a docker container
 
 	// Metrics
-	StartTime      time.Time
-	EndTime        time.Time
-	TotalBuildSize int64
-	DockerClient   *client.Client // Used to pull the base image and output post-build details
+	StartTime      time.Time      `yaml:"-"`
+	EndTime        time.Time      `yaml:"-"`
+	TotalBuildSize int64          `yaml:"-"`
+	DockerClient   *client.Client `yaml:"-"` // Used to pull the base image and output post-build details
 
 	// License attributes from the Software Order Email (SOE)
 	// SAS_Viya_deployment_data.zip
@@ -115,7 +115,7 @@ type SoftwareOrder struct {
 	// │   └── SASViyaV0300_XXXXXX_Linux_x86-64.txt
 	// │   └── SASViyaV0300_XXXXXX_XXXXXXXX_Linux_x86-64.jwt
 	// └── order.oom
-	SOEZipPath string // Used to load licenses
+	SOEZipPath string `yaml:"-"` // Used to load licenses
 	OrderOOM   struct {
 		OomFormatVersion string `json:"oomFormatVersion"`
 		MetaRepo         struct {
@@ -123,13 +123,13 @@ type SoftwareOrder struct {
 			Rpm        string   `json:"rpm"`
 			Orderables []string `json:"orderables"`
 		} `json:"metaRepo"`
-	}
-	CA             []byte
-	Entitlement    []byte
-	License        []byte
-	MeteredLicense []byte
+	} `yaml:"-"`
+	CA             []byte `yaml:"-"`
+	Entitlement    []byte `yaml:"-"`
+	License        []byte `yaml:"-"`
+	MeteredLicense []byte `yaml:"-"`
 
-	SiteDefault []byte
+	SiteDefault []byte `yaml:"-"`
 }
 
 // Registry is ror reading ~/.docker/config.json
@@ -164,22 +164,100 @@ type ConfigMap struct {
 	} `yaml:"resources"`
 }
 
+// SetupBuildDirectory creates a unique isolated directory for the Software Order
+// based on the deployment and time stamp. It also configures logging.
+func (order *SoftwareOrder) SetupBuildDirectory() error {
+	if order.GenerateManifestsOnly {
+		// If we are only generating manifests then use the previous run
+		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
+
+		// Want to make sure the deployment type directory exists. Trying to protect
+		// against the case where a user tries to generate manifests before they
+		// built anything. Generate manifests only is a second step.
+		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
+			return err
+		}
+
+		// Save off the previous build log
+		order.LogPath = order.BuildPath + "/build.log"
+		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s",
+			order.LogPath, order.TimestampTag))
+		if err != nil {
+			return err
+		}
+		logHandle, err := os.Create(order.LogPath)
+		if err != nil {
+			return err
+		}
+		order.Log = logHandle
+
+	} else {
+		// Create an isolated build directory with a unique timestamp
+		order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
+		if err := os.MkdirAll(order.BuildPath+"/manifests", 0744); err != nil {
+			return err
+		}
+
+		// Start a new build log inside the isolated build directory
+		order.LogPath = order.BuildPath + "/build.log"
+		logHandle, err := os.Create(order.LogPath)
+		if err != nil {
+			return err
+		}
+		order.Log = logHandle
+
+		// Symbolically link the most recent time stamped build directory to a shorter name
+		// For example, 'full-2019-04-09-13-37-40' can be referred to as simply 'full'
+		// Note: This is executing inside the build container, inside a mounted volume,
+		// 		 therefore an os.Symlink() does not work correctly.
+		previousLink := "builds/" + order.DeploymentType
+		if _, err := os.Lstat(previousLink); err == nil {
+			if err := os.Remove(previousLink); err != nil {
+				return err
+			}
+		}
+		symlinkCommand := fmt.Sprintf("cd builds && ln -s %s-%s %s && cd ..",
+			order.DeploymentType, order.TimestampTag, order.DeploymentType)
+		cmd := exec.Command("sh", "-c", symlinkCommand)
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			return err
+		}
+		err = cmd.Start()
+		if err != nil {
+			result, _ := ioutil.ReadAll(stderr)
+			return errors.New(string(result) + "\n" + err.Error())
+		}
+		err = cmd.Wait()
+		if err != nil {
+			result, _ := ioutil.ReadAll(stderr)
+			return errors.New(string(result) + "\n" + err.Error())
+		}
+	}
+	return nil
+}
+
 // NewSoftwareOrder once the SOE zip file path has been provided then load all the Software Order's details
 // Note: All sub-processes of this function are essential to the build process.
 //       If any of these steps return an error then the entire process will be exited.
 func NewSoftwareOrder() (*SoftwareOrder, error) {
 	order := &SoftwareOrder{}
 	order.StartTime = time.Now()
-
 	order.TimestampTag = string(order.StartTime.Format("2006-01-02-15-04-05"))
 	if len(order.TagOverride) > 0 {
 		order.TimestampTag = order.TagOverride
 	}
 
+	// Parse the command arguments and setup logging
 	if err := order.LoadCommands(); err != nil {
 		return order, err
 	}
+	if err := order.SetupBuildDirectory(); err != nil {
+		return order, err
+	}
+	order.WriteLog(true, order.BuildArgumentsSummary())
 
+	// Determine if the binary is being run inside the sas-container-recipes-builder
 	order.InDocker = true
 	if _, err := os.Stat("/.dockerenv"); err != nil {
 		order.InDocker = false
@@ -189,59 +267,6 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	order.ConfigPath = "config-full.yml"
 	if order.DeploymentType == "multiple" {
 		order.ConfigPath = "config-multiple.yml"
-	}
-
-	if !order.GenerateManifestsOnly {
-		order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
-		if err := os.MkdirAll(order.BuildPath+"manifests", 0744); err != nil {
-			return order, err
-		}
-		symlinkCommand := fmt.Sprintf("cd builds && rm -rf %s && ln -s %s-%s %s", order.DeploymentType, order.DeploymentType, order.TimestampTag, order.DeploymentType)
-		cmd := exec.Command("sh", "-c", symlinkCommand)
-		stderr, err := cmd.StderrPipe()
-		if err := cmd.Start(); err != nil {
-			log.Fatal(err)
-		}
-
-		slurp, _ := ioutil.ReadAll(stderr)
-		fmt.Printf("%s\n", slurp)
-
-		if err := cmd.Wait(); err != nil {
-			return order, err
-		}
-		if err != nil {
-			return order, err
-		}
-		order.LogPath = order.BuildPath + "/build.log"
-		logHandle, err := os.Create(order.LogPath)
-		if err != nil {
-			return order, err
-		}
-		order.Log = logHandle
-	} else {
-		// If we are only generating manifests, then use the previous run.
-		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
-
-		// Want to make sure the deployment type directory exists. Trying to protect
-		// against the case where a user tries to generate manifests before they
-		// built anything. Generate manifests only is a second step.
-		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
-			return order, err
-		}
-
-		// Save off the previous build log
-		order.LogPath = order.BuildPath + "/build.log"
-		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s", order.LogPath, order.TimestampTag))
-		if err != nil {
-			return order, err
-		}
-
-		logHandle, err := os.Create(order.LogPath)
-		if err != nil {
-			return order, err
-		}
-		order.Log = logHandle
-
 	}
 
 	// Start a worker pool and wait for all workers to finish
@@ -299,6 +324,18 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 			order.WriteLog(true, progress)
 		}
 	}
+}
+
+// BuildArgumentsSummary gets a human readable version of the command arguments
+// that were supplied to the SoftwareOrder object. This is useful for debugging.
+func (order *SoftwareOrder) BuildArgumentsSummary() string {
+	objectAttributes, _ := yaml.Marshal(order)
+	output := "\n" + strings.Repeat("=", 50) + "\n"
+	output += "\t\tBuild Variables\n"
+	output += strings.Repeat("=", 50) + "\n"
+	output += string(objectAttributes)
+	output += strings.Repeat("=", 50) + "\n"
+	return output
 }
 
 // Look through the network interfaces and find the machine's non-loopback IP
@@ -479,6 +516,9 @@ func (order *SoftwareOrder) LoadCommands() error {
 		return err
 	}
 	order.SOEZipPath = *license
+	if !strings.HasSuffix(order.SOEZipPath, ".zip") {
+		return errors.New("the Software Order Email (SOE) argument '--zip' must be a file with the '.zip' extension.")
+	}
 
 	// Optional: Parse the list of addons
 	*addons = strings.TrimSpace(*addons)
@@ -508,8 +548,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 			}
 			order.AddOns = append(order.AddOns, addonPath)
 		}
-
-		order.WriteLog(true, "Building with addons", order.AddOns)
 	}
 
 	// Detect the platform based on the image
@@ -696,7 +734,7 @@ func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
-	dockerfile, err := appendAddonLines(container.Name, string(dockerfileStub), container.SoftwareOrder.AddOns)
+	dockerfile, err := appendAddonLines(container.GetName(), string(dockerfileStub), container.SoftwareOrder.AddOns)
 	if err != nil {
 		return err
 	}
@@ -716,6 +754,7 @@ func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 
 // Build starts each container build concurrently and report the results
 func (order *SoftwareOrder) Build() error {
+	// Handle single container build and output of docker run instructions
 	if order.DeploymentType == "single" {
 		err := getProgrammingOnlySingleContainer(order)
 		if err != nil {

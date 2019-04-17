@@ -62,7 +62,6 @@ function sas_container_recipes_shutdown() {
 trap sas_container_recipes_shutdown SIGTERM
 trap sas_container_recipes_shutdown SIGINT
 
-
 # Parse command arguments and flags
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -241,32 +240,6 @@ if [[ -n ${BUILD_ONLY} ]]; then
     run_args="${run_args} --build-only ${BUILD_ONLY}"
 fi
 
-echo
-echo "=============="
-echo "Variable check"
-echo "=============="
-echo ""
-echo "  Build System OS                 = ${OPERATING_SYSTEM}"
-echo "  Deployment Type                 = ${SAS_RECIPE_TYPE}"
-echo "  BASEIMAGE                       = ${BASEIMAGE}"
-echo "  BASETAG                         = ${BASETAG}"
-echo "  Mirror URL                      = ${SAS_RPM_REPO_URL}"
-echo "  Validate Mirror URL             = ${CHECK_MIRROR_URL}"
-echo "  Platform                        = ${PLATFORM}"
-echo "  Project Name                    = ${PROJECT_NAME}"
-echo "  Deployment Data Zip             = ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
-echo "  Addons                          = ${ADDONS## }"
-echo "  Docker registry URL             = ${DOCKER_REGISTRY_URL}"
-echo "  Docker registry namespace       = ${DOCKER_REGISTRY_NAMESPACE}"
-echo "  Validate Docker registry URL    = ${CHECK_DOCKER_URL}"
-echo "  Generate Manifests Only         = ${GENERATE_MANIFESTS_ONLY}"
-echo "  HTTP Ingress endpoint           = ${CAS_VIRTUAL_HOST}"
-echo "  Tag SAS will apply              = ${SAS_DOCKER_TAG}"
-echo "  Build run args                  = ${run_args## }"
-echo
-
-
-echo
 echo "==============================="
 echo "Building Docker Build Container"
 echo "==============================="
