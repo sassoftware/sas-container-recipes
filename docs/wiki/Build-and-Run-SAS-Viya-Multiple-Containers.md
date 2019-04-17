@@ -22,12 +22,12 @@ You can provide configuration files that the container will process as it starts
 
 * casconfig_usermods.lua
 * cas_usermods.settings
-* casstartup_usremods.lua
+* casstartup_usermods.lua
 * autoexec_usermods.sas
 * sasv9_usermods.cfg
-* batchserver_usremods.sh
-* connectserver_usremods.sh
-* workspaceserver_usremods.sh
+* batchserver_usermods.sh
+* connectserver_usermods.sh
+* workspaceserver_usermods.sh
 * sasstudio_usermods.properties
 
 When the container starts, the content of each file is appended to the existing usermods file.
