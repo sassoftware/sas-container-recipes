@@ -109,7 +109,7 @@ build.sh \
 --mirror-url http://host.company.com/sas_repo \
 --docker-registry-url docker.registry.company.com \
 --docker-registry-namespace sas \
---addons "addons/auth-sssd addons/access-odbc"
+--addons "auth-sssd access-odbc"
 ```
 
 Here is an example to build multiple containers for a full deployment.
@@ -123,7 +123,7 @@ build.sh \
 --mirror-url http://host.company.com/sas_repo \
 --docker-registry-url docker.registry.company.com \
 --docker-registry-namespace sas \
---addons "addons/auth-sssd addons/access-odbc"
+--addons "auth-sssd access-odbc"
 ```
 
 Building multiple images could take several hours to complete. After the process has completed, you will have 3 (programming-only) to around 25 (full) Docker images that are local on your build machine, as well as in the Docker registry that you provided. An example set of manifests is also provided, which is covered in [How to Run](#how-to-run).
