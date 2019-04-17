@@ -1,7 +1,7 @@
 ---
 # Addon config file.
 # List out containers and the dockerfile that updates the container that is being built.
-omputeserver:
+computeserver:
   dockerfiles: [Dockerfile]
 programming:
   dockerfiles: [Dockerfile]
