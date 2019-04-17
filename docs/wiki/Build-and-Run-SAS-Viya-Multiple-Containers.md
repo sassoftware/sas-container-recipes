@@ -22,12 +22,12 @@ You can provide configuration files that the container will process as it starts
 
 * casconfig_usermods.lua
 * cas_usermods.settings
-* casstartup_usremods.lua
+* casstartup_usermods.lua
 * autoexec_usermods.sas
 * sasv9_usermods.cfg
-* batchserver_usremods.sh
-* connectserver_usremods.sh
-* workspaceserver_usremods.sh
+* batchserver_usermods.sh
+* connectserver_usermods.sh
+* workspaceserver_usermods.sh
 * sasstudio_usermods.properties
 
 When the container starts, the content of each file is appended to the existing usermods file.
@@ -109,7 +109,7 @@ build.sh \
 --mirror-url http://host.company.com/sas_repo \
 --docker-registry-url docker.registry.company.com \
 --docker-registry-namespace sas \
---addons "addons/auth-sssd addons/access-odbc"
+--addons "auth-sssd access-odbc"
 ```
 
 Here is an example to build multiple containers for a full deployment.
@@ -123,7 +123,7 @@ build.sh \
 --mirror-url http://host.company.com/sas_repo \
 --docker-registry-url docker.registry.company.com \
 --docker-registry-namespace sas \
---addons "addons/auth-sssd addons/access-odbc"
+--addons "auth-sssd access-odbc"
 ```
 
 Building multiple images could take several hours to complete. After the process has completed, you will have 3 (programming-only) to around 25 (full) Docker images that are local on your build machine, as well as in the Docker registry that you provided. An example set of manifests is also provided, which is covered in [How to Run](#how-to-run).
