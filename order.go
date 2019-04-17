@@ -167,72 +167,46 @@ type ConfigMap struct {
 // SetupBuildDirectory creates a unique isolated directory for the Software Order
 // based on the deployment and time stamp. It also configures logging.
 func (order *SoftwareOrder) SetupBuildDirectory() error {
-	if order.GenerateManifestsOnly {
-		// If we are only generating manifests then use the previous run
-		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
+	// Create an isolated build directory with a unique timestamp
+	order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
+	if err := os.MkdirAll(order.BuildPath+"/manifests", 0744); err != nil {
+		return err
+	}
 
-		// Want to make sure the deployment type directory exists. Trying to protect
-		// against the case where a user tries to generate manifests before they
-		// built anything. Generate manifests only is a second step.
-		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
-			return err
-		}
+	// Start a new build log inside the isolated build directory
+	order.LogPath = order.BuildPath + "/build.log"
+	logHandle, err := os.Create(order.LogPath)
+	if err != nil {
+		return err
+	}
+	order.Log = logHandle
 
-		// Save off the previous build log
-		order.LogPath = order.BuildPath + "/build.log"
-		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s",
-			order.LogPath, order.TimestampTag))
-		if err != nil {
+	// Symbolically link the most recent time stamped build directory to a shorter name
+	// For example, 'full-2019-04-09-13-37-40' can be referred to as simply 'full'
+	// Note: This is executing inside the build container, inside a mounted volume,
+	// 		 therefore an os.Symlink() does not work correctly.
+	previousLink := "builds/" + order.DeploymentType
+	if _, err := os.Lstat(previousLink); err == nil {
+		if err := os.Remove(previousLink); err != nil {
 			return err
 		}
-		logHandle, err := os.Create(order.LogPath)
-		if err != nil {
-			return err
-		}
-		order.Log = logHandle
-
-	} else {
-		// Create an isolated build directory with a unique timestamp
-		order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
-		if err := os.MkdirAll(order.BuildPath+"/manifests", 0744); err != nil {
-			return err
-		}
-
-		// Start a new build log inside the isolated build directory
-		order.LogPath = order.BuildPath + "/build.log"
-		logHandle, err := os.Create(order.LogPath)
-		if err != nil {
-			return err
-		}
-		order.Log = logHandle
-
-		// Symbolically link the most recent time stamped build directory to a shorter name
-		// For example, 'full-2019-04-09-13-37-40' can be referred to as simply 'full'
-		// Note: This is executing inside the build container, inside a mounted volume,
-		// 		 therefore an os.Symlink() does not work correctly.
-		previousLink := "builds/" + order.DeploymentType
-		if _, err := os.Lstat(previousLink); err == nil {
-			if err := os.Remove(previousLink); err != nil {
-				return err
-			}
-		}
-		symlinkCommand := fmt.Sprintf("cd builds && ln -s %s-%s %s && cd ..",
-			order.DeploymentType, order.TimestampTag, order.DeploymentType)
-		cmd := exec.Command("sh", "-c", symlinkCommand)
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			return err
-		}
-		err = cmd.Start()
-		if err != nil {
-			result, _ := ioutil.ReadAll(stderr)
-			return errors.New(string(result) + "\n" + err.Error())
-		}
-		err = cmd.Wait()
-		if err != nil {
-			result, _ := ioutil.ReadAll(stderr)
-			return errors.New(string(result) + "\n" + err.Error())
-		}
+	}
+	symlinkCommand := fmt.Sprintf("cd builds && ln -s %s-%s %s && cd ..",
+		order.DeploymentType, order.TimestampTag, order.DeploymentType)
+	cmd := exec.Command("sh", "-c", symlinkCommand)
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	err = cmd.Start()
+	if err != nil {
+		result, _ := ioutil.ReadAll(stderr)
+		return errors.New(string(result) + "\n" + err.Error())
+	}
+	err = cmd.Wait()
+	if err != nil {
+		result, _ := ioutil.ReadAll(stderr)
+		return errors.New(string(result) + "\n" + err.Error())
 	}
 	return nil
 }
@@ -247,11 +221,16 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	if len(order.TagOverride) > 0 {
 		order.TimestampTag = order.TagOverride
 	}
-
-	// Parse the command arguments and setup logging
 	if err := order.LoadCommands(); err != nil {
 		return order, err
 	}
+
+	// Do not load any more Software Order values, just allow order.GenerateManifests() to be called
+	if order.GenerateManifestsOnly {
+		return order, nil
+	}
+
+	// Configure a new isolated build space
 	if err := order.SetupBuildDirectory(); err != nil {
 		return order, err
 	}
@@ -278,31 +257,29 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	workerCount++
 	go order.LoadSiteDefault(progress, fail, done)
 
-	if !order.GenerateManifestsOnly {
+	workerCount++
+	go order.LoadPlaybook(progress, fail, done)
+
+	workerCount++
+	go order.LoadLicense(progress, fail, done)
+
+	workerCount++
+	go order.LoadDocker(progress, fail, done)
+
+	workerCount++
+	go order.LoadRegistryAuth(fail, done)
+
+	workerCount++
+	go order.LoadUsermods(progress, fail, done)
+
+	if !order.SkipDockerValidation {
 		workerCount++
-		go order.LoadPlaybook(progress, fail, done)
+		go order.TestRegistry(progress, fail, done)
+	}
 
+	if !order.SkipMirrorValidation {
 		workerCount++
-		go order.LoadLicense(progress, fail, done)
-
-		workerCount++
-		go order.LoadDocker(progress, fail, done)
-
-		workerCount++
-		go order.LoadRegistryAuth(fail, done)
-
-		workerCount++
-		go order.LoadUsermods(progress, fail, done)
-
-		if !order.SkipDockerValidation {
-			workerCount++
-			go order.TestRegistry(progress, fail, done)
-		}
-
-		if !order.SkipMirrorValidation {
-			workerCount++
-			go order.TestMirror(progress, fail, done)
-		}
+		go order.TestMirror(progress, fail, done)
 	}
 
 	doneCount := 0
@@ -504,12 +481,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 	order.DeploymentType = strings.ToLower(*deploymentType)
 
-	// Require only a deployment type to re-generate manifests
-	order.GenerateManifestsOnly = *generateManifestsOnly
-	if order.GenerateManifestsOnly {
-		return nil
-	}
-
 	// Always require a license
 	if *license == "" {
 		err := errors.New("a software order email (SOE) '--license' file is required")
@@ -591,10 +562,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 		return errors.New("a '--docker-registry-url' argument is required")
 	}
 
-	order.DockerRegistry = *dockerRegistry
-
-	order.BuilderPort = *builderPort
-
 	// The deployment type utilizes the order.BuildOnly list
 	// Note: the 'full' deployment type builds everything, omitting the --build-only argument
 	if order.DeploymentType == "multiple" {
@@ -623,7 +590,9 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 
 	order.VirtualHost = *virtualHost
-
+	order.DockerRegistry = *dockerRegistry
+	order.BuilderPort = *builderPort
+	order.GenerateManifestsOnly = *generateManifestsOnly
 	return nil
 }
 
@@ -1167,66 +1136,79 @@ func (order *SoftwareOrder) Prepare() error {
 		return nil
 	}
 
-	if !order.GenerateManifestsOnly {
-		// Call a prebuild on each container
-		fail := make(chan string)
-		done := make(chan string)
-		progress := make(chan string)
-		workerCount := 0
-		for _, container := range order.Containers {
-			if container.Status != DoNotBuild {
-				workerCount++
-				go func(container *Container, progress chan string, fail chan string) {
-					container.Status = Loading
-					err := container.Prebuild(progress)
-					if err != nil {
-						container.Status = Failed
-						fail <- container.Name + " prebuild " + err.Error()
-					}
-					done <- container.Name
-				}(container, progress, fail)
-			}
-		}
-
-		// Wait for the worker pool to finish
-		doneCount := 0
-		for {
-			select {
-			case <-done:
-				doneCount++
-				if doneCount == workerCount {
-					// Generate the Kubernetes manifests since we have all the details to do so before the build
-					// Note: This is a time saver, though the manifests are not valid if the images
-					//       fail to build or fail to push to the registry.
-					err := order.GenerateManifests()
-					if err != nil {
-						return err
-					}
-					return nil
+	// Call a prebuild on each container
+	fail := make(chan string)
+	done := make(chan string)
+	progress := make(chan string)
+	workerCount := 0
+	for _, container := range order.Containers {
+		if container.Status != DoNotBuild {
+			workerCount++
+			go func(container *Container, progress chan string, fail chan string) {
+				container.Status = Loading
+				err := container.Prebuild(progress)
+				if err != nil {
+					container.Status = Failed
+					fail <- container.Name + " prebuild " + err.Error()
 				}
-			case failure := <-fail:
-				order.WriteLog(true, failure)
-			case progress := <-progress:
-				order.WriteLog(true, progress)
-			}
+				done <- container.Name
+			}(container, progress, fail)
 		}
-	} else {
-		// Generate the Kubernetes manifests since we have all the details to do so before the build
-		// Note: This is a time saver, though the manifests are not valid if the images
-		//       fail to build or fail to push to the registry.
-		err := order.GenerateManifests()
-		if err != nil {
-			return err
-		}
-		return nil
 	}
+
+	// Wait for the worker pool to finish
+	doneCount := 0
+	for {
+		select {
+		case <-done:
+			doneCount++
+			if doneCount == workerCount {
+				// Generate the Kubernetes manifests since we have all the details to do so before the build
+				// Note: This is a time saver, though the manifests are not valid if the images
+				//       fail to build or fail to push to the registry.
+				err := order.GenerateManifests()
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+		case failure := <-fail:
+			order.WriteLog(true, failure)
+		case progress := <-progress:
+			order.WriteLog(true, progress)
+		}
+	}
+	return nil
 }
 
 // GenerateManifests runs the generate_manifests playbook to output Kubernetes configs
 func (order *SoftwareOrder) GenerateManifests() error {
 	order.WriteLog(true, "Creating deployment manifests ...")
 
-	if !order.GenerateManifestsOnly {
+	if order.GenerateManifestsOnly {
+		// If we are only generating manifests then use the previous run
+		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
+
+		// Want to make sure the deployment type directory exists. Trying to protect
+		// against the case where a user tries to generate manifests before they
+		// built anything. Generate manifests only is a second step.
+		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
+			return err
+		}
+
+		// Save off the previous build log
+		order.LogPath = order.BuildPath + "/build.log"
+		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s",
+			order.LogPath, order.TimestampTag))
+		if err != nil {
+			return err
+		}
+		logHandle, err := os.Create(order.LogPath)
+		if err != nil {
+			return err
+		}
+		order.Log = logHandle
+	} else {
 		// Write a vars file to disk so it can be used by the playbook
 		containerVarSections := []string{}
 		for _, container := range order.Containers {
@@ -1500,8 +1482,8 @@ func bytesToGB(bytes int64) string {
 	return fmt.Sprintf("%.2f GB", float64(bytes)/float64(1000000000))
 }
 
-// ShowBuildSummary calculates all metrics and display them in a table.
-func (order *SoftwareOrder) ShowBuildSummary() error {
+// ShowSummary displays metrics and next steps for deployment
+func (order *SoftwareOrder) ShowSummary() error {
 	if order.DeploymentType == "single" {
 
 		// TODO: this does not use the Fully Qualified Domain Name

@@ -138,13 +138,23 @@ Multiple Containers
         [CAUTION] Changing the value between builds will invalidate your layer cache.
         Default: 1976
 
+    --project-name <value>
+        Specifies a prefix for the container names and deployments.
+        The image names are formatted as "<project_name>-<image_name>", 
+        such as "sas-viya-consul" and "sas-viya-httpproxy".
+        Default: sas-viya
+
     --generate-manifests-only
-        Re-generates the Kubernetes manifests and does not re-build the containers.
+        Re-generates the Kubernetes manifests without re-building all the containers.
         Manifests are added to the /builds/<deployment_type> directory.
-        Only the '--type' argument is required with this flag.
+        Required Arguments:
+            --type [ multiple | full ]
+        Optional Arguments:
+            --virtual-host <value>
+            --project-name <value>
         Examples:
-         `./build.sh --type multiple --generate-manifests-only`
-         `./build.sh --type full --generate-manifests-only`
+            `./build.sh --type multiple --generate-manifests-only`
+            `./build.sh --type full --generate-manifests-only`
         Default: false
 
 

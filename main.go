@@ -30,11 +30,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if !order.GenerateManifestsOnly {
+	if order.GenerateManifestsOnly {
+		err := order.GenerateManifests()
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
 		err = order.Build()
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
-	order.ShowBuildSummary()
+	order.ShowSummary()
 }
