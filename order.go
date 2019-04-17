@@ -437,11 +437,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU()
 	workerCount := flag.Int("workers", defaultWorkerCount, "")
-	order.WorkerCount = *workerCount
-	if *workerCount == 0 || *workerCount > defaultWorkerCount {
-		err := errors.New("invalid '--worker' count, must be less than or equal to the number of CPU cores that are free and permissible in your cgroup configuration")
-		return err
-	}
 
 	// Allow for quick exit if only viewing the --version or --help
 	flag.Usage = func() {
@@ -466,6 +461,13 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.Verbose = *verbose
 	order.SkipMirrorValidation = *skipMirrorValidation
 	order.SkipDockerValidation = *skipDockerValidation
+
+	// Make sure one cannot specify more workers than # cores available
+	order.WorkerCount = *workerCount
+	if *workerCount == 0 || *workerCount > defaultWorkerCount {
+		err := errors.New("invalid '--worker' count, must be less than or equal to the number of CPU cores that are free and permissible in your cgroup configuration")
+		return err
+	}
 
 	// This is a safeguard for when a user does not use quotes around a multi value argument
 	otherArgs := flag.Args()

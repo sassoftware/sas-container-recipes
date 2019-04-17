@@ -153,6 +153,11 @@ while [[ $# -gt 0 ]]; do
             export BUILD_ONLY="$1"
             shift # past value
             ;;
+        -w|--workers)
+            shift # past argument
+            export WORKERS="$1"
+            shift # past value
+            ;;
         *) # Ignore everything that isn't a valid arg
             shift
     ;;
@@ -183,6 +188,10 @@ fi
 
 if [[ -n ${SAS_RECIPE_TYPE} ]]; then
     run_args="${run_args} --type ${SAS_RECIPE_TYPE}"
+fi
+
+if [[ -n ${WORKERS} ]]; then
+    run_args="${run_args} --workers ${WORKERS}"
 fi
 
 if [[ -n ${GENERATE_MANIFESTS_ONLY} ]]; then
