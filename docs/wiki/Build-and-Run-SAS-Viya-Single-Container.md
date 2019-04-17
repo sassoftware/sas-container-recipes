@@ -203,7 +203,7 @@ build.sh \
 --basetag 7 \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repo \
---addons "addons/auth-sssd addons/access-odbc"
+--addons "auth-sssd access-odbc"
 ```
 
 ### Building on a SUSE Linux Image
@@ -219,7 +219,7 @@ build.sh \
 --basetag 42 \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repo \
---addons "addons/auth-sssd addons/access-odbc"
+--addons "auth-sssd access-odbc"
 ```
 
 ### Advanced Building Options
