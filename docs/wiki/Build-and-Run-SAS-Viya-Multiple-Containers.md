@@ -146,11 +146,15 @@ If problems are encountered during the build process, review the log file or pro
 
 If there was an error during the build process, it is possible that some intermediate build containers were left behind. To see any images that are a result of the SAS recipe build process, run the following:
 
-`docker images --filter "dangling=true" --filter "label=sas.recipe.version"`
+```
+docker images --filter "dangling=true" --filter "label=sas.recipe.version"
+```
 
 If you encounter any of these errors, you can remove these images by running:
 
-`docker rmi $(docker images -q --filter "dangling=true" --filter "label=sas.recipe.version")`
+```
+docker rmi $(docker images -q --filter "dangling=true" --filter "label=sas.recipe.version")
+```
 
 The command between the parentheses returns the image IDs that meet the filter criteria, and then will remove those images.
 
