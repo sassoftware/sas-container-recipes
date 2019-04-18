@@ -23,7 +23,11 @@
 Before you build the images and run the container, read about the different ways that you can modify the configuration.
 
 ### Using Custom Values to Override the Playbook Settings
-You can override the default configuration settings for the SAS Programming Runtime Environment (SPRE) and the SAS Cloud Analytic Services (CAS) server that are applied to the image when it is being created. To set these configuration values, edit the util/programming-only-single/vars_usermods.yml file.
+You can override the default configuration settings for the SAS Programming 
+Runtime Environment (SPRE) and the SAS Cloud Analytic Services (CAS) server 
+hat are applied to the image when it is being created. To set these configuration
+values, copy the util/vars_usermods.yml file, place the file into the 
+sas-container-recipes project directory, then edit the values.
 
 ```
 # The following is the initial Admin user for use with CAS Server Monitor. 
