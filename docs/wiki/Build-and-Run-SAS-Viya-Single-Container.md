@@ -26,8 +26,8 @@ Before you build the images and run the container, read about the different ways
 You can override the default configuration settings for the SAS Programming 
 Runtime Environment (SPRE) and the SAS Cloud Analytic Services (CAS) server 
 hat are applied to the image when it is being created. To set these configuration
-values, copy the util/vars_usermods.yml file, place the file into the 
-sas-container-recipes project directory, then edit the values.
+values, copy the util/vars_usermods.yml file into the sas-container-recipes 
+project directory and edit the values in the new copy.
 
 ```
 # The following is the initial Admin user for use with CAS Server Monitor. 
