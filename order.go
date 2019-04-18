@@ -461,6 +461,10 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.Verbose = *verbose
 	order.SkipMirrorValidation = *skipMirrorValidation
 	order.SkipDockerValidation = *skipDockerValidation
+	order.GenerateManifestsOnly = *generateManifestsOnly
+	order.VirtualHost = *virtualHost
+	order.DockerRegistry = *dockerRegistry
+	order.BuilderPort = *builderPort
 
 	// Make sure one cannot specify more workers than # cores available
 	order.WorkerCount = *workerCount
@@ -483,13 +487,13 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 	order.DeploymentType = strings.ToLower(*deploymentType)
 
-	// Always require a license
-	if *license == "" {
+	// Always require a license except to re-generate manifests
+	if *license == "" && !order.GenerateManifestsOnly {
 		err := errors.New("a software order email (SOE) '--license' file is required")
 		return err
 	}
 	order.SOEZipPath = *license
-	if !strings.HasSuffix(order.SOEZipPath, ".zip") {
+	if !strings.HasSuffix(order.SOEZipPath, ".zip") && !order.GenerateManifestsOnly {
 		return errors.New("the Software Order Email (SOE) argument '--zip' must be a file with the '.zip' extension.")
 	}
 
@@ -532,7 +536,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 		order.Platform = "redhat"
 	}
 
-	// A mirror is optional, except in the case of using an opensuse base image
+	// A mirror is optional, except in the case of using an opensuse base image for single container
 	order.MirrorURL = *mirrorURL
 	if len(order.MirrorURL) == 0 && order.DeploymentType == "single" && order.Platform == "suse" {
 		return errors.New("a --mirror-url argument is required for a base suse single container")
@@ -550,17 +554,18 @@ func (order *SoftwareOrder) LoadCommands() error {
 		return errors.New("The --project-name argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
 	}
 
-	// Require a docker namespace for multi and full
-	if *dockerNamespace == "" && (order.DeploymentType == "multiple" || order.DeploymentType == "full") {
+	// Require a docker namespace for multi and full if the manifests are not being re-generated
+	if *dockerNamespace == "" && (order.DeploymentType == "multiple" || order.DeploymentType == "full") && !order.GenerateManifestsOnly {
 		return errors.New("a '--docker-namespace' argument is required")
 	}
 	order.DockerNamespace = *dockerNamespace
-	if !regexNoSpecialCharacters.Match([]byte(order.DockerNamespace)) {
+	if !regexNoSpecialCharacters.Match([]byte(order.DockerNamespace)) && !order.GenerateManifestsOnly {
 		return errors.New("The --docker-namespace argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
 	}
 
 	// Require a docker registry for multi and full
-	if *dockerRegistry == "" && (order.DeploymentType == "multiple" || order.DeploymentType == "full") {
+	if *dockerRegistry == "" && !order.GenerateManifestsOnly &&
+		(order.DeploymentType == "multiple" || order.DeploymentType == "full") {
 		return errors.New("a '--docker-registry-url' argument is required")
 	}
 
@@ -590,11 +595,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 			order.BuildOnly = commaDelimList
 		}
 	}
-
-	order.VirtualHost = *virtualHost
-	order.DockerRegistry = *dockerRegistry
-	order.BuilderPort = *builderPort
-	order.GenerateManifestsOnly = *generateManifestsOnly
 	return nil
 }
 
@@ -1190,14 +1190,12 @@ func (order *SoftwareOrder) GenerateManifests() error {
 	order.WriteLog(true, "Creating deployment manifests ...")
 
 	if order.GenerateManifestsOnly {
-		// If we are only generating manifests then use the previous run
+		// If we are only generating manifests then use the previous run.
+		// Also make sure the previous deployment directory exists.
+		// One must build containers before attempting to re-generate the manifests.
 		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
-
-		// Want to make sure the deployment type directory exists. Trying to protect
-		// against the case where a user tries to generate manifests before they
-		// built anything. Generate manifests only is a second step.
 		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
-			return err
+			return errors.New("The --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist.")
 		}
 
 		// Save off the previous build log
