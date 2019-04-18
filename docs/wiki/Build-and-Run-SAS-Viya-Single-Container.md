@@ -273,9 +273,9 @@ docker run --detach --publish-all --rm --name svc-ide-jupyter-python3 --hostname
 
 ### Logging
 
-The content that is displayed to the console when building is also captured in a log file named ${PWD}/logs/build_sas_container.log.
+When building the images, the content that is displayed to the console is captured in the builds/single/build.log file.
 
-If a log file exists at the time of the run, then the previous file is preserved with a name of build_sas_container_<var>date-time-stamp</var>.log. If problems are encountered during the build process, review the log file or provide it when opening a ticket.
+If problems are encountered during the build process, review the log file or provide it when opening up tickets.
 
 ### Errors During Build
 
