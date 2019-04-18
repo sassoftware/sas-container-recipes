@@ -860,15 +860,18 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 		readCloser, err := zippedFile.Open()
 		if err != nil {
 			fail <- err.Error()
+			return
 		}
 		buffer := new(bytes.Buffer)
 		_, err = io.Copy(buffer, readCloser)
 		if err != nil {
 			fail <- err.Error()
+			return
 		}
 		fileBytes, err := ioutil.ReadAll(buffer)
 		if err != nil {
 			fail <- err.Error()
+			return
 		}
 		readCloser.Close()
 
@@ -884,6 +887,7 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 			err := json.Unmarshal(fileBytes, &order.OrderOOM)
 			if err != nil {
 				fail <- err.Error()
+				return
 			}
 		}
 	}
@@ -891,6 +895,7 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 	// Make sure all required files were loaded into the order
 	if len(order.License) == 0 || len(order.MeteredLicense) == 0 || len(order.CA) == 0 || len(order.Entitlement) == 0 {
 		fail <- "Unable to parse all content from SOE zip"
+		return
 	}
 
 	go order.Serve()
@@ -907,6 +912,7 @@ func (order *SoftwareOrder) LoadDocker(progress chan string, fail chan string, d
 	dockerConnection, err := client.NewClientWithOpts(client.WithVersion("1.37"))
 	if err != nil {
 		fail <- "Unable to connect to Docker daemon. Ensure Docker is installed and the service is started."
+		return
 	}
 	order.DockerClient = dockerConnection
 	progress <- "Finished connecting to Docker daemon"
@@ -917,6 +923,7 @@ func (order *SoftwareOrder) LoadDocker(progress chan string, fail chan string, d
 	_, err = order.DockerClient.ImagePull(order.BuildContext, order.BaseImage, types.ImagePullOptions{})
 	if err != nil {
 		fail <- err.Error()
+		return
 	}
 
 	progress <- "Finished pulling base container image '" + order.BaseImage + "'"
@@ -932,6 +939,7 @@ func (order *SoftwareOrder) LoadSiteDefault(progress chan string, fail chan stri
 		order.SiteDefault, err = ioutil.ReadFile("sitedefault.yml")
 		if err != nil {
 			fail <- "Unable to open sitedefault.yml:" + err.Error()
+			return
 		}
 		progress <- "Finished loading sitedefault.yml"
 	} else {
@@ -948,6 +956,7 @@ func (order *SoftwareOrder) TestMirror(progress chan string, fail chan string, d
 	if len(order.MirrorURL) > 0 {
 		if strings.Contains(order.MirrorURL, "http://") {
 			fail <- "The --mirror-url must have TLS enabled. Provide the url with 'https' instead of 'http' in the command argument."
+			return
 		}
 		url := order.MirrorURL
 		if !strings.Contains(order.MirrorURL, "https://") {
@@ -957,9 +966,11 @@ func (order *SoftwareOrder) TestMirror(progress chan string, fail chan string, d
 		response, err := http.Get(url)
 		if err != nil {
 			fail <- err.Error()
+			return
 		}
 		if response.StatusCode != 200 {
 			fail <- "Invalid mirror URL " + err.Error()
+			return
 		}
 		progress <- "Finished checking the mirror URL for validity: http status code " + strconv.Itoa(response.StatusCode)
 	}
@@ -976,6 +987,7 @@ func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string,
 	}
 	if strings.Contains(order.DockerRegistry, "http://") {
 		fail <- "The --docker-registry-url must have TLS enabled. Provide the url with 'https' instead of 'http' in the command argument."
+		return
 	}
 	url := order.DockerRegistry
 	if !strings.Contains(order.DockerRegistry, "https://") {
@@ -985,11 +997,13 @@ func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string,
 	response, err := http.Get(url)
 	if err != nil {
 		fail <- err.Error()
+		return
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
-		fail <- "Invalid Docker registry URL  " + err.Error()
-		fail <- "The URL cannot contain 'http' or 'https'. Also the registry also be configured for https. "
+		fail <- "The URL cannot contain 'http' or 'https'. Also the registry also be configured for https. " +
+			"Invalid Docker registry URL  " + err.Error()
+		return
 	}
 	progress <- "Finished checking the Docker registry URL for validity: http status code " + strconv.Itoa(response.StatusCode)
 
@@ -998,19 +1012,38 @@ func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string,
 
 // LoadRegistryAuth loads the registry auth from $USERHOME/.docker/config.json
 func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
+	// Skip this if no registry and namespace was specified
+	if len(order.DockerRegistry) == 0 || len(order.DockerNamespace) == 0 {
+		done <- 1
+		return
+	}
+
 	userObject, err := user.Current()
 	if err != nil {
 		fail <- "Cannot get user home directory path for docker config. " + err.Error()
+		return
 	}
 	dockerConfigPath := fmt.Sprintf("%s/.docker/config.json", userObject.HomeDir)
 	order.WriteLog(true, "Reading config from "+dockerConfigPath)
+	configError := "Cannot read Docker configuration or file read permission is not permitted for the ~/.docker/config.json file. Run a `docker login <registry>`.\n"
+	configStat, err := os.Stat(dockerConfigPath)
+	if err != nil {
+		fail <- err.Error()
+		return
+	}
+	if configStat.IsDir() {
+		fail <- configError
+		return
+	}
 	configContent, err := ioutil.ReadFile(dockerConfigPath)
 	if err != nil {
-		fail <- "Cannot read Docker configuration or file read permission is not permitted in " + dockerConfigPath + " run a `docker login <registry>`. " + err.Error()
+		fail <- configError
+		return
 	}
 	config := string(configContent)
 	if !strings.Contains(config, order.DockerRegistry) {
 		fail <- "Cannot find the --docker-registry-url in the Docker config. Run `docker login <registry>` before building."
+		return
 	}
 
 	// Parse the docker registry URL's auth
@@ -1054,6 +1087,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	err := getOrchestrationTool()
 	if err != nil {
 		fail <- "Failed to install sas-orchestration tool. " + err.Error()
+		return
 	}
 	progress <- "Finished fetching orchestration tool"
 
@@ -1068,6 +1102,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	if err != nil {
 		fail <- "[ERROR]: Unable to generate the playbook. java-1.8.0-openjdk or another Java Runtime Environment (1.8.x) must be installed. " +
 			err.Error() + "\n" + generatePlaybookCommand
+		return
 	}
 
 	// Detect if Ansible is installed.
@@ -1077,6 +1112,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 		_, err = exec.Command("sh", "-c", testAnsibleInstall).Output()
 		if err != nil {
 			fail <- "[ERROR]: The package `ansible` must be installed in order to generate Kubernetes manifests."
+			return
 		}
 	}
 
@@ -1086,11 +1122,13 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	_, err = exec.Command("sh", "-c", untarPlaybookCommand).Output()
 	if err != nil {
 		fail <- "Unable to untar playbook. " + err.Error()
+		return
 	}
 	order.PlaybookPath = order.BuildPath + "sas_viya_playbook"
 	err = os.Remove(order.BuildPath + "sas_viya_playbook.tgz")
 	if err != nil {
 		fail <- "Unable to untar playbook. " + err.Error()
+		return
 	}
 	progress <- "Finished extracting and generating playbook for order"
 
@@ -1099,6 +1137,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	order.Containers, err = getContainers(order)
 	if err != nil {
 		fail <- err.Error()
+		return
 	}
 	progress <- "Finished fetching the container list"
 
@@ -1127,6 +1166,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 		if len(order.BuildOnly) != len(imageNameMatches) {
 			order.WriteLog(true, fmt.Sprintf("\nSelected Image Builds: %s\nAvailable Image Builds: %s\n", order.BuildOnly, imageNameOptions))
 			fail <- "One or more of the chosen --build-only containers do not exist. "
+			return
 		}
 	}
 
@@ -1538,10 +1578,13 @@ sas-viya-single-programming-only:latest
 	//       given to the user.
 	symlinkBuildPath := fmt.Sprintf("builds/%s/manifests", order.DeploymentType)
 	namespaceGrepCommand := fmt.Sprintf("grep '^SAS_K8S_NAMESPACE' %svars_usermods.yml | awk -F ': ' '{ print $2 }'", order.BuildPath)
-	grep_out, _ := exec.Command("sh", "-c", namespaceGrepCommand).Output()
-	k8s_namespace := strings.TrimSuffix(string(grep_out), "\n")
-	if len(k8s_namespace) == 0 {
-		k8s_namespace = "sas-viya"
+	grepResult, err := exec.Command("sh", "-c", namespaceGrepCommand).Output()
+	if err != nil {
+		return err
+	}
+	kubeNamespace := strings.TrimSuffix(string(grepResult), "\n")
+	if len(kubeNamespace) == 0 {
+		kubeNamespace = "sas-viya"
 	}
 
 	manifestLocation := fmt.Sprintf(`
@@ -1572,12 +1615,12 @@ kubectl -n %s apply -f %s/kubernetes/secrets && \
 kubectl -n %s apply -f %s/kubernetes/services && \
 kubectl -n %s apply -f %s/kubernetes/deployments
 `,
-		symlinkBuildPath, k8s_namespace,
-		k8s_namespace, symlinkBuildPath, k8s_namespace,
-		k8s_namespace, symlinkBuildPath,
-		k8s_namespace, symlinkBuildPath,
-		k8s_namespace, symlinkBuildPath,
-		k8s_namespace, symlinkBuildPath)
+		symlinkBuildPath, kubeNamespace,
+		kubeNamespace, symlinkBuildPath, kubeNamespace,
+		kubeNamespace, symlinkBuildPath,
+		kubeNamespace, symlinkBuildPath,
+		kubeNamespace, symlinkBuildPath,
+		kubeNamespace, symlinkBuildPath)
 
 	fmt.Println(manifestLocation)
 	fmt.Println(manifestInstructions)

@@ -270,15 +270,27 @@ echo "=============================="
 echo "Running Docker Build Container"
 echo "=============================="
 echo
-docker run -d \
-    --name ${SAS_BUILD_CONTAINER_NAME} \
-    -u ${UID}:${DOCKER_GID} \
-    -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
-    -v ${PWD}/builds:/sas-container-recipes/builds \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
-    sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
-
+# If a Docker config exists then run the builder with the config mounted as a volume.
+# Otherwise, not having a Docker config is acceptable if no registry authentication is required.
+DOCKER_CONFIG_PATH=${HOME}/.docker/config.json
+if [[ -f ${DOCKER_CONFIG_PATH} ]]; then 
+    docker run -d \
+        --name ${SAS_BUILD_CONTAINER_NAME} \
+        -u ${UID}:${DOCKER_GID} \
+        -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
+        -v ${PWD}/builds:/sas-container-recipes/builds \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
+        sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
+else 
+    docker run -d \
+        --name ${SAS_BUILD_CONTAINER_NAME} \
+        -u ${UID}:${DOCKER_GID} \
+        -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
+        -v ${PWD}/builds:/sas-container-recipes/builds \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
+fi
 docker logs -f ${SAS_BUILD_CONTAINER_NAME}
 
 
