@@ -158,7 +158,7 @@ docker rmi $(docker images -q --filter "dangling=true" --filter "label=sas.recip
 
 The command between the parentheses returns the image IDs that meet the filter criteria, and then will remove those images.
 
-See the Docker documentation for options that clean up your build system. Here are some specific topics:
+**Tip:** For information about how to clean up your build system, see the following Docker documentation:
 
 - To remove all unused data, see [docker system prune](https://docs.docker.com/engine/reference/commandline/system_prune/).
 - To remove images, see [docker image rm](https://docs.docker.com/engine/reference/commandline/image_rm/).
