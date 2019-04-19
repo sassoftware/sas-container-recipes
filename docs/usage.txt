@@ -115,15 +115,6 @@ Multiple Containers
         Outputs the result of each Docker layer creation.
         Default: false
 
-    --build-only "<container-name> <container-name> ..."
-        Specifies the name of containers.
-        [NOTE] This argument is intended to re-build small components quickly.
-        Usage: To list multiple names, a space or comma is required between each container name.
-        DO NOT use "sas-viya-" as a prefix for names.
-        Examples:
-          --build-only "consul"
-          --build-only "consul httpproxy sas-casserver-primary"
-
     --skip-mirror-url-validation
         Skips validating the mirror URL from the --mirror-url flag.
         default: false
@@ -156,6 +147,16 @@ Multiple Containers
             `./build.sh --type multiple --generate-manifests-only`
             `./build.sh --type full --generate-manifests-only`
         Default: false
+        
+    --build-only "<container-name> <container-name> ..."
+        Re-build a set of containers.
+        [WARNING] This argument is intended only for developers who require
+        rapid re-builds of containers that are being tested and debugged.
+        Usage: To list multiple names, a space or comma is required between each container name.
+        DO NOT use "sas-viya-" as a prefix for names.
+        Examples:
+            --build-only "consul"
+            --build-only "consul httpproxy sas-casserver-primary"
 
 
 Help and Version
