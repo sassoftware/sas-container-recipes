@@ -144,8 +144,8 @@ Multiple Containers
             --virtual-host <value>
             --project-name <value>
         Examples:
-            `./build.sh --type multiple --generate-manifests-only`
-            `./build.sh --type full --generate-manifests-only`
+            ./build.sh --type multiple --generate-manifests-only
+            ./build.sh --type full --generate-manifests-only
         Default: false
         
     --build-only "<container-name> <container-name> ..."
