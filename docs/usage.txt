@@ -149,7 +149,7 @@ Multiple Containers
         Default: false
         
     --build-only "<container-name> <container-name> ..."
-        Re-build a set of containers.
+        Re-builds a set of containers.
         [WARNING] This argument is intended only for developers who require
         rapid re-builds of containers that are being tested and debugged.
         Usage: To list multiple names, a space or comma is required between each container name.
