@@ -67,7 +67,7 @@ Use the `build.sh` script in the root of the directory: sas-container-recipes/bu
 
 **Note:** The following examples use a mirror repository, which is [strongly recommended](Tips#create-a-local-mirror-repository).
 
-To see what options can be used, run the following:
+To see what arguments can be used, run the following:
 
 ```
 build.sh --help
@@ -98,7 +98,7 @@ The instructions in this section are for Red Hat Enterprise Linux (RHEL) 7 or de
 
 In the following example, the most recent "CentOS:7" image is pulled from DockerHub and multiple images of a programming-only deployment are built, including the addons/auth-sssd and  addons/access-odbc layers. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
 
-To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--base-image` and `--base-tag` arguments. Only Red Hat Enterprise Linux 7 based images are supported for recipes. 
+To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--base-image` and `--base-tag` arguments. 
 
 ```
 build.sh \
