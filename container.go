@@ -347,17 +347,17 @@ func (container *Container) Push(progress chan string) error {
 	if container.Status != Built {
 		return nil
 	}
-
-	// A Docker namespace and registry url is optional in the single container deployment type
-	if container.SoftwareOrder.DeploymentType == "single" &&
-		(len(container.SoftwareOrder.DockerNamespace) == 0 ||
-			len(container.SoftwareOrder.DockerRegistry) == 0) {
-		return nil
-	}
-
 	container.Status = Pushing
 	container.WriteLog("----- Starting Docker Push -----")
-	progress <- "Pushing to Docker registry: " + container.GetWholeImageName() + " ... "
+	progressMessage := "Pushing to Docker registry: " + container.GetWholeImageName() + " ... "
+	if progress != nil {
+		progress <- progressMessage
+	} else {
+		// Support non-concurrent message output
+		fmt.Println("\n")
+		log.Println(progressMessage)
+		container.WriteLog(progressMessage)
+	}
 	pushResponseStream, err := container.DockerClient.ImagePush(container.SoftwareOrder.BuildContext,
 		container.GetWholeImageName(), types.ImagePushOptions{RegistryAuth: container.SoftwareOrder.RegistryAuth})
 	if err != nil {
@@ -480,7 +480,7 @@ func (container *Container) CreateDockerfile() (string, error) {
 	}
 
 	// Handle AddOns Dockerfile lines
-	dockerfile, err := appendAddonLines(container.Name, dockerfile, container.SoftwareOrder.AddOns)
+	dockerfile, err := appendAddonLines(container.Name, dockerfile, container.SoftwareOrder.DeploymentType, container.SoftwareOrder.AddOns)
 	if err != nil {
 		return dockerfile, err
 	}
@@ -509,7 +509,7 @@ func readAddonConf(fileName string) (map[string]effectedImage, error) {
 
 // appendAddonLines adds any corresponding addon lines to a Dockerfile
 // Helper function utilized by all the deployment types
-func appendAddonLines(name string, dockerfile string, addons []string) (string, error) {
+func appendAddonLines(name string, dockerfile string, deploymentType string, addons []string) (string, error) {
 
 	// This function now reads an addon_config.yml file in the addon directory to determine
 	// which containers are affected by the Dockerfiles.
@@ -556,7 +556,14 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 						strings.HasPrefix(line, "ARG") ||
 						strings.HasPrefix(line, "WORKDIR") ||
 						strings.HasPrefix(line, "COPY ") {
-						dockerfile += line + "\n"
+
+						if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") != 0 && strings.Contains(line, "BASEIMAGE") {
+							dockerfile += "ARG BASEIMAGE=non-single-container\n"
+						} else if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") == 0 && strings.Contains(line, "BASEIMAGE") {
+							dockerfile += line + "\n"
+						} else {
+							dockerfile += line + "\n"
+						}
 
 						// If there's a "\" then it's a multi-line command
 						if strings.Contains(line, "\\") {
@@ -587,17 +594,14 @@ func (container *Container) CreateBuildDirectory() error {
 	if err != nil {
 		return err
 	}
-
-	// Setup logging
 	container.LogPath = container.BuildPath + "/log.txt"
 	logFile, err := os.Create(container.LogPath)
 	if err != nil {
 		return err
 	}
 	container.Log = logFile
-
-	// Setup the docker context writer
 	buildContextTarName := "build_context.tar"
+
 	container.DockerContextPath = container.BuildPath + "/" + buildContextTarName
 	finalTarFile, err := os.Create(container.DockerContextPath)
 	if err != nil {

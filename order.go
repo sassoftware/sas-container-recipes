@@ -27,6 +27,7 @@ import (
 
 	"archive/zip"
 	"bytes"
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -705,7 +706,7 @@ func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
-	dockerfile, err := appendAddonLines(container.GetName(), string(dockerfileStub), container.SoftwareOrder.AddOns)
+	dockerfile, err := appendAddonLines(container.GetName(), string(dockerfileStub), container.SoftwareOrder.DeploymentType, container.SoftwareOrder.AddOns)
 	if err != nil {
 		return err
 	}
@@ -1098,10 +1099,42 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	if order.DeploymentType == "multiple" {
 		generatePlaybookCommand = fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --deployment-type programming", order.SOEZipPath, order.BuildPath)
 	}
-	_, err = exec.Command("sh", "-c", generatePlaybookCommand).Output()
+//	genOutput, err = exec.Command("sh", "-c", generatePlaybookCommand).Output()
+//	if err != nil {
+//		fmt.Println(os.Stderr)
+//		fmt.Println(genOutput)
+//		fail <- "[ERROR]: Unable to generate the playbook. java-1.8.0-openjdk or another Java Runtime Environment (1.8.x) must be installed. " +
+//			err.Error() + "\n" + generatePlaybookCommand
+//		return
+//	}
+	cmd := exec.Command("sh", "-c", generatePlaybookCommand)
+	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
-		fail <- "[ERROR]: Unable to generate the playbook. java-1.8.0-openjdk or another Java Runtime Environment (1.8.x) must be installed. " +
-			err.Error() + "\n" + generatePlaybookCommand
+		fmt.Fprintln(os.Stderr, "Error creating StdoutPipe for Cmd", err)
+		return
+	}
+
+	scanner := bufio.NewScanner(cmdReader)
+	go func() {
+		for scanner.Scan() {
+			fmt.Printf("Orchestration CLI out | %s\n", scanner.Text())
+		}
+	}()
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return
+	}
+	err = cmd.Start()
+	if err != nil {
+		result, _ := ioutil.ReadAll(stderr)
+		fail <- "[ERROR]: Unable to generate the playbook. " + string(result) + "\n" + err.Error() + "\n" + generatePlaybookCommand
+		return
+	}
+	err = cmd.Wait()
+	if err != nil {
+		result, _ := ioutil.ReadAll(stderr)
+		fail <- "[ERROR]: Unable to generate the playbook. " + string(result) + "\n" + err.Error() + "\n" + generatePlaybookCommand
 		return
 	}
 
