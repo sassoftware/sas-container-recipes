@@ -360,7 +360,7 @@ docker run --interactive --tty \
 --hostname sas-viya-programming \
 --publish 8443:443 \
 --name viya-single-container \
-viya-single-container:latest
+viya-single-container:<VERSION-TAG>
 ```
 
 - `SSL_CERT_NAME` must be the file name of your certificate signed by the Certificate Authority.
