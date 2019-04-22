@@ -186,7 +186,7 @@ To see what arguments can be used, run the following:
 build.sh --help
 ```
 
-For a single container, the `--addons`, `--base-image`, `--base-tag`, `--mirror-url`, `--platform`, `--type` and `--zip` arguments are used. The ZIP file will be copied to the builds/single/ directory so that the Docker build process can use it.
+For a single container, the `--addons`, `--base-image`, `--base-tag`, `--mirror-url`, `--platform`, `--type` and `--zip` arguments are used.
 
 For information about how to manually build as well as add layers, see [Advanced Building Options](#advanced-building-options).
 
