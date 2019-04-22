@@ -186,7 +186,7 @@ To see what arguments can be used, run the following:
 build.sh --help
 ```
 
-For a single container, the `--addons`, `--baseimage`, `--basetag`, `--mirror-url`, `--platform`, `--type` and `--zip` arguments are used. The ZIP file will be copied to the builds/single/ directory so that the Docker build process can use it.
+For a single container, the `--addons`, `--base-image`, `--base-tag`, `--mirror-url`, `--platform`, `--type` and `--zip` arguments are used.
 
 For information about how to manually build as well as add layers, see [Advanced Building Options](#advanced-building-options).
 
@@ -198,13 +198,13 @@ The instructions in this section are for Red Hat Enterprise Linux (RHEL) 7 or de
 
 In the following example, the most recent CentOS:7 image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
 
-To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--baseimage` and `--basetag` arguments. If the `--baseimage` and `--basetag` arguments are not provided, then centos:latest from DockerHub will be used.
+To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--base-image` and `--base-tag` arguments. If the `--base-image` and `--base-tag` arguments are not provided, then centos:latest from DockerHub will be used.
 
 ```
 build.sh \
 --type single \
---baseimage centos \
---basetag 7 \
+--base-image centos \
+--base-tag 7 \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repo \
 --addons "auth-sssd access-odbc"
@@ -214,13 +214,13 @@ build.sh \
 
 In the following example, the opensuse/leap:42 image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
 
-To change the base image from which the SAS image will be built to any SUSE variant, change the values for the `--baseimage` and `--basetag` arguments. Currently, opensuse/leap with tags 42.* is supported.
+To change the base image from which the SAS image will be built to any SUSE variant, change the values for the `--base-image` and `--base-tag` arguments. Currently, opensuse/leap with tags 42.* is supported.
 
 ```
 build.sh \
 --type single \
---baseimage opensuse/leap \
---basetag 42 \
+--base-image opensuse/leap \
+--base-tag 42 \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repo \
 --addons "auth-sssd access-odbc"
@@ -360,7 +360,7 @@ docker run --interactive --tty \
 --hostname sas-viya-programming \
 --publish 8443:443 \
 --name viya-single-container \
-viya-single-container:latest
+viya-single-container:<VERSION-TAG>
 ```
 
 - `SSL_CERT_NAME` must be the file name of your certificate signed by the Certificate Authority.
