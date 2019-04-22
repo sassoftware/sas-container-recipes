@@ -86,6 +86,7 @@ if [[ -f /etc/init.d/sas-viya-espvm-default ]]; then
     fi
 fi
 
+
 # The following are used in sas-start-functions
 servicename=${SASSERVICENAME}
 servicecontext=${SASSERVICECONTEXT}
@@ -112,6 +113,13 @@ trap docker_shutdown_sas_services SIGINT
 ###############################################################################
 
 docker_run_local_consul
+
+#Updating config data for dataexplorer patch
+if [[ -f /etc/init.d/sas-viya-dataexplorer-default ]]; then
+    ${SASHOME}/bin/sas-bootstrap-config \
+        --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token kv write \
+        --site-default config/SASDataExplorer/jvm/java_option_fjpcp -Djava.util.concurrent.ForkJoinPool.common.parallelism=16
+fi
 
 # Start and continually check the ops-agent process.
 ${SASHOME}/lib/envesntl/docker-ops-agent &
