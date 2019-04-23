@@ -367,7 +367,6 @@ func (container *Container) Push(progress chan string) error {
 		container.SoftwareOrder.Verbose, progress)
 }
 
-
 // readDockerStream is a helper function for container.Build and container.Push
 // Read the response stream from a Docker client API call
 func readDockerStream(responseStream io.ReadCloser,
