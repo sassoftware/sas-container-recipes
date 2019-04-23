@@ -555,6 +555,7 @@ func appendAddonLines(name string, dockerfile string, deploymentType string, add
 						strings.HasPrefix(line, "ADD ") ||
 						strings.HasPrefix(line, "ARG") ||
 						strings.HasPrefix(line, "WORKDIR") ||
+						strings.HasPrefix(line, "USER") ||
 						strings.HasPrefix(line, "COPY ") {
 
 						if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") != 0 && strings.Contains(line, "BASEIMAGE") {
