@@ -1098,7 +1098,8 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 		"util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --repository-warehouse %s",
 		order.SOEZipPath, order.BuildPath, order.MirrorURL)
 	if order.DeploymentType == "multiple" {
-		generatePlaybookCommand = fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --deployment-type programming", order.SOEZipPath, order.BuildPath)
+		generatePlaybookCommand = fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --deployment-type programming --repository-warehouse %s",
+			order.SOEZipPath, order.BuildPath, order.MirrorURL)
 	}
 	_, err = exec.Command("sh", "-c", generatePlaybookCommand).Output()
 	if err != nil {
