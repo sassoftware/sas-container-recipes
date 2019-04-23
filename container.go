@@ -347,17 +347,17 @@ func (container *Container) Push(progress chan string) error {
 	if container.Status != Built {
 		return nil
 	}
+
+	// A Docker namespace and registry url is optional in the single container deployment type
+	if container.SoftwareOrder.DeploymentType == "single" &&
+		(len(container.SoftwareOrder.DockerNamespace) == 0 ||
+			len(container.SoftwareOrder.DockerRegistry) == 0) {
+		return nil
+	}
+
 	container.Status = Pushing
 	container.WriteLog("----- Starting Docker Push -----")
-	progressMessage := "Pushing to Docker registry: " + container.GetWholeImageName() + " ... "
-	if progress != nil {
-		progress <- progressMessage
-	} else {
-		// Support non-concurrent message output
-		fmt.Println("\n")
-		log.Println(progressMessage)
-		container.WriteLog(progressMessage)
-	}
+	progress <- "Pushing to Docker registry: " + container.GetWholeImageName() + " ... "
 	pushResponseStream, err := container.DockerClient.ImagePush(container.SoftwareOrder.BuildContext,
 		container.GetWholeImageName(), types.ImagePushOptions{RegistryAuth: container.SoftwareOrder.RegistryAuth})
 	if err != nil {
@@ -366,6 +366,7 @@ func (container *Container) Push(progress chan string) error {
 	return readDockerStream(pushResponseStream, container,
 		container.SoftwareOrder.Verbose, progress)
 }
+
 
 // readDockerStream is a helper function for container.Build and container.Push
 // Read the response stream from a Docker client API call
@@ -595,14 +596,17 @@ func (container *Container) CreateBuildDirectory() error {
 	if err != nil {
 		return err
 	}
+
+	// Setup logging
 	container.LogPath = container.BuildPath + "/log.txt"
 	logFile, err := os.Create(container.LogPath)
 	if err != nil {
 		return err
 	}
 	container.Log = logFile
-	buildContextTarName := "build_context.tar"
 
+	// Setup the docker context writer
+	buildContextTarName := "build_context.tar"
 	container.DockerContextPath = container.BuildPath + "/" + buildContextTarName
 	finalTarFile, err := os.Create(container.DockerContextPath)
 	if err != nil {
