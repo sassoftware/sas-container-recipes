@@ -1095,9 +1095,11 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	// Run the orchestration tool to make the playbook
 	// TODO: error handling, passing info back from the build command
 	progress <- "Generating playbook for order ..."
-	generatePlaybookCommand := fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz", order.SOEZipPath, order.BuildPath)
+	generatePlaybookCommand := fmt.Sprintf(
+		"util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --repository-warehouse %s",
+		order.SOEZipPath, order.BuildPath, order.MirrorURL)
 	if order.DeploymentType == "multiple" {
-		generatePlaybookCommand = fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --deployment-type programming", order.SOEZipPath, order.BuildPath)
+		generatePlaybookCommand += " --deployment-type programming"
 	}
 	
 	// The following is to fully provide the output of anything that goes wrong
