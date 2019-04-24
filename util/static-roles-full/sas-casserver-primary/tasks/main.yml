@@ -39,3 +39,7 @@
     mode: "0755"
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
+
+- name: Add sas-viya-cas as san-dns to cert
+  shell: |
+    sed -ibak 's/--san-dns localhost \\/--san-dns localhost \\\n        --san-dns sas-viya-cas \\/' /opt/sas/viya/home/SASFoundation/utilities/bin/cas-tls.sh
