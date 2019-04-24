@@ -71,6 +71,10 @@ while [[ $# -gt 0 ]]; do
             usage
             exit 0
             ;;
+        --verbose)
+            shift # past argument
+            VERBOSE=true
+            ;;
         -i|--baseimage|--base-image)
             shift # past argument
             BASEIMAGE="$1"
@@ -196,6 +200,10 @@ fi
 
 if [[ -n ${GENERATE_MANIFESTS_ONLY} ]]; then
     run_args="${run_args} --generate-manifests-only"
+fi
+
+if [[ -n ${VERBOSE} ]]; then
+    run_args="${run_args} --verbose"
 fi
 
 if [[ -n ${DOCKER_REGISTRY_URL} ]]; then
