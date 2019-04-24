@@ -7,5 +7,5 @@ computeserver:
   dockerfiles: [Dockerfile]
 programming:
   dockerfiles: [Dockerfile]
-single-programming-only:
+sas-viya-single-programming-only:
   dockerfiles: [Dockerfile, Dockerfile_http]

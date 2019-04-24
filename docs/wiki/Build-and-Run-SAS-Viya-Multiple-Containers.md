@@ -22,12 +22,12 @@ You can provide configuration files that the container will process as it starts
 
 * casconfig_usermods.lua
 * cas_usermods.settings
-* casstartup_usremods.lua
+* casstartup_usermods.lua
 * autoexec_usermods.sas
 * sasv9_usermods.cfg
-* batchserver_usremods.sh
-* connectserver_usremods.sh
-* workspaceserver_usremods.sh
+* batchserver_usermods.sh
+* connectserver_usermods.sh
+* workspaceserver_usermods.sh
 * sasstudio_usermods.properties
 
 When the container starts, the content of each file is appended to the existing usermods file.
@@ -67,7 +67,7 @@ Use the `build.sh` script in the root of the directory: sas-container-recipes/bu
 
 **Note:** The following examples use a mirror repository, which is [strongly recommended](Tips#create-a-local-mirror-repository).
 
-To see what options can be used, run the following:
+To see what arguments can be used, run the following:
 
 ```
 build.sh --help
@@ -98,18 +98,18 @@ The instructions in this section are for Red Hat Enterprise Linux (RHEL) 7 or de
 
 In the following example, the most recent "CentOS:7" image is pulled from DockerHub and multiple images of a programming-only deployment are built, including the addons/auth-sssd and  addons/access-odbc layers. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
 
-To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--baseimage` and `--basetag` arguments. Only Red Hat Enterprise Linux 7 based images are supported for recipes. 
+To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--base-image` and `--base-tag` arguments. 
 
 ```
 build.sh \
 --type multiple \
---baseimage centos \
---basetag 7 \
+--base-image centos \
+--base-tag 7 \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repo \
 --docker-registry-url docker.registry.company.com \
 --docker-registry-namespace sas \
---addons "addons/auth-sssd addons/access-odbc"
+--addons "auth-sssd access-odbc"
 ```
 
 Here is an example to build multiple containers for a full deployment.
@@ -117,13 +117,13 @@ Here is an example to build multiple containers for a full deployment.
 ```
 build.sh \
 --type full\
---baseimage centos \
---basetag 7 \
+--base-image centos \
+--base-tag 7 \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repo \
 --docker-registry-url docker.registry.company.com \
 --docker-registry-namespace sas \
---addons "addons/auth-sssd addons/access-odbc"
+--addons "auth-sssd access-odbc"
 ```
 
 Building multiple images could take several hours to complete. After the process has completed, you will have 3 (programming-only) to around 25 (full) Docker images that are local on your build machine, as well as in the Docker registry that you provided. An example set of manifests is also provided, which is covered in [How to Run](#how-to-run).
@@ -146,15 +146,19 @@ If problems are encountered during the build process, review the log file or pro
 
 If there was an error during the build process, it is possible that some intermediate build containers were left behind. To see any images that are a result of the SAS recipe build process, run the following:
 
-`docker images --filter "dangling=true" --filter "label=sas.recipe.version"`
+```
+docker images --filter "dangling=true" --filter "label=sas.recipe.version"
+```
 
 If you encounter any of these errors, you can remove these images by running:
 
-`docker rmi $(docker images -q --filter "dangling=true" --filter "label=sas.recipe.version")`
+```
+docker rmi $(docker images -q --filter "dangling=true" --filter "label=sas.recipe.version")
+```
 
 The command between the parentheses returns the image IDs that meet the filter criteria, and then will remove those images.
 
-See the Docker documentation for options that clean up your build system. Here are some specific topics:
+**Tip:** For information about how to clean up your build system, see the following Docker documentation:
 
 - To remove all unused data, see [docker system prune](https://docs.docker.com/engine/reference/commandline/system_prune/).
 - To remove images, see [docker image rm](https://docs.docker.com/engine/reference/commandline/image_rm/).

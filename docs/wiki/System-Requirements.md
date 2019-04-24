@@ -79,14 +79,14 @@ For a full deployment:
 
 For most user interfaces, such as SAS Drive, you configure SAS Viya to access your LDAP server after you run the image or images. For more information, see [Configure the Connection to Your Identity Provider](Post-run-Tasks#configure-the-connection-to-your-identity-provider).
 
-### Transport Security Layer
+### Transport Layer Security
 
 SAS provides encryption in two contexts:
 
 - Data at rest is data stored in databases, file servers, endpoint devices, and various storage networks. This data can be on-premises, virtual, or in the cloud. This data is usually protected in conventional ways by firewalls. Numerous layers of defense are needed, and encrypting sensitive data is another layer. You can also encrypt SAS data sets.
 - Data in motion is data that is being transmitted to another location. Data is most vulnerable while in transit. Sensitive data in transit should be encrypted. You can also choose to protect all traffic in transit between servers and clients.
 
-For a single container, see [How to Run: Docker](Build-and-Run-SAS-Viya-Single-Container#docker) for information about how to run with Transport Security Layer (TLS) enabled via Docker. For Kubernetes, see [Ingress Configuration](Pre-build-Tasks#ingress-configuration) for information about how to set up TLS.
+For a single container, see [How to Run: Docker](Build-and-Run-SAS-Viya-Single-Container#docker) for information about how to run with Transport Layer Security (TLS) enabled via Docker. For Kubernetes, see [Ingress Configuration](Pre-build-Tasks#ingress-configuration) for information about how to set up TLS.
 
 For multiple containers, see [Ingress Configuration](Pre-build-Tasks#ingress-configuration) for information about how to set up TLS.
 

@@ -7,5 +7,5 @@ programming:
   dockerfiles: [Dockerfile]
 sas-casserver-primary:
   dockerfiles: [Dockerfile]
-single-programming-only:
+sas-viya-single-programming-only:
   dockerfiles: [Dockerfile]

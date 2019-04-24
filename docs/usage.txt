@@ -115,15 +115,6 @@ Multiple Containers
         Outputs the result of each Docker layer creation.
         Default: false
 
-    --build-only "<container-name> <container-name> ..."
-        Specifies the name of containers.
-        [NOTE] This argument is intended to re-build small components quickly.
-        Usage: To list multiple names, a space or comma is required between each container name.
-        DO NOT use "sas-viya-" as a prefix for names.
-        Examples:
-          --build-only "consul"
-          --build-only "consul httpproxy sas-casserver-primary"
-
     --skip-mirror-url-validation
         Skips validating the mirror URL from the --mirror-url flag.
         default: false
@@ -138,11 +129,34 @@ Multiple Containers
         [CAUTION] Changing the value between builds will invalidate your layer cache.
         Default: 1976
 
+    --project-name <value>
+        Specifies a prefix for the container names and deployments.
+        The image names are formatted as "<project_name>-<image_name>", 
+        such as "sas-viya-consul" and "sas-viya-httpproxy".
+        Default: sas-viya
+
     --generate-manifests-only
-        Builds the Kubernetes manifests only.
-        Usage: Works with the --type multiple or --type full argument.
+        Re-generates the Kubernetes manifests without re-building all the containers.
         Manifests are added to the /builds/<deployment_type> directory.
+        Required Arguments:
+            --type [ multiple | full ]
+        Optional Arguments:
+            --virtual-host <value>
+            --project-name <value>
+        Examples:
+            ./build.sh --type multiple --generate-manifests-only
+            ./build.sh --type full --generate-manifests-only
         Default: false
+        
+    --build-only "<container-name> <container-name> ..."
+        Re-builds a set of containers.
+        [WARNING] This argument is intended only for developers who require
+        rapid re-builds of containers that are being tested and debugged.
+        Usage: To list multiple names, a space or comma is required between each container name.
+        DO NOT use "sas-viya-" as a prefix for names.
+        Examples:
+            --build-only "consul"
+            --build-only "consul httpproxy sas-casserver-primary"
 
 
 Help and Version

@@ -23,7 +23,11 @@
 Before you build the images and run the container, read about the different ways that you can modify the configuration.
 
 ### Using Custom Values to Override the Playbook Settings
-You can override the default configuration settings for the SAS Programming Runtime Environment (SPRE) and the SAS Cloud Analytic Services (CAS) server that are applied to the image when it is being created. To set these configuration values, edit the util/programming-only-single/vars_usermods.yml file.
+You can override the default configuration settings for the SAS Programming 
+Runtime Environment (SPRE) and the SAS Cloud Analytic Services (CAS) server 
+that are applied to the image when it is being created. To set these 
+configuration values, copy the util/vars_usermods.yml file into the 
+sas-container-recipes project directory, and then edit the values in the new copy.
 
 ```
 # The following is the initial Admin user for use with CAS Server Monitor. 
@@ -128,12 +132,12 @@ You can provide configuration files that the container will process as it starts
 
 * casconfig_usermods.lua
 * cas_usermods.settings
-* casstartup_usremods.lua
+* casstartup_usermods.lua
 * autoexec_usermods.sas
 * sasv9_usermods.cfg
-* batchserver_usremods.sh
-* connectserver_usremods.sh
-* workspaceserver_usremods.sh
+* batchserver_usermods.sh
+* connectserver_usermods.sh
+* workspaceserver_usermods.sh
 * sasstudio_usermods.properties
 
 When the container starts, the content of each file is appended to the existing usermods file.
@@ -182,7 +186,7 @@ To see what arguments can be used, run the following:
 build.sh --help
 ```
 
-For a single container, the `--addons`, `--baseimage`, `--basetag`, `--mirror-url`, `--platform`, `--type` and `--zip` arguments are used. The ZIP file will be copied to the builds/single/ directory so that the Docker build process can use it.
+For a single container, the `--addons`, `--base-image`, `--base-tag`, `--mirror-url`, `--platform`, `--type` and `--zip` arguments are used.
 
 For information about how to manually build as well as add layers, see [Advanced Building Options](#advanced-building-options).
 
@@ -194,32 +198,32 @@ The instructions in this section are for Red Hat Enterprise Linux (RHEL) 7 or de
 
 In the following example, the most recent CentOS:7 image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
 
-To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--baseimage` and `--basetag` arguments. If the `--baseimage` and `--basetag` arguments are not provided, then centos:latest from DockerHub will be used.
+To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--base-image` and `--base-tag` arguments. If the `--base-image` and `--base-tag` arguments are not provided, then centos:latest from DockerHub will be used.
 
 ```
 build.sh \
 --type single \
---baseimage centos \
---basetag 7 \
+--base-image centos \
+--base-tag 7 \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repo \
---addons "addons/auth-sssd addons/access-odbc"
+--addons "auth-sssd access-odbc"
 ```
 
 ### Building on a SUSE Linux Image
 
 In the following example, the opensuse/leap:42 image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
 
-To change the base image from which the SAS image will be built to any SUSE variant, change the values for the `--baseimage` and `--basetag` arguments. Currently, opensuse/leap with tags 42.* is supported.
+To change the base image from which the SAS image will be built to any SUSE variant, change the values for the `--base-image` and `--base-tag` arguments. Currently, opensuse/leap with tags 42.* is supported.
 
 ```
 build.sh \
 --type single \
---baseimage opensuse/leap \
---basetag 42 \
+--base-image opensuse/leap \
+--base-tag 42 \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repo \
---addons "addons/auth-sssd addons/access-odbc"
+--addons "auth-sssd access-odbc"
 ```
 
 ### Advanced Building Options
@@ -269,9 +273,9 @@ docker run --detach --publish-all --rm --name svc-ide-jupyter-python3 --hostname
 
 ### Logging
 
-The content that is displayed to the console when building is also captured in a log file named ${PWD}/logs/build_sas_container.log.
+When building the images, the content that is displayed to the console is captured in the builds/single/build.log file.
 
-If a log file exists at the time of the run, then the previous file is preserved with a name of build_sas_container_<var>date-time-stamp</var>.log. If problems are encountered during the build process, review the log file or provide it when opening a ticket.
+If problems are encountered during the build process, review the log file or provide it when opening up tickets.
 
 ### Errors During Build
 
@@ -356,7 +360,7 @@ docker run --interactive --tty \
 --hostname sas-viya-programming \
 --publish 8443:443 \
 --name viya-single-container \
-viya-single-container:latest
+viya-single-container:<VERSION-TAG>
 ```
 
 - `SSL_CERT_NAME` must be the file name of your certificate signed by the Certificate Authority.

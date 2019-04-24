@@ -62,7 +62,6 @@ function sas_container_recipes_shutdown() {
 trap sas_container_recipes_shutdown SIGTERM
 trap sas_container_recipes_shutdown SIGINT
 
-
 # Parse command arguments and flags
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -154,6 +153,11 @@ while [[ $# -gt 0 ]]; do
             export BUILD_ONLY="$1"
             shift # past value
             ;;
+        -w|--workers)
+            shift # past argument
+            export WORKERS="$1"
+            shift # past value
+            ;;
         *) # Ignore everything that isn't a valid arg
             shift
     ;;
@@ -163,16 +167,6 @@ done
 # Set some defaults
 [[ -z ${CHECK_DOCKER_URL+x} ]]        && CHECK_DOCKER_URL=true
 [[ -z ${CHECK_MIRROR_URL+x} ]]        && CHECK_MIRROR_URL=false
-[[ -z ${GENERATE_MANIFESTS_ONLY+x} ]] && GENERATE_MANIFESTS_ONLY=false
-
-if [[ $GENERATE_MANIFESTS_ONLY == "true" ]] && [[ -z ${SAS_DOCKER_TAG+x} ]]; then
-    last_built_tag="<value>"
-    if [[ -n $SAS_RECIPE_TYPE ]]; then
-        last_built_tag=$(grep "docker_tag" builds/${SAS_RECIPE_TYPE}/vars_deployment.yml | awk -F": " '{ print $2 }')
-    fi
-    export SAS_DOCKER_TAG=${last_built_tag}
-    echo "[INFO] : Setting the Docker tag to '$SAS_DOCKER_TAG'"
-fi
 
 git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
 datetime=$(date "+%Y%m%d%H%M%S")
@@ -194,6 +188,14 @@ fi
 
 if [[ -n ${SAS_RECIPE_TYPE} ]]; then
     run_args="${run_args} --type ${SAS_RECIPE_TYPE}"
+fi
+
+if [[ -n ${WORKERS} ]]; then
+    run_args="${run_args} --workers ${WORKERS}"
+fi
+
+if [[ -n ${GENERATE_MANIFESTS_ONLY} ]]; then
+    run_args="${run_args} --generate-manifests-only"
 fi
 
 if [[ -n ${DOCKER_REGISTRY_URL} ]]; then
@@ -247,32 +249,6 @@ if [[ -n ${BUILD_ONLY} ]]; then
     run_args="${run_args} --build-only ${BUILD_ONLY}"
 fi
 
-echo
-echo "=============="
-echo "Variable check"
-echo "=============="
-echo ""
-echo "  Build System OS                 = ${OPERATING_SYSTEM}"
-echo "  Deployment Type                 = ${SAS_RECIPE_TYPE}"
-echo "  BASEIMAGE                       = ${BASEIMAGE}"
-echo "  BASETAG                         = ${BASETAG}"
-echo "  Mirror URL                      = ${SAS_RPM_REPO_URL}"
-echo "  Validate Mirror URL             = ${CHECK_MIRROR_URL}"
-echo "  Platform                        = ${PLATFORM}"
-echo "  Project Name                    = ${PROJECT_NAME}"
-echo "  Deployment Data Zip             = ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
-echo "  Addons                          = ${ADDONS## }"
-echo "  Docker registry URL             = ${DOCKER_REGISTRY_URL}"
-echo "  Docker registry namespace       = ${DOCKER_REGISTRY_NAMESPACE}"
-echo "  Validate Docker registry URL    = ${CHECK_DOCKER_URL}"
-echo "  Generate Manifests Only         = ${GENERATE_MANIFESTS_ONLY}"
-echo "  HTTP Ingress endpoint           = ${CAS_VIRTUAL_HOST}"
-echo "  Tag SAS will apply              = ${SAS_DOCKER_TAG}"
-echo "  Build run args                  = ${run_args## }"
-echo
-
-
-echo
 echo "==============================="
 echo "Building Docker Build Container"
 echo "==============================="
@@ -294,15 +270,27 @@ echo "=============================="
 echo "Running Docker Build Container"
 echo "=============================="
 echo
-docker run -d \
-    --name ${SAS_BUILD_CONTAINER_NAME} \
-    -u ${UID}:${DOCKER_GID} \
-    -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
-    -v ${PWD}/builds:/sas-container-recipes/builds \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
-    sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
-
+# If a Docker config exists then run the builder with the config mounted as a volume.
+# Otherwise, not having a Docker config is acceptable if no registry authentication is required.
+DOCKER_CONFIG_PATH=${HOME}/.docker/config.json
+if [[ -f ${DOCKER_CONFIG_PATH} ]]; then 
+    docker run -d \
+        --name ${SAS_BUILD_CONTAINER_NAME} \
+        -u ${UID}:${DOCKER_GID} \
+        -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
+        -v ${PWD}/builds:/sas-container-recipes/builds \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
+        sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
+else 
+    docker run -d \
+        --name ${SAS_BUILD_CONTAINER_NAME} \
+        -u ${UID}:${DOCKER_GID} \
+        -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
+        -v ${PWD}/builds:/sas-container-recipes/builds \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
+fi
 docker logs -f ${SAS_BUILD_CONTAINER_NAME}
 
 

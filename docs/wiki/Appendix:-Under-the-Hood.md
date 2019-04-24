@@ -27,12 +27,7 @@ The addons that you choose depends on your needs and the software that you have 
 
     Use the files in the addons/access-greenplum directory to smoke test SAS/ACCESS Interface to Greenplum.
 
-    This addon will not modify all images. It will only modify images called:
-    - computeserver
-    - programming
-    - sas-casserver-primary
-
-    **Note:** Depending on the type of deployment that you choose, you might not have all of the images mentioned above.
+    **Note:** To see a list of images that this addon modifies, see the addons/access-greenplum/addon_config.yml file.
 
 - **Files**
 
@@ -40,7 +35,7 @@ The addons that you choose depends on your needs and the software that you have 
     | --- | --- |
     | greenplum_sasserver.sh | The file contains environment variables that are required so that the Greenplum code executes properly. Update this file with your Greenplum client library version number. |
     | acgreenplum.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Foundation to confirm that SAS/ACCESS Interface to Greenplum is configured correctly. |
-    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container that it needs to modify. |
 
 - **How To Use**
 
@@ -80,12 +75,7 @@ The addons that you choose depends on your needs and the software that you have 
     sas-container-recipes/addons/access-hadoop/hadoop/jars
     ```
 
-    This addon will not modify all images. It will only modify images called:
-    - computeserver
-    - programming
-    - sas-casserver-primary
-
-    **Note:** Depending on the type of deployment that you choose, you might not have all of the images mentioned above.
+    **Note:** To see a list of images that this addon modifies, see the addons/access-hadoop/addon_config.yml file.
 
 - **Files**
 
@@ -93,7 +83,7 @@ The addons that you choose depends on your needs and the software that you have 
     | --- | --- |
     | achadoop.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. The code expects the Hadoop configuration and JAR files to be available at /hadoop and uses SAS Foundation to confirm that SAS/ACCESS Interface to Hadoop is configured correctly. |
     | dchadoop.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. The code expects the Hadoop configuration and JAR files to be available at /hadoop and uses SAS Cloud Analytic Services to confirm that SAS Data Connector to Hadoop is configured correctly. |
-    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container that it needs to modify. |
 
 - **How To Use**
 
@@ -127,12 +117,7 @@ The addons that you choose depends on your needs and the software that you have 
 
     The content in this directory provides a simple way for smoke testing SAS/ACCESS Interface to ODBC.
 
-    This addon will not modify all images. It will only modify images called:
-    - computeserver
-    - programming
-    - sas-casserver-primary
-
-    **Note:** Depending on the type of deployment that you choose, you might not have all of the images mentioned above. 
+    **Note:** To see a list of images that this addon modifies, see the addons/access-odbc/addon_config.yml file.
 
 - **Files**
 
@@ -142,7 +127,7 @@ The addons that you choose depends on your needs and the software that you have 
     | odbc_sasserver.sh | This file contains environment variables that are required so that ODBC code is executed properly. |
     | acodbc.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Foundation to confirm that  SAS/ACCESS Interface to ODBC is configured correctly. |
     | dcodbc.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Cloud Analytic Services to validate that the SAS Data Connector to ODBC is configured correctly. |
-    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container that it needs to modify. |
 
 - **How To Use**
 
@@ -178,12 +163,7 @@ SAS/ACCESS Interface to Oracle. A user must provide:
     - Oracle client library RPMs must be placed in this directory. The Dockerfile will attempt to install any RPMs in this directory.
     - A file named tnsnames.ora is expected in this directory.
 
-    This addon will not modify all images. It will only modify images called:
-    - computeserver
-    - programming
-    - sas-casserver-primary
-
-    **Note:** Depending on the type of deployment that you choose, you might not have all of the images mentioned above. 
+    **Note:** To see a list of images that this addon modifies, see the addons/access-oracle/addon_config.yml file.
 
 - **Files**
 
@@ -193,7 +173,7 @@ SAS/ACCESS Interface to Oracle. A user must provide:
     | oracle_sasserver.sh | This file contains environment variables that are required so that the Oracle code executes properly. Update this file with your Oracle client library version number. |
     | acoracle.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table. The code uses SAS Foundation to validate that SAS/ACCESS Interface to Oracle is configured correctly. |
     | dcoracle.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table. The code uses SAS Cloud Analytic Services (CAS) to validate that the Data Connector to Oracle is configured correctly.   |
-    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container that it needs to modify. |
 
 - **How To Use**
 
@@ -225,12 +205,7 @@ SAS/ACCESS Interface to Oracle. A user must provide:
     The content in this directory provides a simple way for smoke testing 
 SAS/ACCESS Interface to PC Files.
 
-    This addon will not modify all images. It will only modify images called:
-    - computeserver
-    - programming
-    - sas-casserver-primary
-
-    **Note:** Depending on the type of deployment that you choose, you might not have all of the images mentioned above.
+    **Note:** To see a list of images that this addon modifies, see the addons/access-pcfiles/addon_config.yml file.
 
 - **Files**
 
@@ -238,7 +213,7 @@ SAS/ACCESS Interface to PC Files.
     | --- | --- |
     | acpcfiles.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates a table and writes its contents to file and uses SAS Foundation to confirm that  SAS/ACCESS Interface to PC Files is working. |
     | dcpcfiles.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates a table, write its contents to file, and then reads the file contents back into SAS Cloud Analytic Services (CAS). The code uses CAS to validate that the SAS Data Connector to PC Files is working. |
-    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container that it needs to modify. |
 
 - **How To Use**
 
@@ -268,12 +243,7 @@ SAS/ACCESS Interface to PC Files.
     The content in this directory provides a simple way for smoke testing 
 SAS/ACCESS Interface to PostgreSQL.
 
-    This addon will not modify all images. It will only modify images called:
-    - computeserver
-    - programming
-    - sas-casserver-primary
-
-    **Note:** Depending on the type of deployment that you choose, you might not have all of the images mentioned above. 
+    **Note:** To see a list of images that this addon modifies, see the addons/access-postgres/addon_config.yml file.
 
 - **Files**
 
@@ -281,7 +251,7 @@ SAS/ACCESS Interface to PostgreSQL.
     | --- | --- |
     | acpostgres.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Foundation to confirm that SAS/ACCESS Interface to PostgreSQL is configured correctly. |
     | dcpostgres.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Cloud Analytic Services to confirm that the SAS Data Connector to PostgreSQL is configured correctly. |
-    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container that it needs to modify. |
 
 - **How To Use**
 
@@ -313,12 +283,7 @@ SAS/ACCESS Interface to PostgreSQL.
     The content in this directory provides a simple way for smoke testing 
 SAS/ACCESS Interface to Amazon Redshift.
 
-    This addon will not modify all images. It will only modify images called:
-    - computeserver
-    - programming
-    - sas-casserver-primary
-
-    **Note:** Depending on the type of deployment that you choose, you might not have all of the images mentioned above.
+    **Note:** To see a list of images that this addon modifies, see the addons/access-redshift/addon_config.yml file.
 
 - **Files**
 
@@ -326,7 +291,7 @@ SAS/ACCESS Interface to Amazon Redshift.
     | --- | --- |
     | acredshift.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Foundation to confirm that SAS/ACCESS Interface to Amazon Redshift is configured correctly. |
     | dcredshift.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Cloud Analytic Services to confirm that SAS Data Connector to Amazon Redshift is configured correctly. |
-    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container that it needs to modify. |
 
 - **How To Use**
 
@@ -357,12 +322,7 @@ SAS/ACCESS Interface to Amazon Redshift.
 
     The content in this directory provides a simple way for smoke testing SAS/ACCESS Interface to Teradata.
 
-    This addon will not modify all images. It will only modify images called:
-    - computeserver
-    - programming
-    - sas-casserver-primary
-
-    **Note:** Depending on the type of deployment that you choose, you might not have all of the images mentioned above.
+    **Note:** To see a list of images that this addon modifies, see the addons/access-teradata/addon_config.yml file.
 
 - **Files**
 
@@ -371,7 +331,7 @@ SAS/ACCESS Interface to Amazon Redshift.
     | terdata_cas.settings<br/>teradata_sasserver.sh | Files for SAS Cloud Analytic Services (CAS) and the SAS Workspace Server that are required to configure ODBC and Teradata libraries. |
     | acteradata.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses SAS Foundation to confirm that  SAS/ACCESS Interface to Teradata is configured correctly. |
     | dcteradata.sas | SAS code that can be submitted in SAS Studio or by the SAS batch server. This code creates and drops a table and uses CAS to confirm that the SAS Data Connector to Teradata is configured correctly. |
-    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container that it needs to modify. |
 
 - **How To Use**
 
@@ -401,19 +361,14 @@ SAS/ACCESS Interface to Amazon Redshift.
 
     This is an example about how to add a default user to a SAS Viya programming-only Docker image. The user created will also be used for the CAS Administrator and as the default user for running Jupyter Notebook if the _ide-jupyter-python3_ example is used.
 
-    This addon will not modify all images. It will only modify images called:
-    - computeserver
-    - programming
-    - sas-casserver-primary
-
-    **Note:** Depending on the type of deployment that you choose, you might not have all of the images mentioned above.
+    **Note:** To see a list of images that this addon modifies, see the addons/auth-demo/addon_config.yml file.
 
 - **Files**
 
     | **File Name** | **Purpose** |
     | --- | --- |
     | demo_pre_deploy.sh  | A file that ends up in /tmp and will be run by the entrypoint in the script. This will create a user upon startup of the conainer.  |
-    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container that it needs to modify. |
 
 - **How To Use**
 
@@ -458,12 +413,7 @@ SAS/ACCESS Interface to Amazon Redshift.
 
     This addon will install and configure System Security Service Daemon (sssd) inside some of the images. This is a way to connect the container's authentication system via the pluggable authentication module (PAM) to systems like Lightweight Directory Access Protocol (LDAP) or Active Directory (AD).
 
-    This addon will not modify all images. It will only modify images called:
-        - computeserver
-        - programming
-        - sas-casserver-primary
-
-    **Note:** Depending on the type of deployment that you choose, you might not have all of the images mentioned above.
+    **Note:** To see a list of images that this addon modifies, see the addons/auth-sssd/addon_config.yml file.
 
     This addon does have support to create the user's home directory if it does not exist when a user logs into SAS Studio. However, if users need to persist content in their home directories (for example, SAS programs created from SAS Studio, or Jupyter playbooks), then it is advised to re-configure the containers so that the home directories are either :
     - mounted docker volumes when using the single image on Docker
@@ -477,7 +427,7 @@ SAS/ACCESS Interface to Amazon Redshift.
     | example_sssd.conf | A file that contains a template sssd configuration, which should reflect an organization's configuration. You need to provide a valid, tested, sssd.conf for this work. |
     | sssd_mkhomedir_helper.sh | When a users's home directory does not exist, this script will create one. |
     | sssd_pre_deploy.sh | A required file that starts sssd and is called by the main entrypoint script. |
-    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container it needs to modify. |
+    | addon_config.yml | This file contains the data that maps the appropriate Dockerfile or Dockerfiles to the container that it needs to modify. |
 
 - **How To Use**
 

@@ -27,11 +27,13 @@ import (
 
 	"archive/zip"
 	"bytes"
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"log"
@@ -62,47 +64,46 @@ var ConfigPath = "config-full.yml"
 type SoftwareOrder struct {
 
 	// Build arguments and flags (see order.LoadCommands for details)
-	LicensePath           string
-	BaseImage             string
-	MirrorURL             string
-	VirtualHost           string
-	DockerNamespace       string
-	DockerRegistry        string
-	DeploymentType        string
-	PlaybookPath          string
-	Platform              string
-	ProjectName           string
-	TagOverride           string
-	AddOns                []string
-	DebugContainers       []string
-	WorkerCount           int
-	Verbose               bool
-	SkipMirrorValidation  bool
-	SkipDockerValidation  bool
-	GenerateManifestsOnly bool
+	BaseImage             string   `yaml:"Base Image              "`
+	MirrorURL             string   `yaml:"Mirror URL              "`
+	VirtualHost           string   `yaml:"Virtual Host            "`
+	DockerNamespace       string   `yaml:"Docker Namespace        "`
+	DockerRegistry        string   `yaml:"Docker Registry         "`
+	DeploymentType        string   `yaml:"Deployment Type         "`
+	Platform              string   `yaml:"Platform                "`
+	ProjectName           string   `yaml:"Project Name            "`
+	TagOverride           string   `yaml:"Tag Override            "`
+	AddOns                []string `yaml:"AddOns                  "`
+	DebugContainers       []string `yaml:"Debug Containers        "`
+	WorkerCount           int      `yaml:"Worker Count            "`
+	Verbose               bool     `yaml:"Verbose                 "`
+	SkipMirrorValidation  bool     `yaml:"Skip Mirror Validation  "`
+	SkipDockerValidation  bool     `yaml:"Skip Docker Validation  "`
+	GenerateManifestsOnly bool     `yaml:"Generate Manifests Only "`
 
 	// Build attributes
-	TimestampTag string                // Allows for datetime on each temp build bfile
-	Containers   map[string]*Container // Individual containers build list
-	BuildOnly    []string              // Only build these specific containers if they're in the list of entitled containers. The 'multiple' deployment type utilizes this to build only 3 images.
-	Config       map[string]ConfigMap  // Static values and defaults are loaded from the configmap yaml
-	ConfigPath   string                // config-<deployment-type>.yml file for custom or static values
-	Log          *os.File              // File handle for log path
-	LogPath      string                // Path to the build directory with the log file name
-	KVStore      string                // Combines all vars.yaml content
-	BuildContext context.Context       // Background context
-	RegistryAuth string                // Used to push and pull from/to a regitry
-	BuildPath    string                // Kubernetes manifests are generated and placed into this location
-	CertBaseURL  string                // The URL that the build containers will use to fetch their CA and entitlement certs
-	InDocker     bool                  // If we are running in a docker container
-	BuilderIP    string                // IP of where images are being built to be used for generic hostname lookup for builder
-	BuilderPort  string                // Port for serving certificate requests for builds
+	Log          *os.File              `yaml:"-"`                        // File handle for log path
+	BuildContext context.Context       `yaml:"-"`                        // Background context
+	BuildOnly    []string              `yaml:"Build Only              "` // Only build these specific containers if they're in the list of entitled containers. The 'multiple' deployment type utilizes this to build only 3 images.
+	Containers   map[string]*Container `yaml:"-"`                        // Individual containers build list
+	Config       map[string]ConfigMap  `yaml:"-"`                        // Static values and defaults are loaded from the configmap yaml
+	ConfigPath   string                `yaml:"-"`                        // config-<deployment-type>.yml file for custom or static values
+	LogPath      string                `yaml:"-"`                        // Path to the build directory with the log file name
+	PlaybookPath string                `yaml:"-"`                        // Build path + "sas_viya_playbook"
+	KVStore      string                `yaml:"-"`                        // Combines all vars.yaml content
+	RegistryAuth string                `yaml:"-"`                        // Used to push and pull from/to a regitry
+	BuildPath    string                `yaml:"-"`                        // Kubernetes manifests are generated and placed into this location
+	CertBaseURL  string                `yaml:"-"`                        // The URL that the build containers will use to fetch their CA and entitlement certs
+	BuilderIP    string                `yaml:"-"`                        // IP of where images are being built to be used for generic hostname lookup for builder
+	BuilderPort  string                `yaml:"-"`                        // Port for serving certificate requests for builds
+	TimestampTag string                `yaml:"Timestamp Tag           "` // Allows for datetime on each temp build bfile
+	InDocker     bool                  `yaml:"-"`                        // If we are running in a docker container
 
 	// Metrics
-	StartTime      time.Time
-	EndTime        time.Time
-	TotalBuildSize int64
-	DockerClient   *client.Client // Used to pull the base image and output post-build details
+	StartTime      time.Time      `yaml:"-"`
+	EndTime        time.Time      `yaml:"-"`
+	TotalBuildSize int64          `yaml:"-"`
+	DockerClient   *client.Client `yaml:"-"` // Used to pull the base image and output post-build details
 
 	// License attributes from the Software Order Email (SOE)
 	// SAS_Viya_deployment_data.zip
@@ -115,7 +116,7 @@ type SoftwareOrder struct {
 	// │   └── SASViyaV0300_XXXXXX_Linux_x86-64.txt
 	// │   └── SASViyaV0300_XXXXXX_XXXXXXXX_Linux_x86-64.jwt
 	// └── order.oom
-	SOEZipPath string // Used to load licenses
+	SOEZipPath string `yaml:"-"` // Used to load licenses
 	OrderOOM   struct {
 		OomFormatVersion string `json:"oomFormatVersion"`
 		MetaRepo         struct {
@@ -123,13 +124,13 @@ type SoftwareOrder struct {
 			Rpm        string   `json:"rpm"`
 			Orderables []string `json:"orderables"`
 		} `json:"metaRepo"`
-	}
-	CA             []byte
-	Entitlement    []byte
-	License        []byte
-	MeteredLicense []byte
+	} `yaml:"-"`
+	CA             []byte `yaml:"-"`
+	Entitlement    []byte `yaml:"-"`
+	License        []byte `yaml:"-"`
+	MeteredLicense []byte `yaml:"-"`
 
-	SiteDefault []byte
+	SiteDefault []byte `yaml:"-"`
 }
 
 // Registry is ror reading ~/.docker/config.json
@@ -164,22 +165,79 @@ type ConfigMap struct {
 	} `yaml:"resources"`
 }
 
+// SetupBuildDirectory creates a unique isolated directory for the Software Order
+// based on the deployment and time stamp. It also configures logging.
+func (order *SoftwareOrder) SetupBuildDirectory() error {
+	// Create an isolated build directory with a unique timestamp
+	order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
+	if err := os.MkdirAll(order.BuildPath+"/manifests", 0744); err != nil {
+		return err
+	}
+
+	// Start a new build log inside the isolated build directory
+	order.LogPath = order.BuildPath + "/build.log"
+	logHandle, err := os.Create(order.LogPath)
+	if err != nil {
+		return err
+	}
+	order.Log = logHandle
+
+	// Symbolically link the most recent time stamped build directory to a shorter name
+	// For example, 'full-2019-04-09-13-37-40' can be referred to as simply 'full'
+	// Note: This is executing inside the build container, inside a mounted volume,
+	// 		 therefore an os.Symlink() does not work correctly.
+	previousLink := "builds/" + order.DeploymentType
+	if _, err := os.Lstat(previousLink); err == nil {
+		if err := os.Remove(previousLink); err != nil {
+			return err
+		}
+	}
+	symlinkCommand := fmt.Sprintf("cd builds && ln -s %s-%s %s && cd ..",
+		order.DeploymentType, order.TimestampTag, order.DeploymentType)
+	cmd := exec.Command("sh", "-c", symlinkCommand)
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	err = cmd.Start()
+	if err != nil {
+		result, _ := ioutil.ReadAll(stderr)
+		return errors.New(string(result) + "\n" + err.Error())
+	}
+	err = cmd.Wait()
+	if err != nil {
+		result, _ := ioutil.ReadAll(stderr)
+		return errors.New(string(result) + "\n" + err.Error())
+	}
+	return nil
+}
+
 // NewSoftwareOrder once the SOE zip file path has been provided then load all the Software Order's details
 // Note: All sub-processes of this function are essential to the build process.
 //       If any of these steps return an error then the entire process will be exited.
 func NewSoftwareOrder() (*SoftwareOrder, error) {
 	order := &SoftwareOrder{}
 	order.StartTime = time.Now()
-
 	order.TimestampTag = string(order.StartTime.Format("2006-01-02-15-04-05"))
 	if len(order.TagOverride) > 0 {
 		order.TimestampTag = order.TagOverride
 	}
-
 	if err := order.LoadCommands(); err != nil {
 		return order, err
 	}
 
+	// Do not load any more Software Order values, just allow order.GenerateManifests() to be called
+	if order.GenerateManifestsOnly {
+		return order, nil
+	}
+
+	// Configure a new isolated build space
+	if err := order.SetupBuildDirectory(); err != nil {
+		return order, err
+	}
+	order.WriteLog(true, order.BuildArgumentsSummary())
+
+	// Determine if the binary is being run inside the sas-container-recipes-builder
 	order.InDocker = true
 	if _, err := os.Stat("/.dockerenv"); err != nil {
 		order.InDocker = false
@@ -191,59 +249,6 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		order.ConfigPath = "config-multiple.yml"
 	}
 
-	if !order.GenerateManifestsOnly {
-		order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
-		if err := os.MkdirAll(order.BuildPath+"manifests", 0744); err != nil {
-			return order, err
-		}
-		symlinkCommand := fmt.Sprintf("cd builds && rm -rf %s && ln -s %s-%s %s", order.DeploymentType, order.DeploymentType, order.TimestampTag, order.DeploymentType)
-		cmd := exec.Command("sh", "-c", symlinkCommand)
-		stderr, err := cmd.StderrPipe()
-		if err := cmd.Start(); err != nil {
-			log.Fatal(err)
-		}
-
-		slurp, _ := ioutil.ReadAll(stderr)
-		fmt.Printf("%s\n", slurp)
-
-		if err := cmd.Wait(); err != nil {
-			return order, err
-		}
-		if err != nil {
-			return order, err
-		}
-		order.LogPath = order.BuildPath + "/build.log"
-		logHandle, err := os.Create(order.LogPath)
-		if err != nil {
-			return order, err
-		}
-		order.Log = logHandle
-	} else {
-		// If we are only generating manifests, then use the previous run.
-		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
-
-		// Want to make sure the deployment type directory exists. Trying to protect
-		// against the case where a user tries to generate manifests before they
-		// built anything. Generate manifests only is a second step.
-		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
-			return order, err
-		}
-
-		// Save off the previous build log
-		order.LogPath = order.BuildPath + "/build.log"
-		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s", order.LogPath, order.TimestampTag))
-		if err != nil {
-			return order, err
-		}
-
-		logHandle, err := os.Create(order.LogPath)
-		if err != nil {
-			return order, err
-		}
-		order.Log = logHandle
-
-	}
-
 	// Start a worker pool and wait for all workers to finish
 	workerCount := 0 // Number of goroutines started
 	done := make(chan int)
@@ -253,28 +258,29 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	workerCount++
 	go order.LoadSiteDefault(progress, fail, done)
 
-	if !order.GenerateManifestsOnly {
+	workerCount++
+	go order.LoadPlaybook(progress, fail, done)
+
+	workerCount++
+	go order.LoadLicense(progress, fail, done)
+
+	workerCount++
+	go order.LoadDocker(progress, fail, done)
+
+	workerCount++
+	go order.LoadRegistryAuth(fail, done)
+
+	workerCount++
+	go order.LoadUsermods(progress, fail, done)
+
+	if !order.SkipDockerValidation {
 		workerCount++
-		go order.LoadPlaybook(progress, fail, done)
+		go order.TestRegistry(progress, fail, done)
+	}
 
+	if !order.SkipMirrorValidation {
 		workerCount++
-		go order.LoadLicense(progress, fail, done)
-
-		workerCount++
-		go order.LoadDocker(progress, fail, done)
-
-		workerCount++
-		go order.LoadRegistryAuth(fail, done)
-
-		if !order.SkipDockerValidation {
-			workerCount++
-			go order.TestRegistry(progress, fail, done)
-		}
-
-		if !order.SkipMirrorValidation {
-			workerCount++
-			go order.TestMirror(progress, fail, done)
-		}
+		go order.TestMirror(progress, fail, done)
 	}
 
 	doneCount := 0
@@ -296,6 +302,18 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 			order.WriteLog(true, progress)
 		}
 	}
+}
+
+// BuildArgumentsSummary gets a human readable version of the command arguments
+// that were supplied to the SoftwareOrder object. This is useful for debugging.
+func (order *SoftwareOrder) BuildArgumentsSummary() string {
+	objectAttributes, _ := yaml.Marshal(order)
+	output := "\n" + strings.Repeat("=", 50) + "\n"
+	output += "\t\tBuild Variables\n"
+	output += strings.Repeat("=", 50) + "\n"
+	output += string(objectAttributes)
+	output += strings.Repeat("=", 50) + "\n"
+	return output
 }
 
 // Look through the network interfaces and find the machine's non-loopback IP
@@ -420,11 +438,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU()
 	workerCount := flag.Int("workers", defaultWorkerCount, "")
-	order.WorkerCount = *workerCount
-	if *workerCount == 0 || *workerCount > defaultWorkerCount {
-		err := errors.New("invalid '--worker' count, must be less than or equal to the number of CPU cores that are free and permissible in your cgroup configuration")
-		return err
-	}
 
 	// Allow for quick exit if only viewing the --version or --help
 	flag.Usage = func() {
@@ -449,9 +462,17 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.Verbose = *verbose
 	order.SkipMirrorValidation = *skipMirrorValidation
 	order.SkipDockerValidation = *skipDockerValidation
-
-	// See if we the user just wants to generate manifests
 	order.GenerateManifestsOnly = *generateManifestsOnly
+	order.VirtualHost = *virtualHost
+	order.DockerRegistry = *dockerRegistry
+	order.BuilderPort = *builderPort
+
+	// Make sure one cannot specify more workers than # cores available
+	order.WorkerCount = *workerCount
+	if *workerCount == 0 || *workerCount > defaultWorkerCount {
+		err := errors.New("invalid '--worker' count, must be less than or equal to the number of CPU cores that are free and permissible in your cgroup configuration")
+		return err
+	}
 
 	// This is a safeguard for when a user does not use quotes around a multi value argument
 	otherArgs := flag.Args()
@@ -460,19 +481,22 @@ func (order *SoftwareOrder) LoadCommands() error {
 		order.WriteLog(true, progressString)
 	}
 
-	// Always require a license
-	if *license == "" {
-		err := errors.New("a software order email (SOE) '--license' file is required")
-		return err
-	}
-	order.SOEZipPath = *license
-
 	// Always require a deployment type
 	if *deploymentType != "multiple" && *deploymentType != "full" && *deploymentType != "single" {
 		err := errors.New("a valid '--type' is required: choose between single, multiple, or full")
 		return err
 	}
 	order.DeploymentType = strings.ToLower(*deploymentType)
+
+	// Always require a license except to re-generate manifests
+	if *license == "" && !order.GenerateManifestsOnly {
+		err := errors.New("a software order email (SOE) '--license' file is required")
+		return err
+	}
+	order.SOEZipPath = *license
+	if !strings.HasSuffix(order.SOEZipPath, ".zip") && !order.GenerateManifestsOnly {
+		return errors.New("the Software Order Email (SOE) argument '--zip' must be a file with the '.zip' extension.")
+	}
 
 	// Optional: Parse the list of addons
 	*addons = strings.TrimSpace(*addons)
@@ -502,8 +526,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 			}
 			order.AddOns = append(order.AddOns, addonPath)
 		}
-
-		order.WriteLog(true, "Building with addons", order.AddOns)
 	}
 
 	// Detect the platform based on the image
@@ -515,7 +537,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 		order.Platform = "redhat"
 	}
 
-	// A mirror is optional, except in the case of using an opensuse base image
+	// A mirror is optional, except in the case of using an opensuse base image for single container
 	order.MirrorURL = *mirrorURL
 	if len(order.MirrorURL) == 0 && order.DeploymentType == "single" && order.Platform == "suse" {
 		return errors.New("a --mirror-url argument is required for a base suse single container")
@@ -533,23 +555,20 @@ func (order *SoftwareOrder) LoadCommands() error {
 		return errors.New("The --project-name argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
 	}
 
-	// Require a docker namespace for multi and full
-	if *dockerNamespace == "" && (order.DeploymentType == "multiple" || order.DeploymentType == "full") {
+	// Require a docker namespace for multi and full if the manifests are not being re-generated
+	if *dockerNamespace == "" && (order.DeploymentType == "multiple" || order.DeploymentType == "full") && !order.GenerateManifestsOnly {
 		return errors.New("a '--docker-namespace' argument is required")
 	}
 	order.DockerNamespace = *dockerNamespace
-	if !regexNoSpecialCharacters.Match([]byte(order.DockerNamespace)) {
+	if !regexNoSpecialCharacters.Match([]byte(order.DockerNamespace)) && !order.GenerateManifestsOnly {
 		return errors.New("The --docker-namespace argument contains invalid characters. It must contain contain only A-Z, a-z, 0-9, _, ., or -")
 	}
 
 	// Require a docker registry for multi and full
-	if *dockerRegistry == "" && (order.DeploymentType == "multiple" || order.DeploymentType == "full") {
+	if *dockerRegistry == "" && !order.GenerateManifestsOnly &&
+		(order.DeploymentType == "multiple" || order.DeploymentType == "full") {
 		return errors.New("a '--docker-registry-url' argument is required")
 	}
-
-	order.DockerRegistry = *dockerRegistry
-
-	order.BuilderPort = *builderPort
 
 	// The deployment type utilizes the order.BuildOnly list
 	// Note: the 'full' deployment type builds everything, omitting the --build-only argument
@@ -577,9 +596,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 			order.BuildOnly = commaDelimList
 		}
 	}
-
-	order.VirtualHost = *virtualHost
-
 	return nil
 }
 
@@ -637,7 +653,7 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 // Grab the Dockerfile stub from the utils directory and append any addons
 // then do a docker build with the base image and platform build arguments
 // TODO: using license in RUN layers and mounting as volume?
-func buildProgrammingOnlySingleContainer(order *SoftwareOrder) (Container, error) {
+func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	container := Container{
 		Name:          "single-programming-only",
 		SoftwareOrder: order,
@@ -647,7 +663,7 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) (Container, error
 	dockerConnection, err := client.NewClientWithOpts(client.WithVersion(DockerAPIVersion))
 	if err != nil {
 		debugMessage := "Unable to connect to Docker daemon. Ensure Docker is installed and the service is started. "
-		return container, errors.New(debugMessage + err.Error())
+		return errors.New(debugMessage + err.Error())
 	}
 	container.DockerClient = dockerConnection
 
@@ -655,109 +671,68 @@ func buildProgrammingOnlySingleContainer(order *SoftwareOrder) (Container, error
 	resourceDirectory := "util/programming-only-single"
 	err = container.CreateBuildDirectory()
 	if err != nil {
-		return container, err
+		return err
 	}
 	container.DockerContextPath = container.SoftwareOrder.BuildPath + "sas-viya-single-programming-only/build_context.tar"
-	err = container.AddFileToContext(resourceDirectory+"/vars_usermods.yml", "vars_usermods.yml", []byte{})
-	if err != nil {
-		return container, err
-	}
 	err = container.AddFileToContext(resourceDirectory+"/entrypoint", "entrypoint", []byte{})
 	if err != nil {
-		return container, err
+		return err
 	}
 	err = container.AddFileToContext(resourceDirectory+"/replace_httpd_default_cert.sh", "replace_httpd_default_cert.sh", []byte{})
 	if err != nil {
-		return container, err
+		return err
+	}
+	err = container.AddFileToContext(order.BuildPath+"/vars_usermods.yml", "vars_usermods.yml", []byte{})
+	if err != nil {
+		return err
 	}
 
 	// TODO: the SOE should not be added to the container. Need to update the Dockerfile to utilize a license volume mount.
 	err = container.AddFileToContext(container.SoftwareOrder.SOEZipPath, "SAS_Viya_deployment_data.zip", []byte{})
 	if err != nil {
-		return container, err
+		return err
 	}
 
 	// Add files from the addons directory to the build context
 	for _, addon := range order.AddOns {
 		err := container.AddDirectoryToContext(addon, "", "")
 		if err != nil {
-			return container, errors.New("Unable to place addon files into Docker context. " + err.Error())
+			return errors.New("Unable to place addon files into Docker context. " + err.Error())
 		}
 	}
 
 	// Add the Dockerfile to the build context
 	dockerfileStub, err := ioutil.ReadFile(resourceDirectory + "/Dockerfile")
 	if err != nil {
-		return container, err
+		return err
 	}
-	dockerfile, err := appendAddonLines(container.Name, string(dockerfileStub), container.SoftwareOrder.AddOns)
+	dockerfile, err := appendAddonLines(container.GetName(), string(dockerfileStub), container.SoftwareOrder.DeploymentType, container.SoftwareOrder.AddOns)
 	if err != nil {
-		return container, err
+		return err
 	}
 	err = container.AddFileToContext("", "Dockerfile", []byte(dockerfile))
 	if err != nil {
-		return container, err
+		return err
 	}
 
-	// Set the payload to send to the Docker client
-	dockerBuildContext, err := os.Open(container.DockerContextPath)
-	if err != nil {
-		return container, err
+	// Make the software order only build the image that was created in this function
+	for _, item := range order.Containers {
+		item.Status = DoNotBuild
 	}
-	container.GetBuildArgs()
-	buildOptions := types.ImageBuildOptions{
-		Context:    dockerBuildContext,
-		Tags:       []string{container.GetWholeImageName()},
-		Dockerfile: "Dockerfile",
-		BuildArgs:  container.BuildArgs,
-	}
-	buildResponseStream, err := container.DockerClient.ImageBuild(
-		container.SoftwareOrder.BuildContext,
-		dockerBuildContext,
-		buildOptions)
-	if err != nil {
-		return container, err
-	}
-	return container, readDockerStream(buildResponseStream.Body, &container, container.SoftwareOrder.Verbose, nil)
+	container.Status = Loaded
+	order.Containers[container.Name] = &container
+	return nil
 }
 
 // Build starts each container build concurrently and report the results
 func (order *SoftwareOrder) Build() error {
-
 	// Handle single container build and output of docker run instructions
 	if order.DeploymentType == "single" {
-		singleContainer, err := buildProgrammingOnlySingleContainer(order)
+		err := getProgrammingOnlySingleContainer(order)
 		if err != nil {
 			return err
 		}
-		singleContainer.Status = Built
-
-		// Optional: push to registry if a registry and namespace was provided
-		if len(order.DockerRegistry) > 0 && len(order.DockerNamespace) > 0 {
-			err := singleContainer.Push(nil)
-			if err != nil {
-				return err
-			}
-		}
-		singleContainer.Status = Pushed
-
-		// TODO: this does not use the Fully Qualified Domain Name
-		hostname, err := os.Hostname()
-		if err != nil {
-			return err
-		}
-		fmt.Println("\n" + fmt.Sprintf(`Run the following to start the container:
-
-    docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=%s \
-    --env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 \
-    --name sas-viya-single-programming-only --hostname %s \
-    sas-viya-single-programming-only:latest
-`, hostname, hostname))
-
-		return nil
 	}
-
-	// Handle all other deployment types
 	numberOfBuilds := 0
 	for _, container := range order.Containers {
 		if container.Status == Loaded {
@@ -776,10 +751,7 @@ func (order *SoftwareOrder) Build() error {
 		// Use the plural "processes" instead of "process"
 		order.WriteLog(true, "Starting "+strconv.Itoa(numberOfBuilds)+" build processes ... (this may take several minutes)")
 	}
-	if !order.Verbose {
-		order.WriteLog(true, "[TIP] The '--verbose' flag can be used to view the Docker build layers as they are being created.")
-	}
-	order.WriteLog(true, "[TIP] System resource utilization can be seen by using the `docker stats` command.\n")
+	order.WriteLog(true, "[TIP] System resource utilization can be seen by using the `docker stats` command.")
 
 	// Concurrently start each build process
 	jobs := make(chan *Container, 100)
@@ -872,11 +844,13 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 
 	if _, err := os.Stat(order.SOEZipPath); os.IsNotExist(err) {
 		fail <- err.Error()
+		return
 	}
 
 	zipped, err := zip.OpenReader(order.SOEZipPath)
 	if err != nil {
-		fail <- err.Error()
+		fail <- "Could not read the file specified by the `--zip` argument. This must be a valid Software Order Email (SOE) zip file.\n" + err.Error()
+		return
 	}
 	defer zipped.Close()
 
@@ -887,15 +861,18 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 		readCloser, err := zippedFile.Open()
 		if err != nil {
 			fail <- err.Error()
+			return
 		}
 		buffer := new(bytes.Buffer)
 		_, err = io.Copy(buffer, readCloser)
 		if err != nil {
 			fail <- err.Error()
+			return
 		}
 		fileBytes, err := ioutil.ReadAll(buffer)
 		if err != nil {
 			fail <- err.Error()
+			return
 		}
 		readCloser.Close()
 
@@ -911,6 +888,7 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 			err := json.Unmarshal(fileBytes, &order.OrderOOM)
 			if err != nil {
 				fail <- err.Error()
+				return
 			}
 		}
 	}
@@ -918,6 +896,7 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 	// Make sure all required files were loaded into the order
 	if len(order.License) == 0 || len(order.MeteredLicense) == 0 || len(order.CA) == 0 || len(order.Entitlement) == 0 {
 		fail <- "Unable to parse all content from SOE zip"
+		return
 	}
 
 	go order.Serve()
@@ -934,6 +913,7 @@ func (order *SoftwareOrder) LoadDocker(progress chan string, fail chan string, d
 	dockerConnection, err := client.NewClientWithOpts(client.WithVersion("1.37"))
 	if err != nil {
 		fail <- "Unable to connect to Docker daemon. Ensure Docker is installed and the service is started."
+		return
 	}
 	order.DockerClient = dockerConnection
 	progress <- "Finished connecting to Docker daemon"
@@ -944,6 +924,7 @@ func (order *SoftwareOrder) LoadDocker(progress chan string, fail chan string, d
 	_, err = order.DockerClient.ImagePull(order.BuildContext, order.BaseImage, types.ImagePullOptions{})
 	if err != nil {
 		fail <- err.Error()
+		return
 	}
 
 	progress <- "Finished pulling base container image '" + order.BaseImage + "'"
@@ -959,6 +940,7 @@ func (order *SoftwareOrder) LoadSiteDefault(progress chan string, fail chan stri
 		order.SiteDefault, err = ioutil.ReadFile("sitedefault.yml")
 		if err != nil {
 			fail <- "Unable to open sitedefault.yml:" + err.Error()
+			return
 		}
 		progress <- "Finished loading sitedefault.yml"
 	} else {
@@ -975,6 +957,7 @@ func (order *SoftwareOrder) TestMirror(progress chan string, fail chan string, d
 	if len(order.MirrorURL) > 0 {
 		if strings.Contains(order.MirrorURL, "http://") {
 			fail <- "The --mirror-url must have TLS enabled. Provide the url with 'https' instead of 'http' in the command argument."
+			return
 		}
 		url := order.MirrorURL
 		if !strings.Contains(order.MirrorURL, "https://") {
@@ -984,9 +967,11 @@ func (order *SoftwareOrder) TestMirror(progress chan string, fail chan string, d
 		response, err := http.Get(url)
 		if err != nil {
 			fail <- err.Error()
+			return
 		}
 		if response.StatusCode != 200 {
 			fail <- "Invalid mirror URL " + err.Error()
+			return
 		}
 		progress <- "Finished checking the mirror URL for validity: http status code " + strconv.Itoa(response.StatusCode)
 	}
@@ -1003,6 +988,7 @@ func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string,
 	}
 	if strings.Contains(order.DockerRegistry, "http://") {
 		fail <- "The --docker-registry-url must have TLS enabled. Provide the url with 'https' instead of 'http' in the command argument."
+		return
 	}
 	url := order.DockerRegistry
 	if !strings.Contains(order.DockerRegistry, "https://") {
@@ -1012,11 +998,13 @@ func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string,
 	response, err := http.Get(url)
 	if err != nil {
 		fail <- err.Error()
+		return
 	}
 	defer response.Body.Close()
 	if response.StatusCode != 200 {
-		fail <- "Invalid Docker registry URL  " + err.Error()
-		fail <- "The URL cannot contain 'http' or 'https'. Also the registry also be configured for https. "
+		fail <- "The URL cannot contain 'http' or 'https'. Also the registry also be configured for https. " +
+			"Invalid Docker registry URL  " + err.Error()
+		return
 	}
 	progress <- "Finished checking the Docker registry URL for validity: http status code " + strconv.Itoa(response.StatusCode)
 
@@ -1025,19 +1013,38 @@ func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string,
 
 // LoadRegistryAuth loads the registry auth from $USERHOME/.docker/config.json
 func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
+	// Skip this if no registry and namespace was specified
+	if len(order.DockerRegistry) == 0 || len(order.DockerNamespace) == 0 {
+		done <- 1
+		return
+	}
+
 	userObject, err := user.Current()
 	if err != nil {
 		fail <- "Cannot get user home directory path for docker config. " + err.Error()
+		return
 	}
 	dockerConfigPath := fmt.Sprintf("%s/.docker/config.json", userObject.HomeDir)
 	order.WriteLog(true, "Reading config from "+dockerConfigPath)
+	configError := "Cannot read Docker configuration or file read permission is not permitted for the ~/.docker/config.json file. Run a `docker login <registry>`.\n"
+	configStat, err := os.Stat(dockerConfigPath)
+	if err != nil {
+		fail <- err.Error()
+		return
+	}
+	if configStat.IsDir() {
+		fail <- configError
+		return
+	}
 	configContent, err := ioutil.ReadFile(dockerConfigPath)
 	if err != nil {
-		fail <- "Cannot read Docker configuration or file read permission is not permitted in " + dockerConfigPath + " run a `docker login <registry>`. " + err.Error()
+		fail <- configError
+		return
 	}
 	config := string(configContent)
 	if !strings.Contains(config, order.DockerRegistry) {
 		fail <- "Cannot find the --docker-registry-url in the Docker config. Run `docker login <registry>` before building."
+		return
 	}
 
 	// Parse the docker registry URL's auth
@@ -1081,17 +1088,58 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	err := getOrchestrationTool()
 	if err != nil {
 		fail <- "Failed to install sas-orchestration tool. " + err.Error()
+		return
 	}
 	progress <- "Finished fetching orchestration tool"
 
 	// Run the orchestration tool to make the playbook
 	// TODO: error handling, passing info back from the build command
 	progress <- "Generating playbook for order ..."
-	generatePlaybookCommand := fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz", order.SOEZipPath, order.BuildPath)
-	_, err = exec.Command("sh", "-c", generatePlaybookCommand).Output()
+	generatePlaybookCommand := fmt.Sprintf(
+		"util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --repository-warehouse %s",
+		order.SOEZipPath, order.BuildPath, order.MirrorURL)
+	if order.DeploymentType == "multiple" {
+		generatePlaybookCommand += " --deployment-type programming"
+	}
+	
+	// The following is to fully provide the output of anything that goes wrong
+	// when generating the playbook.
+	cmd := exec.Command("sh", "-c", generatePlaybookCommand)
+	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
-		fail <- "[ERROR]: Unable to generate the playbook. java-1.8.0-openjdk or another Java Runtime Environment (1.8.x) must be installed. " +
-			err.Error() + "\n" + generatePlaybookCommand
+		fail <- "[ERROR] Could not create StdoutPipe for Cmd. " + err.Error() + "\n" + generatePlaybookCommand
+		return
+	}
+
+	// This code will output the stdout of the playbook generation process
+	// This was the only way I could get the information as to why the playbook
+	// was failing to generate. It could be there is a better way to capture
+	// the information, but I was not having success. It might have been do
+	// to a Go casting issue.
+	scanner := bufio.NewScanner(cmdReader)
+	go func() {
+		for scanner.Scan() {
+			progress <- fmt.Sprintf("Generate playbook output | %s", scanner.Text())
+		}
+	}()
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		result, _ := ioutil.ReadAll(stderr)
+		fail <- "[ERROR]: Unable to generate the playbook via cmd.Start. " + string(result) + "\n" + err.Error() + "\n" + generatePlaybookCommand
+		return
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		result, _ := ioutil.ReadAll(stderr)
+		fail <- "[ERROR]: Unable to generate the playbook during cmd.Wait. " + string(result) + "\n" + err.Error() + "\n" + generatePlaybookCommand
+		return
 	}
 
 	// Detect if Ansible is installed.
@@ -1101,6 +1149,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 		_, err = exec.Command("sh", "-c", testAnsibleInstall).Output()
 		if err != nil {
 			fail <- "[ERROR]: The package `ansible` must be installed in order to generate Kubernetes manifests."
+			return
 		}
 	}
 
@@ -1110,11 +1159,13 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	_, err = exec.Command("sh", "-c", untarPlaybookCommand).Output()
 	if err != nil {
 		fail <- "Unable to untar playbook. " + err.Error()
+		return
 	}
 	order.PlaybookPath = order.BuildPath + "sas_viya_playbook"
 	err = os.Remove(order.BuildPath + "sas_viya_playbook.tgz")
 	if err != nil {
 		fail <- "Unable to untar playbook. " + err.Error()
+		return
 	}
 	progress <- "Finished extracting and generating playbook for order"
 
@@ -1123,6 +1174,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	order.Containers, err = getContainers(order)
 	if err != nil {
 		fail <- err.Error()
+		return
 	}
 	progress <- "Finished fetching the container list"
 
@@ -1151,6 +1203,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 		if len(order.BuildOnly) != len(imageNameMatches) {
 			order.WriteLog(true, fmt.Sprintf("\nSelected Image Builds: %s\nAvailable Image Builds: %s\n", order.BuildOnly, imageNameOptions))
 			fail <- "One or more of the chosen --build-only containers do not exist. "
+			return
 		}
 	}
 
@@ -1164,66 +1217,77 @@ func (order *SoftwareOrder) Prepare() error {
 		return nil
 	}
 
-	if !order.GenerateManifestsOnly {
-		// Call a prebuild on each container
-		fail := make(chan string)
-		done := make(chan string)
-		progress := make(chan string)
-		workerCount := 0
-		for _, container := range order.Containers {
-			if container.Status != DoNotBuild {
-				workerCount++
-				go func(container *Container, progress chan string, fail chan string) {
-					container.Status = Loading
-					err := container.Prebuild(progress)
-					if err != nil {
-						container.Status = Failed
-						fail <- container.Name + " prebuild " + err.Error()
-					}
-					done <- container.Name
-				}(container, progress, fail)
-			}
-		}
-
-		// Wait for the worker pool to finish
-		doneCount := 0
-		for {
-			select {
-			case <-done:
-				doneCount++
-				if doneCount == workerCount {
-					// Generate the Kubernetes manifests since we have all the details to do so before the build
-					// Note: This is a time saver, though the manifests are not valid if the images
-					//       fail to build or fail to push to the registry.
-					err := order.GenerateManifests()
-					if err != nil {
-						return err
-					}
-					return nil
+	// Call a prebuild on each container
+	fail := make(chan string)
+	done := make(chan string)
+	progress := make(chan string)
+	workerCount := 0
+	for _, container := range order.Containers {
+		if container.Status != DoNotBuild {
+			workerCount++
+			go func(container *Container, progress chan string, fail chan string) {
+				container.Status = Loading
+				err := container.Prebuild(progress)
+				if err != nil {
+					container.Status = Failed
+					fail <- container.Name + " prebuild " + err.Error()
 				}
-			case failure := <-fail:
-				order.WriteLog(true, failure)
-			case progress := <-progress:
-				order.WriteLog(true, progress)
-			}
+				done <- container.Name
+			}(container, progress, fail)
 		}
-	} else {
-		// Generate the Kubernetes manifests since we have all the details to do so before the build
-		// Note: This is a time saver, though the manifests are not valid if the images
-		//       fail to build or fail to push to the registry.
-		err := order.GenerateManifests()
-		if err != nil {
-			return err
-		}
-		return nil
 	}
+
+	// Wait for the worker pool to finish
+	doneCount := 0
+	for {
+		select {
+		case <-done:
+			doneCount++
+			if doneCount == workerCount {
+				// Generate the Kubernetes manifests since we have all the details to do so before the build
+				// Note: This is a time saver, though the manifests are not valid if the images
+				//       fail to build or fail to push to the registry.
+				err := order.GenerateManifests()
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+		case failure := <-fail:
+			order.WriteLog(true, failure)
+		case progress := <-progress:
+			order.WriteLog(true, progress)
+		}
+	}
+	return nil
 }
 
 // GenerateManifests runs the generate_manifests playbook to output Kubernetes configs
 func (order *SoftwareOrder) GenerateManifests() error {
 	order.WriteLog(true, "Creating deployment manifests ...")
 
-	if !order.GenerateManifestsOnly {
+	if order.GenerateManifestsOnly {
+		// If we are only generating manifests then use the previous run.
+		// Also make sure the previous deployment directory exists.
+		// One must build containers before attempting to re-generate the manifests.
+		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
+		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
+			return errors.New("The --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist.")
+		}
+
+		// Save off the previous build log
+		order.LogPath = order.BuildPath + "/build.log"
+		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s",
+			order.LogPath, order.TimestampTag))
+		if err != nil {
+			return err
+		}
+		logHandle, err := os.Create(order.LogPath)
+		if err != nil {
+			return err
+		}
+		order.Log = logHandle
+	} else {
 		// Write a vars file to disk so it can be used by the playbook
 		containerVarSections := []string{}
 		for _, container := range order.Containers {
@@ -1399,30 +1463,6 @@ settings:
 		}
 	}
 
-	varsDestPath := fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath)
-	// If the user provided a vars_usremods.yml file copy it over or copy the default version
-	if _, err := os.Stat("vars_usermods.yml"); os.IsNotExist(err) {
-		input, err := ioutil.ReadFile("util/vars_usermods.yml")
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(varsDestPath, input, 0644)
-		if err != nil {
-			fmt.Println("Error creating", varsDestPath)
-			return err
-		}
-	} else {
-		input, err := ioutil.ReadFile("vars_usermods.yml")
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(varsDestPath, input, 0644)
-		if err != nil {
-			fmt.Println("Error creating", varsDestPath)
-			return err
-		}
-	}
-
 	// Run the playbook locally to generate the Kubernetes manifests
 	manifestsCommand := fmt.Sprintf("ansible-playbook --connection=local --inventory 127.0.0.1, %sgenerate_manifests.yml -vv", order.BuildPath)
 	result, err := exec.Command("sh", "-c", manifestsCommand).Output()
@@ -1430,13 +1470,41 @@ settings:
 		result := string(result) + "\n" + manifestsCommand + "\n"
 		result += string(result) + "\n" + err.Error() + "\n"
 		result += "Generate Manifests playbook failed.\n"
-		result += fmt.Sprintf("To debug use `cd %s ; ansible-playbook generate_manifests.yml`\n", order.BuildPath)
+		result += fmt.Sprintf("To debug use `cd %s ; ansible-playbook -vv generate_manifests.yml`\n", order.BuildPath)
 		return errors.New(result)
 	}
 
 	order.WriteLog(true, "Finished creating deployment manifests\n")
 
 	return nil
+}
+
+// If the user provided a vars_usermods.yml file then copy it
+// into the build directory or copy the default usermods file
+func (order *SoftwareOrder) LoadUsermods(progress chan string, fail chan string, done chan int) {
+	usermodsFileName := "vars_usermods.yml"
+	usermodsFilePath := "util/" + usermodsFileName
+	if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
+		progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
+		usermodsFilePath = usermodsFileName
+	}
+	input, err := ioutil.ReadFile(usermodsFilePath)
+	if err != nil {
+		fail <- err.Error()
+		return
+	}
+
+	// Workaround for single container always requiring this variable somewhere in the usermods
+	if order.DeploymentType == "single" {
+		input = []byte(string(input) + "\nrecipe_override: True\n")
+	}
+
+	err = ioutil.WriteFile(fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath), input, 0644)
+	if err != nil {
+		fail <- err.Error()
+		return
+	}
+	done <- 1
 }
 
 // Download the orchestration tool locally if it is not in the util directory
@@ -1493,17 +1561,30 @@ func bytesToGB(bytes int64) string {
 	return fmt.Sprintf("%.2f GB", float64(bytes)/float64(1000000000))
 }
 
-// ShowBuildSummary calculates all metrics and display them in a table.
-func (order *SoftwareOrder) ShowBuildSummary() {
+// ShowSummary displays metrics and next steps for deployment
+func (order *SoftwareOrder) ShowSummary() error {
+	if order.DeploymentType == "single" {
+
+		// TODO: this does not use the Fully Qualified Domain Name
+		hostname, err := os.Hostname()
+		if err != nil {
+			return err
+		}
+		fmt.Println("\n" + fmt.Sprintf(`Run the following to start the container:
+
+docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=%s \
+--env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 \
+--name sas-viya-single-programming-only --hostname %s \
+sas-viya-single-programming-only:%s
+	`, hostname, hostname, order.TagOverride))
+
+		order.EndTime = time.Now()
+		fmt.Println(fmt.Sprintf("\nTotal Elapsed Time: %s\n", order.EndTime.Sub(order.StartTime).Round(time.Second)))
+		return nil
+	}
 
 	if !order.GenerateManifestsOnly {
 		// Special case where the single deployment does not use the order.Containers list
-		if order.DeploymentType == "single" {
-			order.EndTime = time.Now()
-			fmt.Println(fmt.Sprintf("\nTotal Elapsed Time: %s\n\n", order.EndTime.Sub(order.StartTime).Round(time.Second)))
-			return
-		}
-
 		// Print each container's metrics in a table
 		summaryHeader := fmt.Sprintf("\n%s  Summary  ( %s, %s ) %s", strings.Repeat("-", 23),
 			order.EndTime.Sub(order.StartTime).Round(time.Second),
@@ -1534,10 +1615,13 @@ func (order *SoftwareOrder) ShowBuildSummary() {
 	//       given to the user.
 	symlinkBuildPath := fmt.Sprintf("builds/%s/manifests", order.DeploymentType)
 	namespaceGrepCommand := fmt.Sprintf("grep '^SAS_K8S_NAMESPACE' %svars_usermods.yml | awk -F ': ' '{ print $2 }'", order.BuildPath)
-	grep_out, _ := exec.Command("sh", "-c", namespaceGrepCommand).Output()
-	k8s_namespace := strings.TrimSuffix(string(grep_out), "\n")
-	if len(k8s_namespace) == 0 {
-		k8s_namespace = "sas-viya"
+	grepResult, err := exec.Command("sh", "-c", namespaceGrepCommand).Output()
+	if err != nil {
+		return err
+	}
+	kubeNamespace := strings.TrimSuffix(string(grepResult), "\n")
+	if len(kubeNamespace) == 0 {
+		kubeNamespace = "sas-viya"
 	}
 
 	manifestLocation := fmt.Sprintf(`
@@ -1568,15 +1652,17 @@ kubectl -n %s apply -f %s/kubernetes/secrets && \
 kubectl -n %s apply -f %s/kubernetes/services && \
 kubectl -n %s apply -f %s/kubernetes/deployments
 `,
-		symlinkBuildPath, k8s_namespace,
-		k8s_namespace, symlinkBuildPath, k8s_namespace,
-		k8s_namespace, symlinkBuildPath,
-		k8s_namespace, symlinkBuildPath,
-		k8s_namespace, symlinkBuildPath,
-		k8s_namespace, symlinkBuildPath)
+		symlinkBuildPath, kubeNamespace,
+		kubeNamespace, symlinkBuildPath, kubeNamespace,
+		kubeNamespace, symlinkBuildPath,
+		kubeNamespace, symlinkBuildPath,
+		kubeNamespace, symlinkBuildPath,
+		kubeNamespace, symlinkBuildPath)
 
 	fmt.Println(manifestLocation)
 	fmt.Println(manifestInstructions)
 	order.WriteLog(false, manifestLocation)
 	order.WriteLog(false, manifestInstructions)
+
+	return nil
 }
