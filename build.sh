@@ -158,7 +158,12 @@ while [[ $# -gt 0 ]]; do
             export WORKERS="$1"
             shift # past value
             ;;
-        *) # Ignore everything that isn't a valid arg
+        *)
+            usage
+            echo -e "\n\nOne or more arguments were not recognized:" 
+            for word in "$@"; do echo -e "  $word"; done
+            echo
+            exit 1 
             shift
     ;;
     esac
