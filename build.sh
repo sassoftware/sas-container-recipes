@@ -160,8 +160,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             usage
-            echo -e "\n\nOne or more arguments were not recognized:" 
-            for word in "$@"; do echo -e "  $word"; done
+            echo -e "\n\nOne or more arguments were not recognized: \n$@"
             echo
             exit 1 
             shift
