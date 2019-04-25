@@ -1,0 +1,1 @@
+This documentation is source controlled in the `github.com/sassoftware/sas-container-recipes/docs/wiki/` directory. Our community gladly accepts pull requests with improvements to those markdown files.
