@@ -138,7 +138,7 @@ while [[ $# -gt 0 ]]; do
             export PROJECT_NAME="$1"
             shift # past value
             ;;
-        -s|--sas-docker-tag)
+        --tag)
             shift # past argument
             export SAS_DOCKER_TAG="$1"
             shift # past value
