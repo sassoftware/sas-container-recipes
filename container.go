@@ -429,6 +429,7 @@ ADD roles /ansible/roles
 `
 
 const dockerfileSetupEntrypoint = `# Start a top level process that starts all services
+USER sas
 ENTRYPOINT ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/%s-entrypoint.sh"]
 `
 
