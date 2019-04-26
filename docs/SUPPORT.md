@@ -1,12 +1,13 @@
 # SAS Viya Container Recipes Support
+We use GitHub for tracking bugs and feature requests. 
+Please submit a GitHub issue or pull request for support.
 
-#### GitHub Project ####
+### GitHub Project ####
 - Wiki (documentation): https://github.com/sassoftware/sas-container-recipes/wiki
 - Issues: https://github.com/sassoftware/sas-container-recipes/issues
 - Pull requests: https://github.com/sassoftware/sas-container-recipes/pulls
 
 #### SAS Support and Licensing ####
-- SAS Technical Support (license required): https://support.sas.com/en/technical-support.html
 - Licensing: https://www.sas.com/en_us/software/how-to-buy.html
 - SAS License Assistance: https://support.sas.com/en/technical-support/license-assistance.html
 - Free Software Trials: https://www.sas.com/en_us/trials.html
