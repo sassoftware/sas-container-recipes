@@ -2,7 +2,7 @@
 We use GitHub for tracking bugs and feature requests. 
 Please submit a GitHub issue or pull request for support.
 
-### GitHub Project ####
+#### GitHub Project ####
 - Wiki (documentation): https://github.com/sassoftware/sas-container-recipes/wiki
 - Issues: https://github.com/sassoftware/sas-container-recipes/issues
 - Pull requests: https://github.com/sassoftware/sas-container-recipes/pulls
