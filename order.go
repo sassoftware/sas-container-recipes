@@ -26,8 +26,8 @@ import (
 	"github.com/docker/docker/client"
 
 	"archive/zip"
-	"bytes"
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -409,7 +409,7 @@ func (order *SoftwareOrder) GetIntermediateStatus(progress chan string) {
 		strings.Join(finishedContainers, ", "), strings.Join(remainingContainers, ", "))
 }
 
-// LoadCommands recieves flags and arguments, parse them, and load them into the order
+// LoadCommands receives flags and arguments, parse them, and load them into the order
 func (order *SoftwareOrder) LoadCommands() error {
 	// Standard format that arguments must comply with
 	regexNoSpecialCharacters := regexp.MustCompile("^[_A-z0-9]*([_A-z0-9\\-\\.]*)$")
@@ -742,7 +742,7 @@ func (order *SoftwareOrder) Build() error {
 	fmt.Println("")
 	if numberOfBuilds == 0 {
 		return errors.New("The number of builds are set to zero. " +
-			"An error in pre-build tasks may have occured or the " +
+			"An error in pre-build tasks may have occurred or the " +
 			"Software Order entitlement does not match the deployment type.")
 	} else if numberOfBuilds == 1 {
 		// Use the singular "process" instead of "processes"
@@ -1101,7 +1101,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	if order.DeploymentType == "multiple" {
 		generatePlaybookCommand += " --deployment-type programming"
 	}
-	
+
 	// The following is to fully provide the output of anything that goes wrong
 	// when generating the playbook.
 	cmd := exec.Command("sh", "-c", generatePlaybookCommand)
