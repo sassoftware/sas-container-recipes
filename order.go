@@ -26,8 +26,8 @@ import (
 	"github.com/docker/docker/client"
 
 	"archive/zip"
-	"bytes"
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -1093,21 +1093,23 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	progress <- "Finished fetching orchestration tool"
 
 	// Run the orchestration tool to make the playbook
-	// TODO: error handling, passing info back from the build command
 	progress <- "Generating playbook for order ..."
-	generatePlaybookCommand := fmt.Sprintf(
-		"util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --repository-warehouse %s",
-		order.SOEZipPath, order.BuildPath, order.MirrorURL)
+	playbookCommand := "util/sas-orchestration build "
+	playbookCOmmand += "--platform x64-redhat-linux-6 "
+	playbookCommand += "--input " + order.SOEZipPath + " "
+	playbookCommand += "--output " + order.BuildPath + "/sas_viya_playbook.tgz "
+	playbookCommand += "--repository-warehouse " + order.MirrorURL + " "
 	if order.DeploymentType == "multiple" {
-		generatePlaybookCommand += " --deployment-type programming"
+		playbookCommand += "--deployment-type programming "
 	}
-	
+	order.WriteLog(false, playbookCommand)
+
 	// The following is to fully provide the output of anything that goes wrong
 	// when generating the playbook.
-	cmd := exec.Command("sh", "-c", generatePlaybookCommand)
+	cmd := exec.Command("sh", "-c", playbookCommand)
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
-		fail <- "[ERROR] Could not create StdoutPipe for Cmd. " + err.Error() + "\n" + generatePlaybookCommand
+		fail <- "[ERROR] Could not create StdoutPipe for Cmd. " + err.Error() + "\n" + playbookCommand
 		return
 	}
 
@@ -1122,7 +1124,6 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 			progress <- fmt.Sprintf("Generate playbook output | %s", scanner.Text())
 		}
 	}()
-
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return
@@ -1131,14 +1132,14 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	err = cmd.Start()
 	if err != nil {
 		result, _ := ioutil.ReadAll(stderr)
-		fail <- "[ERROR]: Unable to generate the playbook via cmd.Start. " + string(result) + "\n" + err.Error() + "\n" + generatePlaybookCommand
+		fail <- "[ERROR]: Unable to generate the playbook via cmd.Start. " + string(result) + "\n" + err.Error() + "\n" + playbookCommand
 		return
 	}
 
 	err = cmd.Wait()
 	if err != nil {
 		result, _ := ioutil.ReadAll(stderr)
-		fail <- "[ERROR]: Unable to generate the playbook during cmd.Wait. " + string(result) + "\n" + err.Error() + "\n" + generatePlaybookCommand
+		fail <- "[ERROR]: Unable to generate the playbook during cmd.Wait. " + string(result) + "\n" + err.Error() + "\n" + playbookCommand
 		return
 	}
 
