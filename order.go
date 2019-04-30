@@ -1116,7 +1116,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	if order.DeploymentType == "multiple" {
 		generatePlaybookCommand += " --deployment-type programming"
 	}
-	
+
 	// The following is to fully provide the output of anything that goes wrong
 	// when generating the playbook.
 	cmd := exec.Command("sh", "-c", generatePlaybookCommand)
