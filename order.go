@@ -1514,9 +1514,13 @@ settings:
 	return nil
 }
 
-// If the user provided a vars_usermods.yml file then copy it
-// into the build directory or copy the default usermods file
-func (order *SoftwareOrder) LoadUsermods(progress chan string, fail chan string, done chan int) {
+// LoadUsermods retrieves the user provided vars_usermods.yml file
+// from the project directory then copies it into the build
+// directory, or if the file was not provided then the
+// default usermods file is copied.
+// This function can be used concurrently or non concurrently.
+func (order *SoftwareOrder) LoadUsermods(progress chan string,
+	fail chan string, done chan int) error {
 	usermodsFileName := "vars_usermods.yml"
 	usermodsFilePath := "util/" + usermodsFileName
 	if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
