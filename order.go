@@ -1287,14 +1287,29 @@ func (order *SoftwareOrder) GenerateManifests() error {
 		// One must build containers before attempting to re-generate the manifests.
 		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
 		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
-			return errors.New("The --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist.")
+			return errors.New("The --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist")
 		}
 
-		// Save off the previous build log
-		order.LogPath = order.BuildPath + "/build.log"
-		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s",
-			order.LogPath, order.TimestampTag))
-		if err != nil {
+		// Rename the previous manifests, usermods, and build log with a timestamp
+		// manifests/ --> manifests-<datetime>/
+		if err := os.Rename(order.BuildPath+"manifests",
+			order.BuildPath+"manifests-"+order.TimestampTag); err != nil {
+			return err
+		}
+
+		// vars_usermods.yml --> vars_usermods-<datetime>.yml
+		usermodsPathPrevious := fmt.Sprintf("%svars_usermods-%s.yml",
+			order.BuildPath, order.TimestampTag)
+		if err := os.Rename(order.BuildPath+"vars_usermods.yml",
+			usermodsPathPrevious); err != nil {
+			return err
+		}
+
+		// build.log --> build-<datetime>.log
+		order.LogPath = order.BuildPath + "build.log"
+		buildLogPrevious := fmt.Sprintf("%sbuild-%s.log",
+			order.BuildPath, order.TimestampTag)
+		if err := os.Rename(order.LogPath, buildLogPrevious); err != nil {
 			return err
 		}
 		logHandle, err := os.Create(order.LogPath)
@@ -1302,6 +1317,11 @@ func (order *SoftwareOrder) GenerateManifests() error {
 			return err
 		}
 		order.Log = logHandle
+
+		// Re-copy the usermods file
+		if err = order.LoadUsermods(nil, nil, nil); err != nil {
+			return err
+		}
 	} else {
 		// Write a vars file to disk so it can be used by the playbook
 		containerVarSections := []string{}
