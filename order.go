@@ -495,7 +495,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 	order.SOEZipPath = *license
 	if !strings.HasSuffix(order.SOEZipPath, ".zip") && !order.GenerateManifestsOnly {
-		return errors.New("the Software Order Email (SOE) argument '--zip' must be a file with the '.zip' extension.")
+		return errors.New("the Software Order Email (SOE) argument '--zip' must be a file with the '.zip' extension")
 	}
 
 	// Optional: Parse the list of addons
@@ -1095,9 +1095,9 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	// Run the orchestration tool to make the playbook
 	progress <- "Generating playbook for order ..."
 	playbookCommand := "util/sas-orchestration build "
-	playbookCOmmand += "--platform x64-redhat-linux-6 "
+	playbookCommand += "--platform x64-redhat-linux-6 "
 	playbookCommand += "--input " + order.SOEZipPath + " "
-	playbookCommand += "--output " + order.BuildPath + "/sas_viya_playbook.tgz "
+	playbookCommand += "--output " + order.BuildPath + "sas_viya_playbook.tgz "
 	playbookCommand += "--repository-warehouse " + order.MirrorURL + " "
 	if order.DeploymentType == "multiple" {
 		playbookCommand += "--deployment-type programming "
@@ -1273,7 +1273,7 @@ func (order *SoftwareOrder) GenerateManifests() error {
 		// One must build containers before attempting to re-generate the manifests.
 		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
 		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
-			return errors.New("The --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist.")
+			return errors.New("the --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist")
 		}
 
 		// Save off the previous build log
