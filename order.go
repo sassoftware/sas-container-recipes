@@ -1095,7 +1095,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	// Run the orchestration tool to make the playbook
 	progress <- "Generating playbook for order ..."
 	playbookCommand := "util/sas-orchestration build "
-	playbookCommand += "--platform x64-redhat-linux-6 "
+	playbookCommand += "--platform redhat "
 	playbookCommand += "--input " + order.SOEZipPath + " "
 	playbookCommand += "--output " + order.BuildPath + "sas_viya_playbook.tgz "
 	playbookCommand += "--repository-warehouse " + order.MirrorURL + " "
@@ -1124,6 +1124,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 			progress <- fmt.Sprintf("Generate playbook output | %s", scanner.Text())
 		}
 	}()
+
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return
@@ -1141,17 +1142,6 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 		result, _ := ioutil.ReadAll(stderr)
 		fail <- "[ERROR]: Unable to generate the playbook during cmd.Wait. " + string(result) + "\n" + err.Error() + "\n" + playbookCommand
 		return
-	}
-
-	// Detect if Ansible is installed.
-	// This is required for the Generate Manifests function in multiple and full deployment types, not in the single container.
-	if order.DeploymentType != "single" {
-		testAnsibleInstall := "ansible --version"
-		_, err = exec.Command("sh", "-c", testAnsibleInstall).Output()
-		if err != nil {
-			fail <- "[ERROR]: The package `ansible` must be installed in order to generate Kubernetes manifests."
-			return
-		}
 	}
 
 	// TODO replace with "golang.org/x/build/internal/untar"
@@ -1260,7 +1250,6 @@ func (order *SoftwareOrder) Prepare() error {
 			order.WriteLog(true, progress)
 		}
 	}
-	return nil
 }
 
 // GenerateManifests runs the generate_manifests playbook to output Kubernetes configs
@@ -1276,11 +1265,26 @@ func (order *SoftwareOrder) GenerateManifests() error {
 			return errors.New("the --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist")
 		}
 
-		// Save off the previous build log
-		order.LogPath = order.BuildPath + "/build.log"
-		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s",
-			order.LogPath, order.TimestampTag))
-		if err != nil {
+		// Rename the previous manifests, usermods, and build log with a timestamp
+		// manifests/ --> manifests-<datetime>/
+		if err := os.Rename(order.BuildPath+"manifests",
+			order.BuildPath+"manifests-"+order.TimestampTag); err != nil {
+			return err
+		}
+
+		// vars_usermods.yml --> vars_usermods-<datetime>.yml
+		usermodsPathPrevious := fmt.Sprintf("%svars_usermods-%s.yml",
+			order.BuildPath, order.TimestampTag)
+		if err := os.Rename(order.BuildPath+"vars_usermods.yml",
+			usermodsPathPrevious); err != nil {
+			return err
+		}
+
+		// build.log --> build-<datetime>.log
+		order.LogPath = order.BuildPath + "build.log"
+		buildLogPrevious := fmt.Sprintf("%sbuild-%s.log",
+			order.BuildPath, order.TimestampTag)
+		if err := os.Rename(order.LogPath, buildLogPrevious); err != nil {
 			return err
 		}
 		logHandle, err := os.Create(order.LogPath)
@@ -1288,6 +1292,11 @@ func (order *SoftwareOrder) GenerateManifests() error {
 			return err
 		}
 		order.Log = logHandle
+
+		// Re-copy the usermods file
+		if err = order.LoadUsermods(nil, nil, nil); err != nil {
+			return err
+		}
 	} else {
 		// Write a vars file to disk so it can be used by the playbook
 		containerVarSections := []string{}
@@ -1480,19 +1489,27 @@ settings:
 	return nil
 }
 
-// If the user provided a vars_usermods.yml file then copy it
-// into the build directory or copy the default usermods file
-func (order *SoftwareOrder) LoadUsermods(progress chan string, fail chan string, done chan int) {
+// LoadUsermods retrieves the user provided vars_usermods.yml file
+// from the project directory then copies it into the build
+// directory, or if the file was not provided then the
+// default usermods file is copied.
+// This function can be used concurrently or non concurrently.
+func (order *SoftwareOrder) LoadUsermods(progress chan string,
+	fail chan string, done chan int) error {
 	usermodsFileName := "vars_usermods.yml"
 	usermodsFilePath := "util/" + usermodsFileName
 	if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
-		progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
+		if progress != nil {
+			progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
+		}
 		usermodsFilePath = usermodsFileName
 	}
 	input, err := ioutil.ReadFile(usermodsFilePath)
 	if err != nil {
-		fail <- err.Error()
-		return
+		if fail != nil {
+			fail <- err.Error()
+		}
+		return err
 	}
 
 	// Workaround for single container always requiring this variable somewhere in the usermods
@@ -1502,10 +1519,15 @@ func (order *SoftwareOrder) LoadUsermods(progress chan string, fail chan string,
 
 	err = ioutil.WriteFile(fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath), input, 0644)
 	if err != nil {
-		fail <- err.Error()
-		return
+		if fail != nil {
+			fail <- err.Error()
+		}
+		return err
 	}
-	done <- 1
+	if done != nil {
+		done <- 1
+	}
+	return nil
 }
 
 // Download the orchestration tool locally if it is not in the util directory
