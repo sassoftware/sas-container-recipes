@@ -22,3 +22,11 @@
     mode: "0755"
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
+
+- name: Comment out conflicting X-Forwarded headers
+  shell: |
+    LINE_NUM=$(grep -n '# Default the X-Forwarded-Proto header to http' /etc/httpd/conf.d/petrichor.conf|cut -f1 -d:)
+    if [[ $LINE_NUM -gt 0 ]]; then
+        END_LINE=$(($LINE_NUM+7))
+        sed -ibak "$LINE_NUM,$END_LINE {s/^/#/}" /etc/httpd/conf.d/petrichor.conf
+    fi
