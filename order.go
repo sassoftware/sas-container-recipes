@@ -284,7 +284,7 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	} else {
 		log.Println("Skipping validating Docker registry ...")
 	}
-	
+
 	if !order.SkipMirrorValidation {
 		workerCount++
 		go order.TestMirror(progress, fail, done)
