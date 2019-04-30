@@ -1274,7 +1274,6 @@ func (order *SoftwareOrder) Prepare() error {
 			order.WriteLog(true, progress)
 		}
 	}
-	return nil
 }
 
 // GenerateManifests runs the generate_manifests playbook to output Kubernetes configs
