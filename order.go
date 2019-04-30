@@ -1144,6 +1144,18 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 		return
 	}
 
+	// Detect if Ansible is installed inside the build container.
+	// This is required for the Generate Manifests function in multiple and
+	// full deployment types, not in the single container.
+	if order.DeploymentType != "single" {
+		testAnsibleInstall := "ansible --version"
+		_, err = exec.Command("sh", "-c", testAnsibleInstall).Output()
+		if err != nil {
+			fail <- "[ERROR]: The package `ansible` must be installed inside the build container in order to generate Kubernetes manifests."
+			return
+		}
+	}
+
 	// TODO replace with "golang.org/x/build/internal/untar"
 	progress <- "Extracting generated playbook content ..."
 	untarPlaybookCommand := fmt.Sprintf("tar --extract --file %ssas_viya_playbook.tgz -C %s", order.BuildPath, order.BuildPath)
