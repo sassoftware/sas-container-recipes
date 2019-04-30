@@ -1521,34 +1521,38 @@ settings:
 // This function can be used concurrently or non concurrently.
 func (order *SoftwareOrder) LoadUsermods(progress chan string,
 	fail chan string, done chan int) error {
-	usermodsFileName := "vars_usermods.yml"
-	usermodsFilePath := "util/" + usermodsFileName
-	if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
-		if progress != nil {
-			progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
+		usermodsFileName := "vars_usermods.yml"
+		usermodsFilePath := "util/" + usermodsFileName
+		if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
+			if progress != nil {
+				progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
+			}
+			usermodsFilePath = usermodsFileName
 		}
-		usermodsFilePath = usermodsFileName
-	}
-	input, err := ioutil.ReadFile(usermodsFilePath)
-	if err != nil {
-		if fail != nil {
-			fail <- err.Error()
+		input, err := ioutil.ReadFile(usermodsFilePath)
+		if err != nil {
+			if fail != nil {
+				fail <- err.Error()
+			}
+			return err
 		}
-		return err
-	}
-
-	// Workaround for single container always requiring this variable somewhere in the usermods
-	if order.DeploymentType == "single" {
-		input = []byte(string(input) + "\nrecipe_override: True\n")
-	}
-
-	err = ioutil.WriteFile(fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath), input, 0644)
-	if err != nil {
-		if progress != nil {
-			progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
+	
+		// Workaround for single container always requiring this variable somewhere in the usermods
+		if order.DeploymentType == "single" {
+			input = []byte(string(input) + "\nrecipe_override: True\n")
 		}
-	}
-	return nil
+	
+		err = ioutil.WriteFile(fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath), input, 0644)
+		if err != nil {
+			if fail != nil {
+				fail <- err.Error()
+			}
+			return err
+		}
+		if done != nil {
+			done <- 1
+		}
+		return nil	
 }
 
 // Download the orchestration tool locally if it is not in the util directory
