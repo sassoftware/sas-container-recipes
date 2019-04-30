@@ -26,8 +26,8 @@ import (
 	"github.com/docker/docker/client"
 
 	"archive/zip"
-	"bufio"
 	"bytes"
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -80,6 +80,7 @@ type SoftwareOrder struct {
 	SkipMirrorValidation  bool     `yaml:"Skip Mirror Validation  "`
 	SkipDockerValidation  bool     `yaml:"Skip Docker Validation  "`
 	GenerateManifestsOnly bool     `yaml:"Generate Manifests Only "`
+	SkipDockerRegistry    string   `yaml:"Skip Docker Registry    "`
 
 	// Build attributes
 	Log          *os.File              `yaml:"-"`                        // File handle for log path
@@ -267,17 +268,23 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	workerCount++
 	go order.LoadDocker(progress, fail, done)
 
-	workerCount++
-	go order.LoadRegistryAuth(fail, done)
+	if order.SkipDockerRegistry != "true" {
+		workerCount++
+		go order.LoadRegistryAuth(fail, done)	
+	} else {
+		log.Println("Skipping loading Docker registry authentication ...")
+	}
 
 	workerCount++
 	go order.LoadUsermods(progress, fail, done)
 
-	if !order.SkipDockerValidation {
+	if !order.SkipDockerValidation && order.SkipDockerRegistry != "true"  {
 		workerCount++
 		go order.TestRegistry(progress, fail, done)
+	} else {
+		log.Println("Skipping validating Docker registry ...")
 	}
-
+	
 	if !order.SkipMirrorValidation {
 		workerCount++
 		go order.TestMirror(progress, fail, done)
@@ -409,10 +416,13 @@ func (order *SoftwareOrder) GetIntermediateStatus(progress chan string) {
 		strings.Join(finishedContainers, ", "), strings.Join(remainingContainers, ", "))
 }
 
-// LoadCommands receives flags and arguments, parse them, and load them into the order
+// LoadCommands recieves flags and arguments, parse them, and load them into the order
 func (order *SoftwareOrder) LoadCommands() error {
 	// Standard format that arguments must comply with
 	regexNoSpecialCharacters := regexp.MustCompile("^[_A-z0-9]*([_A-z0-9\\-\\.]*)$")
+
+	// Read environment variables
+	order.SkipDockerRegistry = os.Getenv("SAS_SKIP_DOCKER_REGISTRY")
 
 	// Required arguments
 	license := flag.String("zip", "", "")
@@ -495,7 +505,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 	order.SOEZipPath = *license
 	if !strings.HasSuffix(order.SOEZipPath, ".zip") && !order.GenerateManifestsOnly {
-		return errors.New("the Software Order Email (SOE) argument '--zip' must be a file with the '.zip' extension")
+		return errors.New("the Software Order Email (SOE) argument '--zip' must be a file with the '.zip' extension.")
 	}
 
 	// Optional: Parse the list of addons
@@ -630,21 +640,26 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 		container.SoftwareOrder.TotalBuildSize += imageSize
 		container.ImageSize = imageSize
 
-		// Push
-		container.PushStart = time.Now()
-		err = container.Push(progress)
-		if err != nil {
-			container.Status = Failed
-			fail <- container.GetWholeImageName() + " container push " + err.Error()
-			done <- container.Name
-			return
-		}
-		container.PushEnd = time.Now()
+		if container.SoftwareOrder.SkipDockerRegistry != "true" {
+			// Push
+			container.PushStart = time.Now()
+			err = container.Push(progress)
+			if err != nil {
+				container.Status = Failed
+				fail <- container.GetWholeImageName() + " container push " + err.Error()
+				done <- container.Name
+				return
+			}
+			container.PushEnd = time.Now()
 
-		// Signal the end of the build and push processes
-		container.Status = Pushed
-		progress <- container.GetWholeImageName() + ": finished pushing image to Docker registry"
-		container.SoftwareOrder.GetIntermediateStatus(progress)
+			// Signal the end of the build and push processes
+			container.Status = Pushed
+			progress <- container.GetWholeImageName() + ": finished pushing image to Docker registry"
+			container.SoftwareOrder.GetIntermediateStatus(progress)
+		} else {
+			progress <- "Skipping pushing " + container.GetWholeImageName() + " to Docker registry"
+		}
+		
 		done <- container.Name
 	}
 }
@@ -742,7 +757,7 @@ func (order *SoftwareOrder) Build() error {
 	fmt.Println("")
 	if numberOfBuilds == 0 {
 		return errors.New("The number of builds are set to zero. " +
-			"An error in pre-build tasks may have occurred or the " +
+			"An error in pre-build tasks may have occured or the " +
 			"Software Order entitlement does not match the deployment type.")
 	} else if numberOfBuilds == 1 {
 		// Use the singular "process" instead of "processes"
@@ -1101,7 +1116,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	if order.DeploymentType == "multiple" {
 		generatePlaybookCommand += " --deployment-type programming"
 	}
-
+	
 	// The following is to fully provide the output of anything that goes wrong
 	// when generating the playbook.
 	cmd := exec.Command("sh", "-c", generatePlaybookCommand)
@@ -1259,6 +1274,7 @@ func (order *SoftwareOrder) Prepare() error {
 			order.WriteLog(true, progress)
 		}
 	}
+	return nil
 }
 
 // GenerateManifests runs the generate_manifests playbook to output Kubernetes configs
@@ -1271,29 +1287,14 @@ func (order *SoftwareOrder) GenerateManifests() error {
 		// One must build containers before attempting to re-generate the manifests.
 		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
 		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
-			return errors.New("The --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist")
+			return errors.New("The --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist.")
 		}
 
-		// Rename the previous manifests, usermods, and build log with a timestamp
-		// manifests/ --> manifests-<datetime>/
-		if err := os.Rename(order.BuildPath+"manifests",
-			order.BuildPath+"manifests-"+order.TimestampTag); err != nil {
-			return err
-		}
-
-		// vars_usermods.yml --> vars_usermods-<datetime>.yml
-		usermodsPathPrevious := fmt.Sprintf("%svars_usermods-%s.yml",
-			order.BuildPath, order.TimestampTag)
-		if err := os.Rename(order.BuildPath+"vars_usermods.yml",
-			usermodsPathPrevious); err != nil {
-			return err
-		}
-
-		// build.log --> build-<datetime>.log
-		order.LogPath = order.BuildPath + "build.log"
-		buildLogPrevious := fmt.Sprintf("%sbuild-%s.log",
-			order.BuildPath, order.TimestampTag)
-		if err := os.Rename(order.LogPath, buildLogPrevious); err != nil {
+		// Save off the previous build log
+		order.LogPath = order.BuildPath + "/build.log"
+		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s",
+			order.LogPath, order.TimestampTag))
+		if err != nil {
 			return err
 		}
 		logHandle, err := os.Create(order.LogPath)
@@ -1301,11 +1302,6 @@ func (order *SoftwareOrder) GenerateManifests() error {
 			return err
 		}
 		order.Log = logHandle
-
-		// Re-copy the usermods file
-		if err = order.LoadUsermods(nil, nil, nil); err != nil {
-			return err
-		}
 	} else {
 		// Write a vars file to disk so it can be used by the playbook
 		containerVarSections := []string{}
@@ -1498,27 +1494,19 @@ settings:
 	return nil
 }
 
-// LoadUsermods retrieves the user provided vars_usermods.yml file
-// from the project directory then copies it into the build
-// directory, or if the file was not provided then the
-// default usermods file is copied.
-// This function can be used concurrently or non concurrently.
-func (order *SoftwareOrder) LoadUsermods(progress chan string,
-	fail chan string, done chan int) error {
+// If the user provided a vars_usermods.yml file then copy it
+// into the build directory or copy the default usermods file
+func (order *SoftwareOrder) LoadUsermods(progress chan string, fail chan string, done chan int) {
 	usermodsFileName := "vars_usermods.yml"
 	usermodsFilePath := "util/" + usermodsFileName
 	if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
-		if progress != nil {
-			progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
-		}
+		progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
 		usermodsFilePath = usermodsFileName
 	}
 	input, err := ioutil.ReadFile(usermodsFilePath)
 	if err != nil {
-		if fail != nil {
-			fail <- err.Error()
-		}
-		return err
+		fail <- err.Error()
+		return
 	}
 
 	// Workaround for single container always requiring this variable somewhere in the usermods
@@ -1528,15 +1516,10 @@ func (order *SoftwareOrder) LoadUsermods(progress chan string,
 
 	err = ioutil.WriteFile(fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath), input, 0644)
 	if err != nil {
-		if fail != nil {
-			fail <- err.Error()
-		}
-		return err
+		fail <- err.Error()
+		return
 	}
-	if done != nil {
-		done <- 1
-	}
-	return nil
+	done <- 1
 }
 
 // Download the orchestration tool locally if it is not in the util directory

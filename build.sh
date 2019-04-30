@@ -71,10 +71,6 @@ while [[ $# -gt 0 ]]; do
             usage
             exit 0
             ;;
-        --verbose)
-            shift # past argument
-            VERBOSE=true
-            ;;
         -i|--baseimage|--base-image)
             shift # past argument
             BASEIMAGE="$1"
@@ -138,7 +134,7 @@ while [[ $# -gt 0 ]]; do
             export PROJECT_NAME="$1"
             shift # past value
             ;;
-        --tag)
+        -s|--sas-docker-tag)
             shift # past argument
             export SAS_DOCKER_TAG="$1"
             shift # past value
@@ -162,11 +158,7 @@ while [[ $# -gt 0 ]]; do
             export WORKERS="$1"
             shift # past value
             ;;
-        *)
-            usage
-            echo -e "\n\nOne or more arguments were not recognized: \n$@"
-            echo
-            exit 1 
+        *) # Ignore everything that isn't a valid arg
             shift
     ;;
     esac
@@ -204,10 +196,6 @@ fi
 
 if [[ -n ${GENERATE_MANIFESTS_ONLY} ]]; then
     run_args="${run_args} --generate-manifests-only"
-fi
-
-if [[ -n ${VERBOSE} ]]; then
-    run_args="${run_args} --verbose"
 fi
 
 if [[ -n ${DOCKER_REGISTRY_URL} ]]; then
@@ -261,6 +249,11 @@ if [[ -n ${BUILD_ONLY} ]]; then
     run_args="${run_args} --build-only ${BUILD_ONLY}"
 fi
 
+SAS_RUN_ENV_SKIP_DOCKER_REGISTRY=
+if [[ -n ${SAS_SKIP_DOCKER_REGISTRY} ]]; then
+    SAS_RUN_ENV_SKIP_DOCKER_REGISTRY="-e SAS_SKIP_DOCKER_REGISTRY=$SAS_SKIP_DOCKER_REGISTRY"
+fi
+
 echo "==============================="
 echo "Building Docker Build Container"
 echo "==============================="
@@ -293,6 +286,7 @@ if [[ -f ${DOCKER_CONFIG_PATH} ]]; then
         -v ${PWD}/builds:/sas-container-recipes/builds \
         -v /var/run/docker.sock:/var/run/docker.sock \
         -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
+        $SAS_RUN_ENV_SKIP_DOCKER_REGISTRY \
         sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
 else 
     docker run -d \
@@ -301,6 +295,7 @@ else
         -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
         -v ${PWD}/builds:/sas-container-recipes/builds \
         -v /var/run/docker.sock:/var/run/docker.sock \
+        -e SAS_SKIP_DOCKER_REGISTRY=true \
         sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
 fi
 docker logs -f ${SAS_BUILD_CONTAINER_NAME}
