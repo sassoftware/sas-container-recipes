@@ -48,6 +48,7 @@ export CONSUL_HTTP_ADDR
 # for logging.
 MYNAME=$(basename $0)
 dte=$(date +%Y-%m-%d_%H-%M-%S)
+mkdir -p ${SASCONFIG}/var/log/vault/default/
 export MY_LOG_FILE=${SASCONFIG}/var/log/vault/default/vault-setup_stdout-${dte}.log
 
 if [[ -z "$1" ]];then

@@ -71,6 +71,10 @@ while [[ $# -gt 0 ]]; do
             usage
             exit 0
             ;;
+        --verbose)
+            shift # past argument
+            VERBOSE=true
+            ;;
         -i|--baseimage|--base-image)
             shift # past argument
             BASEIMAGE="$1"
@@ -134,7 +138,7 @@ while [[ $# -gt 0 ]]; do
             export PROJECT_NAME="$1"
             shift # past value
             ;;
-        -s|--sas-docker-tag)
+        --tag)
             shift # past argument
             export SAS_DOCKER_TAG="$1"
             shift # past value
@@ -158,7 +162,11 @@ while [[ $# -gt 0 ]]; do
             export WORKERS="$1"
             shift # past value
             ;;
-        *) # Ignore everything that isn't a valid arg
+        *)
+            usage
+            echo -e "\n\nOne or more arguments were not recognized: \n$@"
+            echo
+            exit 1 
             shift
     ;;
     esac
@@ -196,6 +204,10 @@ fi
 
 if [[ -n ${GENERATE_MANIFESTS_ONLY} ]]; then
     run_args="${run_args} --generate-manifests-only"
+fi
+
+if [[ -n ${VERBOSE} ]]; then
+    run_args="${run_args} --verbose"
 fi
 
 if [[ -n ${DOCKER_REGISTRY_URL} ]]; then
