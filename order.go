@@ -1524,13 +1524,17 @@ func (order *SoftwareOrder) LoadUsermods(progress chan string,
 	usermodsFileName := "vars_usermods.yml"
 	usermodsFilePath := "util/" + usermodsFileName
 	if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
-		progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
+		if progress != nil {
+			progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
+		}
 		usermodsFilePath = usermodsFileName
 	}
 	input, err := ioutil.ReadFile(usermodsFilePath)
 	if err != nil {
-		fail <- err.Error()
-		return
+		if fail != nil {
+			fail <- err.Error()
+		}
+		return err
 	}
 
 	// Workaround for single container always requiring this variable somewhere in the usermods
@@ -1540,10 +1544,11 @@ func (order *SoftwareOrder) LoadUsermods(progress chan string,
 
 	err = ioutil.WriteFile(fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath), input, 0644)
 	if err != nil {
-		fail <- err.Error()
-		return
+		if progress != nil {
+			progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
+		}
 	}
-	done <- 1
+	return nil
 }
 
 // Download the orchestration tool locally if it is not in the util directory
