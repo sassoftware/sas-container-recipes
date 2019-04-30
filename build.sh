@@ -206,6 +206,10 @@ if [[ -n ${GENERATE_MANIFESTS_ONLY} ]]; then
     run_args="${run_args} --generate-manifests-only"
 fi
 
+if [[ -n ${VERBOSE} ]]; then
+    run_args="${run_args} --verbose"
+fi
+
 if [[ -n ${DOCKER_REGISTRY_URL} ]]; then
     run_args="${run_args} --docker-registry-url ${DOCKER_REGISTRY_URL}"
 fi
