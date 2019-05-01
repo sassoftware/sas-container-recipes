@@ -64,23 +64,23 @@ var ConfigPath = "config-full.yml"
 type SoftwareOrder struct {
 
 	// Build arguments and flags (see order.LoadCommands for details)
-	BaseImage             string   `yaml:"Base Image              "`
-	MirrorURL             string   `yaml:"Mirror URL              "`
-	VirtualHost           string   `yaml:"Virtual Host            "`
-	DockerNamespace       string   `yaml:"Docker Namespace        "`
-	DockerRegistry        string   `yaml:"Docker Registry         "`
-	DeploymentType        string   `yaml:"Deployment Type         "`
-	Platform              string   `yaml:"Platform                "`
-	ProjectName           string   `yaml:"Project Name            "`
-	TagOverride           string   `yaml:"Tag Override            "`
-	AddOns                []string `yaml:"AddOns                  "`
-	DebugContainers       []string `yaml:"Debug Containers        "`
-	WorkerCount           int      `yaml:"Worker Count            "`
-	Verbose               bool     `yaml:"Verbose                 "`
-	SkipMirrorValidation  bool     `yaml:"Skip Mirror Validation  "`
-	SkipDockerValidation  bool     `yaml:"Skip Docker Validation  "`
-	GenerateManifestsOnly bool     `yaml:"Generate Manifests Only "`
-	SkipDockerRegistry    string   `yaml:"Skip Docker Registry    "`
+	BaseImage              	string   `yaml:"Base Image              "`
+	MirrorURL              	string   `yaml:"Mirror URL              "`
+	VirtualHost            	string   `yaml:"Virtual Host            "`
+	DockerNamespace        	string   `yaml:"Docker Namespace        "`
+	DockerRegistry         	string   `yaml:"Docker Registry         "`
+	DeploymentType         	string   `yaml:"Deployment Type         "`
+	Platform               	string   `yaml:"Platform                "`
+	ProjectName            	string   `yaml:"Project Name            "`
+	TagOverride            	string   `yaml:"Tag Override            "`
+	AddOns                 	[]string `yaml:"AddOns                  "`
+	DebugContainers        	[]string `yaml:"Debug Containers        "`
+	WorkerCount            	int      `yaml:"Worker Count            "`
+	Verbose                	bool     `yaml:"Verbose                 "`
+	SkipMirrorValidation   	bool     `yaml:"Skip Mirror Validation  "`
+	SkipDockerValidation   	bool     `yaml:"Skip Docker Validation  "`
+	GenerateManifestsOnly  	bool     `yaml:"Generate Manifests Only "`
+	SkipDockerRegistryPush	bool     `yaml:"Skip Docker Registry    "`
 
 	// Build attributes
 	Log          *os.File              `yaml:"-"`                        // File handle for log path
@@ -268,7 +268,7 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	workerCount++
 	go order.LoadDocker(progress, fail, done)
 
-	if order.SkipDockerRegistry != "true" {
+	if !order.SkipDockerRegistryPush {
 		workerCount++
 		go order.LoadRegistryAuth(fail, done)	
 	} else {
@@ -278,7 +278,7 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	workerCount++
 	go order.LoadUsermods(progress, fail, done)
 
-	if !order.SkipDockerValidation && order.SkipDockerRegistry != "true"  {
+	if !order.SkipDockerValidation {
 		workerCount++
 		go order.TestRegistry(progress, fail, done)
 	} else {
@@ -421,9 +421,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 	// Standard format that arguments must comply with
 	regexNoSpecialCharacters := regexp.MustCompile("^[_A-z0-9]*([_A-z0-9\\-\\.]*)$")
 
-	// Read environment variables
-	order.SkipDockerRegistry = os.Getenv("SAS_SKIP_DOCKER_REGISTRY")
-
 	// Required arguments
 	license := flag.String("zip", "", "")
 	dockerNamespace := flag.String("docker-namespace", "", "")
@@ -444,6 +441,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
 	generateManifestsOnly := flag.Bool("generate-manifests-only", false, "")
 	builderPort := flag.String("builder-port", "1976", "")
+	skipDockerRegistryPush := flag.Bool("skip-docker-registry-push", false, "")
 
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU()
@@ -476,6 +474,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.VirtualHost = *virtualHost
 	order.DockerRegistry = *dockerRegistry
 	order.BuilderPort = *builderPort
+	order.SkipDockerRegistryPush = *skipDockerRegistryPush
 
 	// Make sure one cannot specify more workers than # cores available
 	order.WorkerCount = *workerCount
@@ -640,7 +639,7 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 		container.SoftwareOrder.TotalBuildSize += imageSize
 		container.ImageSize = imageSize
 
-		if container.SoftwareOrder.SkipDockerRegistry != "true" {
+		if !container.SoftwareOrder.SkipDockerRegistryPush {
 			// Push
 			container.PushStart = time.Now()
 			err = container.Push(progress)

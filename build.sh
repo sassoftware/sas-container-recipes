@@ -108,6 +108,10 @@ while [[ $# -gt 0 ]]; do
             shift # past argument
             CHECK_DOCKER_URL=false
             ;;
+        --skip-docker-registry-push)
+            shift # past argument
+            SKIP_DOCKER_REGISTRY_PUSH=true
+            ;;
         -a|--addons)
             shift # past argument
             ADDONS="$1"
@@ -173,8 +177,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Set some defaults
-[[ -z ${CHECK_DOCKER_URL+x} ]]        && CHECK_DOCKER_URL=true
-[[ -z ${CHECK_MIRROR_URL+x} ]]        && CHECK_MIRROR_URL=false
+[[ -z ${CHECK_DOCKER_URL+x} ]]          && CHECK_DOCKER_URL=true
+[[ -z ${CHECK_MIRROR_URL+x} ]]          && CHECK_MIRROR_URL=false
+[[ -z ${SKIP_DOCKER_REGISTRY_PUSH+x} ]] && SKIP_DOCKER_REGISTRY_PUSH=false
 
 git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
 datetime=$(date "+%Y%m%d%H%M%S")
@@ -261,9 +266,8 @@ if [[ -n ${BUILD_ONLY} ]]; then
     run_args="${run_args} --build-only ${BUILD_ONLY}"
 fi
 
-SAS_RUN_ENV_SKIP_DOCKER_REGISTRY=
-if [[ -n ${SAS_SKIP_DOCKER_REGISTRY} ]]; then
-    SAS_RUN_ENV_SKIP_DOCKER_REGISTRY="-e SAS_SKIP_DOCKER_REGISTRY=$SAS_SKIP_DOCKER_REGISTRY"
+if [[ ${SKIP_DOCKER_REGISTRY_PUSH} == true  ]]; then
+    run_args="${run_args} --skip-docker-registry-push"
 fi
 
 echo "==============================="
@@ -298,7 +302,6 @@ if [[ -f ${DOCKER_CONFIG_PATH} ]]; then
         -v ${PWD}/builds:/sas-container-recipes/builds \
         -v /var/run/docker.sock:/var/run/docker.sock \
         -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
-        $SAS_RUN_ENV_SKIP_DOCKER_REGISTRY \
         sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
 else 
     docker run -d \
@@ -307,7 +310,6 @@ else
         -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
         -v ${PWD}/builds:/sas-container-recipes/builds \
         -v /var/run/docker.sock:/var/run/docker.sock \
-        -e SAS_SKIP_DOCKER_REGISTRY=true \
         sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
 fi
 docker logs -f ${SAS_BUILD_CONTAINER_NAME}
