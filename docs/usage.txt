@@ -117,11 +117,11 @@ Multiple Containers
 
     --skip-mirror-url-validation
         Skips validating the mirror URL from the --mirror-url flag.
-        default: false
+        Default: false
 
     --skip-docker-url-validation
         Skips validating the Docker registry URL.
-        default: false
+        Default: false
 
     --builder-port <integer>
         Specifies the port to listen on and from which to serve entitlement and CA certificates.
@@ -158,6 +158,12 @@ Multiple Containers
             --build-only "consul"
             --build-only "consul httpproxy sas-casserver-primary"
 
+    --skip-docker-registry-push
+        Skips pushing the built images to the provided Docker registry.
+        If this option is used, you will be responsible for pushing the images
+        to the Docker registry after the images are built and before applying 
+        the Kubernetes manifests
+        Default: false
 
 Help and Version
 ----------------
