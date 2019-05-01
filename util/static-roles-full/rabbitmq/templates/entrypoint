@@ -84,31 +84,11 @@ trap gracefulshutdown SIGINT
 # Run rabbitmq
 ###############################################################################
 
-# Fix the ownership of the directory.
-chown -v sasrabbitmq:sas /opt/sas/viya/config/var/lib/rabbitmq-server/sasrabbitmq
-
-RABBITMQ_USE_LONGNAME=no
-export RABBITMQ_USE_LONGNAME
 [[ -z ${RABBITMQ_DATA_DIR+x} ]] && export RABBITMQ_DATA_DIR=/rabbitmq/data
 
 docker_create_pid_file
 
 chmod -v 0777 ${DOCKERPIDFILE}
-
-if [ ! -d ${RABBITMQ_DATA_DIR} ]; then
-  echo ""
-  mkdir -vp ${RABBITMQ_DATA_DIR}
-  chown -v sasrabbitmq:sas ${RABBITMQ_DATA_DIR}
-  chmod -v 0755 ${RABBITMQ_DATA_DIR}
-  echo ""
-fi
-chown -vR sasrabbitmq:sas "$(dirname "${RABBITMQ_DATA_DIR}")"
-
-if [[ -e ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/rabbitmq/default/erlang.cookie ]];then
-  cp ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/rabbitmq/default/erlang.cookie ${SASCONFIG}/var/lib/rabbitmq-server/sasrabbitmq/.erlang.cookie
-  chown sasrabbitmq:sas ${SASCONFIG}/var/lib/rabbitmq-server/sasrabbitmq/.erlang.cookie
-  chmod 600 ${SASCONFIG}/var/lib/rabbitmq-server/sasrabbitmq/.erlang.cookie
-fi
 
 if [[ "${SECURE_CONSUL}" == "true" ]]; then
   copy_token_from_configmap "${VAULT_TOKEN_DIR}" "${APP_NAME}" "${APP_NAME}"
@@ -144,5 +124,3 @@ ${SASHOME}/bin/sas-rabbitmq-registration
 ###############################################################################
 
 docker_check_process
-
-
