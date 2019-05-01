@@ -428,7 +428,7 @@ ADD *.yml *.cfg /ansible/
 ADD roles /ansible/roles
 `
 
-const dockerfileSetupEntrypoint = `# Start a top level process that starts all services
+const dockerfileSetupEntrypoint = `# Start a top level process that starts all services as a non-root user
 USER sas
 ENTRYPOINT ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/%s-entrypoint.sh"]
 `

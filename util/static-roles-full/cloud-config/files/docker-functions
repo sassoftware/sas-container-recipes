@@ -446,8 +446,14 @@ function docker_run_local_consul()
     # Need to export "default" as the instance value to be picked up by the sas-start-functions
     export SASINSTANCE=default
 
+    # replace start scripts to run as sas
+    sed -i 's|\$RU \$uid -c "\$\*".*$|\$\*|g' ${SASHOME}/lib/envesntl/sas-init-functions
+
     if [ -f "/etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE}" ] && \
        [ -e ${SASTOKENDIR}/client.token ]; then
+
+        sed 's|^SASLOCKROOT="/var/lock/subsys"|SASLOCKROOT="/opt/sas/${SASDEPLOYID}/config/var/lock"|g' ${viya_process}
+
         # start local consul
         /etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE} start
 
@@ -523,6 +529,9 @@ function copy_vault_token_for_sas_service()
 
 function docker_run_sas_services()
 {
+    # replace start scripts to run as sas
+    sed -i 's|\$RU \$uid -c "\$\*".*$|\$\*|g' ${SASHOME}/lib/envesntl/sas-init-functions
+
     if [ -f "${SASHOME}/bin/sasgpud_setup" ]; then
         ${SASHOME}/bin/sasgpud_setup
         gpusetup_rc=$?
@@ -548,6 +557,7 @@ function docker_run_sas_services()
               copy_vault_token_for_sas_service "${viya_process}"
             fi
             echo_line "[INFO]  : Starting ${viya_process}"
+            sed 's|^SASLOCKROOT="/var/lock/subsys"|SASLOCKROOT="/opt/sas/${SASDEPLOYID}/config/var/lock"|g' <${viya_process} >${viya_process}
             ${viya_process} start
         fi
     done
