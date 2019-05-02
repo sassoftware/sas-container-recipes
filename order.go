@@ -27,7 +27,6 @@ import (
 
 	"archive/zip"
 	"bytes"
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -706,7 +705,7 @@ func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
-	dockerfile, err := appendAddonLines(container.GetName(), string(dockerfileStub), container.SoftwareOrder.DeploymentType, container.SoftwareOrder.AddOns)
+	dockerfile, err := appendAddonLines(container.GetName(), string(dockerfileStub), container.SoftwareOrder.AddOns)
 	if err != nil {
 		return err
 	}
@@ -1095,9 +1094,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	// Run the orchestration tool to make the playbook
 	// TODO: error handling, passing info back from the build command
 	progress <- "Generating playbook for order ..."
-	generatePlaybookCommand := fmt.Sprintf(
-		"util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --repository-warehouse %s",
-		order.SOEZipPath, order.BuildPath, order.MirrorURL)
+	generatePlaybookCommand := fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz", order.SOEZipPath, order.BuildPath)
 	if order.DeploymentType == "multiple" {
 		generatePlaybookCommand += " --deployment-type programming"
 	}
