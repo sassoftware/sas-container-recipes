@@ -425,5 +425,11 @@ function docker_check_services()
     done
 }
 
+# Start and continually check the ops-agent process.
+${SASHOME}/lib/envesntl/docker-ops-agent &
+
+echo "Start the other SAS services..."
+docker_run_sas_services
+
 echo "Checking services..."
 docker_check_services
