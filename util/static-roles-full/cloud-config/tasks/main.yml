@@ -16,4 +16,14 @@
   - { name: localconsul_generate_vault_cert.sh, path: "bin", mode: "0755" }
   - { name: sas-consul, path: "bin", mode: "0755" }
 
-
+- name: Adjust for running as the sas user
+  shell: |
+    sed -i 's|\$RU \$uid -c "\$\*".*$|\$\*|g' {{ SASHOME }}/lib/envesntl/sas-init-functions
+    for viya_process in $(ls -1 /etc/init.d/sas-{{ DEPLOYMENT_ID }}-*); do
+        if [[ "${viya_process}" != *"sas-{{ DEPLOYMENT_ID }}-all-services" ]] &&
+          [[ "${viya_process}" != *"sasgpud"* ]] &&
+          [[ "${viya_process}" != *"sas-{{ DEPLOYMENT_ID }}-vault"* ]] &&
+          [[ "${viya_process}" != *"sas-{{ DEPLOYMENT_ID }}-ops-agent-"* ]]; then
+            sed -i 's|^SASLOCKROOT="/var/lock/subsys"|SASLOCKROOT="/opt/sas/{{ DEPLOYMENT_ID }}/config/var/lock"|g' ${viya_process}
+        fi
+    done
