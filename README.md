@@ -86,7 +86,7 @@ After the container image is built, the instructions for running the container w
  --publish-all \
  --publish 8081:80 \
  --name sas-viya-programming \
- sas-viya-single-programming-only:<VERSION-TAG>  
+ sas-viya-programming:<VERSION-TAG>  
 ```
 Use the `docker images` command to see the images that were built and the most recent tag (example: tag `19.0.1-20190109112555-48f98d8`).
 
