@@ -184,7 +184,16 @@ ${SASHOME}/lib/envesntl/docker-ops-agent &
 # https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=p0npk8pk8rezusn0zss8b14tk8t0.htm&docsetVersion=3.4&locale=en#n0wq5wobjqak86n1m04o6mgx8v5q
 set +e
 source ${SASCONFIG}/consul.conf;${SASHOME}/bin/sas-bootstrap-config --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token kv write config/launcher-server/global/environment/SASMAKEHOMEDIR 1
-source ${SASCONFIG}/consul.conf;exit_loop=false; while ! \$exit_loop; do httpd_url=\$(${SASHOME}/bin/sas-bootstrap-config --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token catalog serviceurl httpd); if [[ \"\${httpd_url}\" != \"\" ]]; then exit_loop=true; else sleep 5; fi; done
+source ${SASCONFIG}/consul.conf;exit_loop=false; 
+while ! \$exit_loop; do 
+    httpd_url=$(${SASHOME}/bin/sas-bootstrap-config \
+    --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token catalog serviceurl httpd)
+    if [[ \"\${httpd_url}\" != \"\" ]]; then 
+        exit_loop=true
+    else
+        sleep 5
+    fi
+done
 set -e
 
 docker_run_sas_services
