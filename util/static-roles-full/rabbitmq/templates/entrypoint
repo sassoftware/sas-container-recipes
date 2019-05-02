@@ -96,7 +96,9 @@ fi
 
 echo_line "Starting ${SASSERVICENAME}..."
 
-${SASHOME}/bin/${SASSERVICENAME} -r ${SASROOT}/${SASDEPLOYID} -m ${RABBITMQ_DATA_DIR} -p ${DOCKERPIDFILE}
+#${SASHOME}/bin/${SASSERVICENAME} -r ${SASROOT}/${SASDEPLOYID} -m ${RABBITMQ_DATA_DIR} -p ${DOCKERPIDFILE}
+docker_run_sas_services
+
 
 # I am seeing consistent issues when we start everything at once.
 # We will do one more check to see if Consul has a leader and then we will
