@@ -1649,10 +1649,11 @@ sas-viya-single-programming-only:%s
 				order.WriteLog(false, output)
 			}
 		}
-		lineSeparator := strings.Repeat("-", 79)
-		fmt.Println(lineSeparator)
-		order.WriteLog(false, lineSeparator)
 	}
+
+	lineSeparator := strings.Repeat("-", 79)
+	fmt.Println(lineSeparator)
+	order.WriteLog(false, lineSeparator)
 
 	// TODO: Make the list of directories reflective of the manifests generated.
 	//       In a TLS build there will be an account type. Also, the "manifests"
@@ -1711,22 +1712,23 @@ kubectl -n %s apply -f %s/kubernetes/deployments
 	order.WriteLog(false, manifestInstructions)
 
 	if order.SkipDockerRegistryPush {
-		dockerPushCommand := fmt.Sprintf("docker images --filter=reference='%s/%s/%s*:%s'  --format '{{.Repository}}:{{.Tag}}' | awk '{ print \"docker push \" $1 }'", order.DockerRegistry, order.DockerNamespace, order.ProjectName, order.TagOverride)
-		dockerPushResult, err := exec.Command("sh", "-c", dockerPushCommand).Output()
-		if err != nil {
-			return err
-		}
 		dockerPushInstructions := fmt.Sprintf(`
-Since you decided to skip pushing the images 
-as part of the build process, you will need to 'docker push'
-the images before you can run the above Kubernetes manifests.
-
-%s
-`,
-		dockerPushResult)
+Since you decided to skip pushing the images as part of the build process, 
+you will need to 'docker push' the following images before you can run the 
+above Kubernetes manifests.
+`)
 		fmt.Println(dockerPushInstructions)
 		order.WriteLog(false, dockerPushInstructions)
+
+		for _, container := range order.Containers {
+			dockerPushString := fmt.Sprintf("docker push %s/%s/%s-%s:%s", order.DockerRegistry, order.DockerNamespace, order.ProjectName, container.Name, order.TagOverride)
+			fmt.Println(dockerPushString)
+			order.WriteLog(false, fmt.Sprintf("docker push %s/%s/%s-%s:%s", order.DockerRegistry, order.DockerNamespace, order.ProjectName, container.Name, order.TagOverride))
+		}
 	}
+
+	fmt.Println(lineSeparator)
+	order.WriteLog(false, lineSeparator)
 
 	return nil
 }
