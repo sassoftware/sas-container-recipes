@@ -42,4 +42,3 @@
     sed -i "s|id -u sasrabbitmq|id -u sas|" /opt/sas/viya/home/sbin/rabbitmqctl
     sed -i 's|sasrabbitmq:sas|sas:sas|' /opt/sas/viya/home/bin/sas-rabbitmq-registration
     sed -i 's|SASUSER=sasrabbitmq|SASUSER=sas|' /etc/init.d/sas-viya-rabbitmq-server-default
-    sed -i 's|# set -x|set -x|' /opt/sas/viya/home/bin/sas-rabbitmq-registration

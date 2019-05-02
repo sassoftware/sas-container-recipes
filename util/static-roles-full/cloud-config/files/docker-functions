@@ -544,6 +544,7 @@ function docker_run_sas_services()
         echo ${viya_process}
         if [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
            [[ "${viya_process}" != *"sasgpud"* ]] &&
+           [[ "${viya_process}" != *"sas-${SASDEPLOYID}-rabbitmq-server"* ]] &&
            [[ "${viya_process}" != *"sas-${SASDEPLOYID}-vault"* ]] &&
            [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-"* ]]; then
             if [[ $SECURE_CONSUL == "true" ]]; then

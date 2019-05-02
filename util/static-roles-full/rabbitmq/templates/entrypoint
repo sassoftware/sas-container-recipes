@@ -45,44 +45,18 @@ source ${SASHOME}/lib/envesntl/docker-functions
 # Write tokens to disk if needed and echo CONSUL_HTTP_ADDR to file
 docker_define_consul_environment
 
-# start local consul
-#/etc/init.d/sas-viya-consul-default start
-docker_run_local_consul
-
-# Wait for Consul to be up
-#docker_wait_for_consul_leader
-
-
 ###############################################################################
 # Shutdown
 ###############################################################################
-function gracefulshutdown {
-    echo
-    echo_line "Shutting down ${SASSERVICECONTEXT} pid $(cat ${DOCKERPIDFILE})!"
-    echo
 
-    ${SASHOME}/bin/sas-rabbitmq-registration -x
-
-    # new SAS init stuff
-    kill -TERM $(cat ${DOCKERPIDFILE})
-    result=$?
-    # sleep 10
-    echo
-    if [ $result -eq 0 ]; then
-        echo_line "SUCCESS: ${SASSERVICECONTEXT} is stopped"
-    else
-        echo_line "ERROR: ${SASSERVICECONTEXT} could not be stopped"
-    fi
-
-    exit 0
-}
-
-trap gracefulshutdown SIGTERM
-trap gracefulshutdown SIGINT
+trap docker_shutdown_sas_services SIGTERM
+trap docker_shutdown_sas_services SIGINT
 
 ###############################################################################
 # Run rabbitmq
 ###############################################################################
+
+docker_run_local_consul
 
 [[ -z ${RABBITMQ_DATA_DIR+x} ]] && export RABBITMQ_DATA_DIR=/rabbitmq/data
 
@@ -96,14 +70,7 @@ fi
 
 echo_line "Starting ${SASSERVICENAME}..."
 
-#${SASHOME}/bin/${SASSERVICENAME} -r ${SASROOT}/${SASDEPLOYID} -m ${RABBITMQ_DATA_DIR} -p ${DOCKERPIDFILE}
-docker_run_sas_services
-
-
-# I am seeing consistent issues when we start everything at once.
-# We will do one more check to see if Consul has a leader and then we will
-# try the kv write.
-#docker_wait_for_consul_leader
+${SASHOME}/bin/${SASSERVICENAME} -r ${SASROOT}/${SASDEPLOYID} -m ${RABBITMQ_DATA_DIR} -p ${DOCKERPIDFILE}
 
 # if in k8s, set up HA
 if [ $(env|grep KUBERNETES_|wc -l) -gt 0 ]; then
@@ -121,8 +88,13 @@ fi
 
 ${SASHOME}/bin/sas-rabbitmq-registration
 
+# Start and continually check the ops-agent process.
+${SASHOME}/lib/envesntl/docker-ops-agent &
+
+docker_run_sas_services
+
 ###############################################################################
 # Keep the container alive until it is killed
 ###############################################################################
 
-docker_check_process
+docker_check_sas_services
