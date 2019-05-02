@@ -449,13 +449,14 @@ function docker_run_local_consul()
     # replace start scripts to run as sas
     sed -i 's|\$RU \$uid -c "\$\*".*$|\$\*|g' ${SASHOME}/lib/envesntl/sas-init-functions
 
-    if [ -f "/etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE}" ] && \
+    local viya_process="/etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE}"
+    if [ -f "${viya_process}" ] && \
        [ -e ${SASTOKENDIR}/client.token ]; then
 
         sed 's|^SASLOCKROOT="/var/lock/subsys"|SASLOCKROOT="/opt/sas/${SASDEPLOYID}/config/var/lock"|g' ${viya_process}
 
         # start local consul
-        /etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE} start
+        ${viya_process} start
 
         # Wait for Consul to be up
         docker_wait_for_consul_leader
