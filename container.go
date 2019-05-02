@@ -557,6 +557,7 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 						strings.HasPrefix(line, "ARG") ||
 						strings.HasPrefix(line, "WORKDIR") ||
 						strings.HasPrefix(line, "COPY ") {
+						dockerfile += line + "\n"
 
 						// If there's a "\" then it's a multi-line command
 						if strings.Contains(line, "\\") {
