@@ -116,7 +116,7 @@ export SASINSTANCE=${_tmpinstance}
 # Stop postgres via pg_ctl => This will create the PIDFILE
 echo_line "[postgresql] Stopping postgres via pg_ctl..."
 set -x
-su - -s /bin/bash -c "${SASHOME}/bin/pg_ctl -o '-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf' -D ${PG_DATADIR} -w -t 30 stop" ${SASPOSTGRESOWNER}
+${SASHOME}/bin/pg_ctl -o '-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf' -D ${PG_DATADIR} -w -t 30 stop
 set +x
 
 ###############################################################################
