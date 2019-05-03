@@ -88,11 +88,6 @@ else
     _sasuuid=${PG_VOLUME}/sas_${SASDEPLOYID}_${SASSERVICECONTEXT}_uuid
 fi
 
-if [ ! -d ${PG_VOLUME} ]; then
-    echo "Creating ${PG_VOLUME}"
-    mkdir -vp ${PG_VOLUME}
-fi
-
 if [ -e ${_sasuuid} ]; then
     echo "Sourcing ${_sasuuid} for the instance value"
     source ${_sasuuid}
@@ -108,8 +103,6 @@ fi
 
 unset SASINSTANCE
 export SASINSTANCE="default"
-
-chmod -v 0775 /var/run/sas/
 
 echo "Starting SAS Services..."
 docker_run_sas_services

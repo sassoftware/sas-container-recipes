@@ -447,7 +447,7 @@ ENTRYPOINT ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/%s-entrypoint.sh"]
 
 // Each Ansible role is a RUN layer
 const dockerfileRunLayer = `# %s role
-RUN ansible-playbook -vv /ansible/playbook.yml --extra-vars layer=%s --extra-vars PLAYBOOK_SRV=${PLAYBOOK_SRV}
+RUN ansible-playbook -vv /ansible/playbook.yml --extra-vars layer=%s --extra-vars PLAYBOOK_SRV=${PLAYBOOK_SRV} --extra-vars container_name=%s
 `
 
 const dockerfileAddDynamicRole = `# Add the %s specific role
@@ -473,7 +473,7 @@ func (container *Container) CreateDockerfile() (string, error) {
 		if strings.EqualFold(container.Name, role) {
 			dockerfile += fmt.Sprintf(dockerfileAddDynamicRole, role) + "\n"
 		}
-		dockerfile += fmt.Sprintf(dockerfileRunLayer, role, role) + "\n"
+		dockerfile += fmt.Sprintf(dockerfileRunLayer, role, role, container.Name) + "\n"
 	}
 
 	// Add the provided volumes

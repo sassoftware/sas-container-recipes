@@ -33,7 +33,7 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -z ${SASLOGDIR+x} ]]          && export SASLOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICECONTEXT}"
 [[ -z ${SASCONSULDIR+x} ]]       && export SASCONSULDIR="${SASHOME}"
 [[ -z ${SASPGPOOLCONFIGDIR+x} ]] && export SASPGPOOLCONFIGDIR="${SASCONFIG}/etc/sasdatasvrc/${SASSERVICECONTEXT}/${SASINSTANCE}"
-[[ -z ${SASPGPOOLOWNER+x} ]]     && export SASPGPOOLOWNER="saspgpool"
+[[ -z ${SASPGPOOLOWNER+x} ]]     && export SASPGPOOLOWNER="sas"
 
 _LOGFILENAME=${SASLOGDIR}/${SASSERVICENAME}_${SASINSTANCE}_stop.log
 
