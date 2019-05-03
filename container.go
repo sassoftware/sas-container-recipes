@@ -99,12 +99,16 @@ type Container struct {
 // that do not have static values are set to the defaults
 // (see container.GetConfig).
 type ContainerConfig struct {
+	// Standard Dockerfile layer attributes
+	User        string   `yaml:"user"` // The runuser for the entrypoint. By default a container will run as the sas user
 	Ports       []string `yaml:"ports"`
 	Environment []string `yaml:"environment"`
 	Secrets     []string `yaml:"secrets"`
 	Roles       []string `yaml:"roles"`
 	Volumes     []string `yaml:"volumes"`
-	Resources   struct {
+
+	// Used in the Kubernetes manifest generation
+	Resources struct {
 		Limits   []string `yaml:"limits"`
 		Requests []string `yaml:"requests"`
 	} `yaml:"resources"`
@@ -117,7 +121,8 @@ type effectedImage struct {
 
 // Provide a human readable output of a container's configurations
 func (config *ContainerConfig) String() string {
-	return fmt.Sprintf("\n\n[CONFIGURATION]\n[Ports] %s\n[Environment] %s\n[Roles] %s\n[Volumes] %s\n[Resources Limits] %s\n[Resources Requests] %s\n\n",
+	return fmt.Sprintf("\n\n[CONFIGURATION]\n[User] %s\n[Ports] %s\n[Environment] %s\n[Roles] %s\n[Volumes] %s\n[Resources Limits] %s\n[Resources Requests] %s\n\n",
+		config.User+", ",
 		strings.Join(config.Ports, ", "),
 		strings.Join(config.Environment, ", "),
 		strings.Join(config.Roles, ", "),
@@ -259,6 +264,13 @@ func (container *Container) GetConfig() error {
 	// Default resource requests
 	if len(targetConfig.Resources.Requests) == 0 {
 		targetConfig.Resources.Requests = append(targetConfig.Resources.Requests, "memory=2Gi")
+	}
+
+	// Default runuser
+	// If no "user" attribute is specified in the config file then the
+	// container will run as the sas user by default.
+	if len(targetConfig.User) == 0 {
+		targetConfig.User = "sas"
 	}
 
 	container.Config = targetConfig
@@ -429,7 +441,7 @@ ADD roles /ansible/roles
 `
 
 const dockerfileSetupEntrypoint = `# Start a top level process that starts all services as a non-root user
-USER sas
+USER %s
 ENTRYPOINT ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/%s-entrypoint.sh"]
 `
 
@@ -486,7 +498,7 @@ func (container *Container) CreateDockerfile() (string, error) {
 		return dockerfile, err
 	}
 
-	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Name)
+	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Config.User, container.Name)
 	dockerfile += "\n" + fmt.Sprintf(dockerfileLabels, RecipeVersion, container.Name, container.Name)
 	return dockerfile, nil
 }

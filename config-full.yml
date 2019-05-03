@@ -1,4 +1,5 @@
 computeserver:
+  user: root
   roles:
   - tini
   - sas-prerequisites
@@ -162,6 +163,7 @@ pgpoolc:
   - "SAS_DATAMINING_PASSWORD=ChangePassword"
 
 programming:
+  user: root
   roles:
   - tini
   - sas-prerequisites
@@ -210,6 +212,7 @@ rabbitmq:
   - "data=/rabbitmq/data"
 
 sas-casserver-primary:
+  user: root
   roles:
   - tini
   - sas-prerequisites
