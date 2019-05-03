@@ -29,7 +29,7 @@
     fi
     chown -vR sas:sas "$(dirname "${RABBITMQ_DATA_DIR}")"
     if [[ -e {{ SAS_CONFIG_ROOT }}/etc/SASSecurityCertificateFramework/tokens/rabbitmq/{{ INSTANCE_ID }}/erlang.cookie ]];then
-       cp {{ SASCONFIG }}/etc/SASSecurityCertificateFramework/tokens/rabbitmq/{{ INSTANCE_ID }}/erlang.cookie ${SAS_CONFIG_ROOT}/var/lib/rabbitmq-server/sasrabbitmq/.erlang.cookie
+       cp {{ SAS_CONFIG_ROOT }}/etc/SASSecurityCertificateFramework/tokens/rabbitmq/{{ INSTANCE_ID }}/erlang.cookie ${SAS_CONFIG_ROOT}/var/lib/rabbitmq-server/sasrabbitmq/.erlang.cookie
        chown sas:sas {{ SAS_CONFIG_ROOT }}/var/lib/rabbitmq-server/sasrabbitmq/.erlang.cookie
        chmod 600 {{ SAS_CONFIG_ROOT }}/var/lib/rabbitmq-server/sasrabbitmq/.erlang.cookie
     fi
@@ -38,4 +38,4 @@
     sed -i "s|id -u sasrabbitmq|id -u sas|" {{ SASHOME }}/sbin/rabbitmq-plugins
     sed -i "s|id -u sasrabbitmq|id -u sas|" {{ SASHOME }}/sbin/rabbitmqctl
     sed -i 's|sasrabbitmq:sas|sas:sas|' {{ SASHOME }}/bin/sas-rabbitmq-registration
-    sed -i 's|SASUSER=sasrabbitmq|SASUSER=sas|' /etc/init.d/sas-{{ DEPLPOYMENT_ID }}-rabbitmq-server-{{ INSTANCE_ID }}
+    sed -i 's|SASUSER=sasrabbitmq|SASUSER=sas|' /etc/init.d/sas-{{ DEPLOYMENT_ID }}-rabbitmq-server-{{ INSTANCE_ID }}
