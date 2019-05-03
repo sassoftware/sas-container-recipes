@@ -148,9 +148,6 @@ pgpoolc:
   - cloud-config
   ports:
   - "5431:5431"
-  environment:
-  - "SASPOSTGRESDBSIZE=large"
-  - "PG_VOLUME=/database/data"
   resources:
     limits:
     - "memory=12000Mi"

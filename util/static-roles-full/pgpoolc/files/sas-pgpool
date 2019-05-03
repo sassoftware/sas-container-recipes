@@ -88,7 +88,7 @@ is_password_empty SAS_DEFAULT_PGPWD
 is_password_empty SASPOSTGRESREPLPWD
 [[ -z ${SAS_PCPUSER+x} ]]         && export SAS_PCPUSER="dbmsowner"
 [[ -z ${SAS_PCPPWD+x} ]]          && export SAS_PCPPWD="${SAS_DEFAULT_PGPWD}"
-[[ -z ${SASPGPOOLOWNER+x} ]]      && export SASPGPOOLOWNER="saspgpool"
+[[ -z ${SASPGPOOLOWNER+x} ]]      && export SASPGPOOLOWNER="sas"
 [[ -z ${SASPGPOOLGROUP+x} ]]      && export SASPGPOOLGROUP="sas"
 [[ -z ${SASPGPOOLOIDDIR+x} ]]     && export SASPGPOOLOIDDIR="${SASLOGDIR}/oiddir"
 [[ -z ${SASPGPOOLRUNDIR+x} ]]     && export SASPGPOOLRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
@@ -144,7 +144,7 @@ function init_log() {
         if [ ! -d $(dirname ${_LOGFILENAME}) ]; then
             mkdir -vp $(dirname ${_LOGFILENAME})
             chmod -v 0777 $(dirname ${_LOGFILENAME})
-            chown -v ${SASPOSTGRESOWNER}:${SASPOSTGRESGROUP} $(dirname ${_LOGFILENAME})
+            chown -v ${SASPGPOOLOWNER}:${SASPGPOOLGROUP} $(dirname ${_LOGFILENAME})
         else
             if [ -e ${_LOGFILENAME} ]; then
                 mv -v ${_LOGFILENAME} ${_LOGFILENAME}_$(date +"%Y%m%d%H%M")
