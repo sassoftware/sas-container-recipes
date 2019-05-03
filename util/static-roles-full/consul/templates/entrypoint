@@ -139,7 +139,7 @@ docker_start_consul()
         echo_line "Starting local Consul Agent.."
     fi
 
-    docker_create_pid_file
+    DOCKERPIDFILE=/var/run/sas/sas-viya-consul-default.pid
 
     # Start Consul
     exec ${SASHOME}/bin/${SASSERVICENAME} -p "${DOCKERPIDFILE}" &
@@ -252,9 +252,6 @@ function vault_config() {
     ${SASHOME}/SASSecurityCertificateFramework/bin/sas-merge-certificates.sh ${SASHOME} ${SASCONFIG} consul:$CONSUL_HTTP_ADDR/cacerts
 
     # Start Vault
-    # docker_create_pid_file
-    # exec ${SASHOME}/bin/${SASSERVICENAME}.start -p "${DOCKERPIDFILE}" &
-    # echo_line "DEBUG: DOCKERPIDFILE: $DOCKERPIDFILE"
 
     export SAS_SERVICE_PID_DIR=${SASCONFIG}/var/run/${SASSERVICECONTEXT}
     export SAS_SERVICE_PID=${SAS_SERVICE_PID_DIR}/${SASSERVICENAME}.pid
