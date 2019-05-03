@@ -101,8 +101,8 @@ httpproxy:
   - httpproxy
   - cloud-config
   ports:
-  - "80:80"
-  - "443:443"
+  - "80:8080"
+  - "443:6443"
   resources:
     limits:
     - "memory=1024Mi"
