@@ -1093,21 +1093,24 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	progress <- "Finished fetching orchestration tool"
 
 	// Run the orchestration tool to make the playbook
-	// TODO: error handling, passing info back from the build command
 	progress <- "Generating playbook for order ..."
-	generatePlaybookCommand := fmt.Sprintf(
-		"util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --repository-warehouse %s",
-		order.SOEZipPath, order.BuildPath, order.MirrorURL)
+	commandBuilder := []string{"util/sas-orchestration build"}
+	commandBuilder = append(commandBuilder, "--platform redhat")
+	commandBuilder = append(commandBuilder, "--input "+order.SOEZipPath)
+	commandBuilder = append(commandBuilder, "--output "+order.BuildPath+"sas_viya_playbook.tgz")
+	commandBuilder = append(commandBuilder, "--repository-warehouse "+order.MirrorURL)
 	if order.DeploymentType == "multiple" {
-		generatePlaybookCommand += " --deployment-type programming"
+		commandBuilder = append(commandBuilder, "--deployment-type programming")
 	}
+	playbookCommand := strings.Join(commandBuilder, " ")
+	order.WriteLog(false, playbookCommand)
 
 	// The following is to fully provide the output of anything that goes wrong
 	// when generating the playbook.
-	cmd := exec.Command("sh", "-c", generatePlaybookCommand)
+	cmd := exec.Command("sh", "-c", playbookCommand)
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
-		fail <- "[ERROR] Could not create StdoutPipe for Cmd. " + err.Error() + "\n" + generatePlaybookCommand
+		fail <- "[ERROR] Could not create StdoutPipe for Cmd. " + err.Error() + "\n" + playbookCommand
 		return
 	}
 
@@ -1131,24 +1134,25 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	err = cmd.Start()
 	if err != nil {
 		result, _ := ioutil.ReadAll(stderr)
-		fail <- "[ERROR]: Unable to generate the playbook via cmd.Start. " + string(result) + "\n" + err.Error() + "\n" + generatePlaybookCommand
+		fail <- "[ERROR]: Unable to generate the playbook via cmd.Start. " + string(result) + "\n" + err.Error() + "\n" + playbookCommand
 		return
 	}
 
 	err = cmd.Wait()
 	if err != nil {
 		result, _ := ioutil.ReadAll(stderr)
-		fail <- "[ERROR]: Unable to generate the playbook during cmd.Wait. " + string(result) + "\n" + err.Error() + "\n" + generatePlaybookCommand
+		fail <- "[ERROR]: Unable to generate the playbook during cmd.Wait. " + string(result) + "\n" + err.Error() + "\n" + playbookCommand
 		return
 	}
 
-	// Detect if Ansible is installed.
-	// This is required for the Generate Manifests function in multiple and full deployment types, not in the single container.
+	// Detect if Ansible is installed inside the build container.
+	// This is required for the Generate Manifests function in multiple and
+	// full deployment types, not in the single container.
 	if order.DeploymentType != "single" {
 		testAnsibleInstall := "ansible --version"
 		_, err = exec.Command("sh", "-c", testAnsibleInstall).Output()
 		if err != nil {
-			fail <- "[ERROR]: The package `ansible` must be installed in order to generate Kubernetes manifests."
+			fail <- "[ERROR]: The package `ansible` must be installed inside the build container in order to generate Kubernetes manifests."
 			return
 		}
 	}
@@ -1271,7 +1275,7 @@ func (order *SoftwareOrder) GenerateManifests() error {
 		// One must build containers before attempting to re-generate the manifests.
 		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
 		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
-			return errors.New("The --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist")
+			return errors.New("the --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist")
 		}
 
 		// Rename the previous manifests, usermods, and build log with a timestamp
