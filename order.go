@@ -1094,14 +1094,15 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 
 	// Run the orchestration tool to make the playbook
 	progress <- "Generating playbook for order ..."
-	playbookCommand := "util/sas-orchestration build "
-	playbookCommand += "--platform redhat "
-	playbookCommand += "--input " + order.SOEZipPath + " "
-	playbookCommand += "--output " + order.BuildPath + "sas_viya_playbook.tgz "
-	playbookCommand += "--repository-warehouse " + order.MirrorURL + " "
+	commandBuilder := []string{"util/sas-orchestration build"}
+	commandBuilder = append(commandBuilder, "--platform redhat")
+	commandBuilder = append(commandBuilder, "--input "+order.SOEZipPath)
+	commandBuilder = append(commandBuilder, "--output "+order.BuildPath+"sas_viya_playbook.tgz")
+	commandBuilder = append(commandBuilder, "--repository-warehouse "+order.MirrorURL)
 	if order.DeploymentType == "multiple" {
-		playbookCommand += "--deployment-type programming "
+		commandBuilder = append(commandBuilder, "--deployment-type programming")
 	}
+	playbookCommand := strings.Join(commandBuilder, " ")
 	order.WriteLog(false, playbookCommand)
 
 	// The following is to fully provide the output of anything that goes wrong
