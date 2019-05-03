@@ -18,3 +18,24 @@
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
 
+- name: Set Ownership of rabbitmq directory
+  shell: |
+    export RABBITMQ_DATA_DIR=/rabbitmq/data
+    chown -v sas:sas {{ SAS_CONFIG_ROOT }}/var/lib/rabbitmq-server/sasrabbitmq
+    if [ ! -d ${RABBITMQ_DATA_DIR} ]; then
+       mkdir -vp ${RABBITMQ_DATA_DIR}
+       chown -v sas:sas ${RABBITMQ_DATA_DIR}
+       chmod -v 0755 ${RABBITMQ_DATA_DIR}
+    fi
+    chown -vR sas:sas "$(dirname "${RABBITMQ_DATA_DIR}")"
+    if [[ -e {{ SAS_CONFIG_ROOT }}/etc/SASSecurityCertificateFramework/tokens/rabbitmq/{{ INSTANCE_ID }}/erlang.cookie ]];then
+       cp {{ SAS_CONFIG_ROOT }}/etc/SASSecurityCertificateFramework/tokens/rabbitmq/{{ INSTANCE_ID }}/erlang.cookie ${SAS_CONFIG_ROOT}/var/lib/rabbitmq-server/sasrabbitmq/.erlang.cookie
+       chown sas:sas {{ SAS_CONFIG_ROOT }}/var/lib/rabbitmq-server/sasrabbitmq/.erlang.cookie
+       chmod 600 {{ SAS_CONFIG_ROOT }}/var/lib/rabbitmq-server/sasrabbitmq/.erlang.cookie
+    fi
+    sed -i "s|RABBITMQ_USER=sasrabbitmq|RABBITMQ_USER=sas|" {{ SASHOME }}/bin/sas-rabbitmq-server
+    sed -i "s|id -u sasrabbitmq|id -u sas|" {{ SASHOME }}/sbin/rabbitmq-server
+    sed -i "s|id -u sasrabbitmq|id -u sas|" {{ SASHOME }}/sbin/rabbitmq-plugins
+    sed -i "s|id -u sasrabbitmq|id -u sas|" {{ SASHOME }}/sbin/rabbitmqctl
+    sed -i 's|sasrabbitmq:sas|sas:sas|' {{ SASHOME }}/bin/sas-rabbitmq-registration
+    sed -i 's|SASUSER=sasrabbitmq|SASUSER=sas|' /etc/init.d/sas-{{ DEPLOYMENT_ID }}-rabbitmq-server-{{ INSTANCE_ID }}

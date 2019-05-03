@@ -16,4 +16,21 @@
   - { name: localconsul_generate_vault_cert.sh, path: "bin", mode: "0755" }
   - { name: sas-consul, path: "bin", mode: "0755" }
 
+- name: modify sas-init-functions
+  lineinfile:
+    path: "{{ SASHOME }}/lib/envesntl/sas-init-functions"
+    regexp: '\$RU \$uid -c "\$\*"'
+    line: '  $*'
 
+- name: list all sas init files
+  find:
+    paths: /etc/init.d
+    patterns: "sas-*"
+  register: init_files
+
+- name: update all init files
+  lineinfile:
+    path: "{{ item.path }}"
+    regexp: '^SASLOCKROOT="/var/lock/subsys"'
+    line: 'SASLOCKROOT="/opt/sas/{{ DEPLOYMENT_ID }}/config/var/lock"'
+  with_items: "{{ init_files.files }}"
