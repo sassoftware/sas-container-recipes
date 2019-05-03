@@ -581,7 +581,18 @@ fi
 # Start and continually check the ops-agent process.
 ${SASHOME}/lib/envesntl/docker-ops-agent &
 
-exit_loop=false; source ${SASCONFIG}/consul.conf;while ! \$exit_loop; do httpd_url=\$(${SASHOME}/bin/sas-bootstrap-config --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token catalog serviceurl httpd); if [[ \"\${httpd_url}\" != \"\" ]]; then exit_loop=true; else sleep 5; fi; done
+exit_loop=false
+source ${SASCONFIG}/consul.conf
+while ! $exit_loop; do 
+    httpd_url=$(${SASHOME}/bin/sas-bootstrap-config \
+    --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token catalog serviceurl httpd)
+    
+     if [[ "${httpd_url}" != "" ]]; then 
+        exit_loop=true; 
+    else 
+        sleep 5
+    fi
+done
 
 echo "Starting Cloud Analytic Services..."
 mkdir -pv -m 2770 /var/log/sas/viya/cas/default_audit

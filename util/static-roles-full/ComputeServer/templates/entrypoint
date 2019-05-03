@@ -98,12 +98,17 @@ fi
 [[ -z ${LAUNCHER_OPTIONS+x} ]] && export LAUNCHER_OPTIONS=''
 [[ -z ${SERVICE_NAME+x} ]]     && export SERVICE_NAME="${DEPLOYMENT_NAME}-computeserver"
 
-    ${SASPREHOME}/SASFoundation/utilities/bin/apply_license \
-    ${SASLICENSEDIR}/${SASLICENSEFILE}
+runuser --shell "/bin/sh" --login sas \
+    --command "${SASPREHOME}/SASFoundation/utilities/bin/apply_license \
+    ${SASLICENSEDIR}/${SASLICENSEFILE}"
 
-    ${SASPREHOME}/SASFoundation/utilities/bin/post_install build_nickname
+runuser --shell "/bin/sh" \
+    --login sas \
+    --command "${SASPREHOME}/SASFoundation/utilities/bin/post_install build_nickname"
 
-    ${SASPREHOME}/SASFoundation/utilities/bin/post_install build_add_cmacros
+runuser --shell "/bin/sh" \
+    --login sas \
+    --command "${SASPREHOME}/SASFoundation/utilities/bin/post_install build_add_cmacros"
 
 # If Launcher config file is passed in, use it.
 if [ ! -z "${SAS_LAUNCHER_LOG_CONFIG}" ]; then
@@ -183,6 +188,7 @@ ${SASHOME}/lib/envesntl/docker-ops-agent &
 # Make sure the launcher can create the users home directory if it does not exist.
 # https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=p0npk8pk8rezusn0zss8b14tk8t0.htm&docsetVersion=3.4&locale=en#n0wq5wobjqak86n1m04o6mgx8v5q
 set +e
+<<<<<<< HEAD
 source ${SASCONFIG}/consul.conf;${SASHOME}/bin/sas-bootstrap-config --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token kv write config/launcher-server/global/environment/SASMAKEHOMEDIR 1
 source ${SASCONFIG}/consul.conf;exit_loop=false; 
 while ! \$exit_loop; do 
@@ -194,6 +200,14 @@ while ! \$exit_loop; do
         sleep 5
     fi
 done
+=======
+runuser --shell "/bin/sh" \
+    --login sas \
+    --command "source ${SASCONFIG}/consul.conf;${SASHOME}/bin/sas-bootstrap-config --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token kv write config/launcher-server/global/environment/SASMAKEHOMEDIR 1"
+runuser --shell "/bin/sh" \
+    --login sas \
+    --command "source ${SASCONFIG}/consul.conf;exit_loop=false; while ! \$exit_loop; do httpd_url=\$(${SASHOME}/bin/sas-bootstrap-config --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token catalog serviceurl httpd); if [[ \"\${httpd_url}\" != \"\" ]]; then exit_loop=true; else sleep 5; fi; done"
+>>>>>>> parent of 13aaf0e... Non-root containers: fixed computeserver, operations, programming, casserver
 set -e
 
 docker_run_sas_services
