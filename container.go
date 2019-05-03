@@ -441,7 +441,7 @@ ADD roles /ansible/roles
 `
 
 const dockerfileSetupEntrypoint = `# Start a top level process that starts all services as a non-root user
-USER %s
+USER %s:%s
 ENTRYPOINT ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/%s-entrypoint.sh"]
 `
 
@@ -498,7 +498,7 @@ func (container *Container) CreateDockerfile() (string, error) {
 		return dockerfile, err
 	}
 
-	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Config.User, container.Name)
+	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Config.User, container.Config.User, container.Name)
 	dockerfile += "\n" + fmt.Sprintf(dockerfileLabels, RecipeVersion, container.Name, container.Name)
 	return dockerfile, nil
 }
