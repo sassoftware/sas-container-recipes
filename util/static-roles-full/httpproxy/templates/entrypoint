@@ -91,7 +91,7 @@ then
     # fi
 else
     echo "[INFO]  : Turn off starting the httpd service in ${SASHOME}/bin/replace_httpd_default_cert.sh"
-    sed -i.bak 's/service httpd restart$/#service httpd restart/' ${SASHOME}/bin/replace_httpd_default_cert.sh
+    sed -i.bak 's/$APACHE_CTL -k restart/#$APACHE_CTL -k restart/' ${SASHOME}/bin/replace_httpd_default_cert.sh
 
     echo "[INFO]  : No SSL certificate found in ${SASCONFIG}/srv/httpd/certs/ssl-cert.pem. Using self-signed certificate."
     if [[ $SECURE_CONSUL == "true" ]]; then
@@ -127,6 +127,11 @@ fi
 echo "[INFO]  : Change httpd start command in ${SASHOME}/bin/${SASSERVICENAME}"
 sed -i 's/$APACHE_CTL start/$APACHE_CTL -k start/' ${SASHOME}/bin/${SASSERVICENAME}
 
+echo "[INFO]  : Change httpd ports checked in ${SASHOME}/bin/${SASSERVICENAME}"
+sed -i 's/internal_port:-80/internal_port:-8080/' ${SASHOME}/bin/${SASSERVICENAME}
+sed -i 's/internal_port:-443/internal_port:-6443/' ${SASHOME}/bin/${SASSERVICENAME}
+sed -i 's/external_port:-443/external_port:-6443/' ${SASHOME}/bin/${SASSERVICENAME}
+
 echo "[INFO]  : Change httpd stop command in /etc/init.d/sas-${SASDEPLOYID}-${SASSERVICECONTEXT}-${SASINSTANCE}"
 sed -i 's/$APACHE_CTL stop/$APACHE_CTL -k stop/' /etc/init.d/sas-${SASDEPLOYID}-${SASSERVICECONTEXT}-${SASINSTANCE}
 
@@ -150,14 +155,23 @@ echo "export APACHE_CTL=\"${APACHE_BIN}\"" >> ${SASCONFIG}/etc/sysconfig/httppro
 echo "export APACHE_CTL=\"${APACHE_BIN}\"" >> /etc/sysconfig/sas/sas-${SASDEPLOYID}-${SASSERVICECONTEXT}-${SASINSTANCE}
 echo ""
 
-# removed shared memory segment files between restarts
-rm --verbose --force /run/httpd/authdigest_shm.*
-
 ###############################################################################
 # Logging
 ###############################################################################
 sed -ri -e 's!^(\s*CustomLog)\s+\S+!\1 /proc/self/fd/1!g' ${APACHE_CONF}
 sed -ri -e 's!^(\s*ErrorLog)\s+\S+!\1 /proc/self/fd/2!g' ${APACHE_CONF}
+
+###############################################################################
+# Change user
+###############################################################################
+sed -ri -e 's!^User apache!User sas!g' $APACHE_CONF
+sed -ri -e 's!^Group apache!Group sas!g' $APACHE_CONF
+
+###############################################################################
+# Change port
+###############################################################################	
+sed -ri -e 's!^Listen 80!Listen 8080!g' $APACHE_CONF
+sed -ri -e 's!^Listen 443!Listen 6443!g' $APACHE_CONF_D/ssl.conf
 
 # Start and continually check the ops-agent process.
 ${SASHOME}/lib/envesntl/docker-ops-agent &

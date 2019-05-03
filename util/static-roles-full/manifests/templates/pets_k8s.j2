@@ -44,7 +44,7 @@ spec:
 {% if item.value.ports is defined and item.value.ports %}
         ports:
 {%   for ports in item.value.ports %}
-        - containerPort: {{ ports.split(':')[0] }}
+        - containerPort: {{ ports.split(':')[1] }}
 {%   endfor %}
 {% endif %}
         env:
