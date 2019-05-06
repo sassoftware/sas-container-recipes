@@ -252,7 +252,7 @@ sasdatasvrc:
   ports:
   - "5432:5432"
   environment:
-  - "SAS_DEBUG=1"
+  - "SAS_DEBUG=0"
   - "SASPOSTGRESDBSIZE=large"
   - "PG_VOLUME=/database/data"
   resources:
