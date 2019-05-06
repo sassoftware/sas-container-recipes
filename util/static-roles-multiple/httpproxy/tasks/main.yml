@@ -22,3 +22,17 @@
     mode: "0755"
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
+
+- name: chown directories
+  file: path="{{ item }}" owner="{{ INSTALL_USER }}" group="{{ INSTALL_GROUP }}" state=directory recurse=yes
+  with_items:
+    - /etc/httpd
+    - /var/www
+    - /var/run/httpd
+    - /var/log/httpd
+
+- name: chown files
+  file: path="{{ item }}" owner="{{ INSTALL_USER }}" group="{{ INSTALL_GROUP }}" 
+  with_items:
+    - /etc/pki/tls/certs/localhost.crt
+    - /etc/pki/tls/private/localhost.key
