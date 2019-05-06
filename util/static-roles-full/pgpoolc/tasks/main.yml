@@ -56,11 +56,18 @@
     state: directory
     mode: 0775
 
-
 - name: Make sure the data directory exists
   file:
     path: "{{ SAS_CONFIG_ROOT }}/data/sasdatasvrc/postgres"
     state: directory
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
-    mode: 0740
+    mode: 0750
+
+- name: Make sure the oid directory exists
+  file:
+    path: "/oiddir"
+    state: directory
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+    mode: 0750
