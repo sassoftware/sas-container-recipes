@@ -13,6 +13,8 @@ spec:
     spec:
 {% if SECURE_CONSUL %}
       securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
         fsGroup: 1001
       serviceAccountName: {{ settings.project_name }}-account
 {% else %}
