@@ -478,10 +478,23 @@ func (container *Container) CreateDockerfile() (string, error) {
 
 	// Add the provided volumes
 	if len(container.Config.Volumes) > 0 {
-		dockerfile += "# Volumes\n"
-	}
-	for _, volume := range container.Config.Volumes {
-		dockerfile += fmt.Sprintf("VOLUME %s\n", volume)
+		dockerfile += "# Volume mount points\n"
+		mountPoints := []string{}
+		for _, volume := range container.Config.Volumes {
+			// The config file has the format "name=/some/volume/path",
+			// where the section before the equal sign is only used by the
+			// manifest generation playbook. The section after the equal sign
+			// is used in the Dockerfile. For example, "data=/cas/data" has
+			// the name "data" and the mount path "/cas/data".
+			sections := strings.Split(volume, "=")
+			if !strings.Contains(volume, "=") && len(sections) != 2 {
+				errorOutput := fmt.Sprintf("Could not parse NAME=VALUE format from volume. %s, %s",
+					container.Name, volume)
+				return dockerfile, errors.New(errorOutput)
+			}
+			mountPoints = append(mountPoints, sections[1])
+		}
+		dockerfile += "VOLUME " + strings.Join(mountPoints, " ")
 	}
 
 	// Expose the ports that were specified in the config
