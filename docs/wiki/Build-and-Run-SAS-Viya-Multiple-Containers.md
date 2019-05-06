@@ -73,9 +73,9 @@ To see what arguments can be used, run the following:
 build.sh --help
 ```
 
-The `build.sh` script will validate several of the settings that are needed to help with the deployment process. The `docker-registry-url` and `docker-registry-namespace` arguments are expected. If these arguments are not provided, then the script will exit early until they are provided.
+The `build.sh` script will validate several of the settings that are needed to help with the deployment process. The `docker-registry-url` and `docker-namespace` arguments are expected. If these arguments are not provided, then the script will exit early until they are provided.
 
-* The `docker-registry-url` and `docker-registry-namespace` arguments are used so that the process can push the containers to the Docker registry with a specific Docker tag. This same information is then used to generate the Kubernetes manifests. 
+* The `docker-registry-url` and `docker-namespace` arguments are used so that the process can push the containers to the Docker registry with a specific Docker tag. This same information is then used to generate the Kubernetes manifests. 
 * The `virtual-host` argument points to the ingress hostname that represents the end point for the sas-viya-httpproxy container. This is an optional parameter for the programming-only deployment. The value can be changed or added after `build.sh` is run but before the images are deployed to Kubernetes.
 
 **Note:** If the value for `virtual-host` is not updated after the build, then the user-interface links between SAS Studio and CAS Server Monitor will not work for a programming-only deployment. The `virtual-host` argument has no impact on a full deployment.
@@ -108,7 +108,7 @@ build.sh \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repo \
 --docker-registry-url docker.registry.company.com \
---docker-registry-namespace sas \
+--docker-namespace sas \
 --addons "auth-sssd access-odbc"
 ```
 
@@ -122,7 +122,7 @@ build.sh \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repo \
 --docker-registry-url docker.registry.company.com \
---docker-registry-namespace sas \
+--docker-namespace sas \
 --addons "auth-sssd access-odbc"
 ```
 

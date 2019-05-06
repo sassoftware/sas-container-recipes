@@ -72,7 +72,7 @@ type Container struct {
 	Name      string // Hostname without a project name prefix - such as httpproxy, sas-casserver-primary, consul
 	Tag       string // Use container.GetTag or container.GetWholeImageName instead
 	BaseImage string // Set by the order's --base-image argument
-	IsStatic  bool   // Set by the CreateDockerContext function. Determined by the existance of the util/static-roles-<deployment>/<container-name> directory
+	IsStatic  bool   // Set by the CreateDockerContext function. Determined by the existence of the util/static-roles-<deployment>/<container-name> directory
 
 	// Builder attributes
 	BuildArgs         map[string]*string // Arguments that are passed into the Docker builder https://docs.docker.com/engine/reference/commandline/build/
@@ -666,7 +666,7 @@ func (container *Container) CreateDockerContext() error {
 		"roles/sas-install/vars/soe_defaults.yml", []byte{})
 
 	// Going to copy all the static-roles over. While this will bloat the context, it will make
-	// the begining layers the same for all images and allow for cache re-use and improve build time.
+	// the beginning layers the same for all images and allow for cache re-use and improve build time.
 	staticRolePath := fmt.Sprintf("util/static-roles-%s/", container.SoftwareOrder.DeploymentType)
 	files, err := ioutil.ReadDir(staticRolePath)
 	if err != nil {
@@ -692,11 +692,7 @@ func (container *Container) CreateDockerContext() error {
 		}
 
 		// Add the corresponding group_vars file if it exists in the playbook
-		err = container.AddFileToContext(container.SoftwareOrder.PlaybookPath+"/group_vars/"+dep, "roles/"+dep+"/vars/"+dep, []byte{})
-		if err != nil {
-			// Ignore: not all come from the playbook
-			err = nil
-		}
+		container.AddFileToContext(container.SoftwareOrder.PlaybookPath+"/group_vars/"+dep, "roles/"+dep+"/vars/"+dep, []byte{})
 	}
 
 	// Now put the role that is specific to the service in the /ansible/dynamicRoles directory.
@@ -723,12 +719,7 @@ func (container *Container) CreateDockerContext() error {
 				}
 
 				// Add the corresponding group_vars file if it exists in the playbook
-				err = container.AddFileToContext(container.SoftwareOrder.PlaybookPath+"/group_vars/"+dep, "roles/"+dep+"/vars/"+dep, []byte{})
-				if err != nil {
-					// Ignore: not all come from the playbook
-					err = nil
-				}
-
+				container.AddFileToContext(container.SoftwareOrder.PlaybookPath+"/group_vars/"+dep, "roles/"+dep+"/vars/"+dep, []byte{})
 			} else {
 				//
 				// The role does not exist in the static-roles directory, therefore

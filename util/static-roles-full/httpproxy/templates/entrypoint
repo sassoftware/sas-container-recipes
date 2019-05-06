@@ -99,7 +99,7 @@ else
             req-vault-cert \
             --vault-token /tokens/httpproxy_vault.token \
             --vault-cafile /anchors/vault-ca.crt \
-            --common-name sas-viya-httpproxy-0 \
+            --common-name sas-viya-httpproxy \
             --out-key /etc/pki/tls/private/localhost.key \
             --out-crt /etc/pki/tls/certs/localhost.crt \
             --san-dns $(hostname -f) \

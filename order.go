@@ -26,6 +26,7 @@ import (
 	"github.com/docker/docker/client"
 
 	"archive/zip"
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -408,7 +409,7 @@ func (order *SoftwareOrder) GetIntermediateStatus(progress chan string) {
 		strings.Join(finishedContainers, ", "), strings.Join(remainingContainers, ", "))
 }
 
-// LoadCommands recieves flags and arguments, parse them, and load them into the order
+// LoadCommands receives flags and arguments, parse them, and load them into the order
 func (order *SoftwareOrder) LoadCommands() error {
 	// Standard format that arguments must comply with
 	regexNoSpecialCharacters := regexp.MustCompile("^[_A-z0-9]*([_A-z0-9\\-\\.]*)$")
@@ -494,7 +495,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 	order.SOEZipPath = *license
 	if !strings.HasSuffix(order.SOEZipPath, ".zip") && !order.GenerateManifestsOnly {
-		return errors.New("the Software Order Email (SOE) argument '--zip' must be a file with the '.zip' extension.")
+		return errors.New("the Software Order Email (SOE) argument '--zip' must be a file with the '.zip' extension")
 	}
 
 	// Optional: Parse the list of addons
@@ -741,7 +742,7 @@ func (order *SoftwareOrder) Build() error {
 	fmt.Println("")
 	if numberOfBuilds == 0 {
 		return errors.New("The number of builds are set to zero. " +
-			"An error in pre-build tasks may have occured or the " +
+			"An error in pre-build tasks may have occurred or the " +
 			"Software Order entitlement does not match the deployment type.")
 	} else if numberOfBuilds == 1 {
 		// Use the singular "process" instead of "processes"
@@ -1092,7 +1093,6 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	progress <- "Finished fetching orchestration tool"
 
 	// Run the orchestration tool to make the playbook
-	// TODO: error handling, passing info back from the build command
 	progress <- "Generating playbook for order ..."
 	generatePlaybookCommand := fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz", order.SOEZipPath, order.BuildPath)
 	if order.DeploymentType == "multiple" {
@@ -1102,16 +1102,66 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	if err != nil {
 		fail <- "[ERROR]: Unable to generate the playbook. java-1.8.0-openjdk or another Java Runtime Environment (1.8.x) must be installed. " +
 			err.Error() + "\n" + generatePlaybookCommand
+	}
+	commandBuilder := []string{"util/sas-orchestration build"}
+	commandBuilder = append(commandBuilder, "--platform redhat")
+	commandBuilder = append(commandBuilder, "--input "+order.SOEZipPath)
+	commandBuilder = append(commandBuilder, "--output "+order.BuildPath+"sas_viya_playbook.tgz")
+	commandBuilder = append(commandBuilder, "--repository-warehouse "+order.MirrorURL)
+	if order.DeploymentType == "multiple" {
+		commandBuilder = append(commandBuilder, "--deployment-type programming")
+	}
+	playbookCommand := strings.Join(commandBuilder, " ")
+	order.WriteLog(false, playbookCommand)
+
+	// The following is to fully provide the output of anything that goes wrong
+	// when generating the playbook.
+	cmd := exec.Command("sh", "-c", playbookCommand)
+	cmdReader, err := cmd.StdoutPipe()
+	if err != nil {
+		fail <- "[ERROR] Could not create StdoutPipe for Cmd. " + err.Error() + "\n" + playbookCommand
 		return
 	}
 
-	// Detect if Ansible is installed.
-	// This is required for the Generate Manifests function in multiple and full deployment types, not in the single container.
+	// This code will output the stdout of the playbook generation process
+	// This was the only way I could get the information as to why the playbook
+	// was failing to generate. It could be there is a better way to capture
+	// the information, but I was not having success. It might have been do
+	// to a Go casting issue.
+	scanner := bufio.NewScanner(cmdReader)
+	go func() {
+		for scanner.Scan() {
+			progress <- fmt.Sprintf("Generate playbook output | %s", scanner.Text())
+		}
+	}()
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		result, _ := ioutil.ReadAll(stderr)
+		fail <- "[ERROR]: Unable to generate the playbook via cmd.Start. " + string(result) + "\n" + err.Error() + "\n" + playbookCommand
+		return
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		result, _ := ioutil.ReadAll(stderr)
+		fail <- "[ERROR]: Unable to generate the playbook during cmd.Wait. " + string(result) + "\n" + err.Error() + "\n" + playbookCommand
+		return
+	}
+
+	// Detect if Ansible is installed inside the build container.
+	// This is required for the Generate Manifests function in multiple and
+	// full deployment types, not in the single container.
 	if order.DeploymentType != "single" {
 		testAnsibleInstall := "ansible --version"
 		_, err = exec.Command("sh", "-c", testAnsibleInstall).Output()
 		if err != nil {
-			fail <- "[ERROR]: The package `ansible` must be installed in order to generate Kubernetes manifests."
+			fail <- "[ERROR]: The package `ansible` must be installed inside the build container in order to generate Kubernetes manifests."
 			return
 		}
 	}
@@ -1222,7 +1272,6 @@ func (order *SoftwareOrder) Prepare() error {
 			order.WriteLog(true, progress)
 		}
 	}
-	return nil
 }
 
 // GenerateManifests runs the generate_manifests playbook to output Kubernetes configs
@@ -1235,14 +1284,29 @@ func (order *SoftwareOrder) GenerateManifests() error {
 		// One must build containers before attempting to re-generate the manifests.
 		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
 		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
-			return errors.New("The --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist.")
+			return errors.New("the --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist")
 		}
 
-		// Save off the previous build log
-		order.LogPath = order.BuildPath + "/build.log"
-		err := os.Rename(order.LogPath, fmt.Sprintf("%s-%s",
-			order.LogPath, order.TimestampTag))
-		if err != nil {
+		// Rename the previous manifests, usermods, and build log with a timestamp
+		// manifests/ --> manifests-<datetime>/
+		if err := os.Rename(order.BuildPath+"manifests",
+			order.BuildPath+"manifests-"+order.TimestampTag); err != nil {
+			return err
+		}
+
+		// vars_usermods.yml --> vars_usermods-<datetime>.yml
+		usermodsPathPrevious := fmt.Sprintf("%svars_usermods-%s.yml",
+			order.BuildPath, order.TimestampTag)
+		if err := os.Rename(order.BuildPath+"vars_usermods.yml",
+			usermodsPathPrevious); err != nil {
+			return err
+		}
+
+		// build.log --> build-<datetime>.log
+		order.LogPath = order.BuildPath + "build.log"
+		buildLogPrevious := fmt.Sprintf("%sbuild-%s.log",
+			order.BuildPath, order.TimestampTag)
+		if err := os.Rename(order.LogPath, buildLogPrevious); err != nil {
 			return err
 		}
 		logHandle, err := os.Create(order.LogPath)
@@ -1250,6 +1314,11 @@ func (order *SoftwareOrder) GenerateManifests() error {
 			return err
 		}
 		order.Log = logHandle
+
+		// Re-copy the usermods file
+		if err = order.LoadUsermods(nil, nil, nil); err != nil {
+			return err
+		}
 	} else {
 		// Write a vars file to disk so it can be used by the playbook
 		containerVarSections := []string{}
@@ -1442,19 +1511,27 @@ settings:
 	return nil
 }
 
-// If the user provided a vars_usermods.yml file then copy it
-// into the build directory or copy the default usermods file
-func (order *SoftwareOrder) LoadUsermods(progress chan string, fail chan string, done chan int) {
+// LoadUsermods retrieves the user provided vars_usermods.yml file
+// from the project directory then copies it into the build
+// directory, or if the file was not provided then the
+// default usermods file is copied.
+// This function can be used concurrently or non concurrently.
+func (order *SoftwareOrder) LoadUsermods(progress chan string,
+	fail chan string, done chan int) error {
 	usermodsFileName := "vars_usermods.yml"
 	usermodsFilePath := "util/" + usermodsFileName
 	if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
-		progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
+		if progress != nil {
+			progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
+		}
 		usermodsFilePath = usermodsFileName
 	}
 	input, err := ioutil.ReadFile(usermodsFilePath)
 	if err != nil {
-		fail <- err.Error()
-		return
+		if fail != nil {
+			fail <- err.Error()
+		}
+		return err
 	}
 
 	// Workaround for single container always requiring this variable somewhere in the usermods
@@ -1464,10 +1541,15 @@ func (order *SoftwareOrder) LoadUsermods(progress chan string, fail chan string,
 
 	err = ioutil.WriteFile(fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath), input, 0644)
 	if err != nil {
-		fail <- err.Error()
-		return
+		if fail != nil {
+			fail <- err.Error()
+		}
+		return err
 	}
-	done <- 1
+	if done != nil {
+		done <- 1
+	}
+	return nil
 }
 
 // Download the orchestration tool locally if it is not in the util directory
