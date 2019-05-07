@@ -18,6 +18,15 @@
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
 
+- name: Remove backup agent if SECURE_CONSUL
+  shell: |
+    if [ -f "/opt/sas/viya/config/etc/init.d/sas-backup-agent" ]; then
+      rm -f /opt/sas/viya/config/etc/init.d/sas-backup-agent
+    fi
+    if [ -f "/etc/init.d/sas-viya-backup-agent-default" ];then
+      rm -f /etc/init.d/sas-viya-backup-agent-default
+    fi
+
 - name: Set Ownership of rabbitmq directory
   shell: |
     export RABBITMQ_DATA_DIR=/rabbitmq/data
