@@ -25,7 +25,7 @@ spec:
         domain: {{ settings.project_name }}
     spec:
 {% if SECURE_CONSUL %}
-{% if item.key != "computeserver" and item.key != "programming" and item.key != "cas" %}
+{% if item.key != "computeserver" and item.key != "programming" and item.key != "sas-casserver-primary" %}
       securityContext:
         runAsUser: 1001
         runAsGroup: 1001
