@@ -64,22 +64,23 @@ var ConfigPath = "config-full.yml"
 type SoftwareOrder struct {
 
 	// Build arguments and flags (see order.LoadCommands for details)
-	BaseImage             string   `yaml:"Base Image              "`
-	MirrorURL             string   `yaml:"Mirror URL              "`
-	VirtualHost           string   `yaml:"Virtual Host            "`
-	DockerNamespace       string   `yaml:"Docker Namespace        "`
-	DockerRegistry        string   `yaml:"Docker Registry         "`
-	DeploymentType        string   `yaml:"Deployment Type         "`
-	Platform              string   `yaml:"Platform                "`
-	ProjectName           string   `yaml:"Project Name            "`
-	TagOverride           string   `yaml:"Tag Override            "`
-	AddOns                []string `yaml:"AddOns                  "`
-	DebugContainers       []string `yaml:"Debug Containers        "`
-	WorkerCount           int      `yaml:"Worker Count            "`
-	Verbose               bool     `yaml:"Verbose                 "`
-	SkipMirrorValidation  bool     `yaml:"Skip Mirror Validation  "`
-	SkipDockerValidation  bool     `yaml:"Skip Docker Validation  "`
-	GenerateManifestsOnly bool     `yaml:"Generate Manifests Only "`
+	BaseImage              	string   `yaml:"Base Image              "`
+	MirrorURL              	string   `yaml:"Mirror URL              "`
+	VirtualHost            	string   `yaml:"Virtual Host            "`
+	DockerNamespace        	string   `yaml:"Docker Namespace        "`
+	DockerRegistry         	string   `yaml:"Docker Registry         "`
+	DeploymentType         	string   `yaml:"Deployment Type         "`
+	Platform               	string   `yaml:"Platform                "`
+	ProjectName            	string   `yaml:"Project Name            "`
+	TagOverride            	string   `yaml:"Tag Override            "`
+	AddOns                 	[]string `yaml:"AddOns                  "`
+	DebugContainers        	[]string `yaml:"Debug Containers        "`
+	WorkerCount            	int      `yaml:"Worker Count            "`
+	Verbose                	bool     `yaml:"Verbose                 "`
+	SkipMirrorValidation   	bool     `yaml:"Skip Mirror Validation  "`
+	SkipDockerValidation   	bool     `yaml:"Skip Docker Validation  "`
+	GenerateManifestsOnly  	bool     `yaml:"Generate Manifests Only "`
+	SkipDockerRegistryPush	bool     `yaml:"Skip Docker Registry    "`
 
 	// Build attributes
 	Log          *os.File              `yaml:"-"`                        // File handle for log path
@@ -267,8 +268,12 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	workerCount++
 	go order.LoadDocker(progress, fail, done)
 
-	workerCount++
-	go order.LoadRegistryAuth(fail, done)
+	if !order.SkipDockerRegistryPush {
+		workerCount++
+		go order.LoadRegistryAuth(fail, done)	
+	} else {
+		log.Println("Skipping loading Docker registry authentication ...")
+	}
 
 	workerCount++
 	go order.LoadUsermods(progress, fail, done)
@@ -276,6 +281,8 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	if !order.SkipDockerValidation {
 		workerCount++
 		go order.TestRegistry(progress, fail, done)
+	} else {
+		log.Println("Skipping validating Docker registry ...")
 	}
 
 	if !order.SkipMirrorValidation {
@@ -434,6 +441,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
 	generateManifestsOnly := flag.Bool("generate-manifests-only", false, "")
 	builderPort := flag.String("builder-port", "1976", "")
+	skipDockerRegistryPush := flag.Bool("skip-docker-registry-push", false, "")
 
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU()
@@ -466,6 +474,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.VirtualHost = *virtualHost
 	order.DockerRegistry = *dockerRegistry
 	order.BuilderPort = *builderPort
+	order.SkipDockerRegistryPush = *skipDockerRegistryPush
 
 	// Make sure one cannot specify more workers than # cores available
 	order.WorkerCount = *workerCount
@@ -630,21 +639,26 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 		container.SoftwareOrder.TotalBuildSize += imageSize
 		container.ImageSize = imageSize
 
-		// Push
-		container.PushStart = time.Now()
-		err = container.Push(progress)
-		if err != nil {
-			container.Status = Failed
-			fail <- container.GetWholeImageName() + " container push " + err.Error()
-			done <- container.Name
-			return
-		}
-		container.PushEnd = time.Now()
+		if !container.SoftwareOrder.SkipDockerRegistryPush {
+			// Push
+			container.PushStart = time.Now()
+			err = container.Push(progress)
+			if err != nil {
+				container.Status = Failed
+				fail <- container.GetWholeImageName() + " container push " + err.Error()
+				done <- container.Name
+				return
+			}
+			container.PushEnd = time.Now()
 
-		// Signal the end of the build and push processes
-		container.Status = Pushed
-		progress <- container.GetWholeImageName() + ": finished pushing image to Docker registry"
-		container.SoftwareOrder.GetIntermediateStatus(progress)
+			// Signal the end of the build and push processes
+			container.Status = Pushed
+			progress <- container.GetWholeImageName() + ": finished pushing image to Docker registry"
+			container.SoftwareOrder.GetIntermediateStatus(progress)
+		} else {
+			progress <- "Skipping pushing " + container.GetWholeImageName() + " to Docker registry"
+		}
+		
 		done <- container.Name
 	}
 }
@@ -1639,10 +1653,11 @@ sas-viya-single-programming-only:%s
 				order.WriteLog(false, output)
 			}
 		}
-		lineSeparator := strings.Repeat("-", 79)
-		fmt.Println(lineSeparator)
-		order.WriteLog(false, lineSeparator)
 	}
+
+	lineSeparator := strings.Repeat("-", 79)
+	fmt.Println(lineSeparator)
+	order.WriteLog(false, lineSeparator)
 
 	// TODO: Make the list of directories reflective of the manifests generated.
 	//       In a TLS build there will be an account type. Also, the "manifests"
@@ -1699,6 +1714,61 @@ kubectl -n %s apply -f %s/kubernetes/deployments
 	fmt.Println(manifestInstructions)
 	order.WriteLog(false, manifestLocation)
 	order.WriteLog(false, manifestInstructions)
+
+	if order.SkipDockerRegistryPush {
+		dockerPushInstructions := fmt.Sprintf(`
+Since you decided to skip pushing the images as part of the build process, 
+you will need to 'docker push' the following images before you can run the 
+above Kubernetes manifests.
+`)
+		dockerPushFileInstructions := fmt.Sprintf(`
+The images that need to be pushed are referenced in 
+
+%s/dockerPush
+`,
+		symlinkBuildPath)
+		dockerPushFileSummary := fmt.Sprintf(`# File generated by order.go on %s
+#
+# The following images were not pushed to the Docker registry 
+# per the '--skip-docker-registry-push' option used when running 
+# build.sh. You can execute the below commands to push the specific
+# images. Note that the images must still reside on the current host.
+
+`,
+		order.TimestampTag)
+
+		fmt.Println(dockerPushInstructions)
+		order.WriteLog(false, dockerPushInstructions)
+		dockerPushFile, err := os.Create(symlinkBuildPath + "/dockerPush")
+		if err != nil {
+			return err
+		}
+
+		defer dockerPushFile.Close()    
+		_, err = dockerPushFile.WriteString(dockerPushFileSummary)
+		if err != nil {
+			return err
+		}	
+		for _, container := range order.Containers {
+			dockerPushString := fmt.Sprintf("docker push %s/%s/%s-%s:%s", order.DockerRegistry, order.DockerNamespace, order.ProjectName, container.Name, order.TagOverride)
+			fmt.Println(dockerPushString)
+			order.WriteLog(false, dockerPushString)
+			_, err = dockerPushFile.WriteString(dockerPushString + "\n")
+			if err != nil {
+				return err
+			}	
+		}
+		_, err = dockerPushFile.WriteString("\n")
+		if err != nil {
+			return err
+		}	
+ 		dockerPushFile.Sync()
+		fmt.Println(dockerPushFileInstructions)
+		order.WriteLog(false, dockerPushFileInstructions)
+	}
+
+	fmt.Println(lineSeparator)
+	order.WriteLog(false, lineSeparator)
 
 	return nil
 }
