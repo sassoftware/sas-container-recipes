@@ -104,6 +104,9 @@ fi
 unset SASINSTANCE
 export SASINSTANCE="default"
 
+# Start and continually check the ops-agent process.
+${SASHOME}/lib/envesntl/docker-ops-agent &
+
 echo "Starting SAS Services..."
 docker_run_sas_services
 
