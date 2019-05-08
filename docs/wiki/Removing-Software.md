@@ -56,10 +56,10 @@
 
     ```
     kubectl -n sas-viya delete -f builds/multiple/manifests/kubernetes/deployments/
-    kubectl -n sas-viya delete -f builds/multiple/manifests/manifests/kubernetes/services/
-    kubectl -n sas-viya delete -f builds/multiple/manifests/manifests/kubernetes/secrets/
-    kubectl -n sas-viya delete -f builds/multiple/manifests/manifests/kubernetes/configmaps/
-    kubectl -n sas-viya delete -f builds/multiple/manifests/manifests/kubernetes/ingress/
+    kubectl -n sas-viya delete -f builds/multiple/manifests/kubernetes/services/
+    kubectl -n sas-viya delete -f builds/multiple/manifests/kubernetes/secrets/
+    kubectl -n sas-viya delete -f builds/multiple/manifests/kubernetes/configmaps/
+    kubectl -n sas-viya delete -f builds/multiple/manifests/kubernetes/ingress/
     ```
 
     Delete the full deployment objects
