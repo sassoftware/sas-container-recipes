@@ -99,6 +99,7 @@ type SoftwareOrder struct {
 	BuilderPort  string                `yaml:"-"`                        // Port for serving certificate requests for builds
 	TimestampTag string                `yaml:"Timestamp Tag           "` // Allows for datetime on each temp build bfile
 	InDocker     bool                  `yaml:"-"`                        // If we are running in a docker container
+	ManifestDir  string								 `yaml:"-"`												 // The name of the manifest directory. "manifests" is the default
 
 	// Metrics
 	StartTime      time.Time      `yaml:"-"`
@@ -171,7 +172,7 @@ type ConfigMap struct {
 func (order *SoftwareOrder) SetupBuildDirectory() error {
 	// Create an isolated build directory with a unique timestamp
 	order.BuildPath = fmt.Sprintf("builds/%s-%s/", order.DeploymentType, order.TimestampTag)
-	if err := os.MkdirAll(order.BuildPath+"/manifests", 0744); err != nil {
+	if err := os.MkdirAll(order.BuildPath, 0744); err != nil {
 		return err
 	}
 
@@ -224,6 +225,9 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		order.TimestampTag = order.TagOverride
 	}
 	if err := order.LoadCommands(); err != nil {
+		return order, err
+	}
+	if err := order.DefineManifestDir(); err != nil {
 		return order, err
 	}
 
@@ -414,6 +418,21 @@ func (order *SoftwareOrder) GetIntermediateStatus(progress chan string) {
 	progress <- fmt.Sprintf("Built & Pushed [ %d / %d ].\nComplete: %s\nRemaining: %s\n",
 		len(finishedContainers), len(finishedContainers)+len(remainingContainers),
 		strings.Join(finishedContainers, ", "), strings.Join(remainingContainers, ", "))
+}
+
+// DefineManifestDir looks at the manifests_vars_usermods.yml to see what the manifest dir is.
+// If nothing is defined, then "manifests" is used
+func (order *SoftwareOrder) DefineManifestDir() error {
+	manifestdirGrepCommand := fmt.Sprintf("grep '^SAS_MANIFEST_DIR' %smanifests_vars_usermods.yml | awk -F ': ' '{ print $2 }'", order.BuildPath)
+	grepResult, err := exec.Command("sh", "-c", manifestdirGrepCommand).Output()
+	if err != nil {
+		return err
+	}
+	order.ManifestDir = strings.TrimSuffix(string(grepResult), "\n")
+	if len(order.ManifestDir) == 0 {
+		order.ManifestDir = "manifests"
+	}
+	return nil
 }
 
 // LoadCommands receives flags and arguments, parse them, and load them into the order
@@ -696,7 +715,7 @@ func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
-	err = container.AddFileToContext(order.BuildPath+"/vars_usermods.yml", "vars_usermods.yml", []byte{})
+	err = container.AddFileToContext(order.BuildPath+"/manifests_vars_usermods.yml", "manifests_vars_usermods.yml", []byte{})
 	if err != nil {
 		return err
 	}
@@ -1303,15 +1322,15 @@ func (order *SoftwareOrder) GenerateManifests() error {
 
 		// Rename the previous manifests, usermods, and build log with a timestamp
 		// manifests/ --> manifests-<datetime>/
-		if err := os.Rename(order.BuildPath+"manifests",
-			order.BuildPath+"manifests-"+order.TimestampTag); err != nil {
+		if err := os.Rename(order.BuildPath+order.ManifestDir,
+			order.BuildPath+order.ManifestDir+"-"+order.TimestampTag); err != nil {
 			return err
 		}
 
-		// vars_usermods.yml --> vars_usermods-<datetime>.yml
-		usermodsPathPrevious := fmt.Sprintf("%svars_usermods-%s.yml",
+		// manifests_vars_usermods.yml --> manifests_vars_usermods.yml-<datetime>.yml
+		usermodsPathPrevious := fmt.Sprintf("%smanifests_vars_usermods.yml-%s.yml",
 			order.BuildPath, order.TimestampTag)
-		if err := os.Rename(order.BuildPath+"vars_usermods.yml",
+		if err := os.Rename(order.BuildPath+"manifests_vars_usermods.yml",
 			usermodsPathPrevious); err != nil {
 			return err
 		}
@@ -1475,7 +1494,7 @@ settings:
 		// TODO: clean this up
 		playbook := `
 # Manifests can be re-generated without re-building:
-# 1. Edit values in the 'vars_usermods.yml' file.
+# 1. Edit values in the 'manifests_vars_usermods.yml' file.
 # 2. Run build.sh passing in the '--generate-manifests-only --sas-docker-tag %s'
 # 3. Navigate to '{{ SAS_MANIFEST_DIR }}/kubernetes/' to find the new deployment files.
 #
@@ -1495,7 +1514,7 @@ settings:
   - soe_defaults.yml
   - vars.yml
   - vars_deployment.yml
-  - vars_usermods.yml
+  - manifests_vars_usermods.yml
   - manifest-vars.yml
 
   roles:
@@ -1532,7 +1551,7 @@ settings:
 // This function can be used concurrently or non concurrently.
 func (order *SoftwareOrder) LoadUsermods(progress chan string,
 	fail chan string, done chan int) error {
-	usermodsFileName := "vars_usermods.yml"
+	usermodsFileName := "manifests_vars_usermods.yml"
 	usermodsFilePath := "util/" + usermodsFileName
 	if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
 		if progress != nil {
@@ -1553,7 +1572,7 @@ func (order *SoftwareOrder) LoadUsermods(progress chan string,
 		input = []byte(string(input) + "\nrecipe_override: True\n")
 	}
 
-	err = ioutil.WriteFile(fmt.Sprintf("%s/vars_usermods.yml", order.BuildPath), input, 0644)
+	err = ioutil.WriteFile(fmt.Sprintf("%s/manifests_vars_usermods.yml", order.BuildPath), input, 0644)
 	if err != nil {
 		if fail != nil {
 			fail <- err.Error()
@@ -1673,8 +1692,8 @@ sas-viya-single-programming-only:%s
 	//       directory and Kubernetes namespaces are changeable. Should probably
 	//       have a way to discover this information so it is reflects in the data
 	//       given to the user.
-	symlinkBuildPath := fmt.Sprintf("builds/%s/manifests", order.DeploymentType)
-	namespaceGrepCommand := fmt.Sprintf("grep '^SAS_K8S_NAMESPACE' %svars_usermods.yml | awk -F ': ' '{ print $2 }'", order.BuildPath)
+	symlinkBuildPath := fmt.Sprintf("builds/%s/%s", order.DeploymentType,order.ManifestDir)
+	namespaceGrepCommand := fmt.Sprintf("grep '^SAS_K8S_NAMESPACE' %smanifests_vars_usermods.yml | awk -F ': ' '{ print $2 }'", order.BuildPath)
 	grepResult, err := exec.Command("sh", "-c", namespaceGrepCommand).Output()
 	if err != nil {
 		return err
@@ -1688,13 +1707,13 @@ sas-viya-single-programming-only:%s
 Kubernetes manifests have been created: %s
 That directory is mapped to:            %s
 `,
-		order.BuildPath+"manifests/",
+		order.BuildPath+order.ManifestDir+"/",
 		symlinkBuildPath)
 	if order.GenerateManifestsOnly {
 		manifestLocation = fmt.Sprintf(`
 Kubernetes manifests have been created: %s
 `,
-			order.BuildPath+"manifests/")
+			order.BuildPath+order.ManifestDir+"/")
 	}
 
 	manifestInstructions := fmt.Sprintf(`
