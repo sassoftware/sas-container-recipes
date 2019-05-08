@@ -106,7 +106,7 @@ build.sh \
 --base-image centos \
 --base-tag 7 \
 --zip /path/to/SAS_Viya_deployment_data.zip \
---mirror-url http://host.company.com/sas_repo \
+--mirror-url http://host.company.com/sas_repos \
 --docker-registry-url docker.registry.company.com \
 --docker-namespace sas \
 --addons "auth-sssd access-odbc"
@@ -120,7 +120,7 @@ build.sh \
 --base-image centos \
 --base-tag 7 \
 --zip /path/to/SAS_Viya_deployment_data.zip \
---mirror-url http://host.company.com/sas_repo \
+--mirror-url http://host.company.com/sas_repos \
 --docker-registry-url docker.registry.company.com \
 --docker-namespace sas \
 --addons "auth-sssd access-odbc"
