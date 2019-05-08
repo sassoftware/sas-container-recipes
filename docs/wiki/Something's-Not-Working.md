@@ -100,3 +100,16 @@ To solve this, in the addons/ide-jupyter-python3/Dockerfile, change the SuSE blo
 ```
 
 Next, re-run the Docker build step using the previous base. This should resolve the issue for later layers.
+
+### Why are there "none" Docker images in my Docker image list?
+One or more images with "none" in the name and tag, called "dangling images", may be created as a result of a Docker image build failure.
+
+Running `docker images` may show a list similar to the following:
+```
+REPOSITORY   TAG                 IMAGE ID            CREATED             SIZE
+<none>       <none>              ac16e336a5ca        20 hours ago        842MB
+<none>       <none>              c2ece66e6108        20 hours ago        842MB
+<none>       <none>              b6c3548e6234        20 hours ago        842MB
+```
+
+The command `docker rmi $(docker images --force "dangling=true")` may be run to remove all dangling images.
