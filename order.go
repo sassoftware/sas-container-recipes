@@ -280,7 +280,11 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	}
 
 	workerCount++
-	go order.LoadUsermods(progress, fail, done)
+	if order.DeploymentType != "single" {
+		go order.LoadUsermods("manifests_usermods.yml",progress, fail, done)
+	} else {
+		go order.LoadUsermods("vars_usermods.yml",progress, fail, done)
+	}
 
 	if !order.SkipDockerValidation {
 		workerCount++
@@ -420,10 +424,10 @@ func (order *SoftwareOrder) GetIntermediateStatus(progress chan string) {
 		strings.Join(finishedContainers, ", "), strings.Join(remainingContainers, ", "))
 }
 
-// DefineManifestDir looks at the manifests_vars_usermods.yml to see what the manifest dir is.
+// DefineManifestDir looks at the manifests_usermods.yml to see what the manifest dir is.
 // If nothing is defined, then "manifests" is used
 func (order *SoftwareOrder) DefineManifestDir() error {
-	manifestdirGrepCommand := fmt.Sprintf("grep '^SAS_MANIFEST_DIR' %smanifests_vars_usermods.yml | awk -F ': ' '{ print $2 }'", order.BuildPath)
+	manifestdirGrepCommand := fmt.Sprintf("grep '^SAS_MANIFEST_DIR' %smanifests_usermods.yml | awk -F ': ' '{ print $2 }'", order.BuildPath)
 	grepResult, err := exec.Command("sh", "-c", manifestdirGrepCommand).Output()
 	if err != nil {
 		return err
@@ -715,7 +719,7 @@ func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
-	err = container.AddFileToContext(order.BuildPath+"/manifests_vars_usermods.yml", "manifests_vars_usermods.yml", []byte{})
+	err = container.AddFileToContext(order.BuildPath+"/vars_usermods.yml", "vars_usermods.yml", []byte{})
 	if err != nil {
 		return err
 	}
@@ -1322,17 +1326,21 @@ func (order *SoftwareOrder) GenerateManifests() error {
 
 		// Rename the previous manifests, usermods, and build log with a timestamp
 		// manifests/ --> manifests-<datetime>/
-		if err := os.Rename(order.BuildPath+order.ManifestDir,
+		if _, err := os.Stat(order.BuildPath+order.ManifestDir); !os.IsNotExist(err) {
+			if err := os.Rename(order.BuildPath+order.ManifestDir,
 			order.BuildPath+order.ManifestDir+"-"+order.TimestampTag); err != nil {
-			return err
+				return err
+			}
 		}
 
-		// manifests_vars_usermods.yml --> manifests_vars_usermods.yml-<datetime>.yml
-		usermodsPathPrevious := fmt.Sprintf("%smanifests_vars_usermods.yml-%s.yml",
+		// manifests_usermods.yml --> manifests_usermods.yml-<datetime>.yml
+		usermodsPathPrevious := fmt.Sprintf("%smanifests_usermods.yml-%s.yml",
 			order.BuildPath, order.TimestampTag)
-		if err := os.Rename(order.BuildPath+"manifests_vars_usermods.yml",
+		if _, err := os.Stat(order.BuildPath+"manifests_usermods.yml"); !os.IsNotExist(err) {
+			if err := os.Rename(order.BuildPath+"manifests_usermods.yml",
 			usermodsPathPrevious); err != nil {
-			return err
+				return err
+			}
 		}
 
 		// build.log --> build-<datetime>.log
@@ -1349,7 +1357,7 @@ func (order *SoftwareOrder) GenerateManifests() error {
 		order.Log = logHandle
 
 		// Re-copy the usermods file
-		if err = order.LoadUsermods(nil, nil, nil); err != nil {
+		if err = order.LoadUsermods("manifests_usermods.yml", nil, nil, nil); err != nil {
 			return err
 		}
 	} else {
@@ -1494,7 +1502,7 @@ settings:
 		// TODO: clean this up
 		playbook := `
 # Manifests can be re-generated without re-building:
-# 1. Edit values in the 'manifests_vars_usermods.yml' file.
+# 1. Edit values in the 'manifests_usermods.yml' file.
 # 2. Run build.sh passing in the '--generate-manifests-only --sas-docker-tag %s'
 # 3. Navigate to '{{ SAS_MANIFEST_DIR }}/kubernetes/' to find the new deployment files.
 #
@@ -1514,7 +1522,7 @@ settings:
   - soe_defaults.yml
   - vars.yml
   - vars_deployment.yml
-  - manifests_vars_usermods.yml
+  - manifests_usermods.yml
   - manifest-vars.yml
 
   roles:
@@ -1549,9 +1557,8 @@ settings:
 // directory, or if the file was not provided then the
 // default usermods file is copied.
 // This function can be used concurrently or non concurrently.
-func (order *SoftwareOrder) LoadUsermods(progress chan string,
+func (order *SoftwareOrder) LoadUsermods(usermodsFileName string, progress chan string,
 	fail chan string, done chan int) error {
-	usermodsFileName := "manifests_vars_usermods.yml"
 	usermodsFilePath := "util/" + usermodsFileName
 	if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
 		if progress != nil {
@@ -1567,12 +1574,7 @@ func (order *SoftwareOrder) LoadUsermods(progress chan string,
 		return err
 	}
 
-	// Workaround for single container always requiring this variable somewhere in the usermods
-	if order.DeploymentType == "single" {
-		input = []byte(string(input) + "\nrecipe_override: True\n")
-	}
-
-	err = ioutil.WriteFile(fmt.Sprintf("%s/manifests_vars_usermods.yml", order.BuildPath), input, 0644)
+	err = ioutil.WriteFile(fmt.Sprintf("%s/%s", order.BuildPath, usermodsFileName), input, 0644)
 	if err != nil {
 		if fail != nil {
 			fail <- err.Error()
@@ -1693,7 +1695,7 @@ sas-viya-single-programming-only:%s
 	//       have a way to discover this information so it is reflects in the data
 	//       given to the user.
 	symlinkBuildPath := fmt.Sprintf("builds/%s/%s", order.DeploymentType,order.ManifestDir)
-	namespaceGrepCommand := fmt.Sprintf("grep '^SAS_K8S_NAMESPACE' %smanifests_vars_usermods.yml | awk -F ': ' '{ print $2 }'", order.BuildPath)
+	namespaceGrepCommand := fmt.Sprintf("grep '^SAS_K8S_NAMESPACE' %smanifests_usermods.yml | awk -F ': ' '{ print $2 }'", order.BuildPath)
 	grepResult, err := exec.Command("sh", "-c", namespaceGrepCommand).Output()
 	if err != nil {
 		return err
