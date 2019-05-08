@@ -15,6 +15,7 @@
   - { name: kill_consul_helper.sh, path: "bin", mode: "0755" }
   - { name: localconsul_generate_vault_cert.sh, path: "bin", mode: "0755" }
   - { name: sas-consul, path: "bin", mode: "0755" }
+  - { name: setup_rds_postgres.sh, path: "bin", mode: "0755" }
 
 - name: Define fact that contains the list of images that need to run as root
   debug:
