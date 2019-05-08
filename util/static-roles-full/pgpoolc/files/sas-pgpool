@@ -67,10 +67,8 @@ _sasuuidname=sas_${SASDEPLOYID}_${SASSERVICENAME}_uuid
 _k8ssasuuid=${PG_VOLUME}/${SAS_CURRENT_HOST}_${_sasuuidname}
 _sasuuid=${PG_VOLUME}/${_sasuuidname}
 
-set -x
 [[ -e ${_k8ssasuuid} ]] && source ${_k8ssasuuid}
 [[ -e ${_sasuuid} ]] && source ${_sasuuid}
-set +x
 
 # Process any overrides if they exist
 _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${SASSERVICENAME}
@@ -88,7 +86,7 @@ is_password_empty SAS_DEFAULT_PGPWD
 is_password_empty SASPOSTGRESREPLPWD
 [[ -z ${SAS_PCPUSER+x} ]]         && export SAS_PCPUSER="dbmsowner"
 [[ -z ${SAS_PCPPWD+x} ]]          && export SAS_PCPPWD="${SAS_DEFAULT_PGPWD}"
-[[ -z ${SASPGPOOLOWNER+x} ]]      && export SASPGPOOLOWNER="saspgpool"
+[[ -z ${SASPGPOOLOWNER+x} ]]      && export SASPGPOOLOWNER="sas"
 [[ -z ${SASPGPOOLGROUP+x} ]]      && export SASPGPOOLGROUP="sas"
 [[ -z ${SASPGPOOLOIDDIR+x} ]]     && export SASPGPOOLOIDDIR="${SASLOGDIR}/oiddir"
 [[ -z ${SASPGPOOLRUNDIR+x} ]]     && export SASPGPOOLRUNDIR="${SASCONFIG}/var/run/sasdatasvrc"
@@ -144,7 +142,7 @@ function init_log() {
         if [ ! -d $(dirname ${_LOGFILENAME}) ]; then
             mkdir -vp $(dirname ${_LOGFILENAME})
             chmod -v 0777 $(dirname ${_LOGFILENAME})
-            chown -v ${SASPOSTGRESOWNER}:${SASPOSTGRESGROUP} $(dirname ${_LOGFILENAME})
+            chown -v ${SASPGPOOLOWNER}:${SASPGPOOLGROUP} $(dirname ${_LOGFILENAME})
         else
             if [ -e ${_LOGFILENAME} ]; then
                 mv -v ${_LOGFILENAME} ${_LOGFILENAME}_$(date +"%Y%m%d%H%M")
@@ -426,8 +424,8 @@ if [ ! -d ${SAS_DATASERVER_POOL_COMMON_FILELOCATIONS_LOGDIR} ]; then
 fi
 
 # Create directory if it does not exist
-echo_line "[pgpool] Create the oiddir, ${SASPGPOOLOIDDIR}"
 if [ ! -d ${SASPGPOOLOIDDIR} ]; then
+    echo_line "[pgpool] Create the oiddir, ${SASPGPOOLOIDDIR}"
     mkdir -p ${SASPGPOOLOIDDIR}
     chown ${SASPGPOOLOWNER}:${SASPGPOOLGROUP} ${SASPGPOOLOIDDIR}
 fi
@@ -576,7 +574,7 @@ fi
 ###############################################################################
 
 echo_line "[pgpool] Run pgpool as ${SASPGPOOLOWNER}"
-su - -c "${SASHOME}/bin/pgpool -n -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -F ${SASPGPOOLCONFIGDIR}/pcp.conf -a ${SASPGPOOLCONFIGDIR}/pool_hba.conf &" ${SASPGPOOLOWNER}
+${SASHOME}/bin/pgpool -n -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -F ${SASPGPOOLCONFIGDIR}/pcp.conf -a ${SASPGPOOLCONFIGDIR}/pool_hba.conf &
 
 echo_line "[pgpool] Run pgpool node watcher as ${SASPGPOOLOWNER}"
 ${SASHOME}/libexec/sasdatasvrc/script/node_watcher.sh &

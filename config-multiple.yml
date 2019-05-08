@@ -5,8 +5,8 @@ httpproxy:
   - httpproxy
   - cloud-config
   ports:
-  - "80:80"
-  - "443:443"
+  - "80:8080"
+  - "443:6443"
   # TODO
   #volumes:
   #- static-content:/httpproxy
@@ -17,6 +17,7 @@ httpproxy:
     - "memory=250Mi"
 
 programming:
+  user: root
   roles:
   - tini
   - sas-prerequisites
@@ -38,6 +39,7 @@ programming:
   - "SETINIT_TEXT_ENC="
 
 sas-casserver-primary:
+  user: root
   roles:
   - tini
   - sas-prerequisites

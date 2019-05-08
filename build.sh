@@ -108,6 +108,10 @@ while [[ $# -gt 0 ]]; do
             shift # past argument
             CHECK_DOCKER_URL=false
             ;;
+        --skip-docker-registry-push)
+            shift # past argument
+            SKIP_DOCKER_REGISTRY_PUSH=true
+            ;;
         -a|--addons)
             shift # past argument
             ADDONS="$1"
@@ -166,15 +170,16 @@ while [[ $# -gt 0 ]]; do
             usage
             echo -e "\n\nOne or more arguments were not recognized: \n$@"
             echo
-            exit 1 
+            exit 1
             shift
     ;;
     esac
 done
 
 # Set some defaults
-[[ -z ${CHECK_DOCKER_URL+x} ]]        && CHECK_DOCKER_URL=true
-[[ -z ${CHECK_MIRROR_URL+x} ]]        && CHECK_MIRROR_URL=false
+[[ -z ${CHECK_DOCKER_URL+x} ]]          && CHECK_DOCKER_URL=true
+[[ -z ${CHECK_MIRROR_URL+x} ]]          && CHECK_MIRROR_URL=false
+[[ -z ${SKIP_DOCKER_REGISTRY_PUSH+x} ]] && SKIP_DOCKER_REGISTRY_PUSH=false
 
 git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
 datetime=$(date "+%Y%m%d%H%M%S")
@@ -259,6 +264,10 @@ fi
 
 if [[ -n ${BUILD_ONLY} ]]; then
     run_args="${run_args} --build-only ${BUILD_ONLY}"
+fi
+
+if [[ ${SKIP_DOCKER_REGISTRY_PUSH} == true  ]]; then
+    run_args="${run_args} --skip-docker-registry-push"
 fi
 
 echo "==============================="

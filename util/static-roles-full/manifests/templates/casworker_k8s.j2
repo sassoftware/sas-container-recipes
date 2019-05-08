@@ -27,6 +27,8 @@ spec:
         domain: {{ settings.project_name }}
     spec:
 {% if SECURE_CONSUL %}
+      securityContext:
+        fsGroup: 1001
       serviceAccountName: {{ settings.project_name }}-account
 {% else %}
       # Required for TLS configurations

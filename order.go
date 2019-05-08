@@ -64,22 +64,23 @@ var ConfigPath = "config-full.yml"
 type SoftwareOrder struct {
 
 	// Build arguments and flags (see order.LoadCommands for details)
-	BaseImage             string   `yaml:"Base Image              "`
-	MirrorURL             string   `yaml:"Mirror URL              "`
-	VirtualHost           string   `yaml:"Virtual Host            "`
-	DockerNamespace       string   `yaml:"Docker Namespace        "`
-	DockerRegistry        string   `yaml:"Docker Registry         "`
-	DeploymentType        string   `yaml:"Deployment Type         "`
-	Platform              string   `yaml:"Platform                "`
-	ProjectName           string   `yaml:"Project Name            "`
-	TagOverride           string   `yaml:"Tag Override            "`
-	AddOns                []string `yaml:"AddOns                  "`
-	DebugContainers       []string `yaml:"Debug Containers        "`
-	WorkerCount           int      `yaml:"Worker Count            "`
-	Verbose               bool     `yaml:"Verbose                 "`
-	SkipMirrorValidation  bool     `yaml:"Skip Mirror Validation  "`
-	SkipDockerValidation  bool     `yaml:"Skip Docker Validation  "`
-	GenerateManifestsOnly bool     `yaml:"Generate Manifests Only "`
+	BaseImage              	string   `yaml:"Base Image              "`
+	MirrorURL              	string   `yaml:"Mirror URL              "`
+	VirtualHost            	string   `yaml:"Virtual Host            "`
+	DockerNamespace        	string   `yaml:"Docker Namespace        "`
+	DockerRegistry         	string   `yaml:"Docker Registry         "`
+	DeploymentType         	string   `yaml:"Deployment Type         "`
+	Platform               	string   `yaml:"Platform                "`
+	ProjectName            	string   `yaml:"Project Name            "`
+	TagOverride            	string   `yaml:"Tag Override            "`
+	AddOns                 	[]string `yaml:"AddOns                  "`
+	DebugContainers        	[]string `yaml:"Debug Containers        "`
+	WorkerCount            	int      `yaml:"Worker Count            "`
+	Verbose                	bool     `yaml:"Verbose                 "`
+	SkipMirrorValidation   	bool     `yaml:"Skip Mirror Validation  "`
+	SkipDockerValidation   	bool     `yaml:"Skip Docker Validation  "`
+	GenerateManifestsOnly  	bool     `yaml:"Generate Manifests Only "`
+	SkipDockerRegistryPush	bool     `yaml:"Skip Docker Registry    "`
 
 	// Build attributes
 	Log          *os.File              `yaml:"-"`                        // File handle for log path
@@ -267,8 +268,12 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	workerCount++
 	go order.LoadDocker(progress, fail, done)
 
-	workerCount++
-	go order.LoadRegistryAuth(fail, done)
+	if !order.SkipDockerRegistryPush {
+		workerCount++
+		go order.LoadRegistryAuth(fail, done)	
+	} else {
+		log.Println("Skipping loading Docker registry authentication ...")
+	}
 
 	workerCount++
 	go order.LoadUsermods(progress, fail, done)
@@ -276,6 +281,8 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	if !order.SkipDockerValidation {
 		workerCount++
 		go order.TestRegistry(progress, fail, done)
+	} else {
+		log.Println("Skipping validating Docker registry ...")
 	}
 
 	if !order.SkipMirrorValidation {
@@ -434,6 +441,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
 	generateManifestsOnly := flag.Bool("generate-manifests-only", false, "")
 	builderPort := flag.String("builder-port", "1976", "")
+	skipDockerRegistryPush := flag.Bool("skip-docker-registry-push", false, "")
 
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU()
@@ -466,6 +474,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.VirtualHost = *virtualHost
 	order.DockerRegistry = *dockerRegistry
 	order.BuilderPort = *builderPort
+	order.SkipDockerRegistryPush = *skipDockerRegistryPush
 
 	// Make sure one cannot specify more workers than # cores available
 	order.WorkerCount = *workerCount
@@ -630,21 +639,26 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 		container.SoftwareOrder.TotalBuildSize += imageSize
 		container.ImageSize = imageSize
 
-		// Push
-		container.PushStart = time.Now()
-		err = container.Push(progress)
-		if err != nil {
-			container.Status = Failed
-			fail <- container.GetWholeImageName() + " container push " + err.Error()
-			done <- container.Name
-			return
-		}
-		container.PushEnd = time.Now()
+		if !container.SoftwareOrder.SkipDockerRegistryPush {
+			// Push
+			container.PushStart = time.Now()
+			err = container.Push(progress)
+			if err != nil {
+				container.Status = Failed
+				fail <- container.GetWholeImageName() + " container push " + err.Error()
+				done <- container.Name
+				return
+			}
+			container.PushEnd = time.Now()
 
-		// Signal the end of the build and push processes
-		container.Status = Pushed
-		progress <- container.GetWholeImageName() + ": finished pushing image to Docker registry"
-		container.SoftwareOrder.GetIntermediateStatus(progress)
+			// Signal the end of the build and push processes
+			container.Status = Pushed
+			progress <- container.GetWholeImageName() + ": finished pushing image to Docker registry"
+			container.SoftwareOrder.GetIntermediateStatus(progress)
+		} else {
+			progress <- "Skipping pushing " + container.GetWholeImageName() + " to Docker registry"
+		}
+		
 		done <- container.Name
 	}
 }
@@ -706,7 +720,7 @@ func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
-	dockerfile, err := appendAddonLines(container.GetName(), string(dockerfileStub), container.SoftwareOrder.DeploymentType, container.SoftwareOrder.AddOns)
+	dockerfile, err := appendAddonLines(container.GetName(), string(dockerfileStub), container.SoftwareOrder.AddOns)
 	if err != nil {
 		return err
 	}
@@ -1093,21 +1107,33 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	progress <- "Finished fetching orchestration tool"
 
 	// Run the orchestration tool to make the playbook
-	// TODO: error handling, passing info back from the build command
 	progress <- "Generating playbook for order ..."
-	generatePlaybookCommand := fmt.Sprintf(
-		"util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --repository-warehouse %s",
-		order.SOEZipPath, order.BuildPath, order.MirrorURL)
+	generatePlaybookCommand := fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz", order.SOEZipPath, order.BuildPath)
 	if order.DeploymentType == "multiple" {
-		generatePlaybookCommand += " --deployment-type programming"
+		generatePlaybookCommand = fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --deployment-type programming", order.SOEZipPath, order.BuildPath)
 	}
+	_, err = exec.Command("sh", "-c", generatePlaybookCommand).Output()
+	if err != nil {
+		fail <- "[ERROR]: Unable to generate the playbook. java-1.8.0-openjdk or another Java Runtime Environment (1.8.x) must be installed. " +
+			err.Error() + "\n" + generatePlaybookCommand
+	}
+	commandBuilder := []string{"util/sas-orchestration build"}
+	commandBuilder = append(commandBuilder, "--platform redhat")
+	commandBuilder = append(commandBuilder, "--input "+order.SOEZipPath)
+	commandBuilder = append(commandBuilder, "--output "+order.BuildPath+"sas_viya_playbook.tgz")
+	commandBuilder = append(commandBuilder, "--repository-warehouse "+order.MirrorURL)
+	if order.DeploymentType == "multiple" {
+		commandBuilder = append(commandBuilder, "--deployment-type programming")
+	}
+	playbookCommand := strings.Join(commandBuilder, " ")
+	order.WriteLog(false, playbookCommand)
 
 	// The following is to fully provide the output of anything that goes wrong
 	// when generating the playbook.
-	cmd := exec.Command("sh", "-c", generatePlaybookCommand)
+	cmd := exec.Command("sh", "-c", playbookCommand)
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
-		fail <- "[ERROR] Could not create StdoutPipe for Cmd. " + err.Error() + "\n" + generatePlaybookCommand
+		fail <- "[ERROR] Could not create StdoutPipe for Cmd. " + err.Error() + "\n" + playbookCommand
 		return
 	}
 
@@ -1131,24 +1157,25 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	err = cmd.Start()
 	if err != nil {
 		result, _ := ioutil.ReadAll(stderr)
-		fail <- "[ERROR]: Unable to generate the playbook via cmd.Start. " + string(result) + "\n" + err.Error() + "\n" + generatePlaybookCommand
+		fail <- "[ERROR]: Unable to generate the playbook via cmd.Start. " + string(result) + "\n" + err.Error() + "\n" + playbookCommand
 		return
 	}
 
 	err = cmd.Wait()
 	if err != nil {
 		result, _ := ioutil.ReadAll(stderr)
-		fail <- "[ERROR]: Unable to generate the playbook during cmd.Wait. " + string(result) + "\n" + err.Error() + "\n" + generatePlaybookCommand
+		fail <- "[ERROR]: Unable to generate the playbook during cmd.Wait. " + string(result) + "\n" + err.Error() + "\n" + playbookCommand
 		return
 	}
 
-	// Detect if Ansible is installed.
-	// This is required for the Generate Manifests function in multiple and full deployment types, not in the single container.
+	// Detect if Ansible is installed inside the build container.
+	// This is required for the Generate Manifests function in multiple and
+	// full deployment types, not in the single container.
 	if order.DeploymentType != "single" {
 		testAnsibleInstall := "ansible --version"
 		_, err = exec.Command("sh", "-c", testAnsibleInstall).Output()
 		if err != nil {
-			fail <- "[ERROR]: The package `ansible` must be installed in order to generate Kubernetes manifests."
+			fail <- "[ERROR]: The package `ansible` must be installed inside the build container in order to generate Kubernetes manifests."
 			return
 		}
 	}
@@ -1271,7 +1298,7 @@ func (order *SoftwareOrder) GenerateManifests() error {
 		// One must build containers before attempting to re-generate the manifests.
 		order.BuildPath = fmt.Sprintf("builds/%s/", order.DeploymentType)
 		if _, err := os.Stat(order.BuildPath); os.IsNotExist(err) {
-			return errors.New("The --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist")
+			return errors.New("the --generate-manifests-only flag can only be used to re-generate deployment files following a complete build. No previous build files exist")
 		}
 
 		// Rename the previous manifests, usermods, and build log with a timestamp
@@ -1635,10 +1662,11 @@ sas-viya-single-programming-only:%s
 				order.WriteLog(false, output)
 			}
 		}
-		lineSeparator := strings.Repeat("-", 79)
-		fmt.Println(lineSeparator)
-		order.WriteLog(false, lineSeparator)
 	}
+
+	lineSeparator := strings.Repeat("-", 79)
+	fmt.Println(lineSeparator)
+	order.WriteLog(false, lineSeparator)
 
 	// TODO: Make the list of directories reflective of the manifests generated.
 	//       In a TLS build there will be an account type. Also, the "manifests"
@@ -1695,6 +1723,61 @@ kubectl -n %s apply -f %s/kubernetes/deployments
 	fmt.Println(manifestInstructions)
 	order.WriteLog(false, manifestLocation)
 	order.WriteLog(false, manifestInstructions)
+
+	if order.SkipDockerRegistryPush {
+		dockerPushInstructions := fmt.Sprintf(`
+Since you decided to skip pushing the images as part of the build process, 
+you will need to 'docker push' the following images before you can run the 
+above Kubernetes manifests.
+`)
+		dockerPushFileInstructions := fmt.Sprintf(`
+The images that need to be pushed are referenced in 
+
+%s/dockerPush
+`,
+		symlinkBuildPath)
+		dockerPushFileSummary := fmt.Sprintf(`# File generated by order.go on %s
+#
+# The following images were not pushed to the Docker registry 
+# per the '--skip-docker-registry-push' option used when running 
+# build.sh. You can execute the below commands to push the specific
+# images. Note that the images must still reside on the current host.
+
+`,
+		order.TimestampTag)
+
+		fmt.Println(dockerPushInstructions)
+		order.WriteLog(false, dockerPushInstructions)
+		dockerPushFile, err := os.Create(symlinkBuildPath + "/dockerPush")
+		if err != nil {
+			return err
+		}
+
+		defer dockerPushFile.Close()    
+		_, err = dockerPushFile.WriteString(dockerPushFileSummary)
+		if err != nil {
+			return err
+		}	
+		for _, container := range order.Containers {
+			dockerPushString := fmt.Sprintf("docker push %s/%s/%s-%s:%s", order.DockerRegistry, order.DockerNamespace, order.ProjectName, container.Name, order.TagOverride)
+			fmt.Println(dockerPushString)
+			order.WriteLog(false, dockerPushString)
+			_, err = dockerPushFile.WriteString(dockerPushString + "\n")
+			if err != nil {
+				return err
+			}	
+		}
+		_, err = dockerPushFile.WriteString("\n")
+		if err != nil {
+			return err
+		}	
+ 		dockerPushFile.Sync()
+		fmt.Println(dockerPushFileInstructions)
+		order.WriteLog(false, dockerPushFileInstructions)
+	}
+
+	fmt.Println(lineSeparator)
+	order.WriteLog(false, lineSeparator)
 
 	return nil
 }

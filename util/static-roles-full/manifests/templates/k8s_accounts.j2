@@ -14,7 +14,7 @@ metadata:
   namespace: {{ SAS_K8S_NAMESPACE }}
 rules:
 - apiGroups: ["*"]
-  resources: ["configmaps"]
+  resources: ["configmaps","secrets"]
   verbs: ["*"]
 ...
 

@@ -313,7 +313,7 @@ sed -i 's/@REPLACE_ME_WITH_TAG@/<tag>/' ${PWD}/run/launchsas.sh
 cd run
 ```
 
-**Note:** Replace `<tag>` with the tag value of the sas-viya-single-programming-only image. To retrieve the tag value, run the `docker images` command.
+**Note:** Replace _<tag>_ with the value that you want to use.
 
 When the script is run, it will create several directories for you. These are set up either to cause data to persist or to help with [configuration](#configuration). 
 

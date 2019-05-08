@@ -12,6 +12,12 @@ spec:
         domain: {{ settings.project_name }}
     spec:
 {% if SECURE_CONSUL %}
+{% if item.key != "sas-casserver-primary" %}
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+{% endif %}
       serviceAccountName: {{ settings.project_name }}-account
 {% else %}
       # Required for TLS configurations
