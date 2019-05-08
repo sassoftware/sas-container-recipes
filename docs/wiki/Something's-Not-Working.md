@@ -112,4 +112,4 @@ REPOSITORY   TAG                 IMAGE ID            CREATED             SIZE
 <none>       <none>              b6c3548e6234        20 hours ago        842MB
 ```
 
-The command `docker rmi $(docker images --force "dangling=true")` may be run to remove all dangling images.
+The command `docker image prune --force` may be run to remove all dangling images.
