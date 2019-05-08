@@ -58,9 +58,6 @@ RedirectMatch "^/$" /SASStudio
 </Location>
 HTTPD
 
-# removed shared memory segment files between restarts
-rm --verbose --force /run/httpd/authdigest_shm.*
-
 #
 # Write out a help page to be displayed when browsing port 80
 #
@@ -71,7 +68,7 @@ cat > $APACHE_DOCROOT/index.html <<'EOF'
  <p> Access the software by browsing to:
  <ul>
   <li> <b><a href="/SASStudio">/SASStudio</a></b>
- </ul> using HTTP on port 80.
+ </ul> using HTTP on port 8080.
  <p> If port 80 is forwarded to a different port on the host machine, use the host port instead.
  <p> Use the <b>sasdemo</b> / <b>sasdemo</b> login to access SAS Studio and CAS.
 </html>
@@ -83,6 +80,19 @@ EOF
 sed -ri -e 's!^(\s*CustomLog)\s+\S+!\1 /proc/self/fd/1!g' $APACHE_CONF
 sed -ri -e 's!^(\s*ErrorLog)\s+\S+!\1 /proc/self/fd/2!g' $APACHE_CONF
 
+###############################################################################
+# Change user
+###############################################################################
+sed -ri -e 's!^User apache!User sas!g' $APACHE_CONF
+sed -ri -e 's!^Group apache!Group sas!g' $APACHE_CONF
+
+###############################################################################
+# Change user
+###############################################################################
+sed -ri -e 's!^Listen 80!Listen 8080!g' $APACHE_CONF
+sed -ri -e 's!^Listen 443!Listen 6443!g' $APACHE_CONF_D/ssl.conf
+
+###############################################################################
 
 ###############################################################################
 # Run httpd

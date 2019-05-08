@@ -1,4 +1,5 @@
 computeserver:
+  user: root
   roles:
   - tini
   - sas-prerequisites
@@ -101,8 +102,8 @@ httpproxy:
   - httpproxy
   - cloud-config
   ports:
-  - "80:80"
-  - "443:443"
+  - "80:8080"
+  - "443:6443"
   resources:
     limits:
     - "memory=1024Mi"
@@ -148,9 +149,6 @@ pgpoolc:
   - cloud-config
   ports:
   - "5431:5431"
-  environment:
-  - "SASPOSTGRESDBSIZE=large"
-  - "PG_VOLUME=/database/data"
   resources:
     limits:
     - "memory=12000Mi"
@@ -162,6 +160,7 @@ pgpoolc:
   - "SAS_DATAMINING_PASSWORD=ChangePassword"
 
 programming:
+  user: root
   roles:
   - tini
   - sas-prerequisites
@@ -189,6 +188,7 @@ rabbitmq:
   - tini
   - sas-prerequisites
   - sas-install-base-packages
+  - sas-java
   - rabbitmq
   - cloud-config
   ports:
@@ -209,6 +209,7 @@ rabbitmq:
   - "data=/rabbitmq/data"
 
 sas-casserver-primary:
+  user: root
   roles:
   - tini
   - sas-prerequisites
@@ -251,7 +252,7 @@ sasdatasvrc:
   ports:
   - "5432:5432"
   environment:
-  - "SAS_DEBUG=1"
+  - "SAS_DEBUG=0"
   - "SASPOSTGRESDBSIZE=large"
   - "PG_VOLUME=/database/data"
   resources:

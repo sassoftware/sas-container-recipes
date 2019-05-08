@@ -369,17 +369,17 @@ function create_database {
     if ${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -lqt | cut -d \| -f 1 | grep -qw ${SAS_DBNAME}; then
       echo_line "Database ${SAS_DBNAME} already exists"
     else
-      su - -s /bin/bash -c "${SASHOME}/bin/createdb -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -O ${SASPOSTGRESOWNER} -E UTF8 -T template0 --locale=en_US.utf8 ${SAS_DBNAME}" ${SASPOSTGRESOWNER}
+      ${SASHOME}/bin/createdb -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -O ${SASPOSTGRESOWNER} -E UTF8 -T template0 --locale=en_US.utf8 ${SAS_DBNAME}
     fi
 
     echo_line "grant all privileges on ${SAS_DBNAME} to ${SAS_DEFAULT_PGUSER}"
     # -c = run only single command (SQL or internal) and exit
-    su - -s /bin/bash -c "${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c 'GRANT ALL PRIVILEGES ON DATABASE \"${SAS_DBNAME}\" TO \"${SAS_DEFAULT_PGUSER}\"'" ${SASPOSTGRESOWNER}
+    ${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c "GRANT ALL PRIVILEGES ON DATABASE \"${SAS_DBNAME}\" TO \"${SAS_DEFAULT_PGUSER}\""
 
     if [ "${SAS_INSTANCE_PGUSER}" != "${SAS_DEFAULT_PGUSER}" ]; then
         echo_line "grant all privileges on ${SAS_DBNAME} to ${SAS_INSTANCE_PGUSER}"
         # -c = run only single command (SQL or internal) and exit
-        su - -s /bin/bash -c "${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c 'GRANT ALL PRIVILEGES ON DATABASE \"${SAS_DBNAME}\" TO \"${SAS_INSTANCE_PGUSER}\"'" ${SASPOSTGRESOWNER}
+        ${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c "GRANT ALL PRIVILEGES ON DATABASE \"${SAS_DBNAME}\" TO \"${SAS_INSTANCE_PGUSER}\""
     fi
 }
 
@@ -491,11 +491,11 @@ chown -v ${SASPOSTGRESOWNER}:${SASPOSTGRESGROUP} ${SASPOSTGRESCONFIGDIR}
 if [ ! -d ${PG_VOLUME} ]; then
     echo_line "[postgresql] Create root data directory: ${PG_VOLUME}"
     mkdir -vp ${PG_VOLUME}
+    echo_line "[postgresql] Change ownership and permissions on the data directory: ${PG_VOLUME}"
+    chmod -vR 0700 ${PG_VOLUME}
+    chown -v ${SASPOSTGRESOWNER}:${SASPOSTGRESGROUP} ${PG_VOLUME}
 fi
 
-echo_line "[postgresql] Change ownership and permissions on the data directory: ${PG_VOLUME}"
-chmod -vR 0700 ${PG_VOLUME}
-chown -v ${SASPOSTGRESOWNER}:${SASPOSTGRESGROUP} ${PG_VOLUME}
 
 if [ ! -d ${SASPOSTGRESRUNDIR} ]; then
     echo_line "[postgresql] Create run directory: ${SASPOSTGRESRUNDIR}"
@@ -644,7 +644,7 @@ fi
 
 # Start postgres via pg_ctl
 echo_line "[postgresql] Starting postgres via pg_ctl..."
-su - -s /bin/bash -c "${SASHOME}/bin/pg_ctl -o '-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf' -D ${PG_DATADIR} -w -t 30 start" ${SASPOSTGRESOWNER}
+${SASHOME}/bin/pg_ctl -o "-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf" -D ${PG_DATADIR} -w -t 30 start
 
 if [ $? = 0 ]; then
   echo_line "[postgresql] PostgreSQL started successfully"
@@ -668,7 +668,7 @@ END
 REPL
 
     # Run the script
-    su - -s /bin/bash -c "${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres < ${SASPOSTGRESCONFIGDIR}/setup-replication.sql" ${SASPOSTGRESOWNER}
+    ${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres < ${SASPOSTGRESCONFIGDIR}/setup-replication.sql
   fi
 else
   echo_line "[postgresql] The PostgreSQL server start seems to have some problems, please see logs for details."
@@ -677,5 +677,5 @@ fi
 
 # Stop postgres via pg_ctl
 echo_line "[postgresql] Stopping postgres via pg_ctl..."
-su - -s /bin/bash -c "${SASHOME}/bin/pg_ctl -o '-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf' -D ${PG_DATADIR} -w -t 30 stop" ${SASPOSTGRESOWNER}
+${SASHOME}/bin/pg_ctl -o "-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf" -D ${PG_DATADIR} -w -t 30 stop
 

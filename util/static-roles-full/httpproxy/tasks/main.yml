@@ -23,6 +23,26 @@
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
 
+- name: chown directories
+  file: path="{{ item }}" owner="{{ INSTALL_USER }}" group="{{ INSTALL_GROUP }}" state=directory recurse=yes
+  with_items:
+    - "{{ SAS_CONFIG_ROOT }}/consul"
+    - "{{ SAS_CONFIG_ROOT }}/lib"
+    - "{{ SAS_CONFIG_ROOT }}/var/log"
+    - /etc/httpd
+    - /etc/rc.d/init.d
+    - /var/www
+    - /var/run/httpd
+    - /var/log/httpd
+    - /etc/pki/tls
+    - /etc/sysconfig/sas
+
+- name: chown files
+  file: path="{{ item }}" owner="{{ INSTALL_USER }}" group="{{ INSTALL_GROUP }}" 
+  with_items:
+    - /etc/pki/tls/certs/localhost.crt
+    - /etc/pki/tls/private/localhost.key
+
 - name: Comment out conflicting X-Forwarded headers
   shell: |
     LINE_NUM=$(grep -n '# Default the X-Forwarded-Proto header to http' /etc/httpd/conf.d/petrichor.conf|cut -f1 -d:)

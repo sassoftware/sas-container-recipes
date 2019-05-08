@@ -446,10 +446,12 @@ function docker_run_local_consul()
     # Need to export "default" as the instance value to be picked up by the sas-start-functions
     export SASINSTANCE=default
 
-    if [ -f "/etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE}" ] && \
+    local viya_process="/etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE}"
+    if [ -f "${viya_process}" ] && \
        [ -e ${SASTOKENDIR}/client.token ]; then
+
         # start local consul
-        /etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE} start
+        ${viya_process} start
 
         # Wait for Consul to be up
         docker_wait_for_consul_leader
