@@ -21,7 +21,7 @@ spec:
     - name: "{{ ports.split(':')[0] }}"
       protocol: TCP
       port: {{ ports.split(':')[0] }}
-      targetPort: {{ ports.split(':')[0] }}
+      targetPort: {{ ports.split(':')[1] }}
 {%   endfor %}
 {% endif %}
   sessionAffinity: None

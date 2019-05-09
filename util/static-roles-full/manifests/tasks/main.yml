@@ -77,7 +77,7 @@
   template:
     src: "k8s_secrets.j2"
     dest: "{% if item.key == 'sas-casserver-primary' %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/secrets/cas.yml{% else %}{{ playbook_dir }}/{{ SAS_MANIFEST_DIR }}/kubernetes/secrets/{{ item.key }}.yml{% endif %}"
-  when: item.value.secrets is defined and item.value.secrets
+  when: (item.value.secrets is defined and item.value.secrets) or (custom_services is defined and custom_services and item.key in custom_services.items() | string)
   with_dict: '{{ services }}'
 
 - name: Create k8s domain service

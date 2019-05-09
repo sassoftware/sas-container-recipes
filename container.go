@@ -99,12 +99,16 @@ type Container struct {
 // that do not have static values are set to the defaults
 // (see container.GetConfig).
 type ContainerConfig struct {
+	// Standard Dockerfile layer attributes
+	User        string   `yaml:"user"` // The runuser for the entrypoint. By default a container will run as the sas user
 	Ports       []string `yaml:"ports"`
 	Environment []string `yaml:"environment"`
 	Secrets     []string `yaml:"secrets"`
 	Roles       []string `yaml:"roles"`
 	Volumes     []string `yaml:"volumes"`
-	Resources   struct {
+
+	// Used in the Kubernetes manifest generation
+	Resources struct {
 		Limits   []string `yaml:"limits"`
 		Requests []string `yaml:"requests"`
 	} `yaml:"resources"`
@@ -117,7 +121,8 @@ type effectedImage struct {
 
 // Provide a human readable output of a container's configurations
 func (config *ContainerConfig) String() string {
-	return fmt.Sprintf("\n\n[CONFIGURATION]\n[Ports] %s\n[Environment] %s\n[Roles] %s\n[Volumes] %s\n[Resources Limits] %s\n[Resources Requests] %s\n\n",
+	return fmt.Sprintf("\n\n[CONFIGURATION]\n[User] %s\n[Ports] %s\n[Environment] %s\n[Roles] %s\n[Volumes] %s\n[Resources Limits] %s\n[Resources Requests] %s\n\n",
+		config.User+", ",
 		strings.Join(config.Ports, ", "),
 		strings.Join(config.Environment, ", "),
 		strings.Join(config.Roles, ", "),
@@ -259,6 +264,13 @@ func (container *Container) GetConfig() error {
 	// Default resource requests
 	if len(targetConfig.Resources.Requests) == 0 {
 		targetConfig.Resources.Requests = append(targetConfig.Resources.Requests, "memory=2Gi")
+	}
+
+	// Default runuser
+	// If no "user" attribute is specified in the config file then the
+	// container will run as the sas user by default.
+	if len(targetConfig.User) == 0 {
+		targetConfig.User = "sas"
 	}
 
 	container.Config = targetConfig
@@ -428,13 +440,14 @@ ADD *.yml *.cfg /ansible/
 ADD roles /ansible/roles
 `
 
-const dockerfileSetupEntrypoint = `# Start a top level process that starts all services
+const dockerfileSetupEntrypoint = `# Start a top level process that starts all services as a non-root user
+USER %s:%s
 ENTRYPOINT ["/usr/bin/tini", "--", "/opt/sas/viya/home/bin/%s-entrypoint.sh"]
 `
 
 // Each Ansible role is a RUN layer
 const dockerfileRunLayer = `# %s role
-RUN ansible-playbook -vv /ansible/playbook.yml --extra-vars layer=%s --extra-vars PLAYBOOK_SRV=${PLAYBOOK_SRV}
+RUN ansible-playbook -vv /ansible/playbook.yml --extra-vars layer=%s --extra-vars PLAYBOOK_SRV=${PLAYBOOK_SRV} --extra-vars container_name=%s
 `
 
 const dockerfileAddDynamicRole = `# Add the %s specific role
@@ -460,15 +473,28 @@ func (container *Container) CreateDockerfile() (string, error) {
 		if strings.EqualFold(container.Name, role) {
 			dockerfile += fmt.Sprintf(dockerfileAddDynamicRole, role) + "\n"
 		}
-		dockerfile += fmt.Sprintf(dockerfileRunLayer, role, role) + "\n"
+		dockerfile += fmt.Sprintf(dockerfileRunLayer, role, role, container.Name) + "\n"
 	}
 
 	// Add the provided volumes
 	if len(container.Config.Volumes) > 0 {
-		dockerfile += "# Volumes\n"
-	}
-	for _, volume := range container.Config.Volumes {
-		dockerfile += fmt.Sprintf("VOLUME %s\n", volume)
+		dockerfile += "# Volume mount points\n"
+		mountPoints := []string{}
+		for _, volume := range container.Config.Volumes {
+			// The config file has the format "name=/some/volume/path",
+			// where the section before the equal sign is only used by the
+			// manifest generation playbook. The section after the equal sign
+			// is used in the Dockerfile. For example, "data=/cas/data" has
+			// the name "data" and the mount path "/cas/data".
+			sections := strings.Split(volume, "=")
+			if !strings.Contains(volume, "=") && len(sections) != 2 {
+				errorOutput := fmt.Sprintf("Could not parse NAME=VALUE format from volume. %s, %s",
+					container.Name, volume)
+				return dockerfile, errors.New(errorOutput)
+			}
+			mountPoints = append(mountPoints, sections[1])
+		}
+		dockerfile += "VOLUME " + strings.Join(mountPoints, " ")
 	}
 
 	// Expose the ports that were specified in the config
@@ -480,12 +506,12 @@ func (container *Container) CreateDockerfile() (string, error) {
 	}
 
 	// Handle AddOns Dockerfile lines
-	dockerfile, err := appendAddonLines(container.Name, dockerfile, container.SoftwareOrder.DeploymentType, container.SoftwareOrder.AddOns)
+	dockerfile, err := appendAddonLines(container.Name, dockerfile, container.SoftwareOrder.AddOns)
 	if err != nil {
 		return dockerfile, err
 	}
 
-	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Name)
+	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Config.User, container.Config.User, container.Name)
 	dockerfile += "\n" + fmt.Sprintf(dockerfileLabels, RecipeVersion, container.Name, container.Name)
 	return dockerfile, nil
 }
@@ -509,7 +535,7 @@ func readAddonConf(fileName string) (map[string]effectedImage, error) {
 
 // appendAddonLines adds any corresponding addon lines to a Dockerfile
 // Helper function utilized by all the deployment types
-func appendAddonLines(name string, dockerfile string, deploymentType string, addons []string) (string, error) {
+func appendAddonLines(name string, dockerfile string, addons []string) (string, error) {
 
 	// This function now reads an addon_config.yml file in the addon directory to determine
 	// which containers are affected by the Dockerfiles.
@@ -555,16 +581,8 @@ func appendAddonLines(name string, dockerfile string, deploymentType string, add
 						strings.HasPrefix(line, "ADD ") ||
 						strings.HasPrefix(line, "ARG") ||
 						strings.HasPrefix(line, "WORKDIR") ||
-						strings.HasPrefix(line, "USER") ||
 						strings.HasPrefix(line, "COPY ") {
-
-						if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") != 0 && strings.Contains(line, "BASEIMAGE") {
-							dockerfile += "ARG BASEIMAGE=non-single-container\n"
-						} else if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") == 0 && strings.Contains(line, "BASEIMAGE") {
-							dockerfile += line + "\n"
-						} else {
-							dockerfile += line + "\n"
-						}
+						dockerfile += line + "\n"
 
 						// If there's a "\" then it's a multi-line command
 						if strings.Contains(line, "\\") {

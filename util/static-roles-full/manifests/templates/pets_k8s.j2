@@ -25,6 +25,12 @@ spec:
         domain: {{ settings.project_name }}
     spec:
 {% if SECURE_CONSUL %}
+{% if item.key != "computeserver" and item.key != "programming" and item.key != "sas-casserver-primary" %}
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+{% endif %}
       serviceAccountName: {{ settings.project_name }}-account
 {% else %}
       # Required for TLS configurations
@@ -44,7 +50,7 @@ spec:
 {% if item.value.ports is defined and item.value.ports %}
         ports:
 {%   for ports in item.value.ports %}
-        - containerPort: {{ ports.split(':')[0] }}
+        - containerPort: {{ ports.split(':')[1] }}
 {%   endfor %}
 {% endif %}
         env:

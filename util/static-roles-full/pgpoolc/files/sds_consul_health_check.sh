@@ -27,12 +27,12 @@ _sysconfig=${SASCONFIG}/etc/sasdatasvrc/${SASSERVICENAME}/${SASINSTANCE}/sas-${S
 [[ -e ${_sysconfig} ]] && source ${_sysconfig}
 
 # set standard environment if not already set
-[[ -z ${SASLOGROOT+x} ]] && export SASLOGROOT="${SASCONFIG}/var/log"
-[[ -z ${SASLOGDIR+x} ]] && export SASLOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICENAME}"
-[[ -z ${SASCONSULDIR+x} ]] && export SASCONSULDIR="${SASHOME}"
-[[ -z ${SASPOSTGRESOWNER+x} ]] && export SASPOSTGRESOWNER="sas"
-[[ -z ${SASPOSTGRESGROUP+x} ]] && export SASPOSTGRESGROUP="sas"
-[[ -z ${SAS_CURRENT_HOST+x} ]]   && export SAS_CURRENT_HOST=$(hostname -f)
+[[ -z ${SASLOGROOT+x} ]]        && export SASLOGROOT="${SASCONFIG}/var/log"
+[[ -z ${SASLOGDIR+x} ]]         && export SASLOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICENAME}"
+[[ -z ${SASCONSULDIR+x} ]]      && export SASCONSULDIR="${SASHOME}"
+[[ -z ${SASPGPOOLOWNER+x} ]]    && export SASPGPOOLOWNER="sas"
+[[ -z ${SASPGPOOLGROUP+x} ]]    && export SASPGPOOLGROUP="sas"
+[[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
 
 _LOGFILENAME=${SASLOGDIR}/${SASSERVICENAME}_${SASINSTANCE}_healthcheck.log
 
@@ -45,7 +45,7 @@ function init_log() {
         if [ ! -d $(dirname ${_LOGFILENAME}) ]; then
             mkdir -vp $(dirname ${_LOGFILENAME})
             chmod -v 0777 $(dirname ${_LOGFILENAME})
-            chown -v ${SASPOSTGRESOWNER}:${SASPOSTGRESGROUP} $(dirname ${_LOGFILENAME})
+            chown -v ${SASPGPOOLOWNER}:${SASPGPOOLGROUP} $(dirname ${_LOGFILENAME})
         else
             if [ -e ${_LOGFILENAME} ]; then
                 mv -v ${_LOGFILENAME} ${_LOGFILENAME}_$(date +"%Y%m%d%H%M")
@@ -74,7 +74,7 @@ if [ ! -z "${SASLOGDIR}" ]; then
     if [ ! -d $(dirname ${_logfile}) ]; then
         mkdir -vp $(dirname ${_logfile})
         chmod -v 0777 $(dirname ${_logfile})
-        chown -v ${SASPOSTGRESOWNER}:${SASPOSTGRESGROUP} $(dirname ${_logfile})
+        chown -v ${SASPGPOOLOWNER}:${SASPGPOOLGROUP} $(dirname ${_logfile})
     else
         if [ -e ${_logfile} ]; then
             mv -v ${_logfile} ${_logfile}_$(date +"%Y%m%d%H%M")

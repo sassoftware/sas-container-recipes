@@ -48,8 +48,9 @@ export CONSUL_HTTP_ADDR
 # for logging.
 MYNAME=$(basename $0)
 dte=$(date +%Y-%m-%d_%H-%M-%S)
-mkdir -p ${SASCONFIG}/var/log/vault/default/
-export MY_LOG_FILE=${SASCONFIG}/var/log/vault/default/vault-setup_stdout-${dte}.log
+export VAULT_LOG_DIR=${SASCONFIG}/var/log/vault/default
+export MY_LOG_FILE=${VAULT_LOG_DIR}/vault-setup_stdout-${dte}.log
+mkdir -p ${VAULT_LOG_DIR}
 
 if [[ -z "$1" ]];then
   vault_addr=127.0.0.1:8200
