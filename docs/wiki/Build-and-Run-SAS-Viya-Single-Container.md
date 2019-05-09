@@ -7,7 +7,7 @@
   - [Order of Configuration](#order-of-configuration)
 - [How to Build](#how-to-build)
   - [Overview](#overview)
-  - [Building on an Image Based on Red Hat Enterprise Linux](#building-on-an-image-based-on-red-hat-enterprise-linux)
+  - [Building on an Image Based on CentOS](#building-on-an-image-based-on-centos)
   - [Building on a SUSE Linux Image](#building-on-a-suse-linux-image)
   - [Advanced Building Options](#advanced-building-options)
   - [Logging](#logging)
@@ -190,11 +190,12 @@ For a single container, the `--addons`, `--base-image`, `--base-tag`, `--mirror-
 
 For information about how to manually build as well as add layers, see [Advanced Building Options](#advanced-building-options).
 
-### Building on an Image Based on Red Hat Enterprise Linux
+### Building on an Image Based on CentOS
 
-The instructions in this section are for Red Hat Enterprise Linux (RHEL) 7 or derivatives, such as CentOS 7.
+The instructions in this section are for building SAS containers with CentOS as the base container image. 
 
-**Note:** Only images that are based on RHEL 7 can be used for recipes.
+Note: Other base images related to Red Hat Enterprise Linux (RHEL) are currently
+not supported however, a different `--base-image` value can be provided on an experimental basis.
 
 In the following example, the most recent CentOS:7 image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
 
