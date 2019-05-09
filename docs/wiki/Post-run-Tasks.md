@@ -199,7 +199,12 @@ deployment type to the build script. For example,
 3. New manifests will be generated in builds/full/manifests/ or 
 builds/multiple/manifests/, depending on your deployment type.
 
-**Note:** The symbolic link builds/full/manifests/ or builds/multiple/manifests/ will point to the most recent timestamped directory, such as builds/multiple-2019-04-10-15-27-56/manifests/. If you generate the manifests multiple times, more than one timestamped directory will exist.
+**Note:** Note: The symbolic link builds/full or builds/multiple will point 
+to the most recent build timestamped directory, such as 
+builds/multiple-2019-04-10-15-27-56. Regenerating the manifests will not make 
+a new timestamped builds/full or builds/multiple directory. If you generate the
+manifests multiple times, there will be more than one timestamped manifest 
+directory in the builds/full or builds/multiple directory. 
 
 ## (Optional) Converting an Environment from CAS SMP to CAS MPP
 
