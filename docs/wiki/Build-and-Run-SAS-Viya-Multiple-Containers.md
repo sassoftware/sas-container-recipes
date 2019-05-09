@@ -194,7 +194,7 @@ For a full deployment, each of the containers will also have a volume defined to
 
 To create your deployment, use the manifests that are created during the build process. In the following example, you are deploying into the sas-viya Kubernetes namespace. For more information about namespaces, see [Kubernetes Namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
 
-During the manifest generation, a YML file was created that helps with creating the Kubernetes namespace. If your user has the ability to create namespaces in the Kubernetes environment, run the following command, or request that your Kuberenetes administrator create a namespace for you in the Kubernetes environment:
+During the manifest generation, a YML file was created that helps with creating the Kubernetes namespace. If your user has the ability to create namespaces in the Kubernetes environment, run the following command, or request that your Kubernetes administrator create a namespace for you in the Kubernetes environment:
 
 ```
 kubectl apply -f $MANIFESTS/kubernetes/namespace/sas-viya.yml

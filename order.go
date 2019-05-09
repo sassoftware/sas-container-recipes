@@ -1740,7 +1740,7 @@ Kubernetes manifests have been created: %s
 	manifestInstructions := fmt.Sprintf(`
 To deploy a new environment run the below commands
 
-Create the Kuberenetes namespace:
+Create the Kubernetes namespace:
 
 kubectl apply -f %s/kubernetes/namespace/%s.yml
 
