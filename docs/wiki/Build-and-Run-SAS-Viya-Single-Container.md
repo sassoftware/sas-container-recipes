@@ -229,7 +229,9 @@ build.sh \
 ### Advanced Building Options
 #### Running Docker build
 
-If you want to run the Docker build explicitly, navigate to the util/programming-only-single directory and run the following:
+To explicitly run the Docker build, first copy your 
+SAS_Viya_deployment_data.zip file and manifests_usermods.yml file into the
+`util/programming-only-single/` directory, then run the following:
 
 ```
 docker build . \
