@@ -204,7 +204,7 @@ The version of SAS Studio that you are using depends on which type of deployment
       1. Select **Snippets** > **SAS Viya Cloud Analytic Services**.
       1. Right-click **New CAS Session** and select **Open**.
       1. Edit the SAS code that you copied you copied in step 3.
-      1. In the toolbar, click <img src="viya_runningman.png"> to run the new CAS session code. If any of the verification steps for data access return an error, perform the appropriate configuration steps again.
+      1. In the toolbar, click <img src="../viya_runningman.png"> to run the new CAS session code. If any of the verification steps for data access return an error, perform the appropriate configuration steps again.
 
     - Note: When the snippet is added it will display
     ```
