@@ -1,0 +1,49 @@
+# Copy this file, place it in the sas-container-recipes project directory, 
+# and add any overrides that are desired.
+# See https://github.com/sassoftware/sas-container-recipes/wiki/Pre-build-Tasks#kubernetes-manifest-inputs
+
+# The directory where manifests will be created. Default is "manifests"
+#SAS_MANIFEST_DIR: manifests
+
+# The Kubernetes namespace that we are deploying into. Default is "sas-viya"
+#SAS_K8S_NAMESPACE: sas-viya
+
+# Reflects the domain to use when filling in the ingress paths. Default is "company.com"
+#SAS_K8S_INGRESS_DOMAIN: company.com
+
+# Defines if inter-communication between services is TLS enabled. Default is "false"
+# DO NOT USE: This is an experimental option that is not ready for production.
+#SECURE_CONSUL: false
+
+# In the following structure, define the deployment_overrides per service that
+# you want to end up in the generated manifests. This will add to or replace defaults
+# For each service.deployment_overrides section, you can define the following:
+#
+# - environments
+# - secrets
+#
+
+#custom_services:
+#  sas-casserver-primary:
+#    deployment_overrides:
+#      environment:
+#        - "CASCFG_MODE=mpp"
+
+# In the following structures, define the custom volumes and volume mounts that
+# are desired per service. If the same set of volumes and volume mounts are used
+# across multiple services they will need to be defined per service. This will 
+# add to or replace defaults. The structure is that everything after the pipe '|'
+# is added to the manifest. It is a straight copy of what is provided to the
+# generated manifest.
+
+#custom_volume_mounts:
+#  sas-casserver-primary: |
+#    - name: someserver
+#      mountPath: /specific/path/to/mount
+
+#custom_volumes:
+#  sas-casserver-primary: |
+#    - name: someserver
+#      nfs:
+#        server: server.company.com
+#        path: "/path"

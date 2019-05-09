@@ -190,7 +190,7 @@ SAS Viya supports encrypted connections between the LDAP client and server. To c
 
 If the deployment manifests that were generated in builds/full/manifests or builds/multiple/manifests need to be updated, perform the following post-build steps to regenerate the manifests without re-running the entire build process. 
 
-1. (Optional) To provide custom configuration, edit the vars_usermods.yml file in the sas-container-recipes project directory. For more information, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task).
+1. (Optional) To provide custom configuration, edit the manifests_usermods.yml file in the sas-container-recipes project directory. For more information, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task).
 1. Re-run `build.sh` with the same command arguments that were previously supplied, and add the `--generate-manifests-only` argument.
 1. New manifests will be generated in builds/full/manifests/ or builds/multiple/manifests/, depending on your deployment type.
 
@@ -200,7 +200,7 @@ If the deployment manifests that were generated in builds/full/manifests or buil
 
 By default, the CAS deployment is set up as SMP. If a MPP environment is needed, perform one of the following steps:
 
-* If you have not yet deployed the environment, regenerate manifests. See [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) for information about editing the vars_usermods.yml file to support MPP mode.
+* If you have not yet deployed the environment, regenerate manifests. See [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) for information about editing the manifests_usermods.yml file to support MPP mode.
 * If you have already deployed the environment:
     1. Scale down the controller to 0: 
 
