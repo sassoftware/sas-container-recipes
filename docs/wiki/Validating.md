@@ -207,8 +207,8 @@ The version of SAS Studio that you are using depends on which type of deployment
       1. In the toolbar, click <img src="../viya_runningman.png"> to run the new CAS session code. If any of the verification steps for data access return an error, perform the appropriate configuration steps again.
 
     - Note: When the snippet is added it will display
-    ```
-    options cashost="<cas server name>" casport=<port number>; 
-    ```
+      ```
+      options cashost="<cas server name>" casport=<port number>; 
+      ```
       - For single image builds, use localhost and 5570 for the "cas server name" and "port number" respectively. 
       - For multiple and full deployments, use sas-viya-cas and 5570 for the "cas server name" and "port number" respectively.
