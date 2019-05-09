@@ -210,4 +210,5 @@ The version of SAS Studio that you are using depends on which type of deployment
     ```
     options cashost="<cas server name>" casport=<port number>; 
     ```
-    For single image builds, use localhost and 5570 for the "cas server name" and "port number" respectively. For multiple and full deployments, use sas-viya-cas and 5570 for the "cas server name" and "port number" respectively.
+        - For single image builds, use localhost and 5570 for the "cas server name" and "port number" respectively. 
+        - For multiple and full deployments, use sas-viya-cas and 5570 for the "cas server name" and "port number" respectively.
