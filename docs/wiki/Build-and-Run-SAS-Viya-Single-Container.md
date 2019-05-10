@@ -7,7 +7,7 @@
   - [Order of Configuration](#order-of-configuration)
 - [How to Build](#how-to-build)
   - [Overview](#overview)
-  - [Building on an Image Based on Red Hat Enterprise Linux](#building-on-an-image-based-on-red-hat-enterprise-linux)
+  - [Building on a CentOS Image](#building-on-a-centos-image)
   - [Building on a SUSE Linux Image](#building-on-a-suse-linux-image)
   - [Advanced Building Options](#advanced-building-options)
   - [Logging](#logging)
@@ -190,15 +190,9 @@ For a single container, the `--addons`, `--base-image`, `--base-tag`, `--mirror-
 
 For information about how to manually build as well as add layers, see [Advanced Building Options](#advanced-building-options).
 
-### Building on an Image Based on Red Hat Enterprise Linux
-
-The instructions in this section are for Red Hat Enterprise Linux (RHEL) 7 or derivatives, such as CentOS 7.
-
-**Note:** Only images that are based on RHEL 7 can be used for recipes.
+### Building on a CentOS Image
 
 In the following example, the most recent CentOS:7 image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
-
-To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--base-image` and `--base-tag` arguments. If the `--base-image` and `--base-tag` arguments are not provided, then centos:latest from DockerHub will be used.
 
 ```
 build.sh \
@@ -209,6 +203,9 @@ build.sh \
 --mirror-url http://host.company.com/sas_repo \
 --addons "auth-sssd access-odbc"
 ```
+
+**Note:** If the `--base-image` and `--base-tag` arguments are not provided, then centos:latest from DockerHub will be used. Although building on other Red Hat Enterprise Linux (RHEL) based images is not currently
+not supported, different options for the `--base-image` and `--base-tag` arguments can be provided on an experimental basis.
 
 ### Building on a SUSE Linux Image
 
