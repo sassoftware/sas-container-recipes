@@ -227,6 +227,21 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	if err := order.LoadCommands(); err != nil {
 		return order, err
 	}
+
+	// A single image only uses the vars_usermods.yml. That can be used to change the
+	// running of the playbook that is used in creating the image. For "full" or 
+	// "multiple" deployments, only the manifests_usermods.yml is used. It is used
+	// when generating manifests and not in the building of the images.
+	if order.DeploymentType != "single" {
+		if err = order.LoadUsermods("manifests_usermods.yml"); err != nil {
+			return order, err
+		}
+	} else {
+		if err = order.LoadUsermods("vars_usermods.yml"); err != nil {
+			return order, err
+		}
+	}
+
 	if err := order.DefineManifestDir(); err != nil {
 		return order, err
 	}
@@ -286,17 +301,6 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		go order.LoadRegistryAuth(fail, done)	
 	} else {
 		log.Println("Skipping loading Docker registry authentication ...")
-	}
-
-	// A single image only uses the vars_usermods.yml. That can be used to change the
-	// running of the playbook that is used in creating the image. For "full" or 
-	// "multiple" deployments, only the manifests_usermods.yml is used. It is used
-	// when generating manifests and not in the building of the images.
-	workerCount++
-	if order.DeploymentType != "single" {
-		go order.LoadUsermods("manifests_usermods.yml",progress, fail, done)
-	} else {
-		go order.LoadUsermods("vars_usermods.yml",progress, fail, done)
 	}
 
 	if !order.SkipDockerValidation {
@@ -1351,16 +1355,6 @@ func (order *SoftwareOrder) GenerateManifests() error {
 			}
 		}
 
-		// manifests_usermods.yml --> manifests_usermods.yml-<datetime>.yml
-		usermodsPathPrevious := fmt.Sprintf("%smanifests_usermods.yml-%s.yml",
-			order.BuildPath, order.TimestampTag)
-		if _, err := os.Stat(order.BuildPath+"manifests_usermods.yml"); !os.IsNotExist(err) {
-			if err := os.Rename(order.BuildPath+"manifests_usermods.yml",
-			usermodsPathPrevious); err != nil {
-				return err
-			}
-		}
-
 		// build.log --> build-<datetime>.log
 		order.LogPath = order.BuildPath + "build.log"
 		buildLogPrevious := fmt.Sprintf("%sbuild-%s.log",
@@ -1373,11 +1367,6 @@ func (order *SoftwareOrder) GenerateManifests() error {
 			return err
 		}
 		order.Log = logHandle
-
-		// Re-copy the usermods file
-		if err = order.LoadUsermods("manifests_usermods.yml", nil, nil, nil); err != nil {
-			return err
-		}
 	} else {
 		// Write a vars file to disk so it can be used by the playbook
 		containerVarSections := []string{}
@@ -1575,32 +1564,28 @@ settings:
 // directory, or if the file was not provided then the
 // default usermods file is copied.
 // This function can be used concurrently or non concurrently.
-func (order *SoftwareOrder) LoadUsermods(usermodsFileName string, progress chan string,
-	fail chan string, done chan int) error {
+func (order *SoftwareOrder) LoadUsermods(usermodsFileName string) error {
+	// manifests_usermods.yml --> manifests_usermods.yml-<datetime>.yml
+	usermodsPathPrevious := fmt.Sprintf("builds/%s/%s-%s.yml", order.DeploymentType, usermodsFileName, order.TimestampTag)
+	if _, err := os.Stat("builds/"+order.DeploymentType+"/"+usermodsFileName); !os.IsNotExist(err) {
+		if err := os.Rename("builds/"+order.DeploymentType+"/"+usermodsFileName, usermodsPathPrevious); err != nil {
+			return err
+		}
+	}
+
 	usermodsFilePath := "util/" + usermodsFileName
 	if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
-		if progress != nil {
-			progress <- "Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory."
-		}
+		log.Println("Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory.")
 		usermodsFilePath = usermodsFileName
 	}
 	input, err := ioutil.ReadFile(usermodsFilePath)
 	if err != nil {
-		if fail != nil {
-			fail <- err.Error()
-		}
 		return err
 	}
 
-	err = ioutil.WriteFile(fmt.Sprintf("%s/%s", order.BuildPath, usermodsFileName), input, 0644)
+	err = ioutil.WriteFile(fmt.Sprintf("builds/%s/%s", order.DeploymentType, usermodsFileName), input, 0644)
 	if err != nil {
-		if fail != nil {
-			fail <- err.Error()
-		}
 		return err
-	}
-	if done != nil {
-		done <- 1
 	}
 	return nil
 }
