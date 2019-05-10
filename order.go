@@ -1663,18 +1663,14 @@ func bytesToGB(bytes int64) string {
 func (order *SoftwareOrder) ShowSummary() error {
 	if order.DeploymentType == "single" {
 
-		// TODO: this does not use the Fully Qualified Domain Name
-		hostname, err := os.Hostname()
-		if err != nil {
-			return err
-		}
 		nextStepInstructions := "\n" + fmt.Sprintf(`Run the following to start the container:
 
-docker run --detach --rm --env CASENV_CAS_VIRTUAL_HOST=%s \
---env CASENV_CAS_VIRTUAL_PORT=8081 --publish-all --publish 8081:80 \
---name sas-viya-single-programming-only --hostname %s \
-sas-viya-single-programming-only:%s
-	`, hostname, hostname, order.TagOverride)
+mkdir -p run
+cp samples/viya-single-container/example_launchsas.sh run/launchsas.sh
+cd run
+sed -i 's|@REPLACE_ME_WITH_TAG@|%s|' launchsas.sh
+./launchsas.sh
+`, order.TagOverride)
 		order.WriteLog(true, nextStepInstructions)
 
 		order.EndTime = time.Now()

@@ -1,6 +1,6 @@
 #! /bin/bash -e
 
-IMAGE=sas-viya-programming:@REPLACE_ME_WITH_TAG@
+IMAGE=sas-viya-single-programming-only:@REPLACE_ME_WITH_TAG@
 SAS_HTTP_PORT=8080
 SAS_HTTPS_PORT=8443
 
