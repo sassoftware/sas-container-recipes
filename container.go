@@ -506,7 +506,7 @@ func (container *Container) CreateDockerfile() (string, error) {
 	}
 
 	// Handle AddOns Dockerfile lines
-	dockerfile, err := appendAddonLines(container.Name, dockerfile, container.SoftwareOrder.AddOns)
+	dockerfile, err := appendAddonLines(container.Name, dockerfile, container.SoftwareOrder.DeploymentType, container.SoftwareOrder.AddOns)
 	if err != nil {
 		return dockerfile, err
 	}
@@ -535,7 +535,7 @@ func readAddonConf(fileName string) (map[string]effectedImage, error) {
 
 // appendAddonLines adds any corresponding addon lines to a Dockerfile
 // Helper function utilized by all the deployment types
-func appendAddonLines(name string, dockerfile string, addons []string) (string, error) {
+func appendAddonLines(name string, dockerfile string, deploymentType string, addons []string) (string, error) {
 
 	// This function now reads an addon_config.yml file in the addon directory to determine
 	// which containers are affected by the Dockerfiles.
@@ -581,8 +581,16 @@ func appendAddonLines(name string, dockerfile string, addons []string) (string, 
 						strings.HasPrefix(line, "ADD ") ||
 						strings.HasPrefix(line, "ARG") ||
 						strings.HasPrefix(line, "WORKDIR") ||
+						strings.HasPrefix(line, "USER") ||
 						strings.HasPrefix(line, "COPY ") {
-						dockerfile += line + "\n"
+
+						if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") != 0 && strings.Contains(line, "BASEIMAGE") {
+							dockerfile += "ARG BASEIMAGE=non-single-container\n"
+						} else if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") == 0 && strings.Contains(line, "BASEIMAGE") {
+							dockerfile += line + "\n"
+						} else {
+							dockerfile += line + "\n"
+						}
 
 						// If there's a "\" then it's a multi-line command
 						if strings.Contains(line, "\\") {
