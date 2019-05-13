@@ -211,6 +211,19 @@ func (order *SoftwareOrder) SetupBuildDirectory() error {
 		result, _ := ioutil.ReadAll(stderr)
 		return errors.New(string(result) + "\n" + err.Error())
 	}
+	// A single image only uses the vars_usermods.yml. That can be used to change the
+	// running of the playbook that is used in creating the image. For "full" or 
+	// "multiple" deployments, only the manifests_usermods.yml is used. It is used
+	// when generating manifests and not in the building of the images.
+	if order.DeploymentType != "single" {
+		if err = order.LoadUsermods("manifests_usermods.yml"); err != nil {
+			return err
+		}
+	} else {
+		if err = order.LoadUsermods("vars_usermods.yml"); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -228,20 +241,6 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		return order, err
 	}
 
-	// A single image only uses the vars_usermods.yml. That can be used to change the
-	// running of the playbook that is used in creating the image. For "full" or 
-	// "multiple" deployments, only the manifests_usermods.yml is used. It is used
-	// when generating manifests and not in the building of the images.
-	if order.DeploymentType != "single" {
-		if err = order.LoadUsermods("manifests_usermods.yml"); err != nil {
-			return order, err
-		}
-	} else {
-		if err = order.LoadUsermods("vars_usermods.yml"); err != nil {
-			return order, err
-		}
-	}
-
 	if err := order.DefineManifestDir(); err != nil {
 		return order, err
 	}
@@ -251,11 +250,12 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		return order, nil
 	}
 
+	order.WriteLog(true, order.BuildArgumentsSummary())
+
 	// Configure a new isolated build space
 	if err := order.SetupBuildDirectory(); err != nil {
 		return order, err
 	}
-	order.WriteLog(true, order.BuildArgumentsSummary())
 
 	// Determine if the binary is being run inside the sas-container-recipes-builder
 	order.InDocker = true
@@ -1355,6 +1355,19 @@ func (order *SoftwareOrder) GenerateManifests() error {
 			}
 		}
 
+		// A single image only uses the vars_usermods.yml. That can be used to change the
+		// running of the playbook that is used in creating the image. For "full" or 
+		// "multiple" deployments, only the manifests_usermods.yml is used. It is used
+		// when generating manifests and not in the building of the images.
+		if order.DeploymentType != "single" {
+			if err := order.LoadUsermods("manifests_usermods.yml"); err != nil {
+				return err
+			}
+		} else {
+			if err := order.LoadUsermods("vars_usermods.yml"); err != nil {
+				return err
+			}
+		}
 		// build.log --> build-<datetime>.log
 		order.LogPath = order.BuildPath + "build.log"
 		buildLogPrevious := fmt.Sprintf("%sbuild-%s.log",
@@ -1575,8 +1588,9 @@ func (order *SoftwareOrder) LoadUsermods(usermodsFileName string) error {
 
 	usermodsFilePath := "util/" + usermodsFileName
 	if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
-		log.Println("Loaded custom " + usermodsFileName + " file from the sas-container-recipes project directory.")
 		usermodsFilePath = usermodsFileName
+		order.Log.Write([]byte(fmt.Sprintf("Loaded the custom %s file.",usermodsFileName)))
+		log.Println("Loaded the custom " + usermodsFileName + " file.")
 	}
 	input, err := ioutil.ReadFile(usermodsFilePath)
 	if err != nil {
