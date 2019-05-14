@@ -193,6 +193,36 @@ If the deployment manifests that were generated in builds/full/manifests or buil
 1. (Optional) To provide custom configuration, edit the manifests_usermods.yml file 
 in the sas-container-recipes project directory. For more information, see 
 [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task).
+
+1. (Optional) To provide an updated sitedefault.yml file, the file must first be base64 encoded, and then added to the `custom_services:` section of the manifests_usermods.yml file: 
+    
+    ```
+    ## change to the container recipe folder
+    cd sas-container-recipes
+
+    ## usually present, but needed for base64 command
+    sudo yum install -y coreutils
+
+    ## encode the content of the file
+    sitedefault_base64="$(base64 -w 0 sitedefault.yml)"
+
+    ## verify that output was produced
+    echo $sitedefault_base64
+
+    ## append the section containing the encoded sitedefault content
+    cat >> ./manifests_usermods.yml <<EOF
+
+    ## appended content of sitedefault for consul
+    custom_services:
+      consul:
+        deployment_overrides:
+          environment:
+            - "CONSUL_KEY_VALUE_DATA_ENC=$sitedefault_base64"
+    EOF
+    ```
+    
+    **Note:** The preceding configuration adds a new `custom_services:` section to the manifests_usermods.yml file. If this section already exists, you must manually add all the unique lines shown above for `custom_services:` to the existing section, and then remove the new `custom_services:` section that is added.
+
 2. Provide the `--generate-manifests-only` argument and the previous build's 
 deployment type to the build script. For example, 
 `./build.sh --generate-manifests-only --type full`.
