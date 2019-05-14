@@ -234,10 +234,10 @@ docker build . \
 --build-arg BASEIMAGE=centos \
 --build-arg BASETAG=7 \
 --build-arg PLATFORM=redhat \
---tag viya-single-container
+--tag sas-viya-single-programming-only
 ```
 
-The result will create a Docker image tagged as viya-single-container:latest.
+The result will create a Docker image tagged as sas-viya-single-programming-only:latest.
 
 To change the base image, change the `BASEIMAGE` and `BASETAG` options. If using a SUSE-based operating system, make sure to set `PLATFORM=suse`.  
 
@@ -306,7 +306,7 @@ Here is example of running the script:
 ```
 mkdir -p ${PWD}/run
 cp samples/viya-single-container/example_launchsas.sh ${PWD}/run/launchsas.sh
-sed -i 's/@REPLACE_ME_WITH_TAG@/<tag>/' ${PWD}/run/launchsas.sh
+sed -i 's|@REPLACE_ME_WITH_TAG@|<tag>|' ${PWD}/run/launchsas.sh
 cd run
 ```
 
@@ -331,7 +331,7 @@ Create the container:
 Check that all the services are started (there should be three services and the status for each should be "up"):
 
 ```
-docker exec --interactive --tty sas-programming /etc/init.d/sas-viya-all-services status
+docker exec --interactive --tty sas-viya-single-programming-only /etc/init.d/sas-viya-all-services status
   Service                                            Status     Host               Port     PID
   sas-viya-cascontroller-default                     up         N/A                 N/A     607
   sas-viya-sasstudio-default                         up         N/A                 N/A     386
@@ -354,10 +354,10 @@ docker run --interactive --tty \
 --env SSL_KEY_NAME=servertls.key \
 --env CASENV_CAS_VIRTUAL_HOST=myhostname \
 --env CASENV_CAS_VIRTUAL_PORT=8443 \
---hostname sas-viya-programming \
+--hostname sas-viya-single-programming-only \
 --publish 8443:443 \
---name viya-single-container \
-viya-single-container:<VERSION-TAG>
+--name sas-viya-single-programming-only \
+sas-viya-single-programming-only:<VERSION-TAG>
 ```
 
 - `SSL_CERT_NAME` must be the file name of your certificate signed by the Certificate Authority.
@@ -379,13 +379,13 @@ docker run \
 --tty \
 --rm \
 --volume ${PWD}/sasinside:/sasinside \
-sas-viya-programming:<tag> \
+sas-viya-single-programming-only:<tag> \
 --batch /sasinside/sasprogram.sas
 ```
 
 Here is an example of how to run a sample program that executes 'proc javainfo; run;':
 ```
-docker run --interactive --tty --rm --volume ${PWD}/sasinside:/sasinside sas-viya-programming:<tag> --batch /sasinside/javainfo.sas
+docker run --interactive --tty --rm --volume ${PWD}/sasinside:/sasinside sas-viya-single-programming-only:<tag> --batch /sasinside/javainfo.sas
 
 removed '/opt/sas/viya/config/var/log/all-services/default/all-services_2018-08-31_13-51-24.log'
 removed '/opt/sas/viya/config/var/log/all-services/default/all-services_2018-08-31_13-41-36.log'
@@ -495,13 +495,13 @@ Before you run the SAS Viya programming-only image in Kubernetes, you must push 
 Use `docker tag` so that the tag matches the location of where we want to push the image. In the following examples, replace docker.registry.com and /sas/ with the location of your Docker registry and the user space that you want the image to be pushed to:
 
 ```
-docker tag sas-viya-programming:<tag> docker.registry.com/sas/sas-viya-programming:<tag>
+docker tag sas-viya-single-programming-only:<tag> docker.registry.com/sas/sas-viya-single-programming-only:<tag>
 ```
 
 Next, use `docker push` to push the image to the Docker registry:
 
 ```
-docker push docker.registry.com/sas/sas-viya-programming:<tag>
+docker push docker.registry.com/sas/sas-viya-single-programming-only:<tag>
 ```
 
 With the image in the Docker registry, you can create a Kubernetes manifest in order to deploy the image. In the root of the directory, there is a /samples directory that provides a sample Kubernetes manifest for the single container. Copy the file, and modify it, as appropriate:
@@ -534,7 +534,7 @@ Create the deployment. In this example, you create the SAS programming-only cont
 kubectl -n sasviya apply -f run/programming.yml
 ```
 
-To very that the system is running successfully, list the pods and identify the sas-viya-programming pod:
+To very that the system is running successfully, list the pods and identify the sas-viya-single-programming-only pod:
 
 ```
 kubectl -n sasviya get pods
@@ -544,7 +544,7 @@ kubectl -n sasviya get pods
 Check that all the services are started (there should be three services and the status for each should be "up"):
 
 ```
-kubectl -n sasviya exec -it sas-viya-programming-<uuid> -- /etc/init.d/sas-viya-all-services status
+kubectl -n sasviya exec -it sas-viya-single-programming-only-<uuid> -- /etc/init.d/sas-viya-all-services status
   Service                                            Status     Host               Port     PID
   sas-viya-cascontroller-default                     up         N/A                 N/A     607
   sas-viya-sasstudio-default                         up         N/A                 N/A     386

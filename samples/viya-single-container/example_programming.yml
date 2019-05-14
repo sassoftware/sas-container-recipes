@@ -2,10 +2,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: sas-programming
+  name: sas-viya-single-programming-only
 data:
   poac.SAS_DEBUG: ""
-  poac.DEPLOYMENT_NAME: "sas-programming"
+  poac.DEPLOYMENT_NAME: "sas-viya-single-programming-only"
   poac.SETINIT_TEXT: |
     "@REPLACE_ME_WITH_CONTENTS_OF_SASViyaV0300_*_Linux_x86-64.txt@"
 #  poac.PRE_DEPLOY_SCRIPT: |
@@ -19,10 +19,10 @@ data:
 apiVersion: v1
 kind: Service
 metadata:
-  name: sas-programming
+  name: sas-viya-single-programming-only
 spec:
   selector:
-    app: sas-programming
+    app: sas-viya-single-programming-only
   ports:
   - name: http
     port: 80
@@ -34,7 +34,7 @@ spec:
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: sas-programming
+  name: sas-viya-single-programming-only
 spec:
   replicas: 1
   strategy:
@@ -45,11 +45,11 @@ spec:
   template:
     metadata:
       labels:
-        app: sas-programming
+        app: sas-viya-single-programming-only
     spec:
-      hostname: sas-programming
+      hostname: sas-viya-single-programming-only
       containers:
-      - name: sas-programming
+      - name: sas-viya-single-programming-only
         image: @REPLACE_ME with location-of-docker-image:tag@
         imagePullPolicy: Always
         ports:
@@ -61,32 +61,32 @@ spec:
         - name: SAS_DEBUG
           valueFrom:
             configMapKeyRef:
-              name: sas-programming
+              name: sas-viya-single-programming-only
               key: poac.SAS_DEBUG
         - name: DEPLOYMENT_NAME
           valueFrom:
             configMapKeyRef:
-              name: sas-programming
+              name: sas-viya-single-programming-only
               key: poac.DEPLOYMENT_NAME
         - name: SETINIT_TEXT
           valueFrom:
             configMapKeyRef:
-              name: sas-programming
+              name: sas-viya-single-programming-only
               key: poac.SETINIT_TEXT
 #        - name: PRE_DEPLOY_SCRIPT
 #          valueFrom:
 #            configMapKeyRef:
-#              name: sas-programming
+#              name: sas-viya-single-programming-only
 #              key: poac.PRE_DEPLOY_SCRIPT
 #        - name: POST_DEPLOY_SCRIPT
 #          valueFrom:
 #            configMapKeyRef:
-#              name: sas-programming
+#              name: sas-viya-single-programming-only
 #              key: poac.POST_DEPLOY_SCRIPT
 #        - name: RUN_MODE
 #          valueFrom:
 #            configMapKeyRef:
-#              name: sas-programming
+#              name: sas-viya-single-programming-only
 #              key: poac.RUN_MODE
         - name: CASENV_ADMIN_USER
           value: "sasdemo"

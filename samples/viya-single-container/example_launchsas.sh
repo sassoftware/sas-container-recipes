@@ -1,6 +1,7 @@
 #! /bin/bash -e
 
-IMAGE=sas-viya-programming:@REPLACE_ME_WITH_TAG@
+SAS_CONTAINER_NAME=sas-viya-single-programming-only
+IMAGE=$SAS_CONTAINER_NAME:@REPLACE_ME_WITH_TAG@
 SAS_HTTP_PORT=8080
 SAS_HTTPS_PORT=8443
 
@@ -11,9 +12,9 @@ mkdir -p ${PWD}/cas/cache      # Allow for writing temporary files to a differen
 mkdir -p ${PWD}/cas/permstore  # Persist CAS permissions
 
 run_args="
---name=sas-programming
+--name=$SAS_CONTAINER_NAME
 --rm
---hostname sas-programming
+--hostname $SAS_CONTAINER_NAME
 --env RUN_MODE=developer
 --env CASENV_ADMIN_USER=sasdemo
 --env CASENV_CAS_VIRTUAL_HOST=$(hostname -f)

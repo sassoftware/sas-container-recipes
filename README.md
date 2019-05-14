@@ -81,17 +81,15 @@ Run the following command to build the container image and add a default user ID
 After the container image is built, the instructions for running the container will be printed at the end of the build.sh output.
 
 ```
- docker run --detach --rm --hostname sas-viya-programming \
- --env CASENV_CAS_VIRTUAL_HOST=<my_host_address> \
- --env CASENV_CAS_VIRTUAL_PORT=8081 \
- --publish-all \
- --publish 8081:80 \
- --name sas-viya-programming \
- sas-viya-single-programming-only:<VERSION-TAG>
+mkdir -p run
+cp samples/viya-single-container/example_launchsas.sh run/launchsas.sh
+cd run
+sed -i 's|@REPLACE_ME_WITH_TAG@|19.05.0-20190509195121-d991185|' launchsas.sh
+./launchsas.sh
 ```
-Use the `docker images` command to see the images that were built and the most recent tag (example: tag `19.0.1-20190109112555-48f98d8`).
+Use the `docker images` command to see the images that were built and the most recent tag (example: tag `19.05.0-20190509195121-d991185`).
 
-After the docker run command is completed, use `docker ps` to list the running container. 
+After the launchsas.sh command is completed, use `docker ps` to list the running container. 
 
 ### Sign In to SAS Studio
 
