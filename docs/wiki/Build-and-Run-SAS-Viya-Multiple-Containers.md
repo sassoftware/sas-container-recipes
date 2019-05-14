@@ -137,7 +137,7 @@ Building multiple containers on SUSE Linux-based images are not currently suppor
 When building images, the content that is displayed to the console is captured in one of the following files:
 
 - builds/multiple/build.log for a `--type multiple` build
-- builds/full/build.log for a `--type multiple` build
+- builds/full/build.log for a `--type full` build
 - builds/single/build.log for a `--type single` build
 
 If problems are encountered during the build process, review the log file or provide it when opening up tickets.

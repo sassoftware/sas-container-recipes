@@ -38,6 +38,8 @@ A local mirror repository can save you time whenever you run a build, and it pro
 - Setting up a local mirror repository for the RPM files can save time because you access the RPM files locally each time that you build or rebuild an image. If you do create a local mirror repository, then the RPM files are downloaded from servers that are hosted by SAS, which can take longer.
 - There is a limit to how many times that you can download a SAS Viya software order from the SAS servers.
 
+**Note:** A multi-threaded HTTP server is required to access the local mirror repository.
+
 For more information about creating a local mirror repository, see [Create a Mirror Repository](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&amp;docsetTarget=p1ilrw734naazfn119i2rqik91r0.htm&amp;docsetVersion=3.4) in _SAS Viya for Linux: Deployment Guide_.
 
 ## Use a Docker Registry
