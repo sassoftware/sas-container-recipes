@@ -62,9 +62,6 @@ function sas_container_recipes_shutdown() {
 trap sas_container_recipes_shutdown SIGTERM
 trap sas_container_recipes_shutdown SIGINT
 
-# Flag arguments that are disallowed with 'generate-manifests-only'
-DISALLOWED_WITH_GENERATE_ONLY=false
-
 # Parse command arguments and flags
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -81,52 +78,43 @@ while [[ $# -gt 0 ]]; do
         -i|--baseimage|--base-image)
             shift # past argument
             BASEIMAGE="$1"
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         -t|--basetag|--base-tag)
             shift # past argument
             BASETAG="$1"
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         -m|--mirror-url)
             shift # past argument
             export SAS_RPM_REPO_URL=$1
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         -p|--platform)
             shift # past argument
             PLATFORM="$1"
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         -z|--zip)
             shift # past argument
             SAS_VIYA_DEPLOYMENT_DATA_ZIP="$1"
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         -k|--skip-mirror-url-validation)
             shift # past argument
             CHECK_MIRROR_URL=false
-            DISALLOWED_WITH_GENERATE_ONLY=true
             ;;
         -d|--skip-docker-url-validation)
             shift # past argument
             CHECK_DOCKER_URL=false
-            DISALLOWED_WITH_GENERATE_ONLY=true
             ;;
         --skip-docker-registry-push)
             shift # past argument
             SKIP_DOCKER_REGISTRY_PUSH=true
-            DISALLOWED_WITH_GENERATE_ONLY=true
             ;;
         -a|--addons)
             shift # past argument
             ADDONS="$1"
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         -y|--type)
@@ -137,37 +125,31 @@ while [[ $# -gt 0 ]]; do
         -u|--docker-url|--docker-registry-url)
             shift # past argument
             export DOCKER_REGISTRY_URL=$(echo $1 | cut -d'/' -f3)
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         -n|--docker-namespace|--docker-registry-namespace)
             shift # past argument
             export DOCKER_REGISTRY_NAMESPACE="$1"
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         -v|--virtual-host)
             shift # past argument
             export CAS_VIRTUAL_HOST="$1"
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         -j|--project-name)
             shift # past argument
             export PROJECT_NAME="$1"
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         --tag)
             shift # past argument
             export SAS_DOCKER_TAG="$1"
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         --builder-port)
             shift # past argument
             export BUILDER_PORT="$1"
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         --generate-manifests-only)
@@ -177,13 +159,11 @@ while [[ $# -gt 0 ]]; do
         -b|--build-only)
             shift # past argument
             export BUILD_ONLY="$1"
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         -w|--workers)
             shift # past argument
             export WORKERS="$1"
-            DISALLOWED_WITH_GENERATE_ONLY=true
             shift # past value
             ;;
         *)
@@ -196,19 +176,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Fail with error if '--generate-manifests-only' was used and:
-#    a) arg(s) other than '--type' were used
-#    b) '--type' was not used
-if [[ -n ${GENERATE_MANIFESTS_ONLY} ]]; then
-   if [[ -z ${SAS_RECIPE_TYPE} ]] || $DISALLOWED_WITH_GENERATE_ONLY; then
-        echo -e "\nERROR: The '--generate-manifests-only' flag requires '--type(-y)'. No additional arguments are valid.\n"
-        exit 1
-   fi
-fi
-
 # Set some defaults
 [[ -z ${CHECK_DOCKER_URL+x} ]]          && CHECK_DOCKER_URL=true
-[[ -z ${CHECK_MIRROR_URL+x} ]]          && CHECK_MIRROR_URL=false
 [[ -z ${SKIP_DOCKER_REGISTRY_PUSH+x} ]] && SKIP_DOCKER_REGISTRY_PUSH=false
 
 git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
@@ -235,10 +204,6 @@ fi
 
 if [[ -n ${WORKERS} ]]; then
     run_args="${run_args} --workers ${WORKERS}"
-fi
-
-if [[ -n ${GENERATE_MANIFESTS_ONLY} ]]; then
-    run_args="${run_args} --generate-manifests-only"
 fi
 
 if [[ -n ${VERBOSE} ]]; then
@@ -324,7 +289,7 @@ echo
 # If a Docker config exists then run the builder with the config mounted as a volume.
 # Otherwise, not having a Docker config is acceptable if no registry authentication is required.
 DOCKER_CONFIG_PATH=${HOME}/.docker/config.json
-if [[ -f ${DOCKER_CONFIG_PATH} ]]; then
+if [[ -f ${DOCKER_CONFIG_PATH} ]]; then 
     docker run -d \
         --name ${SAS_BUILD_CONTAINER_NAME} \
         -u ${UID}:${DOCKER_GID} \
@@ -333,7 +298,7 @@ if [[ -f ${DOCKER_CONFIG_PATH} ]]; then
         -v /var/run/docker.sock:/var/run/docker.sock \
         -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
         sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
-else
+else 
     docker run -d \
         --name ${SAS_BUILD_CONTAINER_NAME} \
         -u ${UID}:${DOCKER_GID} \
