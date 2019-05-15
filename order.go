@@ -437,7 +437,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	projectName := flag.String("project-name", "sas-viya", "")
 	deploymentType := flag.String("type", "single", "")
 	version := flag.Bool("version", false, "")
-	skipMirrorValidation := flag.Bool("skip-mirror-url-validation", true, "")
+	skipMirrorValidation := flag.Bool("skip-mirror-url-validation", false, "")
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
 	generateManifestsOnly := flag.Bool("generate-manifests-only", false, "")
 	builderPort := flag.String("builder-port", "1976", "")
@@ -484,7 +484,7 @@ func (order *SoftwareOrder) LoadCommands() error {
                         return err
                 }
                 if *deploymentType == "single" {
-                        err := errors.New("Use of '--type(-y) <multipe|full>' is required with '--generate-manifests-only'.")
+                        err := errors.New("Use of '--type(-y) <multiple|full>' is required with '--generate-manifests-only'.")
                         return err
                 }
         }
