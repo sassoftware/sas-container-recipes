@@ -178,7 +178,6 @@ done
 
 # Set some defaults
 [[ -z ${CHECK_DOCKER_URL+x} ]]          && CHECK_DOCKER_URL=true
-[[ -z ${CHECK_MIRROR_URL+x} ]]          && CHECK_MIRROR_URL=false
 [[ -z ${SKIP_DOCKER_REGISTRY_PUSH+x} ]] && SKIP_DOCKER_REGISTRY_PUSH=false
 
 git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
@@ -205,10 +204,6 @@ fi
 
 if [[ -n ${WORKERS} ]]; then
     run_args="${run_args} --workers ${WORKERS}"
-fi
-
-if [[ -n ${GENERATE_MANIFESTS_ONLY} ]]; then
-    run_args="${run_args} --generate-manifests-only"
 fi
 
 if [[ -n ${VERBOSE} ]]; then

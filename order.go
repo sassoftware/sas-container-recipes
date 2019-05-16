@@ -516,6 +516,19 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.BuilderPort = *builderPort
 	order.SkipDockerRegistryPush = *skipDockerRegistryPush
 
+        // Disallow all other flags except --type with --generate-manifests-only
+        // Note: --tag is always passed from build.sh, so will have to ignore that
+        if *generateManifestsOnly {
+                if flag.NFlag() > 3 {
+                        err := errors.New("Only '--type(-y)' can be used with '--generate-manifests-only'.")
+                        return err
+                }
+                if *deploymentType == "single" {
+                        err := errors.New("Use of '--type(-y) <multiple|full>' is required with '--generate-manifests-only'.")
+                        return err
+                }
+        }
+
 	// Make sure one cannot specify more workers than # cores available
 	order.WorkerCount = *workerCount
 	if *workerCount == 0 || *workerCount > defaultWorkerCount {
