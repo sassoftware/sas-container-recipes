@@ -320,7 +320,7 @@ if [[ $OPERATING_SYSTEM == "linux" ]]; then
     build_container_exit_status=$(docker inspect ${SAS_BUILD_CONTAINER_NAME} --format='{{.State.ExitCode}}')
     docker rm ${SAS_BUILD_CONTAINER_NAME}
 elif [[ $OPERATING_SYSTEM == "darwin" ]];  then
-    go run main.go container.go order.go ${run_args}
+    go run main.go container.go order.go ${run_args} --os darwin
     build_container_exit_status=$?
 else
     echo "[ERROR] : Unknown OS"

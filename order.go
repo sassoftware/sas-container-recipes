@@ -81,6 +81,7 @@ type SoftwareOrder struct {
 	SkipDockerValidation   	bool     `yaml:"Skip Docker Validation  "`
 	GenerateManifestsOnly  	bool     `yaml:"Generate Manifests Only "`
 	SkipDockerRegistryPush	bool     `yaml:"Skip Docker Registry    "`
+	OperatingSystem         string   `yaml:"Operating System        "`
 
 	// Build attributes
 	Log          *os.File              `yaml:"-"`                        // File handle for log path
@@ -482,6 +483,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	generateManifestsOnly := flag.Bool("generate-manifests-only", false, "")
 	builderPort := flag.String("builder-port", "1976", "")
 	skipDockerRegistryPush := flag.Bool("skip-docker-registry-push", false, "")
+	operatingSystem := flag.String("os", "linux", "")
 
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU()
@@ -515,19 +517,20 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.DockerRegistry = *dockerRegistry
 	order.BuilderPort = *builderPort
 	order.SkipDockerRegistryPush = *skipDockerRegistryPush
+	order.OperatingSystem = *operatingSystem
 
-        // Disallow all other flags except --type with --generate-manifests-only
-        // Note: --tag is always passed from build.sh, so will have to ignore that
-        if *generateManifestsOnly {
-                if flag.NFlag() > 3 {
-                        err := errors.New("Only '--type(-y)' can be used with '--generate-manifests-only'.")
-                        return err
-                }
-                if *deploymentType == "single" {
-                        err := errors.New("Use of '--type(-y) <multiple|full>' is required with '--generate-manifests-only'.")
-                        return err
-                }
-        }
+	// Disallow all other flags except --type with --generate-manifests-only
+	// Note: --tag is always passed from build.sh, so will have to ignore that
+	if *generateManifestsOnly {
+		if flag.NFlag() > 3 {
+			err := errors.New("Only '--type(-y)' can be used with '--generate-manifests-only'.")
+			return err
+		}
+		if *deploymentType == "single" {
+			err := errors.New("Use of '--type(-y) <multiple|full>' is required with '--generate-manifests-only'.")
+			return err
+		}
+	}
 
 	// Make sure one cannot specify more workers than # cores available
 	order.WorkerCount = *workerCount
@@ -1616,7 +1619,10 @@ func getOrchestrationTool() error {
 	}
 
 	// HTTP GET the file
-	fileURL := fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/mac/sas-orchestration-osx.tgz", SasViyaVersion)
+	fileURL := fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/lax/sas-orchestration-linux.tgz", SasViyaVersion)
+	if order.OperatingSystem == "darwin" {
+		fileURL := fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/mac/sas-orchestration-osx.tgz", SasViyaVersion)
+	}
 	resp, err := http.Get(fileURL)
 	if err != nil {
 		return errors.New("Cannot fetch sas-orchestration tool. support.sas.com must be accessible, " + err.Error())
