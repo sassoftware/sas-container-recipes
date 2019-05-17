@@ -29,12 +29,12 @@ if [ $# -eq 0 ] ; then
     exit 0
 fi
 
-# Display logs only in Linux.
-# Logging on MacOS is currently not supported.
 set -e
 if [[ -n ${SAS_DEBUG} ]]; then
     set -x
 fi
+
+# If we are running on a Mac, we cannot do Docker-in-Docker
 unameSystem="$(uname -s)"
 case "${unameSystem}" in
     Linux*)     OPERATING_SYSTEM=linux;;
@@ -177,6 +177,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Set some defaults
+[[ -z ${OPERATING_SYSTEM+x} ]]          && OPERATING_SYSTEM=linux
 [[ -z ${CHECK_DOCKER_URL+x} ]]          && CHECK_DOCKER_URL=true
 [[ -z ${SKIP_DOCKER_REGISTRY_PUSH+x} ]] && SKIP_DOCKER_REGISTRY_PUSH=false
 
@@ -265,52 +266,61 @@ if [[ ${SKIP_DOCKER_REGISTRY_PUSH} == true  ]]; then
     run_args="${run_args} --skip-docker-registry-push"
 fi
 
-echo "==============================="
-echo "Building Docker Build Container"
-echo "==============================="
-echo
-DOCKER_GID=$(getent group docker|awk -F: '{print $3}')
-USER_GID=$(id -g)
-mkdir -p ${PWD}/builds
-docker build . \
-    --label sas.recipe=true \
-    --label sas.recipe.builder.version=${SAS_DOCKER_TAG} \
-    --build-arg USER_UID=${UID} \
-    --build-arg DOCKER_GID=${DOCKER_GID} \
-    --tag sas-container-recipes-builder:${SAS_DOCKER_TAG} \
-    --file Dockerfile \
+if [[ $OPERATING_SYSTEM == "linux" ]]; then
+    echo "==============================="
+    echo "Building Docker Build Container"
+    echo "==============================="
+    echo
+    DOCKER_GID=$(getent group docker|awk -F: '{print $3}')
+    USER_GID=$(id -g)
+    mkdir -p ${PWD}/builds
+    docker build . \
+        --label sas.recipe=true \
+        --label sas.recipe.builder.version=${SAS_DOCKER_TAG} \
+        --build-arg USER_UID=${UID} \
+        --build-arg DOCKER_GID=${DOCKER_GID} \
+        --tag sas-container-recipes-builder:${SAS_DOCKER_TAG} \
+        --file Dockerfile \
 
 
-echo
-echo "=============================="
-echo "Running Docker Build Container"
-echo "=============================="
-echo
-# If a Docker config exists then run the builder with the config mounted as a volume.
-# Otherwise, not having a Docker config is acceptable if no registry authentication is required.
-DOCKER_CONFIG_PATH=${HOME}/.docker/config.json
-if [[ -f ${DOCKER_CONFIG_PATH} ]]; then 
-    docker run -d \
-        --name ${SAS_BUILD_CONTAINER_NAME} \
-        -u ${UID}:${DOCKER_GID} \
-        -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
-        -v ${PWD}/builds:/sas-container-recipes/builds \
-        -v /var/run/docker.sock:/var/run/docker.sock \
-        -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
-        sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
-else 
-    docker run -d \
-        --name ${SAS_BUILD_CONTAINER_NAME} \
-        -u ${UID}:${DOCKER_GID} \
-        -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
-        -v ${PWD}/builds:/sas-container-recipes/builds \
-        -v /var/run/docker.sock:/var/run/docker.sock \
-        sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
+    echo
+    echo "=============================="
+    echo "Running Docker Build Container"
+    echo "=============================="
+    echo
+    # If a Docker config exists then run the builder with the config mounted as a volume.
+    # Otherwise, not having a Docker config is acceptable if no registry authentication is required.
+    DOCKER_CONFIG_PATH=${HOME}/.docker/config.json
+    if [[ -f ${DOCKER_CONFIG_PATH} ]]; then 
+        docker run -d \
+            --name ${SAS_BUILD_CONTAINER_NAME} \
+            -u ${UID}:${DOCKER_GID} \
+            -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
+            -v ${PWD}/builds:/sas-container-recipes/builds \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
+            sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
+    else 
+        docker run -d \
+            --name ${SAS_BUILD_CONTAINER_NAME} \
+            -u ${UID}:${DOCKER_GID} \
+            -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
+            -v ${PWD}/builds:/sas-container-recipes/builds \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
+    fi
+    docker logs -f ${SAS_BUILD_CONTAINER_NAME}
+
+
+    # Clean up and exit
+    build_container_exit_status=$(docker inspect ${SAS_BUILD_CONTAINER_NAME} --format='{{.State.ExitCode}}')
+    docker rm ${SAS_BUILD_CONTAINER_NAME}
+elif [[ $OPERATING_SYSTEM == "darwin" ]];  then
+    go run main.go container.go order.go ${run_args}
+    build_container_exit_status=$?
+else
+    echo "[ERROR] : Unknown OS"
+    build_container_exit_status=1
 fi
-docker logs -f ${SAS_BUILD_CONTAINER_NAME}
 
-
-# Clean up and exit
-build_container_exit_status=$(docker inspect ${SAS_BUILD_CONTAINER_NAME} --format='{{.State.ExitCode}}')
-docker rm ${SAS_BUILD_CONTAINER_NAME}
 exit ${build_container_exit_status}
