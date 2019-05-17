@@ -242,7 +242,7 @@ By default, the CAS deployment is set up as SMP. If a MPP environment is needed,
 
 * If you have not yet deployed the environment, regenerate manifests. See [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) for information about editing the manifests_usermods.yml file to support MPP mode.
 * If you have already deployed the environment:
-    1. Scale down the controller to 0: 
+    1. Scale down the CAS controller to 0: 
 
         `kubectl -n <k8s namespace> scale statefulsets sas-viya-cas --replicas=0`
 
@@ -250,15 +250,17 @@ By default, the CAS deployment is set up as SMP. If a MPP environment is needed,
 
         `kubectl -n <k8s namespace> edit configmap sas-viya-cas`
 
-    1. Scale up the controller to 1: 
+    1. Scale up the CAS controller to 1: 
 
         `kubectl -n <k8s namespace> scale statefulsets sas-viya-cas --replicas=1`
 
-    1. Scale up the workers: 
+    1. Scale up the CAS workers: 
 
         `kubectl -n <k8s namespace> scale deployment.v1.apps/sas-viya-cas-worker --replicas=3`
 
-When scaling CAS workers you should be aware that data will not automatically be reloaded to either take advantage of new workers just added to the cluster or remove data before a worker is removed from the cluster. If you scale up the CAS workers, you will need to take the extra step of reloading the data in order to distribute it. It is strongly recommended that you do not set up auto scaling rules at this time.
+  **Important:**
+  - When scaling CAS workers, be aware that data will not automatically be reloaded to either take advantage of new CAS workers just added to the cluster or remove data before a CAS worker is removed from the cluster. If you scale up the CAS workers, you will need to reload the data in order to distribute it.
+  - It is strongly recommended that you do not set up auto-scaling rules.
 
 ## (Optional) Verify Bulk Loaded Configuration
 
