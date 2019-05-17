@@ -196,7 +196,11 @@ if [[ -n ${SAS_RPM_REPO_URL} ]]; then
 fi
 
 if [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
-    run_args="${run_args} --zip /$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP})"
+    if [[ $OPERATING_SYSTEM == "darwin" ]]; then
+        run_args="${run_args} --zip ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
+    else
+        run_args="${run_args} --zip /$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP})"
+    fi
 fi
 
 if [[ -n ${SAS_RECIPE_TYPE} ]]; then

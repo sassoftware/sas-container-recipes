@@ -912,7 +912,7 @@ func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 // LoadLicense once the path to the Software Order Email (SOE) zip file has been provided then unzip it
 // and load the content into the SoftwareOrder struct for use in the build process.
 func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, done chan int) {
-	progress <- "Reading Software Order Email Zip ..."
+	progress <- "Jon, Reading Software Order Email Zip " + order.SOEZipPath + " ..."
 
 	if _, err := os.Stat(order.SOEZipPath); os.IsNotExist(err) {
 		fail <- err.Error()
@@ -1166,15 +1166,6 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 
 	// Run the orchestration tool to make the playbook
 	progress <- "Generating playbook for order ..."
-	generatePlaybookCommand := fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz", order.SOEZipPath, order.BuildPath)
-	if order.DeploymentType == "multiple" {
-		generatePlaybookCommand = fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --deployment-type programming", order.SOEZipPath, order.BuildPath)
-	}
-	_, err = exec.Command("sh", "-c", generatePlaybookCommand).Output()
-	if err != nil {
-		fail <- "[ERROR]: Unable to generate the playbook. java-1.8.0-openjdk or another Java Runtime Environment (1.8.x) must be installed. " +
-			err.Error() + "\n" + generatePlaybookCommand
-	}
 	commandBuilder := []string{"util/sas-orchestration build"}
 	commandBuilder = append(commandBuilder, "--platform redhat")
 	commandBuilder = append(commandBuilder, "--input "+order.SOEZipPath)
@@ -1625,7 +1616,7 @@ func getOrchestrationTool() error {
 	}
 
 	// HTTP GET the file
-	fileURL := fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/lax/sas-orchestration-linux.tgz", SasViyaVersion)
+	fileURL := fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/mac/sas-orchestration-osx.tgz", SasViyaVersion)
 	resp, err := http.Get(fileURL)
 	if err != nil {
 		return errors.New("Cannot fetch sas-orchestration tool. support.sas.com must be accessible, " + err.Error())
