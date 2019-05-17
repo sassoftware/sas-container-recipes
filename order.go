@@ -1621,7 +1621,7 @@ func getOrchestrationTool(operatingSystem string) error {
 	// HTTP GET the file
 	fileURL := fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/lax/sas-orchestration-linux.tgz", SasViyaVersion)
 	if operatingSystem == "darwin" {
-		fileURL := fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/mac/sas-orchestration-osx.tgz", SasViyaVersion)
+		fileURL = fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/mac/sas-orchestration-osx.tgz", SasViyaVersion)
 	}
 	resp, err := http.Get(fileURL)
 	if err != nil {
