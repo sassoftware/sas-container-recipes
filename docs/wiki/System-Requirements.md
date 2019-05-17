@@ -107,7 +107,7 @@ If you are using Kubernetes to deploy the software, there are no specific requir
 
 For a programming-only deployment, an administrative user is the only type of user that can log on to the CAS Server Monitor user interface in order to manage CAS settings. Therefore, a CAS administrator must be configured when the Docker image is launched. You can define a user account for the CAS administrator by specifying a user name for the CASENV_ADMIN_USER variable.
 
-For programming-only deployments, the CAS Administrator Account must have a valid host account. To support this requirement, SAS provides the addons/auth-demo and addons/auth-sssd addons that enable you to configure the running container to have valid host accounts.
+For programming-only deployments, the CAS administrator must have a valid host account. To support this requirement, SAS provides the auth-demo and auth-sssd addons that enable you to configure the running container to have valid host accounts.
 
 **Note:** For more information about the authentication addons, see [Host Authentication](Pre-build-Tasks#host-authentication).
 
