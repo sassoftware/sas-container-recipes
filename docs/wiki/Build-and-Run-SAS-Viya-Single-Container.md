@@ -311,8 +311,8 @@ cd run
 ```
 
 **Note:** 
-- Replace _\<tag\>_ with the value that you want to use.
-- If you used the auth-sssd addon or customised the user in the auth-demo addon, make sure to update the CASENV_ADMIN_USER to contain a valid username.
+- Replace `<tag>` with the value that you want to use.
+- If you used the auth-sssd addon or customised the user in the auth-demo addon, make sure to specify a valid user name for the CASENV_ADMIN_USER variable.
 
 When the script is run, it will create several directories for you. These are set up either to cause data to persist or to help with [configuration](#configuration). 
 
