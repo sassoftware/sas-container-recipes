@@ -1160,7 +1160,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 
 	// Check to see if the tool exists
 	progress <- "Fetching orchestration tool ..."
-	err := getOrchestrationTool()
+	err := getOrchestrationTool(order.OperatingSystem)
 	if err != nil {
 		fail <- "Failed to install sas-orchestration tool. " + err.Error()
 		return
@@ -1612,7 +1612,7 @@ func (order *SoftwareOrder) LoadUsermods(usermodsFileName string) error {
 }
 
 // Download the orchestration tool locally if it is not in the util directory
-func getOrchestrationTool() error {
+func getOrchestrationTool(operatingSystem string) error {
 	_, err := os.Stat("util/sas-orchestration")
 	if !os.IsNotExist(err) {
 		return nil
@@ -1620,7 +1620,7 @@ func getOrchestrationTool() error {
 
 	// HTTP GET the file
 	fileURL := fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/lax/sas-orchestration-linux.tgz", SasViyaVersion)
-	if order.OperatingSystem == "darwin" {
+	if operatingSystem == "darwin" {
 		fileURL := fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/mac/sas-orchestration-osx.tgz", SasViyaVersion)
 	}
 	resp, err := http.Get(fileURL)
