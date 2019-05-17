@@ -42,6 +42,10 @@ Single Container
         For more information about using a mirror repository, see the Mirror Manager guide at
         https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
+    --skip-mirror-url-validation
+        Skips validation of the URL specified in the --mirror-url argument.
+        Default: false
+
 
 Multiple Containers
 -------------------
@@ -116,7 +120,7 @@ Multiple Containers
         Default: false
 
     --skip-mirror-url-validation
-        Skips validating the mirror URL from the --mirror-url flag.
+        Skips validation of the URL specified in the --mirror-url argument.
         Default: false
 
     --skip-docker-url-validation

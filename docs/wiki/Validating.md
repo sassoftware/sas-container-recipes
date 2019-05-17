@@ -75,7 +75,7 @@ If the image is not running, here are several recovery actions that you can perf
 
 To verify that the sas-programming process is running in Kubernetes, run the following command:
 
-`kubectl get -f sas-programming.yml`
+`kubectl get -f run/programming.yml`
 
 Here are typical results:
 
@@ -87,7 +87,7 @@ NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
 sas-programming         1/1     1            1           11d
 ```
 
-**Tip:** Run the command from the directory where the sas-programming.yml file is located. For a programming-only deployment, the Kubernetes manifests are located at $PWD/builds/multiple/manifests/ and for a full deployment, the manifests are located at $PWD/builds/full/manifests/.
+**Tip:** Run the command from the directory where the programming.yml file is located. For a single image programming-only deployment, the Kubernetes manifests are located at $PWD/run/programming.yml. For a multiple image programming-only deployment, the manifests are lodated at $PWD/builds/multiple/manifests/kubernetes and for a full deployment, the manifests are located at $PWD/builds/full/manifests/kubernetes.
 
 If you do not get the results that you expect, run the following command to enable the DEBUG option to provide more information:
 

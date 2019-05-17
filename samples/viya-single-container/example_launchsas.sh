@@ -17,6 +17,7 @@ run_args="
 --hostname $SAS_CONTAINER_NAME
 --env RUN_MODE=developer
 --env CASENV_ADMIN_USER=sasdemo
+--env CASENV_CAS_VIRTUAL_PORT=${SAS_HTTPS_PORT}
 --env CASENV_CAS_VIRTUAL_HOST=$(hostname -f)
 --env CASENV_CAS_VIRTUAL_PORT=${SAS_HTTP_PORT}
 --env CASENV_CASDATADIR=/cas/data
