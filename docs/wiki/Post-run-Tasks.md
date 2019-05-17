@@ -258,6 +258,8 @@ By default, the CAS deployment is set up as SMP. If a MPP environment is needed,
 
         `kubectl -n <k8s namespace> scale deployment.v1.apps/sas-viya-cas-worker --replicas=3`
 
+When scaling CAS workers you should be aware that data will not automatically be reloaded to either take advantage of new workers just added to the cluster or remove data before a worker is removed from the cluster. If you scale up the CAS workers, you will need to take the extra step of reloading the data in order to distribute it. It is strongly recommended that you do not set up auto scaling rules at this time.
+
 ## (Optional) Verify Bulk Loaded Configuration
 
 For a full deployment, if you performed the [Bulk Loading of Configuration Values](Pre-build-Tasks#bulk-loading-of-configuration-values) pre-build task, you want to confirm that the key-value pairs were loaded correctly. To do this, view the configuration properties for a configuration definition such as, SAS Logon Manager, in SAS Environment Manager to verify that the specified values are present. For more information, follow the first five steps in [Edit Configuration Instances](https://go.documentation.sas.com/?cdcId=calcdc&cdcVersion=3.4&docsetId=calconfig&docsetTarget=n03000sasconfiguration0admin.htm&locale=en#n03007sasconfiguration0admin) in _SAS Viya Administration_.
