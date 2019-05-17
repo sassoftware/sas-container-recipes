@@ -35,10 +35,7 @@ The following software and hardware requirements are for the machine that is use
 **Notes:**
 
 - <sup>1</sup> Use of overlay is not supported.
-- <sup>2</sup> To use the Mac OS, you will need to install the following dependencies first:
-    - Go [download](https://golang.org/dl/)
-    - Java 
-    - Ansible [instructions](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#latest-releases-on-macos)
+- <sup>2</sup> To build images on the Mac OS, Docker and the following software must be installed: [Go](https://golang.org/dl/), Java, and [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#latest-releases-on-macos).
 - <sup>3</sup> The build process will push built Docker images automatically to the Docker registry. Before running build.sh, log on to docker.registry.company.com and make sure that the $HOME/.docker/config.json file is filled in correctly.
 - <sup>4</sup> The disk space requirement depends on the products in the software order
 - <sup>5</sup> The optimal build time occurs when the number of cores is equal to the number of containers that are being built. The number of containers varies based on your software order.
