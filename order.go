@@ -1166,15 +1166,6 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 
 	// Run the orchestration tool to make the playbook
 	progress <- "Generating playbook for order ..."
-	generatePlaybookCommand := fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz", order.SOEZipPath, order.BuildPath)
-	if order.DeploymentType == "multiple" {
-		generatePlaybookCommand = fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --deployment-type programming", order.SOEZipPath, order.BuildPath)
-	}
-	_, err = exec.Command("sh", "-c", generatePlaybookCommand).Output()
-	if err != nil {
-		fail <- "[ERROR]: Unable to generate the playbook. java-1.8.0-openjdk or another Java Runtime Environment (1.8.x) must be installed. " +
-			err.Error() + "\n" + generatePlaybookCommand
-	}
 	commandBuilder := []string{"util/sas-orchestration build"}
 	commandBuilder = append(commandBuilder, "--platform redhat")
 	commandBuilder = append(commandBuilder, "--input "+order.SOEZipPath)
