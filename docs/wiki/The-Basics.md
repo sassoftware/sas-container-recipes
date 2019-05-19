@@ -48,10 +48,11 @@ An error during the build process might result in dangling images which represen
 
 ### Can I build images on my Mac?
 
-Yes. In addtion to installing Docker, you are responsible for installing the following pre-requisites:
+Yes, as long as you have installed the following prerequisite software:
 
+- Docker
 - Go [download](https://golang.org/dl/)
 - Java 
 - Ansible [instructions](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#latest-releases-on-macos)
 
-Once those are installed, follow the directions to run the build.sh script.
+For more information, see the [System Requirements](System-Requirements).
