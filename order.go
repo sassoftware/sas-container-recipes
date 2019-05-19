@@ -915,7 +915,7 @@ func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 // LoadLicense once the path to the Software Order Email (SOE) zip file has been provided then unzip it
 // and load the content into the SoftwareOrder struct for use in the build process.
 func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, done chan int) {
-	progress <- "Jon, Reading Software Order Email Zip " + order.SOEZipPath + " ..."
+	progress <- "Reading Software Order Email Zip ..."
 
 	if _, err := os.Stat(order.SOEZipPath); os.IsNotExist(err) {
 		fail <- err.Error()
