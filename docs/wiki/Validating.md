@@ -89,7 +89,7 @@ NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
 sas-programming         1/1     1            1           11d
 ```
 
-Here is an example for validating running images for `--type full` build. In this example, the default namespace and manifests directory are shown: sas-viya and builds/full/manifests/kubernetes/deployments/, repectively.
+Here is an example for validating running images for a `--type full` build. In this example, the default namespace and manifests directory are shown: sas-viya and builds/full/manifests/kubernetes/deployments/, repectively.
 
 `kubectl -n sas-viya get -f builds/full/manifests/kubernetes/deployments/`
 
