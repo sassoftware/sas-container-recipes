@@ -1171,7 +1171,11 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	scanner := bufio.NewScanner(cmdReader)
 	go func() {
 		for scanner.Scan() {
-			progress <- fmt.Sprintf("Generate playbook output | %s", scanner.Text())
+			result := scanner.Text()
+			progress <- fmt.Sprintf("Generate playbook output | %s", result)
+			if strings.Contains(result, "Connection refused") || strings.Contains(result, "No route to host") {
+				progress <- fmt.Sprintf("Error: unable to generate the playbook. The mirror URL provided by '--mirror-url %s' did not point to a host with an accessible mirrormgr repository. The ip, hostname, or port may be incorrect.\n", order.MirrorURL)
+			}
 		}
 	}()
 
@@ -1190,7 +1194,8 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	err = cmd.Wait()
 	if err != nil {
 		result, _ := ioutil.ReadAll(stderr)
-		fail <- "[ERROR]: Unable to generate the playbook during cmd.Wait. " + string(result) + "\n" + err.Error() + "\n" + playbookCommand
+		fail <- fmt.Sprintf("Error: unable to generate the playbook during cmd.Wait. %s\n%s\n%s", 
+			string(result), err.Error(), playbookCommand)
 		return
 	}
 
