@@ -8,8 +8,8 @@ Single Container
 
     --zip <value>
         Specifies the path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
-        Example: /path/to/SAS_Viya_deployment_data.zip
-        For information about SAS software licenses, go to
+        Example: /path/to/SAS_Viya_deployment_data.zip  
+        For information about SAS software licenses, go to 
         https://support.sas.com/en/technical-support/license-assistance.html
 
   Optional arguments:
@@ -19,8 +19,8 @@ Single Container
         Usage: To list multiple addons, a space or comma is required between each addon.
         Prerequisites: Some addons require additional configuration. For more information, see
         https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
-        SAS/ACCESS engine addons: access-greenplum, access-hadoop, access-odbc,
-                                  access-oracle, access-pcfiles, access-postgres,
+        SAS/ACCESS engine addons: access-greenplum, access-hadoop, access-odbc, 
+                                  access-oracle, access-pcfiles, access-postgres, 
                                   access-redshift, access-teradata
         Authentication addons: auth-sssd, auth-demo
         Other: ide-jupyter-python3
@@ -42,10 +42,6 @@ Single Container
         For more information about using a mirror repository, see the Mirror Manager guide at
         https://support.sas.com/en/documentation/install-center/viya/deployment-tools/34/mirror-manager.html
 
-    --skip-mirror-url-validation
-        Skips validation of the URL specified in the --mirror-url argument.
-        Default: false
-
 
 Multiple Containers
 -------------------
@@ -62,7 +58,7 @@ Multiple Containers
     --zip <value>
         Specifies the path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
         Example: /path/to/SAS_Viya_deployment_data.zip
-        For information about SAS software licenses, go to
+        For information about SAS software licenses, go to 
         https://support.sas.com/en/technical-support/license-assistance.html
 
     --docker-namespace <value>
@@ -88,8 +84,8 @@ Multiple Containers
         Usage: To list multiple addons, a space or comma is required between each addon.
         Prerequisites: Some addons require additional configuration. For more information, see
         https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood
-        SAS/ACCESS engine addons: access-greenplum, access-hadoop, access-odbc,
-                                  access-oracle, access-pcfiles, access-postgres,
+        SAS/ACCESS engine addons: access-greenplum, access-hadoop, access-odbc, 
+                                  access-oracle, access-pcfiles, access-postgres, 
                                   access-redshift, access-teradata
         Authentication addons: auth-sssd, auth-demo
         Other: ide-jupyter-python3
@@ -120,12 +116,12 @@ Multiple Containers
         Default: false
 
     --skip-mirror-url-validation
-        Skips validation of the URL specified in the --mirror-url argument.
-        Default: false
+        Skips validating the mirror URL from the --mirror-url flag.
+        default: false
 
     --skip-docker-url-validation
         Skips validating the Docker registry URL.
-        Default: false
+        default: false
 
     --builder-port <integer>
         Specifies the port to listen on and from which to serve entitlement and CA certificates.
@@ -135,7 +131,7 @@ Multiple Containers
 
     --project-name <value>
         Specifies a prefix for the container names and deployments.
-        The image names are formatted as "<project_name>-<image_name>",
+        The image names are formatted as "<project_name>-<image_name>", 
         such as "sas-viya-consul" and "sas-viya-httpproxy".
         Default: sas-viya
 
@@ -144,11 +140,14 @@ Multiple Containers
         Manifests are added to the /builds/<deployment_type> directory.
         Required Arguments:
             --type [ multiple | full ]
+        Optional Arguments:
+            --virtual-host <value>
+            --project-name <value>
         Examples:
             ./build.sh --type multiple --generate-manifests-only
             ./build.sh --type full --generate-manifests-only
         Default: false
-
+        
     --build-only "<container-name> <container-name> ..."
         Re-builds a set of containers.
         [WARNING] This argument is intended only for developers who require
@@ -159,12 +158,6 @@ Multiple Containers
             --build-only "consul"
             --build-only "consul httpproxy sas-casserver-primary"
 
-    --skip-docker-registry-push
-        Skips pushing the built images to the provided Docker registry.
-        If this option is used, you will be responsible for pushing the images
-        to the Docker registry after the images are built and before applying
-        the Kubernetes manifests
-        Default: false
 
 Help and Version
 ----------------
