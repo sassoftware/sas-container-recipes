@@ -23,6 +23,13 @@
 package main
 
 import (
+	"github.com/gosuri/uiprogress"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+
+	"gopkg.in/yaml.v2"
+
 	"archive/tar"
 	"encoding/base64"
 	"encoding/json"
@@ -37,10 +44,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"gopkg.in/yaml.v2"
 )
 
 // State of the Container
@@ -57,6 +60,7 @@ const (
 	Built      State = 8  // Docker client has built and tagged the last layer
 	Pushing    State = 9  // Image is in the process of being pushed to the provided registry
 	Pushed     State = 10 // Image has finished pushing to the provided registry
+	Done       State = 11 // Image has finished building and pushing
 )
 
 // DockerAPIVersion is the minimum version of the API we support
@@ -68,11 +72,13 @@ type Container struct {
 	SoftwareOrder *SoftwareOrder
 
 	// Basic default attributes set on creation
-	Status    State  // See `type State` above
-	Name      string // Hostname without a project name prefix - such as httpproxy, sas-casserver-primary, consul
-	Tag       string // Use container.GetTag or container.GetWholeImageName instead
-	BaseImage string // Set by the order's --base-image argument
-	IsStatic  bool   // Set by the CreateDockerContext function. Determined by the existence of the util/static-roles-<deployment>/<container-name> directory
+	Status      State           // See `type State` above
+	Name        string          // Hostname without a project name prefix - such as httpproxy, sas-casserver-primary, consul
+	Tag         string          // Use container.GetTag or container.GetWholeImageName instead
+	BaseImage   string          // Set by the order's --base-image argument
+	IsStatic    bool            // Set by the CreateDockerContext function. Determined by the existence of the util/static-roles-<deployment>/<container-name> directory
+	LayerCount  int             // Set by the CreateDockerfile function, counts the number of layers after the Dockerfile is created
+	ProgressBar *uiprogress.Bar // Terminal UI element that displays layer progress
 
 	// Builder attributes
 	BuildArgs         map[string]*string // Arguments that are passed into the Docker builder https://docs.docker.com/engine/reference/commandline/build/
@@ -137,6 +143,29 @@ type DockerResponse struct {
 	Stream string      `json:"stream"`      // Shows up in an Image Build response
 	Status string      `json:"status"`      // Shows up in an Image Push response
 	Error  interface{} `json:"errorDetail"` // Only shows if there's an error image build response
+}
+
+// GetStatus translates an integer represenatation of a container's status into a string.
+// For example, in the container.Status state 5 is "Loading".
+func (container *Container) GetStatus() string {
+	switch container.Status {
+	case 5:
+		return "Loading"
+	case 6:
+		return "Loaded"
+	case 7:
+		return "Building"
+	case 8:
+		return "Built"
+	case 9:
+		return "Pushing"
+	case 10:
+		return "Pushed"
+	case 11:
+		return "Done"
+	default:
+		return "Unknown"
+	}
 }
 
 // WriteLog writes any number of object info to the container's log file
@@ -342,7 +371,6 @@ func (container *Container) Build(progress chan string) error {
 
 	// Build the image and get the response
 	container.WriteLog("----- Starting Docker Build -----")
-	progress <- "Starting Docker build: " + container.GetWholeImageName() + " ... "
 	buildResponseStream, err := container.DockerClient.ImageBuild(
 		container.SoftwareOrder.BuildContext,
 		dockerBuildContext,
@@ -350,6 +378,7 @@ func (container *Container) Build(progress chan string) error {
 	if err != nil {
 		return err
 	}
+	container.Status = Building
 	return readDockerStream(buildResponseStream.Body,
 		container, container.SoftwareOrder.Verbose, progress)
 }
@@ -396,18 +425,12 @@ func readDockerStream(responseStream io.ReadCloser,
 			}
 		}
 
-		// The raw response is noisy with lots of spaces, so trim the spacing
-		// and print it to standard output
+		// The raw response is noisy with lots of spaces so trim the spacing
 		response.Stream = strings.TrimSpace(string(response.Stream))
 		responses = append(responses, *response)
 		container.WriteLog(response)
-		if verbose && len(response.Stream) > 0 {
-			if progress != nil {
-				progress <- container.Name + ":\n" + response.Stream
-			} else {
-				// Work-around to allow single container to build without a progress stream
-				log.Println(response.Stream)
-			}
+		if strings.Contains(response.Stream, "Step ") {
+			container.ProgressBar.Incr()
 		}
 		if response.Error != nil {
 			// If anything goes wrong then dump the error and provide debugging options
@@ -513,7 +536,17 @@ func (container *Container) CreateDockerfile() (string, error) {
 
 	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Config.User, container.Config.User, container.Name)
 	dockerfile += "\n" + fmt.Sprintf(dockerfileLabels, RecipeVersion, container.Name, container.Name)
+
+	container.LayerCount = getLayerCount(dockerfile)
 	return dockerfile, nil
+}
+
+// getLayerCount is a helper function for CreateDockerfile that counts the
+// number of layers in a Dockerfile string and returns the integer
+func getLayerCount(dockerfile string) int {
+	layerRegex := regexp.MustCompile("FROM|RUN|CMD|LABEL|EXPOSE|ENV|ADD|COPY|ENTRYPOINT|VOLUME|USER|WORKDIR|ARG|ONBUILD|STOPSIGNAL|HEALTHCHECK|SHELL")
+	matches := layerRegex.FindAllStringIndex(dockerfile, -1)
+	return len(matches)
 }
 
 // readAddonConf reads the yaml file and return the data.
@@ -874,7 +907,7 @@ func (container *Container) AddDirectoryToContext(externalPath string, contextPa
 		if info != nil {
 			if !info.IsDir() {
 				if strings.Contains(path, "Dockerfile") || strings.Contains(path, "addon_config.yml") {
-					log.Println("Skipping adding file to " + container.Name + " Docker context: ", path)
+					log.Println("Skipping adding file to "+container.Name+" Docker context: ", path)
 					return nil
 				}
 				paths = append(paths, path)

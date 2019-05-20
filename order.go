@@ -19,11 +19,15 @@
 package main
 
 import (
+	"github.com/gosuri/uiprogress"
+
 	"encoding/base64"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+
+	"gopkg.in/yaml.v2"
 
 	"archive/zip"
 	"bufio"
@@ -33,7 +37,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"log"
@@ -64,23 +67,23 @@ var ConfigPath = "config-full.yml"
 type SoftwareOrder struct {
 
 	// Build arguments and flags (see order.LoadCommands for details)
-	BaseImage              	string   `yaml:"Base Image              "`
-	MirrorURL              	string   `yaml:"Mirror URL              "`
-	VirtualHost            	string   `yaml:"Virtual Host            "`
-	DockerNamespace        	string   `yaml:"Docker Namespace        "`
-	DockerRegistry         	string   `yaml:"Docker Registry         "`
-	DeploymentType         	string   `yaml:"Deployment Type         "`
-	Platform               	string   `yaml:"Platform                "`
-	ProjectName            	string   `yaml:"Project Name            "`
-	TagOverride            	string   `yaml:"Tag Override            "`
-	AddOns                 	[]string `yaml:"AddOns                  "`
-	DebugContainers        	[]string `yaml:"Debug Containers        "`
-	WorkerCount            	int      `yaml:"Worker Count            "`
-	Verbose                	bool     `yaml:"Verbose                 "`
-	SkipMirrorValidation   	bool     `yaml:"Skip Mirror Validation  "`
-	SkipDockerValidation   	bool     `yaml:"Skip Docker Validation  "`
-	GenerateManifestsOnly  	bool     `yaml:"Generate Manifests Only "`
-	SkipDockerRegistryPush	bool     `yaml:"Skip Docker Registry    "`
+	BaseImage              string   `yaml:"Base Image              "`
+	MirrorURL              string   `yaml:"Mirror URL              "`
+	VirtualHost            string   `yaml:"Virtual Host            "`
+	DockerNamespace        string   `yaml:"Docker Namespace        "`
+	DockerRegistry         string   `yaml:"Docker Registry         "`
+	DeploymentType         string   `yaml:"Deployment Type         "`
+	Platform               string   `yaml:"Platform                "`
+	ProjectName            string   `yaml:"Project Name            "`
+	TagOverride            string   `yaml:"Tag Override            "`
+	AddOns                 []string `yaml:"AddOns                  "`
+	DebugContainers        []string `yaml:"Debug Containers        "`
+	WorkerCount            int      `yaml:"Worker Count            "`
+	Verbose                bool     `yaml:"Verbose                 "`
+	SkipMirrorValidation   bool     `yaml:"Skip Mirror Validation  "`
+	SkipDockerValidation   bool     `yaml:"Skip Docker Validation  "`
+	GenerateManifestsOnly  bool     `yaml:"Generate Manifests Only "`
+	SkipDockerRegistryPush bool     `yaml:"Skip Docker Registry    "`
 
 	// Build attributes
 	Log          *os.File              `yaml:"-"`                        // File handle for log path
@@ -99,7 +102,7 @@ type SoftwareOrder struct {
 	BuilderPort  string                `yaml:"-"`                        // Port for serving certificate requests for builds
 	TimestampTag string                `yaml:"Timestamp Tag           "` // Allows for datetime on each temp build bfile
 	InDocker     bool                  `yaml:"-"`                        // If we are running in a docker container
-	ManifestDir  string								 `yaml:"-"`												 // The name of the manifest directory. "manifests" is the default
+	ManifestDir  string                `yaml:"-"`                        // The name of the manifest directory. "manifests" is the default
 
 	// Metrics
 	StartTime      time.Time      `yaml:"-"`
@@ -212,7 +215,7 @@ func (order *SoftwareOrder) SetupBuildDirectory() error {
 		return errors.New(string(result) + "\n" + err.Error())
 	}
 	// A single image only uses the vars_usermods.yml. That can be used to change the
-	// running of the playbook that is used in creating the image. For "full" or 
+	// running of the playbook that is used in creating the image. For "full" or
 	// "multiple" deployments, only the manifests_usermods.yml is used. It is used
 	// when generating manifests and not in the building of the images.
 	if order.DeploymentType != "single" {
@@ -298,7 +301,7 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 
 	if !order.SkipDockerRegistryPush {
 		workerCount++
-		go order.LoadRegistryAuth(fail, done)	
+		go order.LoadRegistryAuth(fail, done)
 	} else {
 		log.Println("Skipping loading Docker registry authentication ...")
 	}
@@ -326,7 +329,7 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		case failure := <-fail:
 			return order, errors.New(failure)
 		case progress := <-progress:
-			order.WriteLog(true, progress)
+			order.WriteLog(false, progress)
 		}
 	}
 }
@@ -509,18 +512,18 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.BuilderPort = *builderPort
 	order.SkipDockerRegistryPush = *skipDockerRegistryPush
 
-        // Disallow all other flags except --type with --generate-manifests-only
-        // Note: --tag is always passed from build.sh, so will have to ignore that
-        if *generateManifestsOnly {
-                if flag.NFlag() > 3 {
-                        err := errors.New("Only '--type(-y)' can be used with '--generate-manifests-only'.")
-                        return err
-                }
-                if *deploymentType == "single" {
-                        err := errors.New("Use of '--type(-y) <multiple|full>' is required with '--generate-manifests-only'.")
-                        return err
-                }
-        }
+	// Disallow all other flags except --type with --generate-manifests-only
+	// Note: --tag is always passed from build.sh, so will have to ignore that
+	if *generateManifestsOnly {
+		if flag.NFlag() > 3 {
+			err := errors.New("Only '--type(-y)' can be used with '--generate-manifests-only'.")
+			return err
+		}
+		if *deploymentType == "single" {
+			err := errors.New("Use of '--type(-y) <multiple|full>' is required with '--generate-manifests-only'.")
+			return err
+		}
+	}
 
 	// Make sure one cannot specify more workers than # cores available
 	order.WorkerCount = *workerCount
@@ -663,6 +666,10 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 		if container.Status != Loaded {
 			continue
 		}
+		container.ProgressBar = uiprogress.AddBar(container.LayerCount).AppendCompleted()
+		container.ProgressBar.PrependFunc(func(b *uiprogress.Bar) string {
+			return container.Name + strings.Repeat(" ", 30-len(container.Name)) + container.GetStatus()
+		})
 
 		// Build
 		container.BuildStart = time.Now()
@@ -708,7 +715,8 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 		} else {
 			progress <- "Skipping pushing " + container.GetWholeImageName() + " to Docker registry"
 		}
-		
+
+		container.Status = Done
 		done <- container.Name
 	}
 }
@@ -718,8 +726,8 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 // then do a docker build with the base image and platform build arguments
 // TODO: using license in RUN layers and mounting as volume?
 func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
-	// In the case of the sinlge container, we will define the memory for the 
-	// order.Containers object. For non-single builds, this is done in the 
+	// In the case of the sinlge container, we will define the memory for the
+	// order.Containers object. For non-single builds, this is done in the
 	// getContainers method. That method is not called in a single image build
 	// so we need to do the following.
 	order.Containers = make(map[string]*Container)
@@ -823,6 +831,7 @@ func (order *SoftwareOrder) Build() error {
 	order.WriteLog(true, "[TIP] System resource utilization can be seen by using the `docker stats` command.")
 
 	// Concurrently start each build process
+	uiprogress.Start() // start rendering
 	jobs := make(chan *Container, 100)
 	fail := make(chan string)
 	done := make(chan string)
@@ -1194,7 +1203,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	err = cmd.Wait()
 	if err != nil {
 		result, _ := ioutil.ReadAll(stderr)
-		fail <- fmt.Sprintf("Error: unable to generate the playbook during cmd.Wait. %s\n%s\n%s", 
+		fail <- fmt.Sprintf("Error: unable to generate the playbook during cmd.Wait. %s\n%s\n%s",
 			string(result), err.Error(), playbookCommand)
 		return
 	}
@@ -1334,15 +1343,15 @@ func (order *SoftwareOrder) GenerateManifests() error {
 
 		// Rename the previous manifests, usermods, and build log with a timestamp
 		// manifests/ --> manifests-<datetime>/
-		if _, err := os.Stat(order.BuildPath+order.ManifestDir); !os.IsNotExist(err) {
+		if _, err := os.Stat(order.BuildPath + order.ManifestDir); !os.IsNotExist(err) {
 			if err := os.Rename(order.BuildPath+order.ManifestDir,
-			order.BuildPath+order.ManifestDir+"-"+order.TimestampTag); err != nil {
+				order.BuildPath+order.ManifestDir+"-"+order.TimestampTag); err != nil {
 				return err
 			}
 		}
 
 		// A single image only uses the vars_usermods.yml. That can be used to change the
-		// running of the playbook that is used in creating the image. For "full" or 
+		// running of the playbook that is used in creating the image. For "full" or
 		// "multiple" deployments, only the manifests_usermods.yml is used. It is used
 		// when generating manifests and not in the building of the images.
 		if order.DeploymentType != "single" {
@@ -1566,7 +1575,7 @@ settings:
 func (order *SoftwareOrder) LoadUsermods(usermodsFileName string) error {
 	// manifests_usermods.yml --> manifests_usermods.yml-<datetime>.yml
 	usermodsPathPrevious := fmt.Sprintf("builds/%s/%s-%s.yml", order.DeploymentType, usermodsFileName, order.TimestampTag)
-	if _, err := os.Stat("builds/"+order.DeploymentType+"/"+usermodsFileName); !os.IsNotExist(err) {
+	if _, err := os.Stat("builds/" + order.DeploymentType + "/" + usermodsFileName); !os.IsNotExist(err) {
 		if err := os.Rename("builds/"+order.DeploymentType+"/"+usermodsFileName, usermodsPathPrevious); err != nil {
 			return err
 		}
@@ -1575,7 +1584,7 @@ func (order *SoftwareOrder) LoadUsermods(usermodsFileName string) error {
 	usermodsFilePath := "util/" + usermodsFileName
 	if _, err := os.Stat(usermodsFileName); !os.IsNotExist(err) {
 		usermodsFilePath = usermodsFileName
-		order.Log.Write([]byte(fmt.Sprintf("Loaded the custom %s file.",usermodsFileName)))
+		order.Log.Write([]byte(fmt.Sprintf("Loaded the custom %s file.", usermodsFileName)))
 		log.Println("Loaded the custom " + usermodsFileName + " file.")
 	}
 	input, err := ioutil.ReadFile(usermodsFilePath)
@@ -1630,6 +1639,7 @@ func getOrchestrationTool() error {
 
 // Finish removes all temporary build files: sas_viya_playbook and all Docker contexts (tar files) in the /tmp directory
 func (order *SoftwareOrder) Finish() {
+	uiprogress.Stop()
 	order.EndTime = time.Now()
 	// TODO
 	//for _, container := range order.Containers {
@@ -1694,7 +1704,7 @@ sed -i 's|@REPLACE_ME_WITH_TAG@|%s|' launchsas.sh
 	//       directory and Kubernetes namespaces are changeable. Should probably
 	//       have a way to discover this information so it is reflects in the data
 	//       given to the user.
-	symlinkBuildPath := fmt.Sprintf("builds/%s/%s", order.DeploymentType,order.ManifestDir)
+	symlinkBuildPath := fmt.Sprintf("builds/%s/%s", order.DeploymentType, order.ManifestDir)
 	namespaceGrepCommand := fmt.Sprintf("grep '^SAS_K8S_NAMESPACE' %smanifests_usermods.yml | awk -F ': ' '{ print $2 }'", order.BuildPath)
 	grepResult, err := exec.Command("sh", "-c", namespaceGrepCommand).Output()
 	if err != nil {
@@ -1756,7 +1766,7 @@ The images that need to be pushed are referenced in
 
 %s/dockerPush
 `,
-		symlinkBuildPath)
+			symlinkBuildPath)
 		dockerPushFileSummary := fmt.Sprintf(`# File generated by order.go on %s
 #
 # The following images were not pushed to the Docker registry 
@@ -1765,7 +1775,7 @@ The images that need to be pushed are referenced in
 # images. Note that the images must still reside on the current host.
 
 `,
-		order.TimestampTag)
+			order.TimestampTag)
 
 		fmt.Println(dockerPushInstructions)
 		order.WriteLog(false, dockerPushInstructions)
@@ -1774,11 +1784,11 @@ The images that need to be pushed are referenced in
 			return err
 		}
 
-		defer dockerPushFile.Close()    
+		defer dockerPushFile.Close()
 		_, err = dockerPushFile.WriteString(dockerPushFileSummary)
 		if err != nil {
 			return err
-		}	
+		}
 		for _, container := range order.Containers {
 			dockerPushString := fmt.Sprintf("docker push %s/%s/%s-%s:%s", order.DockerRegistry, order.DockerNamespace, order.ProjectName, container.Name, order.TagOverride)
 			fmt.Println(dockerPushString)
@@ -1786,13 +1796,13 @@ The images that need to be pushed are referenced in
 			_, err = dockerPushFile.WriteString(dockerPushString + "\n")
 			if err != nil {
 				return err
-			}	
+			}
 		}
 		_, err = dockerPushFile.WriteString("\n")
 		if err != nil {
 			return err
-		}	
- 		dockerPushFile.Sync()
+		}
+		dockerPushFile.Sync()
 		fmt.Println(dockerPushFileInstructions)
 		order.WriteLog(false, dockerPushFileInstructions)
 	}
