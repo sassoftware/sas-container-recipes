@@ -91,9 +91,7 @@ sas-programming         1/1     1            1           11d
 
 Here is an example for validating running images for `--type full` build. In this example, the default namespace and manifests directory are shown: sas-viya and builds/full/manifests/kubernetes/deployments/, repectively.
 
-```
-kubectl -n sas-viya get -f builds/full/manifests/kubernetes/deployments/
-```
+`kubectl -n sas-viya get -f builds/full/manifests/kubernetes/deployments/`
 
 **Tips:** 
 - For a `--type multiple` build, the default manifests directory is $PWD/builds/multiple/manifests/kubernetes/deployments.
