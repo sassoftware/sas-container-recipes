@@ -310,11 +310,6 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		log.Println("Skipping validating Docker registry ...")
 	}
 
-	if !order.SkipMirrorValidation {
-		workerCount++
-		go order.TestMirror(progress, fail, done)
-	}
-
 	doneCount := 0
 	for {
 		select {
@@ -477,7 +472,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 	projectName := flag.String("project-name", "sas-viya", "")
 	deploymentType := flag.String("type", "single", "")
 	version := flag.Bool("version", false, "")
-	skipMirrorValidation := flag.Bool("skip-mirror-url-validation", false, "")
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
 	generateManifestsOnly := flag.Bool("generate-manifests-only", false, "")
 	builderPort := flag.String("builder-port", "1976", "")
@@ -508,7 +502,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 	}
 
 	order.Verbose = *verbose
-	order.SkipMirrorValidation = *skipMirrorValidation
 	order.SkipDockerValidation = *skipDockerValidation
 	order.GenerateManifestsOnly = *generateManifestsOnly
 	order.VirtualHost = *virtualHost
@@ -603,6 +596,10 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.MirrorURL = *mirrorURL
 	if len(order.MirrorURL) == 0 && order.DeploymentType == "single" && order.Platform == "suse" {
 		return errors.New("a --mirror-url argument is required for a base suse single container")
+	}
+	if strings.Contains(order.MirrorURL, "http://") {
+		fmt.Println(fmt.Sprintf(
+			"WARNING: the --mirror-url argument '%s' does not have TLS.", order.MirrorURL))
 	}
 
 	// Optional: override the standard tag format
@@ -1017,35 +1014,6 @@ func (order *SoftwareOrder) LoadSiteDefault(progress chan string, fail chan stri
 		progress <- "Finished loading sitedefault.yml"
 	} else {
 		progress <- "Skipping loading sitedefault.yml"
-	}
-	done <- 1
-}
-
-// TestMirror runs a simple curl on the mirror URL to see if it's accessible.
-// This is a preliminary check so an error is less likely to occur once the build starts
-//
-// NOTE: this does not support a local registry filesystem path
-func (order *SoftwareOrder) TestMirror(progress chan string, fail chan string, done chan int) {
-	if len(order.MirrorURL) > 0 {
-		if strings.Contains(order.MirrorURL, "http://") {
-			fail <- "The --mirror-url must have TLS enabled. Provide the url with 'https' instead of 'http' in the command argument."
-			return
-		}
-		url := order.MirrorURL
-		if !strings.Contains(order.MirrorURL, "https://") {
-			url = "https://" + order.MirrorURL
-		}
-		progress <- "Checking the mirror URL for validity ... curl " + url
-		response, err := http.Get(url)
-		if err != nil {
-			fail <- err.Error()
-			return
-		}
-		if response.StatusCode != 200 {
-			fail <- "Invalid mirror URL " + err.Error()
-			return
-		}
-		progress <- "Finished checking the mirror URL for validity: http status code " + strconv.Itoa(response.StatusCode)
 	}
 	done <- 1
 }
