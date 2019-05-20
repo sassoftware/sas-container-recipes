@@ -661,6 +661,8 @@ func (order *SoftwareOrder) LoadCommands() error {
 	return nil
 }
 
+var LongestContainerName = 0
+
 func buildWorker(id int, containers <-chan *Container, done chan<- string, progress chan string, fail chan string) {
 	for container := range containers {
 		if container.Status != Loaded {
@@ -668,7 +670,7 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 		}
 		container.ProgressBar = uiprogress.AddBar(container.LayerCount).AppendCompleted()
 		container.ProgressBar.PrependFunc(func(b *uiprogress.Bar) string {
-			return container.Name + strings.Repeat(" ", 30-len(container.Name)) + container.GetStatus()
+			return fmt.Sprintf("%s %s(%s)", container.Name, strings.Repeat(" ", LongestContainerName-len(container.Name)), container.GetStatus())
 		})
 
 		// Build
@@ -828,7 +830,19 @@ func (order *SoftwareOrder) Build() error {
 		// Use the plural "processes" instead of "process"
 		order.WriteLog(true, "Starting "+strconv.Itoa(numberOfBuilds)+" build processes ... (this may take several minutes)")
 	}
-	order.WriteLog(true, "[TIP] System resource utilization can be seen by using the `docker stats` command.")
+	order.WriteLog(true, fmt.Sprintf("[TIP] System resource utilization can be seen by using the `docker stats` command.\nVerbose logging for each container is inside the builds/%s/<container>/log.txt file.\n",
+		order.DeploymentType))
+
+	// Get the longest container name so the progress bar padding will be uniformed
+	for _, container := range order.Containers {
+		if container.Status == DoNotBuild {
+			continue
+		}
+		nameLength := len(container.Name)
+		if nameLength > LongestContainerName {
+			LongestContainerName = nameLength
+		}
+	}
 
 	// Concurrently start each build process
 	uiprogress.Start() // start rendering
