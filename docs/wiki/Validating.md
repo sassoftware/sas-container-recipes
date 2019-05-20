@@ -89,15 +89,15 @@ NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
 sas-programming         1/1     1            1           11d
 ```
 
-Here is an example for validating running images for a full build (multiple containers). In this example, the default namespace and manifests directory are shown: sas-viya and builds/full/manifests/kubernetes/deployments/, repectively.
+Here is an example for validating running images for `--type full` build. In this example, the default namespace and manifests directory are shown: sas-viya and builds/full/manifests/kubernetes/deployments/, repectively.
 
 ```
 kubectl -n sas-viya get -f builds/full/manifests/kubernetes/deployments/
 ```
 
 **Tips:** 
-- The default directory for a multiple build, the default manifests directory is $PWD/builds/multiple/manifests/kubernetes/deployments.
-- To find the namespace, look at the related yaml file in builds/\<type\>/kubernetes/namespace 
+- For a `--type multiple` build, the default manifests directory is $PWD/builds/multiple/manifests/kubernetes/deployments.
+- To find the namespace, locate the related yaml file in the $PWD/builds/full/kubernetes/namespace or $PWD/builds/multiple/kubernetes/namespace directory.
 
 If you do not get the results that you expect, run the following command to enable the DEBUG option to provide more information:
 
