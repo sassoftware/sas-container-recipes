@@ -87,7 +87,7 @@ NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
 sas-programming         1/1     1            1           11d
 ```
 
-**Tip:** Run the command from the directory where the programming.yml file is located. For a single image programming-only deployment, the Kubernetes manifests are located at $PWD/run/programming.yml. For a multiple image programming-only deployment, the manifests are lodated at $PWD/builds/multiple/manifests/kubernetes/deployments and for a full deployment, the manifests are located at $PWD/builds/full/manifests/kubernetes/deployments. Here is an example of how to run this command against a full build that wrote the manifests to the default manifest directory (This uses the default namespace of sas-viya but to know for sure which namespace to use, look at the yaml file in builds/\<type\>/kubernetes/namespace):
+**Tip:** Run the command from the directory where the programming.yml file is located. For a single image programming-only deployment, the Kubernetes manifests are located at $PWD/run/programming.yml. For a multiple image programming-only deployment, the manifests are located at $PWD/builds/multiple/manifests/kubernetes/deployments and for a full deployment, the manifests are located at $PWD/builds/full/manifests/kubernetes/deployments. Here is an example of how to run this command against a full build that wrote the manifests to the default manifest directory (This uses the default namespace of sas-viya but to know for sure which namespace to use, look at the yaml file in builds/\<type\>/kubernetes/namespace):
 
 ```
 kubectl -n sas-vya get -f builds/full/jrg-d1315-09nxn4/kubernetes/deployments/
