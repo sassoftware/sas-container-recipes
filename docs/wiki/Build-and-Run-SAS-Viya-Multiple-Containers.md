@@ -213,10 +213,10 @@ kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/deployments
 
 - The examples use _sas-viya_ for the namespace. If you created a different namespace, use that value. 
 - Make sure that the file in the $MANIFESTS/kubernetes/ingress directory contains the correct Ingress domain. An example value _company.com_ is used by default, which will not work in your environment. To change the value, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) for information about how to set it, and then see [(Optional) Regenerating Manifests](post-run-tasks#optional-regenerating-manifests) (a post-run task) for information about how to regenerate the manifests.
+- If you are setting up TLS, make sure that the TLS section of the file in the $MANIFESTS/kubernetes/ingress directory is configured correctly. For more information, see the [Ingress Configuration](Pre-build-Tasks#ingress-configuration) (a pre-build task). 
 - By default, the user account for the CAS administrator (the casenv_admin_user variable) is sasdemo. If you built the images with the auth-sssd addon or customized the user in the auth-demo addon, make sure to specify a valid user name for the casenv_admin_user variable, which is in one of the following files:
   - builds/multiple/manifests/kubernetes/configmaps/cas.yml for a `--type multiple` build
   - builds/full/manifests/kubernetes/configmaps/cas.yml for a `--type full` build
-- If you are setting up TLS, make sure that the TLS section of the file in the $MANIFESTS/kubernetes/ingress directory is configured correctly. For more information, see the [Ingress Configuration](Pre-build-Tasks#ingress-configuration) (a pre-build task).
 
 To check the status of the containers, run `kubectl -n sas-viya get pods`
 
