@@ -1,7 +1,7 @@
 ## Contents
 
 - [Validate a Docker Deployment](#validate-a-docker-deployment)
-- [Validate a Kubernetes Deployment](#validate-a-kubernetes-deployment)
+- [Validate Running Images in Kubernetes](#validate-running-images-in-kubernetes)
 - [Sign In to Your Version of SAS Studio](#sign-in-to-your-version-of-sas-studio)
 - [Access SAS Environment Manager](#access-sas-environment-manager)
 - [Access SAS Logon and SAS Drive](#access-sas-logon-and-sas-drive)
@@ -71,11 +71,13 @@ If the image is not running, here are several recovery actions that you can perf
 
     4. Using the vi editor, you can view the scripts in the container and work through the errors.
 
-## Validate a Kubernetes Deployment
+## Validate Running Images in Kubernetes
 
-To verify that the single image pod of sas-programming is running in Kubernetes, run the following command:
+Here is an example for validating that a single image pod of sas-programming is running in Kubernetes:
 
 `kubectl get -f run/programming.yml`
+
+For a single-container deployment, run the command from the directory where the programming.yml file is located: $PWD/run/programming.yml.
 
 Here are typical results:
 
@@ -87,11 +89,15 @@ NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
 sas-programming         1/1     1            1           11d
 ```
 
-**Tip:** Run the command from the directory where the programming.yml file is located. For a single image programming-only deployment, the Kubernetes manifests are located at $PWD/run/programming.yml. For a multiple image programming-only deployment, the manifests are located at $PWD/builds/multiple/manifests/kubernetes/deployments and for a full deployment, the manifests are located at $PWD/builds/full/manifests/kubernetes/deployments. Here is an example of how to run this command against a full build that wrote the manifests to the default manifest directory (This uses the default namespace of sas-viya but to know for sure which namespace to use, look at the yaml file in builds/\<type\>/kubernetes/namespace):
+Here is an example for validating running images for a full build (multiple containers). In this example, the default namespace and manifests directory are shown: sas-viya and builds/full/manifests/kubernetes/deployments/, repectively.
 
 ```
-kubectl -n sas-vya get -f builds/full/jrg-d1315-09nxn4/kubernetes/deployments/
+kubectl -n sas-viya get -f builds/full/manifests/kubernetes/deployments/
 ```
+
+**Tips:** 
+- The default directory for a multiple build, the default manifests directory is $PWD/builds/multiple/manifests/kubernetes/deployments.
+- To find the namespace, look at the related yaml file in builds/\<type\>/kubernetes/namespace 
 
 If you do not get the results that you expect, run the following command to enable the DEBUG option to provide more information:
 
