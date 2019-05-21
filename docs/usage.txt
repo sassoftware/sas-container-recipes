@@ -115,10 +115,6 @@ Multiple Containers
         Outputs the result of each Docker layer creation.
         Default: false
 
-    --skip-mirror-url-validation
-        Skips validating the mirror URL from the --mirror-url flag.
-        Default: false
-
     --skip-docker-url-validation
         Skips validating the Docker registry URL.
         Default: false
