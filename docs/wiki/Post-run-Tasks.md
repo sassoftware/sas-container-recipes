@@ -223,11 +223,13 @@ in the sas-container-recipes project directory. For more information, see
     
     **Note:** The preceding configuration adds a new `custom_services:` section to the manifests_usermods.yml file. If this section already exists, you must manually add all the unique lines shown above for `custom_services:` to the existing section, and then remove the new `custom_services:` section that is added.
 
-2. Provide the `--generate-manifests-only` argument and the previous build's 
-deployment type to the build script. For example, 
-`./build.sh --generate-manifests-only --type full`.
-3. New manifests will be generated in builds/full/manifests/ or 
-builds/multiple/manifests/, depending on your deployment type.
+1. Execute the build script with the `--generate-manifests-only` argument and the deployment type of the previous build.
+
+   Here is an example of executing the script with the `--type full` deployment type.
+   
+   `./build.sh --generate-manifests-only --type full`.
+ 
+   Depending on your deployment type, teh new manifests will be generated in the builds/full/manifests/ or builds/multiple/manifests/ directory.
 
 **Note:** The symbolic link for builds/full or builds/multiple will point 
 to the most recent timestamped build directory, such as 
