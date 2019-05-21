@@ -190,11 +190,11 @@ SAS Viya supports encrypted connections between the LDAP client and server. To c
 
 If the deployment manifests that were generated in builds/full/manifests or builds/multiple/manifests need to be updated, perform the following post-build steps to regenerate the manifests without re-running the entire build process. 
 
-1. (Optional) To provide custom configuration, edit the manifests_usermods.yml file 
+1. If you want to provide custom configuration, edit the manifests_usermods.yml file 
 in the sas-container-recipes project directory. For more information, see 
 [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task).
 
-1. (Optional) To provide an updated sitedefault.yml file, the file must first be base64 encoded, and then added to the `custom_services:` section of the manifests_usermods.yml file: 
+1. If you want to provide an updated sitedefault.yml file, the file must first be base64 encoded, and then added to the `custom_services:` section of the manifests_usermods.yml file: 
     
     ```
     ## change to the container recipe folder
