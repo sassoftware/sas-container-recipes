@@ -1174,7 +1174,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 			result := scanner.Text()
 			progress <- fmt.Sprintf("Generate playbook output | %s", result)
 			if strings.Contains(result, "Connection refused") || strings.Contains(result, "No route to host") {
-				progress <- fmt.Sprintf("Error: unable to generate the playbook. The mirror URL provided by '--mirror-url %s' did not point to a host with an accessible mirrormgr repository. The ip, hostname, or port may be incorrect.\n", order.MirrorURL)
+				progress <- fmt.Sprintf("Error: unable to generate the playbook. The mirror URL provided by '--mirror-url %s' did not point to a host with an accessible mirrormgr repository. The IP address, hostname, or port might be incorrect.\n", order.MirrorURL)
 			}
 		}
 	}()
