@@ -27,7 +27,7 @@ FROM $BASE
 
 ARG PLATFORM=redhat
 ENV PLATFORM=$PLATFORM
-ARG ANSIBLE_VERSION=2.4.1
+ARG ANSIBLE_VERSION=2.7
 ARG TINI_RPM_NAME=tini_0.18.0.rpm
 ARG TINI_URL=https://github.com/krallin/tini/releases/download/v0.18.0
 ARG SAS_RPM_REPO_URL=https://ses.sas.download/ses/
