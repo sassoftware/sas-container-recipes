@@ -42,6 +42,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -68,17 +69,19 @@ const DockerAPIVersion = "1.37"
 
 // Container defines the attributes for a single host
 type Container struct {
-	// Reference to the parent SOE
-	SoftwareOrder *SoftwareOrder
+	SoftwareOrder *SoftwareOrder // Reference to the parent SOE
 
 	// Basic default attributes set on creation
-	Status      State           // See `type State` above
-	Name        string          // Hostname without a project name prefix - such as httpproxy, sas-casserver-primary, consul
-	Tag         string          // Use container.GetTag or container.GetWholeImageName instead
-	BaseImage   string          // Set by the order's --base-image argument
-	IsStatic    bool            // Set by the CreateDockerContext function. Determined by the existence of the util/static-roles-<deployment>/<container-name> directory
-	LayerCount  int             // Set by the CreateDockerfile function, counts the number of layers after the Dockerfile is created
-	ProgressBar *uiprogress.Bar // Terminal UI element that displays layer progress
+	Name      string // Hostname without a project name prefix - such as httpproxy, sas-casserver-primary, consul
+	Tag       string // Use container.GetTag or container.GetWholeImageName instead
+	BaseImage string // Set by the order's --base-image argument
+	IsStatic  bool   // Set by the CreateDockerContext function. Determined by the existence of the util/static-roles-<deployment>/<container-name> directory
+
+	// Tracks the container's build progress and status
+	Status       State           // See `type State` above
+	CurrentLayer int             // Set by the Docker build response that echoes "Step x/y", with 'x' being the current layer being built and 'y' being the layer count
+	LayerCount   int             // Set by the CreateDockerfile function, counts the number of layers after the Dockerfile is created
+	ProgressBar  *uiprogress.Bar // Terminal UI element that displays layer progress
 
 	// Builder attributes
 	BuildArgs         map[string]*string // Arguments that are passed into the Docker builder https://docs.docker.com/engine/reference/commandline/build/
@@ -150,21 +153,21 @@ type DockerResponse struct {
 func (container *Container) GetStatus() string {
 	switch container.Status {
 	case 5:
-		return "Loading"
+		return "Loading "
 	case 6:
-		return "Loaded"
+		return "Loaded  "
 	case 7:
 		return "Building"
 	case 8:
-		return "Built"
+		return "Built   "
 	case 9:
-		return "Pushing"
+		return "Pushing "
 	case 10:
-		return "Pushed"
+		return "Pushed  "
 	case 11:
-		return "DONE"
+		return "  DONE  "
 	default:
-		return "Unknown"
+		return "Unknown "
 	}
 }
 
@@ -429,7 +432,22 @@ func readDockerStream(responseStream io.ReadCloser,
 		response.Stream = strings.TrimSpace(string(response.Stream))
 		responses = append(responses, *response)
 		container.WriteLog(response)
-		if strings.Contains(response.Stream, "Step ") {
+
+		// The Docker builder outputs the format "Step x/y : <layer>" on some lines, which can be parsed to get the current progress
+		progressDelimiter := "Step "
+		if strings.Contains(response.Stream, progressDelimiter) {
+			// Makes the format "x/y"
+			rawProgress := strings.TrimSpace(response.Stream[:strings.Index(response.Stream, ":")])
+			rawProgress = response.Stream[len(progressDelimiter):]
+
+			currentLayerString := rawProgress[:strings.Index(rawProgress, "/")]
+			currentLayerInt, _ := strconv.ParseInt(currentLayerString, 10, 64)
+			container.CurrentLayer = int(currentLayerInt)
+
+			layerCountString := strings.TrimSpace(rawProgress[strings.Index(rawProgress, "/")+1 : strings.Index(rawProgress, ":")])
+			layerCountInt, _ := strconv.ParseInt(layerCountString, 10, 64)
+			container.LayerCount = int(layerCountInt)
+
 			container.ProgressBar.Incr()
 		}
 		if response.Error != nil {

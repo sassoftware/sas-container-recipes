@@ -415,30 +415,6 @@ func (order *SoftwareOrder) WriteLog(writeToStdout bool, contentBlocks ...interf
 	order.Log.Write([]byte("\n"))
 }
 
-// GetIntermediateStatus returns the output of how many and which containers have been built
-// out of the total number of builds.
-// This is displayed after a container finishes its build process.
-func (order *SoftwareOrder) GetIntermediateStatus(progress chan string) {
-	finishedContainers := []string{}
-	remainingContainers := []string{}
-	for _, container := range order.Containers {
-		if container.Status == Pushed {
-			finishedContainers = append(finishedContainers, container.Name)
-		} else if container.Status != DoNotBuild {
-			remainingContainers = append(remainingContainers, container.Name)
-		}
-	}
-
-	if len(remainingContainers) == 0 {
-		// Don't show anything once all have completed since the final build summary displays
-		return
-	}
-
-	progress <- fmt.Sprintf("Built & Pushed [ %d / %d ].\nComplete: %s\nRemaining: %s\n",
-		len(finishedContainers), len(finishedContainers)+len(remainingContainers),
-		strings.Join(finishedContainers, ", "), strings.Join(remainingContainers, ", "))
-}
-
 // DefineManifestDir looks at the manifests_usermods.yml to see what the manifest dir is.
 // If nothing is defined, then "manifests" is used
 func (order *SoftwareOrder) DefineManifestDir() error {
@@ -661,6 +637,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	return nil
 }
 
+// Used to determine how much padding should be on the progress bar
 var LongestContainerName = 0
 
 func buildWorker(id int, containers <-chan *Container, done chan<- string, progress chan string, fail chan string) {
@@ -668,9 +645,16 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 		if container.Status != Loaded {
 			continue
 		}
-		container.ProgressBar = uiprogress.AddBar(container.LayerCount).AppendCompleted()
-		container.ProgressBar.PrependFunc(func(b *uiprogress.Bar) string {
+
+		// Configure the progress bar
+		container.ProgressBar = uiprogress.AddBar(container.LayerCount)
+		// Add a string to the left side of the progress bar
+		container.ProgressBar.PrependFunc(func(progress *uiprogress.Bar) string {
 			return fmt.Sprintf("%s %s(%s)", container.Name, strings.Repeat(" ", LongestContainerName-len(container.Name)), container.GetStatus())
+		})
+		// Add a string to the right side of the progress bar
+		container.ProgressBar.AppendFunc(func(progress *uiprogress.Bar) string {
+			return fmt.Sprintf("%s (Layer %d/%d)", progress.CompletedPercentString(), container.CurrentLayer, container.LayerCount)
 		})
 
 		// Build
@@ -712,10 +696,6 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 
 			// Signal the end of the build and push processes
 			container.Status = Pushed
-			progress <- container.GetWholeImageName() + ": finished pushing image to Docker registry"
-			container.SoftwareOrder.GetIntermediateStatus(progress)
-		} else {
-			progress <- "Skipping pushing " + container.GetWholeImageName() + " to Docker registry"
 		}
 
 		container.Status = Done
@@ -830,7 +810,7 @@ func (order *SoftwareOrder) Build() error {
 		// Use the plural "processes" instead of "process"
 		order.WriteLog(true, "Starting "+strconv.Itoa(numberOfBuilds)+" build processes ... (this may take several minutes)")
 	}
-	order.WriteLog(true, fmt.Sprintf("[TIP] System resource utilization can be seen by using the `docker stats` command.\nVerbose logging for each container is inside the builds/%s/<container>/log.txt file.\n",
+	fmt.Println(fmt.Sprintf("System resource utilization can be seen by using the `docker stats` command.\nVerbose logging for each container is inside the builds/%s/<container>/log.txt file.\n",
 		order.DeploymentType))
 
 	// Get the longest container name so the progress bar padding will be uniformed
@@ -888,6 +868,7 @@ func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 	}
 
 	// The names inside the playbook's inventory file are mapped to hosts
+	// Narrow down the text to show only the sas-all section
 	inventoryBytes, err := ioutil.ReadFile(order.BuildPath + "sas_viya_playbook/" + "inventory.ini")
 	if err != nil {
 		return containers, err
@@ -904,6 +885,8 @@ func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 	if startLine == 0 {
 		return containers, errors.New("Cannot find inventory.ini section with all container names")
 	}
+
+	// Parse each line of the inventory file's hosts section
 	for i := startLine + 1; i < len(lines); i++ {
 		skip := false
 		name := lines[i]
@@ -916,6 +899,7 @@ func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 			continue
 		}
 
+		// Add the new container to the containers array
 		container := Container{
 			Name:          strings.ToLower(name),
 			SoftwareOrder: order,
@@ -1651,7 +1635,7 @@ func getOrchestrationTool() error {
 	return nil
 }
 
-// Finish removes all temporary build files: sas_viya_playbook and all Docker contexts (tar files) in the /tmp directory
+// Close any open files and stop displaying progress bars
 func (order *SoftwareOrder) Finish() {
 	uiprogress.Stop()
 	order.EndTime = time.Now()
