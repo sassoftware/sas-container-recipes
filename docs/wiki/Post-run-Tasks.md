@@ -227,7 +227,7 @@ in the sas-container-recipes project directory. For more information, see
 
    Here is an example of executing the script with the `--type full` deployment type.
    
-   `./build.sh --generate-manifests-only --type full`.
+   `./build.sh --generate-manifests-only --type full`
  
    **Note:** Depending on the deployment type, the new manifests will be generated in the builds/full/manifests/ or builds/multiple/manifests/ directory. The symbolic link for builds/full or builds/multiple will point 
 to the most recent timestamped build directory, such as 
