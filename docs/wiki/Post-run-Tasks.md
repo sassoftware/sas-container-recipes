@@ -229,7 +229,7 @@ in the sas-container-recipes project directory. For more information, see
    
    `./build.sh --generate-manifests-only --type full`.
  
-   Depending on your deployment type, teh new manifests will be generated in the builds/full/manifests/ or builds/multiple/manifests/ directory.
+   Depending on the deployment type, the new manifests will be generated in the builds/full/manifests/ or builds/multiple/manifests/ directory.
 
 **Note:** The symbolic link for builds/full or builds/multiple will point 
 to the most recent timestamped build directory, such as 
