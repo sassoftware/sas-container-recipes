@@ -47,9 +47,10 @@ import (
 	"time"
 )
 
-// State of the Container
+// State of the Container for the enumeration (see const definitions below)
 type State int
 
+// Enumeration for the container's state
 // Note: this omits 0 and 1 to prevent evaluation to True or False
 const (
 	Unknown    State = 2  // Default unset status, no configurations have been loaded
@@ -61,7 +62,7 @@ const (
 	Built      State = 8  // Docker client has built and tagged the last layer
 	Pushing    State = 9  // Image is in the process of being pushed to the provided registry
 	Pushed     State = 10 // Image has finished pushing to the provided registry
-	Done       State = 11 // Image has finished building and pushing
+	Done       State = 11 // Image has finished building, pushing, and is ready to deploy
 )
 
 // DockerAPIVersion is the minimum version of the API we support
@@ -123,8 +124,8 @@ type ContainerConfig struct {
 	} `yaml:"resources"`
 }
 
-// effectedImage holdes the docker file that will need to be applied to the container
-type effectedImage struct {
+// affectedImage holdes the docker file that will need to be applied to the container
+type affectedImage struct {
 	Dockerfiles []string
 }
 
@@ -428,12 +429,13 @@ func readDockerStream(responseStream io.ReadCloser,
 			}
 		}
 
-		// The raw response is noisy with lots of spaces so trim the spacing
+		// Note: the raw response is noisy with lots of spaces so trim the spacing
 		response.Stream = strings.TrimSpace(string(response.Stream))
 		responses = append(responses, *response)
 		container.WriteLog(response)
 
-		// The Docker builder outputs the format "Step x/y : <layer>" on some lines, which can be parsed to get the current progress
+		// The Docker builder outputs the format "Step x/y : <layer>" on some
+		// lines, which can be parsed to get the current progress and total layer count
 		progressDelimiter := "Step "
 		if strings.Contains(response.Stream, progressDelimiter) {
 			// Makes the format "x/y"
@@ -450,8 +452,9 @@ func readDockerStream(responseStream io.ReadCloser,
 
 			container.ProgressBar.Incr()
 		}
+
+		// If anything goes wrong then dump the error and provide debugging options
 		if response.Error != nil {
-			// If anything goes wrong then dump the error and provide debugging options
 			errSummary := fmt.Sprintf("[ERROR] %s: %v \n\nDebugging: %s\n",
 				container.Name, response.Error, container.LogPath)
 			return errors.New(errSummary)
@@ -464,19 +467,12 @@ const dockerfileFromBase = `# Generated Dockerfile for %s
 FROM %s
 ARG PLATFORM
 ARG PLAYBOOK_SRV
-ENV PLATFORM=$PLATFORM ANSIBLE_CONFIG=/ansible/ansible.cfg ANSIBLE_CONTAINER=true
+ENV ANSIBLE_CONFIG=/ansible/ansible.cfg ANSIBLE_CONTAINER=true
 RUN mkdir --parents /opt/sas/viya/home/{lib/envesntl,bin}
-RUN if [ "$PLATFORM" = "redhat" ]; then \
-        yum install --assumeyes ansible; \
-		rm -rf /root/.cache /var/cache/yum; \
-		echo -e "minrate=1" >> /etc/yum.conf; \
-		echo -e "timeout=300" >> /etc/yum.conf; \
-    elif [ "$PLATFORM" = "suse" ]; then \
-        zypper install --no-confirm ansible curl && rm -rf /var/cache/zypp; \
-	else \
-		echo -e "Platform $PLATFORM not supported"; \
-		exit 1; \
-    fi
+RUN yum install --assumeyes ansible && \
+	rm -rf /root/.cache /var/cache/yum && \
+	echo -e "minrate=1" >> /etc/yum.conf && \
+	echo -e "timeout=300" >> /etc/yum.conf
 ADD *.yml *.cfg /ansible/
 ADD roles /ansible/roles
 `
@@ -567,20 +563,16 @@ func getLayerCount(dockerfile string) int {
 	return len(matches)
 }
 
-// readAddonConf reads the yaml file and return the data.
-func readAddonConf(fileName string) (map[string]effectedImage, error) {
-
-	imageData := make(map[string]effectedImage)
-
+// readAddonConf reads an addon's config file and returns the data.
+func readAddonConf(fileName string) (map[string]affectedImage, error) {
+	imageData := make(map[string]affectedImage)
 	yamlFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return imageData, err
 	}
-	err = yaml.Unmarshal(yamlFile, &imageData)
-	if err != nil {
+	if err = yaml.Unmarshal(yamlFile, &imageData); err != nil {
 		return imageData, err
 	}
-
 	return imageData, nil
 }
 
@@ -590,75 +582,76 @@ func appendAddonLines(name string, dockerfile string, deploymentType string, add
 
 	// This function now reads an addon_config.yml file in the addon directory to determine
 	// which containers are affected by the Dockerfiles.
-	if len(addons) > 0 {
+	if len(addons) == 0 {
+		return dockerfile, nil
+	}
 
-		// If we add an addon to a container then set to True and we add sas.recipe.addons=true to the image
-		labelRecipeAddons := false
-		for _, addon := range addons {
-			images, err := readAddonConf(addon + "addon_config.yml")
-			if err != nil {
-				return "", err
-			}
+	// If we add an addon to a container then set to True and we add sas.recipe.addons=true to the image
+	labelRecipeAddons := false
+	for _, addon := range addons {
+		images, err := readAddonConf(addon + "addon_config.yml")
+		if err != nil {
+			return "", err
+		}
 
-			// If we don't find the image name listed we skip.
-			targetImage, targetFound := images[name]
-			if !targetFound {
-				continue
-			}
+		// If we don't find the image name listed we skip.
+		targetImage, targetFound := images[name]
+		if !targetFound {
+			continue
+		}
 
-			labelRecipeAddons = true
+		labelRecipeAddons = true
 
-			// Read the addon's Dockerfile and only grab the RUN, ADD, COPY, USER, lines
-			dockerfile += "\n# AddOn(s)"
-			dockerfile += "\n# " + addon + "\n"
+		// Read the addon's Dockerfile and only grab the RUN, ADD, COPY, USER, lines
+		dockerfile += "\n# AddOn(s)"
+		dockerfile += "\n# " + addon + "\n"
 
-			// addonPath is a split out of the addon var, which includes the path to the addons.
-			addonName := filepath.Base(addon)
+		// addonPath is a split out of the addon var, which includes the path to the addons.
+		addonName := filepath.Base(addon)
 
-			dockerfile += "LABEL sas.recipe.addons." + addonName + "=\"true\"\n"
+		dockerfile += "LABEL sas.recipe.addons." + addonName + "=\"true\"\n"
 
-			// This will need to loop through list.
-			for _, addonDockerfile := range targetImage.Dockerfiles {
-				bytes, _ := ioutil.ReadFile(addon + addonDockerfile)
-				lines := strings.Split(string(bytes), "\n")
-				endsWithSlashRe := regexp.MustCompile("\\\\s*")
-				for index, line := range lines {
-					line = strings.TrimSpace(line)
-					if len(line) == 0 {
-						continue
+		// This will need to loop through list.
+		for _, addonDockerfile := range targetImage.Dockerfiles {
+			bytes, _ := ioutil.ReadFile(addon + addonDockerfile)
+			lines := strings.Split(string(bytes), "\n")
+			endsWithSlashRe := regexp.MustCompile("\\\\s*")
+			for index, line := range lines {
+				line = strings.TrimSpace(line)
+				if len(line) == 0 {
+					continue
+				}
+
+				if strings.HasPrefix(line, "RUN ") ||
+					strings.HasPrefix(line, "ADD ") ||
+					strings.HasPrefix(line, "ARG") ||
+					strings.HasPrefix(line, "WORKDIR") ||
+					strings.HasPrefix(line, "USER") ||
+					strings.HasPrefix(line, "COPY ") {
+
+					if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") != 0 && strings.Contains(line, "BASEIMAGE") {
+						dockerfile += "ARG BASEIMAGE=non-single-container\n"
+					} else if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") == 0 && strings.Contains(line, "BASEIMAGE") {
+						dockerfile += line + "\n"
+					} else {
+						dockerfile += line + "\n"
 					}
 
-					if strings.HasPrefix(line, "RUN ") ||
-						strings.HasPrefix(line, "ADD ") ||
-						strings.HasPrefix(line, "ARG") ||
-						strings.HasPrefix(line, "WORKDIR") ||
-						strings.HasPrefix(line, "USER") ||
-						strings.HasPrefix(line, "COPY ") {
-
-						if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") != 0 && strings.Contains(line, "BASEIMAGE") {
-							dockerfile += "ARG BASEIMAGE=non-single-container\n"
-						} else if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") == 0 && strings.Contains(line, "BASEIMAGE") {
-							dockerfile += line + "\n"
-						} else {
-							dockerfile += line + "\n"
-						}
-
-						// If there's a "\" then it's a multi-line command
-						if strings.Contains(line, "\\") {
-							for _, nextLine := range lines[index+1:] {
-								dockerfile += nextLine + "\n"
-								if !endsWithSlashRe.MatchString(nextLine) {
-									break
-								}
+					// If there's a "\" then it's a multi-line command
+					if strings.Contains(line, "\\") {
+						for _, nextLine := range lines[index+1:] {
+							dockerfile += nextLine + "\n"
+							if !endsWithSlashRe.MatchString(nextLine) {
+								break
 							}
 						}
 					}
 				}
 			}
 		}
-		if labelRecipeAddons == true {
-			dockerfile += "LABEL sas.recipe.addons=\"true\""
-		}
+	}
+	if labelRecipeAddons == true {
+		dockerfile += "LABEL sas.recipe.addons=\"true\""
 	}
 
 	return dockerfile, nil
