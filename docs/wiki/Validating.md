@@ -80,11 +80,14 @@ To verify that the single image pod of sas-programming is running in Kubernetes,
 Here are typical results:
 
 ```
-NAME                        TYPE           CLUSTER-IP    EXTERNAL-IP    PORT(S)           AGE
-service/sas-programming     ClusterIP      None          <none>         80/TCP,443/TCP    11d
+NAME                                         DATA   AGE
+configmap/sas-viya-single-programming-only   5      16m
 
-NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
-sas-programming         1/1     1            1           11d
+NAME                                       TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/sas-viya-single-programming-only   ClusterIP   None         <none>        80/TCP    16m
+
+NAME                                               READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/sas-viya-single-programming-only   1/1     1            1           16m
 ```
 
 **Tip:** Run the command from the directory where the programming.yml file is located. For a single image programming-only deployment, the Kubernetes manifests are located at $PWD/run/programming.yml. For a multiple image programming-only deployment, the manifests are located at $PWD/builds/multiple/manifests/kubernetes/deployments and for a full deployment, the manifests are located at $PWD/builds/full/manifests/kubernetes/deployments. Here is an example of how to run this command against a full build that wrote the manifests to the default manifest directory (This uses the default namespace of sas-viya but to know for sure which namespace to use, look at the yaml file in builds/\<type\>/kubernetes/namespace):
