@@ -47,6 +47,7 @@ import (
 	"os/user"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -86,23 +87,23 @@ type SoftwareOrder struct {
 	SkipDockerRegistryPush bool     `yaml:"Skip Docker Registry    "`
 
 	// Build attributes
-	Log          *os.File              `yaml:"-"`                        // File handle for log path
-	BuildContext context.Context       `yaml:"-"`                        // Background context
-	BuildOnly    []string              `yaml:"Build Only              "` // Only build these specific containers if they're in the list of entitled containers. The 'multiple' deployment type utilizes this to build only 3 images.
-	Containers   map[string]*Container `yaml:"-"`                        // Individual containers build list
-	Config       map[string]ConfigMap  `yaml:"-"`                        // Static values and defaults are loaded from the configmap yaml
-	ConfigPath   string                `yaml:"-"`                        // config-<deployment-type>.yml file for custom or static values
-	LogPath      string                `yaml:"-"`                        // Path to the build directory with the log file name
-	PlaybookPath string                `yaml:"-"`                        // Build path + "sas_viya_playbook"
-	KVStore      string                `yaml:"-"`                        // Combines all vars.yaml content
-	RegistryAuth string                `yaml:"-"`                        // Used to push and pull from/to a regitry
-	BuildPath    string                `yaml:"-"`                        // Kubernetes manifests are generated and placed into this location
-	CertBaseURL  string                `yaml:"-"`                        // The URL that the build containers will use to fetch their CA and entitlement certs
-	BuilderIP    string                `yaml:"-"`                        // IP of where images are being built to be used for generic hostname lookup for builder
-	BuilderPort  string                `yaml:"-"`                        // Port for serving certificate requests for builds
-	TimestampTag string                `yaml:"Timestamp Tag           "` // Allows for datetime on each temp build bfile
-	InDocker     bool                  `yaml:"-"`                        // If we are running in a docker container
-	ManifestDir  string                `yaml:"-"`                        // The name of the manifest directory. "manifests" is the default
+	Log          *os.File             `yaml:"-"`                        // File handle for log path
+	BuildContext context.Context      `yaml:"-"`                        // Background context
+	BuildOnly    []string             `yaml:"Build Only              "` // Only build these specific containers if they're in the list of entitled containers. The 'multiple' deployment type utilizes this to build only 3 images.
+	Containers   []*Container         `yaml:"-"`                        // Individual containers build list
+	Config       map[string]ConfigMap `yaml:"-"`                        // Static values and defaults are loaded from the configmap yaml
+	ConfigPath   string               `yaml:"-"`                        // config-<deployment-type>.yml file for custom or static values
+	LogPath      string               `yaml:"-"`                        // Path to the build directory with the log file name
+	PlaybookPath string               `yaml:"-"`                        // Build path + "sas_viya_playbook"
+	KVStore      string               `yaml:"-"`                        // Combines all vars.yaml content
+	RegistryAuth string               `yaml:"-"`                        // Used to push and pull from/to a regitry
+	BuildPath    string               `yaml:"-"`                        // Kubernetes manifests are generated and placed into this location
+	CertBaseURL  string               `yaml:"-"`                        // The URL that the build containers will use to fetch their CA and entitlement certs
+	BuilderIP    string               `yaml:"-"`                        // IP of where images are being built to be used for generic hostname lookup for builder
+	BuilderPort  string               `yaml:"-"`                        // Port for serving certificate requests for builds
+	TimestampTag string               `yaml:"Timestamp Tag           "` // Allows for datetime on each temp build bfile
+	InDocker     bool                 `yaml:"-"`                        // If we are running in a docker container
+	ManifestDir  string               `yaml:"-"`                        // The name of the manifest directory. "manifests" is the default
 
 	// Metrics
 	StartTime      time.Time      `yaml:"-"`
@@ -660,8 +661,17 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 		})
 		// Add a string to the right side of the progress bar
 		container.ProgressBar.AppendFunc(func(progress *uiprogress.Bar) string {
-			return fmt.Sprintf("%s (Layer %d/%d)", progress.CompletedPercentString(), container.CurrentLayer, container.LayerCount)
+			layerStringSpace := 0
+			if len(string(container.CurrentLayer)) == 1 {
+				layerStringSpace = 1
+			}
+			return fmt.Sprintf("%s (Layer %s%d/%d)",
+				progress.CompletedPercentString(),
+				strings.Repeat(" ", layerStringSpace),
+				container.CurrentLayer,
+				container.LayerCount)
 		})
+		container.ProgressBar.Empty = '_'
 
 		// Build
 		container.BuildStart = time.Now()
@@ -718,12 +728,12 @@ func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	// order.Containers object. For non-single builds, this is done in the
 	// getContainers method. That method is not called in a single image build
 	// so we need to do the following.
-	order.Containers = make(map[string]*Container)
 	container := Container{
 		Name:          "single-programming-only",
 		SoftwareOrder: order,
 		BaseImage:     order.BaseImage,
 	}
+	order.Containers = []*Container{&container}
 
 	dockerConnection, err := client.NewClientWithOpts(client.WithVersion(DockerAPIVersion))
 	if err != nil {
@@ -785,7 +795,6 @@ func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 		item.Status = DoNotBuild
 	}
 	container.Status = Loaded
-	order.Containers[container.Name] = &container
 	return nil
 }
 
@@ -806,21 +815,11 @@ func (order *SoftwareOrder) Build() error {
 	}
 
 	// Display a message about what will be seen during the build process
-	fmt.Println("")
-	if numberOfBuilds == 0 {
-		return errors.New("The number of builds are set to zero. " +
-			"An error in pre-build tasks may have occurred or the " +
-			"Software Order entitlement does not match the deployment type.")
-	} else if numberOfBuilds == 1 {
-		// Use the singular "process" instead of "processes"
-		order.WriteLog(true, true, "Starting "+strconv.Itoa(numberOfBuilds)+" build process ... (this may take several minutes)")
-	} else {
-		// Use the plural "processes" instead of "process"
-		order.WriteLog(true, true, "Starting "+strconv.Itoa(numberOfBuilds)+" build processes ... (this may take several minutes)")
-	}
-	fmt.Println("System resource utilization can be seen by using the `docker stats` command.")
-	fmt.Println(fmt.Sprintf("Verbose logging for each container is inside the builds/%s/<container-name>/log.txt file.\n",
-		order.DeploymentType))
+	displayProcessCount := fmt.Sprintf("\nStarting %s build processes. "+
+		"System resource utilization can be seen by using the `docker stats` command. "+
+		"Verbose logging for each container is inside the builds/%s/<container-name>/log.txt file.\n",
+		strconv.Itoa(numberOfBuilds)+order.DeploymentType)
+	order.WriteLog(true, true, displayProcessCount)
 
 	// Get the longest container name so the progress bar padding will be uniform
 	for _, container := range order.Containers {
@@ -834,6 +833,10 @@ func (order *SoftwareOrder) Build() error {
 	}
 
 	// Concurrently start each build process and start rendering the progress bars
+	//
+	sort.Slice(order.Containers, func(i, j int) bool {
+		return order.Containers[i].LayerCount < order.Containers[j].LayerCount
+	})
 	uiprogress.Start()
 	jobs := make(chan *Container, 100)
 	fail := make(chan string)
@@ -867,8 +870,8 @@ func (order *SoftwareOrder) Build() error {
 //
 // Read the sas_viya_playbook directory for the "group_vars" where each
 // file individually defines a host. There is one container per host.
-func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
-	containers := make(map[string]*Container)
+func getContainers(order *SoftwareOrder) ([]*Container, error) {
+	containers := []*Container{}
 
 	// These values are not added to the final hostGroup list result
 	var ignoredContainers = [...]string{
@@ -878,7 +881,7 @@ func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 
 	// The names inside the playbook's inventory file are mapped to hosts
 	// Narrow down the text to show only the sas-all section
-	inventoryBytes, err := ioutil.ReadFile(order.BuildPath + "sas_viya_playbook/" + "inventory.ini")
+	inventoryBytes, err := ioutil.ReadFile(order.BuildPath + "sas_viya_playbook/inventory.ini")
 	if err != nil {
 		return containers, err
 	}
@@ -916,7 +919,7 @@ func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 			BaseImage:     order.BaseImage,
 		}
 		container.Tag = container.GetTag()
-		containers[container.Name] = &container
+		containers = append(containers, &container)
 	}
 
 	return containers, nil
