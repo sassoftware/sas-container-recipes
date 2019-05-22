@@ -163,6 +163,10 @@ while [[ $# -gt 0 ]]; do
             export ORCHESTRATION_GLOBAL_OPTIONS="$1"
             shift # past value
             ;;
+        --skip-docker-in-docker)
+            shift # past argument
+            export SKIP_DOCKER_IN_DOCKER=true
+            ;;
         *) # Ignore everything that isn't a valid arg
             shift
     ;;
@@ -172,6 +176,7 @@ done
 # Set some defaults
 [[ -z ${CHECK_DOCKER_URL+x} ]]        && CHECK_DOCKER_URL=true
 [[ -z ${CHECK_MIRROR_URL+x} ]]        && CHECK_MIRROR_URL=false
+[[ -z ${SKIP_DOCKER_IN_DOCKER+x} ]]   && SKIP_DOCKER_IN_DOCKER=false
 
 git_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "no-git-sha")
 datetime=$(date "+%Y%m%d%H%M%S")
@@ -188,7 +193,11 @@ if [[ -n ${SAS_RPM_REPO_URL} ]]; then
 fi
 
 if [[ -n ${SAS_VIYA_DEPLOYMENT_DATA_ZIP} ]]; then
-    run_args="${run_args} --zip /$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP})"
+    if [[ $SKIP_DOCKER_IN_DOCKER == "false" ]]; then
+        run_args="${run_args} --zip /$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP})"
+    else
+        run_args="${run_args} --zip ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}"
+    fi
 fi
 
 if [[ -n ${SAS_RECIPE_TYPE} ]]; then
@@ -258,54 +267,64 @@ if [[ -n ${ORCHESTRATION_GLOBAL_OPTIONS} ]]; then
     run_args="${run_args} --orchestration-global-options ${ORCHESTRATION_GLOBAL_OPTIONS}"
 fi
 
-echo "==============================="
-echo "Building Docker Build Container"
-echo "==============================="
-echo
-DOCKER_GID=$(getent group docker|awk -F: '{print $3}')
-USER_GID=$(id -g)
-mkdir -p ${PWD}/builds
-docker build . \
-    --label sas.recipe=true \
-    --label sas.recipe.builder.version=${SAS_DOCKER_TAG} \
-    --build-arg USER_UID=${UID} \
-    --build-arg DOCKER_GID=${DOCKER_GID} \
-    --tag sas-container-recipes-builder:${SAS_DOCKER_TAG} \
-    --file Dockerfile \
-
-
-echo
-echo "=============================="
-echo "Running Docker Build Container"
-echo "=============================="
-echo
 # If a Docker config exists then run the builder with the config mounted as a volume.
 # Otherwise, not having a Docker config is acceptable if no registry authentication is required.
-DOCKER_CONFIG_PATH=${HOME}/.docker/config.json
-if [[ -f ${DOCKER_CONFIG_PATH} ]]; then
-    set -x
-    docker run -d \
-        --name ${SAS_BUILD_CONTAINER_NAME} \
-        -u ${UID}:${DOCKER_GID} \
-        -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
-        -v ${PWD}/builds:/sas-container-recipes/builds \
-        -v /var/run/docker.sock:/var/run/docker.sock \
-        -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
-        sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
-    set +x
+if [[ ${SKIP_DOCKER_IN_DOCKER} == "false" ]]; then
+    echo "==============================="
+    echo "Building Docker Build Container"
+    echo "==============================="
+    echo
+    DOCKER_GID=$(getent group docker|awk -F: '{print $3}')
+    USER_GID=$(id -g)
+    mkdir -p ${PWD}/builds
+    docker build . \
+        --label sas.recipe=true \
+        --label sas.recipe.builder.version=${SAS_DOCKER_TAG} \
+        --build-arg USER_UID=${UID} \
+        --build-arg DOCKER_GID=${DOCKER_GID} \
+        --tag sas-container-recipes-builder:${SAS_DOCKER_TAG} \
+        --file Dockerfile \
+
+    echo
+    echo "=============================="
+    echo "Running Docker Build Container"
+    echo "=============================="
+    echo
+    DOCKER_CONFIG_PATH=${HOME}/.docker/config.json
+    if [[ -f ${DOCKER_CONFIG_PATH} ]]; then
+        set -x
+        docker run -d \
+            --name ${SAS_BUILD_CONTAINER_NAME} \
+            -u ${UID}:${DOCKER_GID} \
+            -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
+            -v ${PWD}/builds:/sas-container-recipes/builds \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
+            sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
+        set +x
+    else
+        docker run -d \
+            --name ${SAS_BUILD_CONTAINER_NAME} \
+            -u ${UID}:${DOCKER_GID} \
+            -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
+            -v ${PWD}/builds:/sas-container-recipes/builds \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
+    fi
+    docker logs -f ${SAS_BUILD_CONTAINER_NAME}
+
+
+    # Clean up and exit
+    build_container_exit_status=$(docker inspect ${SAS_BUILD_CONTAINER_NAME} --format='{{.State.ExitCode}}')
+    docker rm ${SAS_BUILD_CONTAINER_NAME}
 else
-    docker run -d \
-        --name ${SAS_BUILD_CONTAINER_NAME} \
-        -u ${UID}:${DOCKER_GID} \
-        -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
-        -v ${PWD}/builds:/sas-container-recipes/builds \
-        -v /var/run/docker.sock:/var/run/docker.sock \
-        sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
+    echo
+    echo "=============================="
+    echo "Running image creation process"
+    echo "=============================="
+    echo
+    go run main.go container.go order.go ${run_args}
+    build_container_exit_status=$?
 fi
-docker logs -f ${SAS_BUILD_CONTAINER_NAME}
 
-
-# Clean up and exit
-build_container_exit_status=$(docker inspect ${SAS_BUILD_CONTAINER_NAME} --format='{{.State.ExitCode}}')
-docker rm ${SAS_BUILD_CONTAINER_NAME}
 exit ${build_container_exit_status}
