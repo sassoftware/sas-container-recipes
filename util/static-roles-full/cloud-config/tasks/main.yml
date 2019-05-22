@@ -17,9 +17,15 @@
   - { name: sas-consul, path: "bin", mode: "0755" }
   - { name: setup_rds_postgres.sh, path: "bin", mode: "0755" }
 
-- name: Define fact that contains the list of images that need to run as root
-  debug:
-    var: container_name
+- name: Copy sas-viya-all-services to remote host
+  copy:
+    src: "{{ item.name }}"
+    dest: "/etc/init.d/{{ item.name }}"
+    owner: "{{ INSTALL_USER }}"
+    group: "{{ INSTALL_GROUP }}"
+    mode: "{{ item.mode }}"
+  with_items:
+  - { name: sas-viya-all-services, mode: "0755" }
 
 - name: modify sas-init-functions
   lineinfile:

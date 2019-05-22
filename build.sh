@@ -102,7 +102,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -k|--skip-mirror-url-validation)
             shift # past argument
-            CHECK_MIRROR_URL=false
+	    echo -e "\nNote: -k|--skip-mirror-url-validation has been deprecated. This function is no longer performed and its usage can be ignored.\n"
             ;;
         -d|--skip-docker-url-validation)
             shift # past argument
@@ -239,10 +239,6 @@ fi
 
 if [[ ${CHECK_DOCKER_URL} == false ]]; then
     run_args="${run_args} --skip-docker-url-validation"
-fi
-
-if [[ ${CHECK_MIRROR_URL} == false ]]; then
-    run_args="${run_args} --skip-mirror-url-validation"
 fi
 
 if [[ ${GENERATE_MANIFESTS_ONLY} == true ]]; then
