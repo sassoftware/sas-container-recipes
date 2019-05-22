@@ -93,7 +93,7 @@ After the launchsas.sh command is completed, use `docker ps` to list the running
 
 ### Sign In to SAS Studio
 
-Go to `http://<myhostname>:8081`, and then sign in with the sasdemo user ID and the sasdemo password to start using SAS Studio! 
+Go to `http://<myhostname>:8080`, and then sign in with the sasdemo user ID and the sasdemo password to start using SAS Studio! 
 
 <img src="docs/sas-logon-screen-sasdemo.png" alt="SAS Logon Screen" style="width: 80%; height: 80%; object-fit: contain;">
 

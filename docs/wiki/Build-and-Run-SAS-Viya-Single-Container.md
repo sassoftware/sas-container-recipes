@@ -310,7 +310,9 @@ sed -i 's|@REPLACE_ME_WITH_TAG@|<tag>|' ${PWD}/run/launchsas.sh
 cd run
 ```
 
-**Note:** Replace _<tag>_ with the value that you want to use.
+**Note:** 
+- Replace `<tag>` with the tag value of the sas-viya-single-programming-only image. To retrieve the tag value, run the `docker images` command.
+- By default, the user account for the CAS administrator (the CASENV_ADMIN_USER variable) is sasdemo. If you built the image with the auth-sssd addon or customized the user in the auth-demo addon, make sure to specify a valid user name for the CASENV_ADMIN_USER variable.
 
 When the script is run, it will create several directories for you. These are set up either to cause data to persist or to help with [configuration](#configuration). 
 

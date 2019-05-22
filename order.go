@@ -1646,6 +1646,9 @@ cp samples/viya-single-container/example_launchsas.sh run/launchsas.sh
 cd run
 sed -i 's|@REPLACE_ME_WITH_TAG@|%s|' launchsas.sh
 ./launchsas.sh
+
+Note: If you used the auth-sssd addon or customised the user in the auth-demo addon, 
+      make sure to update the CASENV_ADMIN_USER in run/launchsas.sh to contain a valid username.
 `, order.TagOverride)
 		order.WriteLog(true, nextStepInstructions)
 
