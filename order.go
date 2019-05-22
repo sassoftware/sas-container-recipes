@@ -64,22 +64,23 @@ var ConfigPath = "config-full.yml"
 type SoftwareOrder struct {
 
 	// Build arguments and flags (see order.LoadCommands for details)
-	BaseImage             string   `yaml:"Base Image              "`
-	MirrorURL             string   `yaml:"Mirror URL              "`
-	VirtualHost           string   `yaml:"Virtual Host            "`
-	DockerNamespace       string   `yaml:"Docker Namespace        "`
-	DockerRegistry        string   `yaml:"Docker Registry         "`
-	DeploymentType        string   `yaml:"Deployment Type         "`
-	Platform              string   `yaml:"Platform                "`
-	ProjectName           string   `yaml:"Project Name            "`
-	TagOverride           string   `yaml:"Tag Override            "`
-	AddOns                []string `yaml:"AddOns                  "`
-	DebugContainers       []string `yaml:"Debug Containers        "`
-	WorkerCount           int      `yaml:"Worker Count            "`
-	Verbose               bool     `yaml:"Verbose                 "`
-	SkipMirrorValidation  bool     `yaml:"Skip Mirror Validation  "`
-	SkipDockerValidation  bool     `yaml:"Skip Docker Validation  "`
-	GenerateManifestsOnly bool     `yaml:"Generate Manifests Only "`
+	BaseImage                    string   `yaml:"Base Image                        "`
+	MirrorURL                    string   `yaml:"Mirror URL                        "`
+	VirtualHost                  string   `yaml:"Virtual Host                      "`
+	DockerNamespace              string   `yaml:"Docker Namespace                  "`
+	DockerRegistry               string   `yaml:"Docker Registry                   "`
+	DeploymentType               string   `yaml:"Deployment Type                   "`
+	Platform                     string   `yaml:"Platform                          "`
+	ProjectName                  string   `yaml:"Project Name                      "`
+	TagOverride                  string   `yaml:"Tag Override                      "`
+	AddOns                       []string `yaml:"AddOns                            "`
+	DebugContainers              []string `yaml:"Debug Containers                  "`
+	WorkerCount                  int      `yaml:"Worker Count                      "`
+	Verbose                      bool     `yaml:"Verbose                           "`
+	SkipMirrorValidation         bool     `yaml:"Skip Mirror Validation            "`
+	SkipDockerValidation         bool     `yaml:"Skip Docker Validation            "`
+	GenerateManifestsOnly        bool     `yaml:"Generate Manifests Only           "`
+	OrchestrationGlobalOptions   string   `yaml:"Orchestration CLI Global Options  "`
 
 	// Build attributes
 	Log          *os.File              `yaml:"-"`                        // File handle for log path
@@ -258,8 +259,10 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	workerCount++
 	go order.LoadSiteDefault(progress, fail, done)
 
-	workerCount++
-	go order.LoadPlaybook(progress, fail, done)
+	if order.DeploymentType != "single" {
+		workerCount++
+		go order.LoadPlaybook(progress, fail, done)
+	}
 
 	workerCount++
 	go order.LoadLicense(progress, fail, done)
@@ -434,6 +437,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	skipDockerValidation := flag.Bool("skip-docker-url-validation", false, "")
 	generateManifestsOnly := flag.Bool("generate-manifests-only", false, "")
 	builderPort := flag.String("builder-port", "1976", "")
+	orchestrationGlobalOptions := flag.String("orchestration-global-options", "", "")
 
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU()
@@ -496,6 +500,20 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.SOEZipPath = *license
 	if !strings.HasSuffix(order.SOEZipPath, ".zip") && !order.GenerateManifestsOnly {
 		return errors.New("the Software Order Email (SOE) argument '--zip' must be a file with the '.zip' extension.")
+	}
+
+	*orchestrationGlobalOptions = strings.TrimSpace(*orchestrationGlobalOptions)
+	if *orchestrationGlobalOptions != "" {
+		log.Println(*orchestrationGlobalOptions)
+		spaces, _ := regexp.Compile("[ ,]+") // match spaces or commas
+		optionsGlobalString := spaces.ReplaceAllString(strings.TrimSpace(*orchestrationGlobalOptions), " ")
+
+		optionsGlobalList := strings.Split(optionsGlobalString, " ")
+		for _, option := range optionsGlobalList {
+			log.Println(option)
+			order.OrchestrationGlobalOptions += "--java-option -D" + option + " "
+		}
+		log.Println(order.OrchestrationGlobalOptions)
 	}
 
 	// Optional: Parse the list of addons
@@ -654,6 +672,11 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 // then do a docker build with the base image and platform build arguments
 // TODO: using license in RUN layers and mounting as volume?
 func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
+	// In the case of the sinlge container, we will define the memory for the
+	// order.Containers object. For non-single builds, this is done in the
+	// getContainers method. That method is not called in a single image build
+	// so we need to do the following.
+	order.Containers = make(map[string]*Container)
 	container := Container{
 		Name:          "single-programming-only",
 		SoftwareOrder: order,
@@ -1101,7 +1124,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	if order.DeploymentType == "multiple" {
 		generatePlaybookCommand += " --deployment-type programming"
 	}
-	
+
 	// The following is to fully provide the output of anything that goes wrong
 	// when generating the playbook.
 	cmd := exec.Command("sh", "-c", generatePlaybookCommand)

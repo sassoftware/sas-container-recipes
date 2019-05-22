@@ -158,6 +158,11 @@ while [[ $# -gt 0 ]]; do
             export WORKERS="$1"
             shift # past value
             ;;
+        --orchestration-global-options)
+            shift # past argument
+            export ORCHESTRATION_GLOBAL_OPTIONS="$1"
+            shift # past value
+            ;;
         *) # Ignore everything that isn't a valid arg
             shift
     ;;
@@ -249,6 +254,10 @@ if [[ -n ${BUILD_ONLY} ]]; then
     run_args="${run_args} --build-only ${BUILD_ONLY}"
 fi
 
+if [[ -n ${ORCHESTRATION_GLOBAL_OPTIONS} ]]; then
+    run_args="${run_args} --orchestration-global-options ${ORCHESTRATION_GLOBAL_OPTIONS}"
+fi
+
 echo "==============================="
 echo "Building Docker Build Container"
 echo "==============================="
@@ -273,7 +282,8 @@ echo
 # If a Docker config exists then run the builder with the config mounted as a volume.
 # Otherwise, not having a Docker config is acceptable if no registry authentication is required.
 DOCKER_CONFIG_PATH=${HOME}/.docker/config.json
-if [[ -f ${DOCKER_CONFIG_PATH} ]]; then 
+if [[ -f ${DOCKER_CONFIG_PATH} ]]; then
+    set -x
     docker run -d \
         --name ${SAS_BUILD_CONTAINER_NAME} \
         -u ${UID}:${DOCKER_GID} \
@@ -282,7 +292,8 @@ if [[ -f ${DOCKER_CONFIG_PATH} ]]; then
         -v /var/run/docker.sock:/var/run/docker.sock \
         -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
         sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
-else 
+    set +x
+else
     docker run -d \
         --name ${SAS_BUILD_CONTAINER_NAME} \
         -u ${UID}:${DOCKER_GID} \

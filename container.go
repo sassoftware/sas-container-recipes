@@ -302,6 +302,9 @@ func (container *Container) GetBuildArgs() {
 	buildArgs["PLAYBOOK_SRV"] = &container.SoftwareOrder.CertBaseURL
 	buildArgs["SAS_RPM_REPO_URL"] = &container.SoftwareOrder.MirrorURL
 
+	if container.SoftwareOrder.DeploymentType == "single" {
+		buildArgs["ORCHESTRATION_GLOBAL_OPTIONS"] = &container.SoftwareOrder.OrchestrationGlobalOptions
+	}
 	container.WriteLog(container.BuildArgs)
 	container.BuildArgs = buildArgs
 }

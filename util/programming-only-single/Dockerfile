@@ -27,10 +27,11 @@ FROM $BASE
 
 ARG PLATFORM=redhat
 ENV PLATFORM=$PLATFORM
-ARG ANSIBLE_VERSION=2.4.1
+ARG ANSIBLE_VERSION=2.7
 ARG TINI_RPM_NAME=tini_0.18.0.rpm
 ARG TINI_URL=https://github.com/krallin/tini/releases/download/v0.18.0
 ARG SAS_RPM_REPO_URL=https://ses.sas.download/ses/
+ARG ORCHESTRATION_GLOBAL_OPTIONS=""
 
 USER root
 WORKDIR /tmp/sas
@@ -127,7 +128,8 @@ RUN set -e; \
             echo; echo "####### Get the orchestrationCLI and generate the playbook"; echo; \
             curl --silent --remote-name https://support.sas.com/installation/viya/34/sas-orchestration-cli/lax/sas-orchestration-linux.tgz ; \
             tar xvf sas-orchestration-linux.tgz; \
-            ./sas-orchestration build --input SAS_Viya_deployment_data.zip --deployment-type programming --repository-warehouse $SAS_RPM_REPO_URL --platform $PLATFORM; \
+            echo; echo "ORCHESTRATION_GLOBAL_OPTIONS=${ORCHESTRATION_GLOBAL_OPTIONS}"; \
+            ./sas-orchestration ${ORCHESTRATION_GLOBAL_OPTIONS} build --input SAS_Viya_deployment_data.zip --deployment-type programming --repository-warehouse $SAS_RPM_REPO_URL --platform $PLATFORM; \
             tar xvf SAS_Viya_playbook.tgz; \
         else \
             echo; echo "####### For the platform $PLATFORM we cannot generate the playbook as part of the Docker build"; \
