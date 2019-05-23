@@ -190,11 +190,11 @@ SAS Viya supports encrypted connections between the LDAP client and server. To c
 
 If the deployment manifests that were generated in builds/full/manifests or builds/multiple/manifests need to be updated, perform the following post-build steps to regenerate the manifests without re-running the entire build process. 
 
-1. (Optional) To provide custom configuration, edit the manifests_usermods.yml file 
+1. If you want to provide custom configuration, edit the manifests_usermods.yml file 
 in the sas-container-recipes project directory. For more information, see 
 [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task).
 
-1. (Optional) To provide an updated sitedefault.yml file, the file must first be base64 encoded, and then added to the `custom_services:` section of the manifests_usermods.yml file: 
+1. If you want to provide an updated sitedefault.yml file, the file must first be base64 encoded, and then added to the `custom_services:` section of the manifests_usermods.yml file: 
     
     ```
     ## change to the container recipe folder
@@ -223,13 +223,13 @@ in the sas-container-recipes project directory. For more information, see
     
     **Note:** The preceding configuration adds a new `custom_services:` section to the manifests_usermods.yml file. If this section already exists, you must manually add all the unique lines shown above for `custom_services:` to the existing section, and then remove the new `custom_services:` section that is added.
 
-2. Provide the `--generate-manifests-only` argument and the previous build's 
-deployment type to the build script. For example, 
-`./build.sh --generate-manifests-only --type full`.
-3. New manifests will be generated in builds/full/manifests/ or 
-builds/multiple/manifests/, depending on your deployment type.
+1. Execute the build script with the `--generate-manifests-only` argument and the deployment type of the previous build.
 
-**Note:** The symbolic link for builds/full or builds/multiple will point 
+   Here is an example of executing the script with the `--type full` deployment type.
+   
+   `./build.sh --generate-manifests-only --type full`
+ 
+   **Note:** Depending on the deployment type, the new manifests will be generated in the builds/full/manifests/ or builds/multiple/manifests/ directory. The symbolic link for builds/full or builds/multiple will point 
 to the most recent timestamped build directory, such as 
 builds/multiple-2019-04-10-15-27-56. Regenerating the manifests will not make 
 a new timestamped builds/full or builds/multiple directory. If you generate the
@@ -242,7 +242,7 @@ By default, the CAS deployment is set up as SMP. If a MPP environment is needed,
 
 * If you have not yet deployed the environment, regenerate manifests. See [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) for information about editing the manifests_usermods.yml file to support MPP mode.
 * If you have already deployed the environment:
-    1. Scale down the controller to 0: 
+    1. Scale down the CAS controller to 0: 
 
         `kubectl -n <k8s namespace> scale statefulsets sas-viya-cas --replicas=0`
 
@@ -250,13 +250,17 @@ By default, the CAS deployment is set up as SMP. If a MPP environment is needed,
 
         `kubectl -n <k8s namespace> edit configmap sas-viya-cas`
 
-    1. Scale up the controller to 1: 
+    1. Scale up the CAS controller to 1: 
 
         `kubectl -n <k8s namespace> scale statefulsets sas-viya-cas --replicas=1`
 
-    1. Scale up the workers: 
+    1. Scale up the CAS workers: 
 
         `kubectl -n <k8s namespace> scale deployment.v1.apps/sas-viya-cas-worker --replicas=3`
+
+  **Important:**
+  - When scaling CAS workers, be aware that data will not automatically be reloaded to either take advantage of new CAS workers just added to the cluster or remove data before a CAS worker is removed from the cluster. If you scale up the CAS workers, you will need to reload the data in order to distribute it.
+  - It is strongly recommended that you do not set up auto-scaling rules.
 
 ## (Optional) Verify Bulk Loaded Configuration
 
