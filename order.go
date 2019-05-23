@@ -655,23 +655,35 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 
 		// Configure the progress bar
 		container.ProgressBar = uiprogress.AddBar(container.LayerCount)
-		// Add a string to the left side of the progress bar
+		container.ProgressBar.Width = 60
+		container.ProgressBar.Empty = '_'
 		container.ProgressBar.PrependFunc(func(progress *uiprogress.Bar) string {
-			return fmt.Sprintf("%s %s(%s)", container.Name, strings.Repeat(" ", LongestContainerName-len(container.Name)), container.GetStatus())
+			// Format everything at the front of the progress bar
+			return fmt.Sprintf("%s %s%s",
+				container.Name,
+				strings.Repeat(" ", LongestContainerName-len(container.Name)), // Padding after name to keep them the same length
+				container.GetStatus())
 		})
-		// Add a string to the right side of the progress bar
 		container.ProgressBar.AppendFunc(func(progress *uiprogress.Bar) string {
+			// Format everything at the end of the progress bar
+			// Determine how much padding to add between "xx/yy" for the layer count
 			layerStringSpace := 0
 			if len(string(container.CurrentLayer)) == 1 {
 				layerStringSpace = 1
 			}
-			return fmt.Sprintf("%s (Layer %s%d/%d)",
-				progress.CompletedPercentString(),
+
+			// Append the final image size if has finished building
+			imageSize := ""
+			if bytesToGB(container.ImageSize) != "0.00 GB" {
+				imageSize = fmt.Sprintf(" (%s)", bytesToGB(container.ImageSize))
+			}
+
+			return fmt.Sprintf("%s%d/%d%s",
 				strings.Repeat(" ", layerStringSpace),
 				container.CurrentLayer,
-				container.LayerCount)
+				container.LayerCount,
+				imageSize)
 		})
-		container.ProgressBar.Empty = '_'
 
 		// Build
 		container.BuildStart = time.Now()
@@ -815,10 +827,10 @@ func (order *SoftwareOrder) Build() error {
 	}
 
 	// Display a message about what will be seen during the build process
-	displayProcessCount := fmt.Sprintf("\nStarting %s build processes. "+
-		"System resource utilization can be seen by using the `docker stats` command. "+
+	displayProcessCount := fmt.Sprintf("Starting %s build processes.\n"+
+		"System resource utilization can be seen by using the `docker stats` command.\n"+
 		"Verbose logging for each container is inside the builds/%s/<container-name>/log.txt file.\n",
-		strconv.Itoa(numberOfBuilds)+order.DeploymentType)
+		strconv.Itoa(numberOfBuilds), order.DeploymentType)
 	order.WriteLog(true, true, displayProcessCount)
 
 	// Get the longest container name so the progress bar padding will be uniform
@@ -833,7 +845,7 @@ func (order *SoftwareOrder) Build() error {
 	}
 
 	// Concurrently start each build process and start rendering the progress bars
-	//
+	// Sort the containers by layer count ascending
 	sort.Slice(order.Containers, func(i, j int) bool {
 		return order.Containers[i].LayerCount < order.Containers[j].LayerCount
 	})
@@ -1658,13 +1670,14 @@ func (order *SoftwareOrder) Finish() {
 	}
 }
 
-// Helper function to convert an image size to a human readable value
+// bytesToGB is a helper function to convert an image size to a human readable value
 func bytesToGB(bytes int64) string {
 	return fmt.Sprintf("%.2f GB", float64(bytes)/float64(1000000000))
 }
 
 // ShowSummary displays metrics and next steps for deployment
 func (order *SoftwareOrder) ShowSummary() error {
+	// Display the unique instructions for running the single container
 	if order.DeploymentType == "single" {
 
 		nextStepInstructions := "\n" + fmt.Sprintf(`Run the following to start the container:
@@ -1682,32 +1695,14 @@ sed -i 's|@REPLACE_ME_WITH_TAG@|%s|' launchsas.sh
 		return nil
 	}
 
-	if !order.GenerateManifestsOnly {
-		// Special case where the single deployment does not use the order.Containers list
-		// Print each container's metrics in a table
-		summaryHeader := fmt.Sprintf("\n%s  Summary  ( %s, %s ) %s", strings.Repeat("-", 23),
-			order.EndTime.Sub(order.StartTime).Round(time.Second),
-			bytesToGB(order.TotalBuildSize),
-			strings.Repeat("-", 23))
-		fmt.Println(summaryHeader)
-		order.WriteLog(false, false, summaryHeader)
-		for _, container := range order.Containers {
-			if container.Status == Pushed {
-				output := fmt.Sprintf("%s\n\tSize: %s\tBuild Time: %s\tPush Time: %s",
-					container.GetWholeImageName(),
-					bytesToGB(container.ImageSize),
-					container.BuildEnd.Sub(container.BuildStart).Round(time.Second),
-					container.PushEnd.Sub(container.PushStart).Round(time.Second))
-				fmt.Println(output)
-				order.WriteLog(false, false, output)
-			}
-		}
+	// Output all the container names and sizes to the build log
+	finalOutput := ""
+	for _, container := range order.Containers {
+		finalOutput += fmt.Sprintf("%s, %s\n", container.Name, bytesToGB(container.ImageSize))
 	}
+	order.WriteLog(false, false, finalOutput)
 
-	lineSeparator := strings.Repeat("-", 79)
-	fmt.Println(lineSeparator)
-	order.WriteLog(false, false, lineSeparator)
-
+	// Display details on how to deploy to Kubernetes
 	// TODO: Make the list of directories reflective of the manifests generated.
 	//       In a TLS build there will be an account type. Also, the "manifests"
 	//       directory and Kubernetes namespaces are changeable. Should probably
@@ -1815,9 +1810,6 @@ The images that need to be pushed are referenced in
 		fmt.Println(dockerPushFileInstructions)
 		order.WriteLog(true, false, dockerPushFileInstructions)
 	}
-
-	fmt.Println(lineSeparator)
-	order.WriteLog(true, false, lineSeparator)
 
 	return nil
 }

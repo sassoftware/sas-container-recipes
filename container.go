@@ -166,7 +166,7 @@ func (container *Container) GetStatus() string {
 	case 10:
 		return "Pushed  "
 	case 11:
-		return "  DONE  "
+		return "DONE    "
 	default:
 		return "Unknown "
 	}
