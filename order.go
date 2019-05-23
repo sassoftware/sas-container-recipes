@@ -647,6 +647,8 @@ func (order *SoftwareOrder) LoadCommands() error {
 // Used to determine how much padding should be on the progress bar
 var LongestContainerName = 0
 
+const ProgressBarWidth = 60
+
 func buildWorker(id int, containers <-chan *Container, done chan<- string, progress chan string, fail chan string) {
 	for container := range containers {
 		if container.Status != Loaded {
@@ -655,7 +657,7 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 
 		// Configure the progress bar
 		container.ProgressBar = uiprogress.AddBar(container.LayerCount)
-		container.ProgressBar.Width = 60
+		container.ProgressBar.Width = ProgressBarWidth
 		container.ProgressBar.Empty = '_'
 		container.ProgressBar.PrependFunc(func(progress *uiprogress.Bar) string {
 			// Format everything at the front of the progress bar
@@ -826,14 +828,8 @@ func (order *SoftwareOrder) Build() error {
 		}
 	}
 
-	// Display a message about what will be seen during the build process
-	displayProcessCount := fmt.Sprintf("Starting %s build processes.\n"+
-		"System resource utilization can be seen by using the `docker stats` command.\n"+
-		"Verbose logging for each container is inside the builds/%s/<container-name>/log.txt file.\n",
-		strconv.Itoa(numberOfBuilds), order.DeploymentType)
-	order.WriteLog(true, true, displayProcessCount)
-
 	// Get the longest container name so the progress bar padding will be uniform
+	// then sort the containers by layer count ascending, write the header, and start rendering
 	for _, container := range order.Containers {
 		if container.Status == DoNotBuild {
 			continue
@@ -843,13 +839,23 @@ func (order *SoftwareOrder) Build() error {
 			LongestContainerName = nameLength
 		}
 	}
-
-	// Concurrently start each build process and start rendering the progress bars
-	// Sort the containers by layer count ascending
 	sort.Slice(order.Containers, func(i, j int) bool {
 		return order.Containers[i].LayerCount < order.Containers[j].LayerCount
 	})
+
+	// Display a message about what will be seen during the build process
+	displayProcessCount := fmt.Sprintf("Starting %s build processes.\n"+
+		"System resource utilization can be seen by using the `docker stats` command.\n"+
+		"Verbose logging for each container is inside the builds/%s/<container-name>/log.txt file.\n\n"+
+		"NAME%sSTATUS%sLAYER",
+		strconv.Itoa(numberOfBuilds),
+		order.DeploymentType,
+		strings.Repeat(" ", LongestContainerName-3),
+		strings.Repeat(" ", ProgressBarWidth+5))
+	order.WriteLog(true, true, displayProcessCount)
 	uiprogress.Start()
+
+	// Concurrently start each build proceses
 	jobs := make(chan *Container, 100)
 	fail := make(chan string)
 	done := make(chan string)
