@@ -1169,15 +1169,6 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 
 	// Run the orchestration tool to make the playbook
 	progress <- "Generating playbook for order ..."
-	generatePlaybookCommand := fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz", order.SOEZipPath, order.BuildPath)
-	if order.DeploymentType == "multiple" {
-		generatePlaybookCommand = fmt.Sprintf("util/sas-orchestration build --input %s --output %ssas_viya_playbook.tgz --deployment-type programming", order.SOEZipPath, order.BuildPath)
-	}
-	_, err = exec.Command("sh", "-c", generatePlaybookCommand).Output()
-	if err != nil {
-		fail <- "[ERROR]: Unable to generate the playbook. java-1.8.0-openjdk or another Java Runtime Environment (1.8.x) must be installed. " +
-			err.Error() + "\n" + generatePlaybookCommand
-	}
 	commandBuilder := []string{"util/sas-orchestration build"}
 	commandBuilder = append(commandBuilder, "--platform redhat")
 	commandBuilder = append(commandBuilder, "--input "+order.SOEZipPath)
@@ -1209,7 +1200,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 			result := scanner.Text()
 			progress <- fmt.Sprintf("Generate playbook output | %s", result)
 			if strings.Contains(result, "Connection refused") || strings.Contains(result, "No route to host") {
-				progress <- fmt.Sprintf("Error: unable to generate the playbook. The mirror URL provided by '--mirror-url %s' did not point to a host with an accessible mirrormgr repository. The ip, hostname, or port may be incorrect.\n", order.MirrorURL)
+				progress <- fmt.Sprintf("Error: unable to generate the playbook. The mirror URL provided by '--mirror-url %s' did not point to a host with an accessible mirrormgr repository. The IP address, hostname, or port might be incorrect.\n", order.MirrorURL)
 			}
 		}
 	}()
@@ -1691,6 +1682,9 @@ cp samples/viya-single-container/example_launchsas.sh run/launchsas.sh
 cd run
 sed -i 's|@REPLACE_ME_WITH_TAG@|%s|' launchsas.sh
 ./launchsas.sh
+
+Note: If you used the auth-sssd addon or customised the user in the auth-demo addon, 
+      make sure to update the CASENV_ADMIN_USER in run/launchsas.sh to contain a valid username.
 `, order.TagOverride)
 		order.WriteLog(true, true, nextStepInstructions)
 

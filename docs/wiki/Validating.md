@@ -1,7 +1,7 @@
 ## Contents
 
 - [Validate a Docker Deployment](#validate-a-docker-deployment)
-- [Validate a Kubernetes Deployment](#validate-a-kubernetes-deployment)
+- [Validate Running Images in Kubernetes](#validate-running-images-in-kubernetes)
 - [Sign In to Your Version of SAS Studio](#sign-in-to-your-version-of-sas-studio)
 - [Access SAS Environment Manager](#access-sas-environment-manager)
 - [Access SAS Logon and SAS Drive](#access-sas-logon-and-sas-drive)
@@ -62,7 +62,7 @@ If the image is not running, here are several recovery actions that you can perf
     --env CASENV_CASPERMSTORE=/cas/permstore
     --env SAS_DEBUG=1
     --publish-all
-    ...    
+    ...
     ```
 
     3. Launch the script with the following command.
@@ -71,23 +71,34 @@ If the image is not running, here are several recovery actions that you can perf
 
     4. Using the vi editor, you can view the scripts in the container and work through the errors.
 
-## Validate a Kubernetes Deployment
+## Validate Running Images in Kubernetes
 
-To verify that the sas-programming process is running in Kubernetes, run the following command:
+Here is an example for validating that a single image pod of sas-programming is running in Kubernetes:
 
-`kubectl get -f sas-programming.yml`
+`kubectl get -f run/programming.yml`
+
+For a single-container deployment, run the command from the directory where the programming.yml file is located: $PWD/run/programming.yml.
 
 Here are typical results:
 
 ```
-NAME                        TYPE           CLUSTER-IP    EXTERNAL-IP    PORT(S)           AGE
-service/sas-programming     ClusterIP      None          <none>         80/TCP,443/TCP    11d
+NAME                                         DATA   AGE
+configmap/sas-viya-single-programming-only   5      16m
 
-NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
-sas-programming         1/1     1            1           11d
+NAME                                       TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/sas-viya-single-programming-only   ClusterIP   None         <none>        80/TCP    16m
+
+NAME                                               READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/sas-viya-single-programming-only   1/1     1            1           16m
 ```
 
-**Tip:** Run the command from the directory where the sas-programming.yml file is located. For a programming-only deployment, the Kubernetes manifests are located at $PWD/builds/multiple/manifests/ and for a full deployment, the manifests are located at $PWD/builds/full/manifests/.
+Here is an example for validating running images for a `--type full` build. In this example, the default namespace and manifests directory are shown: sas-viya and builds/full/manifests/kubernetes/deployments/, repectively.
+
+`kubectl -n sas-viya get -f builds/full/manifests/kubernetes/deployments/`
+
+**Tips:** 
+- For a `--type multiple` build, the default manifests directory is $PWD/builds/multiple/manifests/kubernetes/deployments.
+- To find the namespace, locate the related yaml file in the $PWD/builds/full/kubernetes/namespace or $PWD/builds/multiple/kubernetes/namespace directory.
 
 If you do not get the results that you expect, run the following command to enable the DEBUG option to provide more information:
 
@@ -117,7 +128,7 @@ The version of SAS Studio that you are using depends on which type of deployment
       `https://docker-host:8443/SASStudio`
 
     - For SAS Studio 4.4 via Kubernetes:
-      
+
       `https://ingress-path/SASStudio`
 
     - For SAS Studio 5.1:
@@ -126,7 +137,7 @@ The version of SAS Studio that you are using depends on which type of deployment
 
 1. Sign in using the credentials for your operating system account.
 
-**Notes:** 
+**Notes:**
 
 - To sign out from SAS Studio, click **Sign Out** on the toolbar. Do not use the **Back** button on your web browser.
 - Make a note of the correct URL for your environment to share with any other users of your SAS Viya software.
@@ -153,13 +164,13 @@ The version of SAS Studio that you are using depends on which type of deployment
 
 ## Access CAS Server Monitor
 
-**Note:** This section is applicable only if you are using a programming-only deployment. Skip this section if you are using a full deployment. 
+**Note:** This section is applicable only if you are using a programming-only deployment. Skip this section if you are using a full deployment.
 
 1. To verify that CAS Server Monitor has been successfully deployed, access it by opening a web browser and entering the URL in the address field in one of the following formats:
 
     - For Docker deployment running on port 8443:
 
-      `https://docker-host:8443/cas-shared-default-http`  
+      `https://docker-host:8443/cas-shared-default-http`
 
       Here is an example:
 
@@ -181,7 +192,7 @@ The version of SAS Studio that you are using depends on which type of deployment
 
 1. Go to the [Validating the Deployment](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&docsetTarget=n18cthgsfyxndyn1imqkbfjisxsv.htm&docsetVersion=3.4) section in the SAS Viya 3.4 for Linux: Deployment Guide.
 
-1. Locate and open the topic that corresponds to the SAS/ACCESS product that you want to validate. For example, if you want to validate access to Greenplum, go to the topic: _Verify SAS/ACCESS Interface to Greenplum_.  
+1. Locate and open the topic that corresponds to the SAS/ACCESS product that you want to validate. For example, if you want to validate access to Greenplum, go to the topic: _Verify SAS/ACCESS Interface to Greenplum_.
 
 1. Review the topic and copy the code within the topic to your clipboard.
 
@@ -208,7 +219,7 @@ The version of SAS Studio that you are using depends on which type of deployment
 
     - Note: When the snippet is added it will display
       ```
-      options cashost="<cas server name>" casport=<port number>; 
+      options cashost="<cas server name>" casport=<port number>;
       ```
-      - For single image builds, use localhost and 5570 for the "cas server name" and "port number" respectively. 
+      - For single image builds, use localhost and 5570 for the "cas server name" and "port number" respectively.
       - For multiple and full deployments, use sas-viya-cas and 5570 for the "cas server name" and "port number" respectively.
