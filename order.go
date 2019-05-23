@@ -78,7 +78,6 @@ type SoftwareOrder struct {
 	ProjectName            string   `yaml:"Project Name            "`
 	TagOverride            string   `yaml:"Tag Override            "`
 	AddOns                 []string `yaml:"AddOns                  "`
-	DebugContainers        []string `yaml:"Debug Containers        "`
 	WorkerCount            int      `yaml:"Worker Count            "`
 	SkipMirrorValidation   bool     `yaml:"Skip Mirror Validation  "`
 	SkipDockerValidation   bool     `yaml:"Skip Docker Validation  "`
