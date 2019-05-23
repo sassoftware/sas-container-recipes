@@ -383,8 +383,7 @@ func (container *Container) Build(progress chan string) error {
 		return err
 	}
 	container.Status = Building
-	return readDockerStream(buildResponseStream.Body,
-		container, container.SoftwareOrder.Verbose, progress)
+	return readDockerStream(buildResponseStream.Body, container, progress)
 }
 
 // Push the image to the docker registry that's defined in the software order's attributes
@@ -408,14 +407,13 @@ func (container *Container) Push(progress chan string) error {
 	if err != nil {
 		return err
 	}
-	return readDockerStream(pushResponseStream, container,
-		container.SoftwareOrder.Verbose, progress)
+	return readDockerStream(pushResponseStream, container, progress)
 }
 
 // readDockerStream is a helper function for container.Build and container.Push
 // Read the response stream from a Docker client API call
 func readDockerStream(responseStream io.ReadCloser,
-	container *Container, verbose bool, progress chan string) error {
+	container *Container, progress chan string) error {
 
 	// Stream the response into a json decoder and return it to the progress channel
 	defer responseStream.Close()

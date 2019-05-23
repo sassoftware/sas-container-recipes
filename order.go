@@ -80,7 +80,6 @@ type SoftwareOrder struct {
 	AddOns                 []string `yaml:"AddOns                  "`
 	DebugContainers        []string `yaml:"Debug Containers        "`
 	WorkerCount            int      `yaml:"Worker Count            "`
-	Verbose                bool     `yaml:"Verbose                 "`
 	SkipMirrorValidation   bool     `yaml:"Skip Mirror Validation  "`
 	SkipDockerValidation   bool     `yaml:"Skip Docker Validation  "`
 	GenerateManifestsOnly  bool     `yaml:"Generate Manifests Only "`
@@ -452,7 +451,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 	addons := flag.String("addons", "", "")
 	baseImage := flag.String("base-image", "centos:7", "")
 	mirrorURL := flag.String("mirror-url", "https://ses.sas.download/ses/", "")
-	verbose := flag.Bool("verbose", false, "")
 	buildOnly := flag.String("build-only", "", "")
 	tagOverride := flag.String("tag", RecipeVersion+"-"+order.TimestampTag, "")
 	projectName := flag.String("project-name", "sas-viya", "")
@@ -487,7 +485,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 		flag.Usage()
 	}
 
-	order.Verbose = *verbose
 	order.SkipDockerValidation = *skipDockerValidation
 	order.GenerateManifestsOnly = *generateManifestsOnly
 	order.VirtualHost = *virtualHost
@@ -803,6 +800,7 @@ func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
+	container.LayerCount = getLayerCount(dockerfile)
 
 	// Make the software order only build the image that was created in this function
 	for _, item := range order.Containers {
@@ -845,7 +843,7 @@ func (order *SoftwareOrder) Build() error {
 
 	// Display a message about what will be seen during the build process
 	displayProcessCount := fmt.Sprintf("Starting %s build processes.\n"+
-		"System resource utilization can be seen by using the `docker stats` command.\n"+
+		"System resource utilization can be seen by using the `docker stats` command in a separate terminal.\n"+
 		"Verbose logging for each container is inside the builds/%s/<container-name>/log.txt file.\n\n"+
 		"NAME%sSTATUS%sLAYER",
 		strconv.Itoa(numberOfBuilds),
