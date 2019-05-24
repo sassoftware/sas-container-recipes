@@ -79,7 +79,6 @@ type SoftwareOrder struct {
 	TagOverride            string   `yaml:"Tag Override            "`
 	AddOns                 []string `yaml:"AddOns                  "`
 	WorkerCount            int      `yaml:"Worker Count            "`
-	SkipMirrorValidation   bool     `yaml:"Skip Mirror Validation  "`
 	SkipDockerValidation   bool     `yaml:"Skip Docker Validation  "`
 	GenerateManifestsOnly  bool     `yaml:"Generate Manifests Only "`
 	SkipDockerRegistryPush bool     `yaml:"Skip Docker Registry    "`
