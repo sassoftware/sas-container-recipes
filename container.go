@@ -32,6 +32,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -370,13 +371,36 @@ func (container *Container) Push(progress chan string) error {
 	container.Status = Pushing
 	container.WriteLog("----- Starting Docker Push -----")
 	progress <- "Pushing to Docker registry: " + container.GetWholeImageName() + " ... "
-	pushResponseStream, err := container.DockerClient.ImagePush(container.SoftwareOrder.BuildContext,
-		container.GetWholeImageName(), types.ImagePushOptions{RegistryAuth: container.SoftwareOrder.RegistryAuth})
-	if err != nil {
-		return err
+
+	if strings.Contains(container.SoftwareOrder.DockerRegistry, "gcr.io") {
+		// TODO: work-around for GCR using a "credHelper" in the Docker config
+		pushCommand := "docker push " + container.GetWholeImageName()
+
+		cmd := exec.Command("sh", "-c", pushCommand)
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			return errors.New(fmt.Sprintf("'%s' %s", pushCommand, err.Error()))
+		}
+		err = cmd.Start()
+		if err != nil {
+			result, _ := ioutil.ReadAll(stderr)
+			return errors.New(fmt.Sprintf("'%s' %s\n%s", pushCommand, string(result), err.Error()))
+		}
+		err = cmd.Wait()
+		if err != nil {
+			result, _ := ioutil.ReadAll(stderr)
+			return errors.New(fmt.Sprintf("'%s' %s\n%s", pushCommand, string(result), err.Error()))
+		}
+		return nil
+	} else {
+		pushResponseStream, err := container.DockerClient.ImagePush(container.SoftwareOrder.BuildContext,
+			container.GetWholeImageName(), types.ImagePushOptions{RegistryAuth: container.SoftwareOrder.RegistryAuth})
+		if err != nil {
+			return err
+		}
+		return readDockerStream(pushResponseStream, container,
+			container.SoftwareOrder.Verbose, progress)
 	}
-	return readDockerStream(pushResponseStream, container,
-		container.SoftwareOrder.Verbose, progress)
 }
 
 // readDockerStream is a helper function for container.Build and container.Push

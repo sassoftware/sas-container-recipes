@@ -1093,29 +1093,31 @@ func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
 	//		"auth": "Y29J79JPO=="
 	//	},
 	// TODO: clean this up... substrings are sloppy but marshalling the interface was too annoying to start with
-	startSection := strings.Index(config, order.DockerRegistry)
-	config = config[startSection:]
-	endSection := strings.Index(config, "},")
-	config = config[0:endSection]
-	authSection := "\"auth\": \""
-	startAuth := strings.Index(config, "\"auth\": \"")
-	config = strings.TrimSpace(config[startAuth+len(authSection)-1:])
-	config = strings.Replace(config, "\"", "", -1)
-	config = strings.Replace(config, "\n", "", -1)
-	config = strings.Replace(config, "\t", "", -1)
-	authInfoBytes, _ := base64.StdEncoding.DecodeString(config)
-	authInfo := strings.Split(string(authInfoBytes), ":")
-	auth := struct {
-		Username string
-		Password string
-	}{
-		Username: authInfo[0],
-		Password: authInfo[1],
+	// TODO: work-around for GCR using "credHelpers" for registry auth
+	if !strings.Contains(order.DockerRegistry, "gcr.io") {
+		startSection := strings.Index(config, order.DockerRegistry)
+		config = config[startSection:]
+		endSection := strings.Index(config, "},")
+		config = config[0:endSection]
+		authSection := "\"auth\": \""
+		startAuth := strings.Index(config, "\"auth\": \"")
+		config = strings.TrimSpace(config[startAuth+len(authSection)-1:])
+		config = strings.Replace(config, "\"", "", -1)
+		config = strings.Replace(config, "\n", "", -1)
+		config = strings.Replace(config, "\t", "", -1)
+		authInfoBytes, _ := base64.StdEncoding.DecodeString(config)
+		authInfo := strings.Split(string(authInfoBytes), ":")
+		auth := struct {
+			Username string
+			Password string
+		}{
+			Username: authInfo[0],
+			Password: authInfo[1],
+		}
+		authBytes, _ := json.Marshal(auth)
+
+		order.RegistryAuth = base64.StdEncoding.EncodeToString(authBytes)
 	}
-
-	authBytes, _ := json.Marshal(auth)
-
-	order.RegistryAuth = base64.StdEncoding.EncodeToString(authBytes)
 
 	done <- 1
 }
