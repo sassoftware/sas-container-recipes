@@ -19,8 +19,7 @@
 package main
 
 import (
-	"encoding/base64"
-
+	"github.com/docker/cli/cli/config/configfile"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
@@ -29,6 +28,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -1081,43 +1081,61 @@ func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
 		fail <- configError
 		return
 	}
-	config := string(configContent)
-	if !strings.Contains(config, order.DockerRegistry) {
-		fail <- "Cannot find the --docker-registry-url in the Docker config. Run `docker login <registry>` before building."
+
+	// Look for the base URL, such as "gcr.io" instead of "gcr.io/<project-name>"
+	// and remove 'https://' or 'http://' if it exists
+	registryAuthStub := order.DockerRegistry
+	registryAuthStub = strings.Replace(registryAuthStub, "http://", "", -1)
+	registryAuthStub = strings.Replace(registryAuthStub, "https://", "", -1)
+	if strings.Contains(order.DockerRegistry, "/") {
+		registryAuthStub = strings.Split(registryAuthStub, "/")[0]
+	}
+
+	// Unmarshal the config into Docker's ConfigFile struct
+	// and parse the config file for the auth token
+	//
+	//"auths": {
+	//	"docker.mycompany.com": {
+	//        "auth": "Y23SEF34aTL"		<--- token
+	//	},
+	//
+	configFailureMessage := "Cannot find the --docker-registry-url '" + order.DockerRegistry +
+		"' in the Docker config.\nRun `docker login <registry>` before building. "
+	var dockerConfig *configfile.ConfigFile = &configfile.ConfigFile{}
+	if err := json.Unmarshal(configContent, dockerConfig); err != nil {
+		fail <- "Failed to unmarshal docker config, " + err.Error() + "\n" + configFailureMessage
+		return
+	}
+	authSection, exists := dockerConfig.AuthConfigs[registryAuthStub]
+	if !exists {
+		fail <- configFailureMessage
+		return
+	}
+	if authSection.Auth == "" {
+		fail <- configFailureMessage
 		return
 	}
 
-	// Parse the docker registry URL's auth
-	//"auths": {
-	//	"docker.mycompany.com": {
-	//		"auth": "Y29J79JPO=="
-	//	},
-	// TODO: clean this up... substrings are sloppy but marshalling the interface was too annoying to start with
-	// TODO: work-around for GCR using "credHelpers" for registry auth
-	if !strings.Contains(order.DockerRegistry, "gcr.io") {
-		startSection := strings.Index(config, order.DockerRegistry)
-		config = config[startSection:]
-		endSection := strings.Index(config, "},")
-		config = config[0:endSection]
-		authSection := "\"auth\": \""
-		startAuth := strings.Index(config, "\"auth\": \"")
-		config = strings.TrimSpace(config[startAuth+len(authSection)-1:])
-		config = strings.Replace(config, "\"", "", -1)
-		config = strings.Replace(config, "\n", "", -1)
-		config = strings.Replace(config, "\t", "", -1)
-		authInfoBytes, _ := base64.StdEncoding.DecodeString(config)
-		authInfo := strings.Split(string(authInfoBytes), ":")
-		auth := struct {
-			Username string
-			Password string
-		}{
-			Username: authInfo[0],
-			Password: authInfo[1],
-		}
-		authBytes, _ := json.Marshal(auth)
-
-		order.RegistryAuth = base64.StdEncoding.EncodeToString(authBytes)
+	// Decode the token, formatted as "username:password" separate the fields, then encode it again.
+	// In the case of a cloud provider registry, such as grc.io, the format is "_dcgcloud_token:XYZ.TOKEN",
+	// where "_dcgcloud_token" is the username
+	authInfoBytes, err := base64.StdEncoding.DecodeString(authSection.Auth)
+	if err != nil {
+		fail <- "Failed to decode auth info bytes. " + configFailureMessage
 	}
+	authFields := strings.Split(string(authInfoBytes), ":")
+	auth := struct {
+		Username string //`json:"Username"`
+		Password string //`json:"Password"`
+	}{
+		Username: authFields[0],
+		Password: authFields[1],
+	}
+	authBytes, err := json.Marshal(auth)
+	if err != nil {
+		fail <- "Failed to marshal auth info bytes. " + configFailureMessage
+	}
+	order.RegistryAuth = base64.URLEncoding.EncodeToString(authBytes)
 
 	done <- 1
 }
