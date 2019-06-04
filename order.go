@@ -1132,31 +1132,49 @@ func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
 		fail <- configFailureMessage
 		return
 	}
-	if authSection.Auth == "" {
+
+	if authSection.IdentityToken != "" {
+		// Azure uses an "identitytoken" field in the Docker config file
+		// The identity token is similar to: {"alg":"RS256","typ":"JWT","kid":"1234:5678:9101:3HIX:SS4K:7VGD:CP2J:ZGTX:MIQ5:B7ED:MC2O:GZZ3"}
+		// The username is always "00000000-0000-0000-0000-000000000000"
+		auth := struct {
+			Username      string
+			IdentityToken string
+		}{
+			Username:      authSection.Username,
+			IdentityToken: authSection.IdentityToken,
+		}
+		authBytes, err := json.Marshal(auth)
+		if err != nil {
+			fail <- "Failed to marshal auth info bytes. " + configFailureMessage
+		}
+		order.RegistryAuth = base64.URLEncoding.EncodeToString(authBytes)
+	} else if authSection.Auth != "" {
+		// GCE and AWS both use the "auth" field in the Docker config file.
+		// 	 For gcr.io the format is "_dcgcloud_token:<token>", where "_dcgcloud_token" is the username
+		// 	 For amazonaws.com the format is "AWS:<token>", where "AWS" is the username
+		// Decode the token, formatted as "username:password" separate the fields, then encode it again.
+		authInfoBytes, err := base64.StdEncoding.DecodeString(authSection.Auth)
+		if err != nil {
+			fail <- "Failed to decode auth info bytes. " + configFailureMessage
+		}
+		authFields := strings.Split(string(authInfoBytes), ":")
+		auth := struct {
+			Username string
+			Password string
+		}{
+			Username: authFields[0],
+			Password: authFields[1],
+		}
+		authBytes, err := json.Marshal(auth)
+		if err != nil {
+			fail <- "Failed to marshal auth info bytes. " + configFailureMessage
+		}
+		order.RegistryAuth = base64.URLEncoding.EncodeToString(authBytes)
+	} else {
 		fail <- configFailureMessage
 		return
 	}
-
-	// Decode the token, formatted as "username:password" separate the fields, then encode it again.
-	// In the case of a cloud provider registry, such as grc.io, the format is "_dcgcloud_token:XYZ.TOKEN",
-	// where "_dcgcloud_token" is the username
-	authInfoBytes, err := base64.StdEncoding.DecodeString(authSection.Auth)
-	if err != nil {
-		fail <- "Failed to decode auth info bytes. " + configFailureMessage
-	}
-	authFields := strings.Split(string(authInfoBytes), ":")
-	auth := struct {
-		Username string //`json:"Username"`
-		Password string //`json:"Password"`
-	}{
-		Username: authFields[0],
-		Password: authFields[1],
-	}
-	authBytes, err := json.Marshal(auth)
-	if err != nil {
-		fail <- "Failed to marshal auth info bytes. " + configFailureMessage
-	}
-	order.RegistryAuth = base64.URLEncoding.EncodeToString(authBytes)
 
 	done <- 1
 }
