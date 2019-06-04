@@ -1030,24 +1030,45 @@ func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string,
 		fail <- "The --docker-registry-url must have TLS enabled. Provide the url with 'https' instead of 'http' in the command argument."
 		return
 	}
-	url := order.DockerRegistry
-	if !strings.Contains(order.DockerRegistry, "https://") {
-		url = "https://" + order.DockerRegistry
-	}
-	progress <- "Checking the Docker registry URL for validity ... curl " + url
-	response, err := http.Get(url)
-	if err != nil {
-		fail <- err.Error()
-		return
-	}
-	defer response.Body.Close()
-	if response.StatusCode != 200 {
-		fail <- "The URL cannot contain 'http' or 'https'. Also the registry also be configured for https. " +
-			"Invalid Docker registry URL  " + err.Error()
-		return
-	}
-	progress <- "Finished checking the Docker registry URL for validity: http status code " + strconv.Itoa(response.StatusCode)
 
+	// Curl the non-TLS address first
+	url := order.DockerRegistry
+	url = strings.Replace(url, "http://", "", -1)
+	url = strings.Replace(url, "https://", "", -1)
+	progress <- "Checking the Docker registry URL for validity ... curl http://" + url
+	timeout := time.Duration(5 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+	response, err := client.Get("http://" + url)
+	if err != nil || (response.StatusCode != 200 && response.StatusCode != 401) {
+
+		errorMessage := "Curl of non-TLS Docker registry URL failed.\n" +
+			"Retrying with the TLS Docker registry URL ... curl https://" + url
+		if err != nil {
+			errorMessage += "\n" + err.Error()
+		}
+		if response != nil {
+			errorMessage += fmt.Sprintf("\nReturned status code %d", response.StatusCode)
+		}
+		progress <- errorMessage
+
+		// Try the TLS address
+		secondResponse, secondError := client.Get("https://" + url)
+		if secondError != nil || (secondResponse.StatusCode != 200 && secondResponse.StatusCode != 401) {
+			secondErrorMessage := "Curl of Docker registry TLS URL failed. \nEnsure your " +
+				"--docker-registry-url argument was entered correctly.\n"
+			if secondError != nil {
+				secondErrorMessage += secondError.Error()
+			}
+			if response != nil {
+				secondErrorMessage += fmt.Sprintf("Returned status code %d", secondResponse.StatusCode)
+			}
+			fail <- secondErrorMessage
+		}
+	}
+
+	progress <- "Finished checking the Docker registry URL for validity"
 	done <- 1
 }
 

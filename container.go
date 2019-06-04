@@ -181,6 +181,14 @@ func (container *Container) GetWholeImageName() string {
 		len(container.SoftwareOrder.DockerRegistry) == 0 {
 		return container.GetName() + ":" + container.GetTag()
 	}
+
+	// AWS requires the creation of a registry for each image
+	// do not append the Docker namespace in this case.
+	if strings.Contains(container.SoftwareOrder.DockerRegistry, "amazonaws") {
+		return container.SoftwareOrder.DockerRegistry +
+			"/" + container.GetName() + ":" + container.GetTag()
+	}
+
 	return container.SoftwareOrder.DockerRegistry +
 		"/" + container.SoftwareOrder.DockerNamespace +
 		"/" + container.GetName() + ":" + container.GetTag()
