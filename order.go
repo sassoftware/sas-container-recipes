@@ -20,10 +20,15 @@ package main
 
 import (
 	"github.com/docker/cli/cli/config/configfile"
+	"github.com/gosuri/uiprogress"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 
+	"gopkg.in/yaml.v2"
+
+    "encoding/base64"
 	"archive/zip"
 	"bufio"
 	"bytes"
@@ -33,7 +38,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"log"
@@ -44,6 +48,7 @@ import (
 	"os/user"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -74,32 +79,29 @@ type SoftwareOrder struct {
 	ProjectName            string   `yaml:"Project Name            "`
 	TagOverride            string   `yaml:"Tag Override            "`
 	AddOns                 []string `yaml:"AddOns                  "`
-	DebugContainers        []string `yaml:"Debug Containers        "`
 	WorkerCount            int      `yaml:"Worker Count            "`
-	Verbose                bool     `yaml:"Verbose                 "`
-	SkipMirrorValidation   bool     `yaml:"Skip Mirror Validation  "`
 	SkipDockerValidation   bool     `yaml:"Skip Docker Validation  "`
 	GenerateManifestsOnly  bool     `yaml:"Generate Manifests Only "`
 	SkipDockerRegistryPush bool     `yaml:"Skip Docker Registry    "`
 
 	// Build attributes
-	Log          *os.File              `yaml:"-"`                        // File handle for log path
-	BuildContext context.Context       `yaml:"-"`                        // Background context
-	BuildOnly    []string              `yaml:"Build Only              "` // Only build these specific containers if they're in the list of entitled containers. The 'multiple' deployment type utilizes this to build only 3 images.
-	Containers   map[string]*Container `yaml:"-"`                        // Individual containers build list
-	Config       map[string]ConfigMap  `yaml:"-"`                        // Static values and defaults are loaded from the configmap yaml
-	ConfigPath   string                `yaml:"-"`                        // config-<deployment-type>.yml file for custom or static values
-	LogPath      string                `yaml:"-"`                        // Path to the build directory with the log file name
-	PlaybookPath string                `yaml:"-"`                        // Build path + "sas_viya_playbook"
-	KVStore      string                `yaml:"-"`                        // Combines all vars.yaml content
-	RegistryAuth string                `yaml:"-"`                        // Used to push and pull from/to a regitry
-	BuildPath    string                `yaml:"-"`                        // Kubernetes manifests are generated and placed into this location
-	CertBaseURL  string                `yaml:"-"`                        // The URL that the build containers will use to fetch their CA and entitlement certs
-	BuilderIP    string                `yaml:"-"`                        // IP of where images are being built to be used for generic hostname lookup for builder
-	BuilderPort  string                `yaml:"-"`                        // Port for serving certificate requests for builds
-	TimestampTag string                `yaml:"Timestamp Tag           "` // Allows for datetime on each temp build bfile
-	InDocker     bool                  `yaml:"-"`                        // If we are running in a docker container
-	ManifestDir  string                `yaml:"-"`                        // The name of the manifest directory. "manifests" is the default
+	Log          *os.File             `yaml:"-"`                        // File handle for log path
+	BuildContext context.Context      `yaml:"-"`                        // Background context
+	BuildOnly    []string             `yaml:"Build Only              "` // Only build these specific containers if they're in the list of entitled containers. The 'multiple' deployment type utilizes this to build only 3 images.
+	Containers   []*Container         `yaml:"-"`                        // Individual containers build list
+	Config       map[string]ConfigMap `yaml:"-"`                        // Static values and defaults are loaded from the configmap yaml
+	ConfigPath   string               `yaml:"-"`                        // config-<deployment-type>.yml file for custom or static values
+	LogPath      string               `yaml:"-"`                        // Path to the build directory with the log file name
+	PlaybookPath string               `yaml:"-"`                        // Build path + "sas_viya_playbook"
+	KVStore      string               `yaml:"-"`                        // Combines all vars.yaml content
+	RegistryAuth string               `yaml:"-"`                        // Used to push and pull from/to a regitry
+	BuildPath    string               `yaml:"-"`                        // Kubernetes manifests are generated and placed into this location
+	CertBaseURL  string               `yaml:"-"`                        // The URL that the build containers will use to fetch their CA and entitlement certs
+	BuilderIP    string               `yaml:"-"`                        // IP of where images are being built to be used for generic hostname lookup for builder
+	BuilderPort  string               `yaml:"-"`                        // Port for serving certificate requests for builds
+	TimestampTag string               `yaml:"Timestamp Tag           "` // Allows for datetime on each temp build bfile
+	InDocker     bool                 `yaml:"-"`                        // If we are running in a docker container
+	ManifestDir  string               `yaml:"-"`                        // The name of the manifest directory. "manifests" is the default
 
 	// Metrics
 	StartTime      time.Time      `yaml:"-"`
@@ -211,6 +213,7 @@ func (order *SoftwareOrder) SetupBuildDirectory() error {
 		result, _ := ioutil.ReadAll(stderr)
 		return errors.New(string(result) + "\n" + err.Error())
 	}
+
 	// A single image only uses the vars_usermods.yml. That can be used to change the
 	// running of the playbook that is used in creating the image. For "full" or
 	// "multiple" deployments, only the manifests_usermods.yml is used. It is used
@@ -250,7 +253,7 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		return order, nil
 	}
 
-	order.WriteLog(true, order.BuildArgumentsSummary())
+	order.WriteLog(false, true, order.BuildArgumentsSummary())
 
 	// Configure a new isolated build space
 	if err := order.SetupBuildDirectory(); err != nil {
@@ -326,7 +329,7 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		case failure := <-fail:
 			return order, errors.New(failure)
 		case progress := <-progress:
-			order.WriteLog(true, progress)
+			order.WriteLog(true, false, progress)
 		}
 	}
 }
@@ -335,11 +338,12 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 // that were supplied to the SoftwareOrder object. This is useful for debugging.
 func (order *SoftwareOrder) BuildArgumentsSummary() string {
 	objectAttributes, _ := yaml.Marshal(order)
-	output := "\n" + strings.Repeat("=", 50) + "\n"
-	output += "\t\tBuild Variables\n"
-	output += strings.Repeat("=", 50) + "\n"
+	dividerLength := 80
+	output := "\n" + strings.Repeat("=", dividerLength) + "\n"
+	output += strings.Repeat("\t", dividerLength/20) + "Build Variables\n"
+	output += strings.Repeat("=", dividerLength) + "\n"
 	output += string(objectAttributes)
-	output += strings.Repeat("=", 50) + "\n"
+	output += strings.Repeat("=", dividerLength) + "\n"
 	return output
 }
 
@@ -376,7 +380,7 @@ func (order *SoftwareOrder) Serve() {
 	}
 
 	// Serve only two endpoints to receive the entitlement and CA
-	order.WriteLog(true, fmt.Sprintf("Serving license and entitlement on sas-container-recipes-builder:%s (%s)", order.BuilderPort, order.BuilderIP))
+	order.WriteLog(true, true, fmt.Sprintf("Serving license and entitlement on sas-container-recipes-builder:%s (%s)", order.BuilderPort, order.BuilderIP))
 	order.CertBaseURL = fmt.Sprintf("http://sas-container-recipes-builder:%s", order.BuilderPort)
 
 	http.HandleFunc("/entitlement/", func(w http.ResponseWriter, r *http.Request) {
@@ -390,11 +394,15 @@ func (order *SoftwareOrder) Serve() {
 
 // WriteLog is multiplexer for writing logs.
 // Write any number of object info to the build log file and/or to standard output
-func (order *SoftwareOrder) WriteLog(writeToStdout bool, contentBlocks ...interface{}) {
+func (order *SoftwareOrder) WriteLog(timestamp bool, writeToStdout bool, contentBlocks ...interface{}) {
 	// Write each block to standard output
 	if writeToStdout {
 		for _, block := range contentBlocks {
-			log.Println(block)
+			if timestamp {
+				log.Println(block)
+			} else {
+				fmt.Println(block)
+			}
 		}
 	}
 
@@ -410,30 +418,6 @@ func (order *SoftwareOrder) WriteLog(writeToStdout bool, contentBlocks ...interf
 		order.Log.Write([]byte(fmt.Sprintf("%v\n", block)))
 	}
 	order.Log.Write([]byte("\n"))
-}
-
-// GetIntermediateStatus returns the output of how many and which containers have been built
-// out of the total number of builds.
-// This is displayed after a container finishes its build process.
-func (order *SoftwareOrder) GetIntermediateStatus(progress chan string) {
-	finishedContainers := []string{}
-	remainingContainers := []string{}
-	for _, container := range order.Containers {
-		if container.Status == Pushed {
-			finishedContainers = append(finishedContainers, container.Name)
-		} else if container.Status != DoNotBuild {
-			remainingContainers = append(remainingContainers, container.Name)
-		}
-	}
-
-	if len(remainingContainers) == 0 {
-		// Don't show anything once all have completed since the final build summary displays
-		return
-	}
-
-	progress <- fmt.Sprintf("Built & Pushed [ %d / %d ].\nComplete: %s\nRemaining: %s\n",
-		len(finishedContainers), len(finishedContainers)+len(remainingContainers),
-		strings.Join(finishedContainers, ", "), strings.Join(remainingContainers, ", "))
 }
 
 // DefineManifestDir looks at the manifests_usermods.yml to see what the manifest dir is.
@@ -466,7 +450,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 	addons := flag.String("addons", "", "")
 	baseImage := flag.String("base-image", "centos:7", "")
 	mirrorURL := flag.String("mirror-url", "https://ses.sas.download/ses/", "")
-	verbose := flag.Bool("verbose", false, "")
 	buildOnly := flag.String("build-only", "", "")
 	tagOverride := flag.String("tag", RecipeVersion+"-"+order.TimestampTag, "")
 	projectName := flag.String("project-name", "sas-viya", "")
@@ -501,7 +484,6 @@ func (order *SoftwareOrder) LoadCommands() error {
 		flag.Usage()
 	}
 
-	order.Verbose = *verbose
 	order.SkipDockerValidation = *skipDockerValidation
 	order.GenerateManifestsOnly = *generateManifestsOnly
 	order.VirtualHost = *virtualHost
@@ -533,7 +515,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	otherArgs := flag.Args()
 	if len(otherArgs) > 0 {
 		progressString := "WARNING: one or more arguments were not parsed. Quotes are required for multi-value arguments."
-		order.WriteLog(true, progressString)
+		order.WriteLog(true, true, progressString)
 	}
 
 	// Always require a deployment type
@@ -635,7 +617,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 		order.BuildOnly = []string{"programming", "httpproxy", "sas-casserver-primary"}
 	}
 	if order.DeploymentType == "full" {
-		order.WriteLog(true, `
+		order.WriteLog(false, true, `
   _______  ______  _____ ____  ___ __  __ _____ _   _ _____  _    _
  | ____\ \/ /  _ \| ____|  _ \|_ _|  \/  | ____| \ | |_   _|/ \  | |
  |  _|  \  /| |_) |  _| | |_) || || |\/| |  _| |  \| | | | / _ \ | |
@@ -658,11 +640,48 @@ func (order *SoftwareOrder) LoadCommands() error {
 	return nil
 }
 
+// Used to determine how much padding should be on the progress bar
+var LongestContainerName = 0
+
+const ProgressBarWidth = 60
+
 func buildWorker(id int, containers <-chan *Container, done chan<- string, progress chan string, fail chan string) {
 	for container := range containers {
 		if container.Status != Loaded {
 			continue
 		}
+
+		// Configure the progress bar
+		container.ProgressBar = uiprogress.AddBar(container.LayerCount)
+		container.ProgressBar.Width = ProgressBarWidth
+		container.ProgressBar.Empty = '_'
+		container.ProgressBar.PrependFunc(func(progress *uiprogress.Bar) string {
+			// Format everything at the front of the progress bar
+			return fmt.Sprintf("%s %s%s",
+				container.Name,
+				strings.Repeat(" ", LongestContainerName-len(container.Name)), // Padding after name to keep them the same length
+				container.GetStatus())
+		})
+		container.ProgressBar.AppendFunc(func(progress *uiprogress.Bar) string {
+			// Format everything at the end of the progress bar
+			// Determine how much padding to add between "xx/yy" for the layer count
+			layerStringSpace := 0
+			if len(string(container.CurrentLayer)) == 1 {
+				layerStringSpace = 1
+			}
+
+			// Append the final image size if has finished building
+			imageSize := ""
+			if bytesToGB(container.ImageSize) != "0.00 GB" {
+				imageSize = fmt.Sprintf(" (%s)", bytesToGB(container.ImageSize))
+			}
+
+			return fmt.Sprintf("%s%d/%d%s",
+				strings.Repeat(" ", layerStringSpace),
+				container.CurrentLayer,
+				container.LayerCount,
+				imageSize)
+		})
 
 		// Build
 		container.BuildStart = time.Now()
@@ -683,7 +702,7 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 		imageInfo, err := container.SoftwareOrder.DockerClient.ImageList(container.SoftwareOrder.BuildContext,
 			types.ImageListOptions{Filters: filterArgs})
 		if err != nil {
-			container.SoftwareOrder.WriteLog(true, "Unable to connect to Docker client for image build sizes")
+			container.SoftwareOrder.WriteLog(true, true, "Unable to connect to Docker client for image build sizes")
 		}
 		imageSize := imageInfo[0].Size
 		container.SoftwareOrder.TotalBuildSize += imageSize
@@ -703,12 +722,9 @@ func buildWorker(id int, containers <-chan *Container, done chan<- string, progr
 
 			// Signal the end of the build and push processes
 			container.Status = Pushed
-			progress <- container.GetWholeImageName() + ": finished pushing image to Docker registry"
-			container.SoftwareOrder.GetIntermediateStatus(progress)
-		} else {
-			progress <- "Skipping pushing " + container.GetWholeImageName() + " to Docker registry"
 		}
 
+		container.Status = Done
 		done <- container.Name
 	}
 }
@@ -722,12 +738,12 @@ func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	// order.Containers object. For non-single builds, this is done in the
 	// getContainers method. That method is not called in a single image build
 	// so we need to do the following.
-	order.Containers = make(map[string]*Container)
 	container := Container{
 		Name:          "single-programming-only",
 		SoftwareOrder: order,
 		BaseImage:     order.BaseImage,
 	}
+	order.Containers = []*Container{&container}
 
 	dockerConnection, err := client.NewClientWithOpts(client.WithVersion(DockerAPIVersion))
 	if err != nil {
@@ -783,13 +799,13 @@ func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
+	container.LayerCount = getLayerCount(dockerfile)
 
 	// Make the software order only build the image that was created in this function
 	for _, item := range order.Containers {
 		item.Status = DoNotBuild
 	}
 	container.Status = Loaded
-	order.Containers[container.Name] = &container
 	return nil
 }
 
@@ -808,21 +824,35 @@ func (order *SoftwareOrder) Build() error {
 			numberOfBuilds++
 		}
 	}
-	fmt.Println("")
-	if numberOfBuilds == 0 {
-		return errors.New("The number of builds are set to zero. " +
-			"An error in pre-build tasks may have occurred or the " +
-			"Software Order entitlement does not match the deployment type.")
-	} else if numberOfBuilds == 1 {
-		// Use the singular "process" instead of "processes"
-		order.WriteLog(true, "Starting "+strconv.Itoa(numberOfBuilds)+" build process ... (this may take several minutes)")
-	} else {
-		// Use the plural "processes" instead of "process"
-		order.WriteLog(true, "Starting "+strconv.Itoa(numberOfBuilds)+" build processes ... (this may take several minutes)")
-	}
-	order.WriteLog(true, "[TIP] System resource utilization can be seen by using the `docker stats` command.")
 
-	// Concurrently start each build process
+	// Get the longest container name so the progress bar padding will be uniform
+	// then sort the containers by layer count ascending, write the header, and start rendering
+	for _, container := range order.Containers {
+		if container.Status == DoNotBuild {
+			continue
+		}
+		nameLength := len(container.Name)
+		if nameLength > LongestContainerName {
+			LongestContainerName = nameLength
+		}
+	}
+	sort.Slice(order.Containers, func(i, j int) bool {
+		return order.Containers[i].LayerCount < order.Containers[j].LayerCount
+	})
+
+	// Display a message about what will be seen during the build process
+	displayProcessCount := fmt.Sprintf("Starting %s build processes.\n"+
+		"System resource utilization can be seen by using the `docker stats` command in a separate terminal.\n"+
+		"Verbose logging for each container is inside the builds/%s/<container-name>/log.txt file.\n\n"+
+		"NAME%sSTATUS%sLAYER",
+		strconv.Itoa(numberOfBuilds),
+		order.DeploymentType,
+		strings.Repeat(" ", LongestContainerName-3),
+		strings.Repeat(" ", ProgressBarWidth+5))
+	order.WriteLog(true, true, displayProcessCount)
+	uiprogress.Start()
+
+	// Concurrently start each build proceses
 	jobs := make(chan *Container, 100)
 	fail := make(chan string)
 	done := make(chan string)
@@ -846,7 +876,7 @@ func (order *SoftwareOrder) Build() error {
 		case failure := <-fail:
 			return errors.New(failure)
 		case progress := <-progress:
-			order.WriteLog(true, progress)
+			order.WriteLog(true, false, progress)
 		}
 	}
 }
@@ -855,8 +885,8 @@ func (order *SoftwareOrder) Build() error {
 //
 // Read the sas_viya_playbook directory for the "group_vars" where each
 // file individually defines a host. There is one container per host.
-func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
-	containers := make(map[string]*Container)
+func getContainers(order *SoftwareOrder) ([]*Container, error) {
+	containers := []*Container{}
 
 	// These values are not added to the final hostGroup list result
 	var ignoredContainers = [...]string{
@@ -865,7 +895,8 @@ func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 	}
 
 	// The names inside the playbook's inventory file are mapped to hosts
-	inventoryBytes, err := ioutil.ReadFile(order.BuildPath + "sas_viya_playbook/" + "inventory.ini")
+	// Narrow down the text to show only the sas-all section
+	inventoryBytes, err := ioutil.ReadFile(order.BuildPath + "sas_viya_playbook/inventory.ini")
 	if err != nil {
 		return containers, err
 	}
@@ -881,6 +912,8 @@ func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 	if startLine == 0 {
 		return containers, errors.New("Cannot find inventory.ini section with all container names")
 	}
+
+	// Parse each line of the inventory file's hosts section
 	for i := startLine + 1; i < len(lines); i++ {
 		skip := false
 		name := lines[i]
@@ -893,6 +926,7 @@ func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 			continue
 		}
 
+		// Add the new container to the containers array
 		container := Container{
 			Name:          strings.ToLower(name),
 			SoftwareOrder: order,
@@ -900,7 +934,7 @@ func getContainers(order *SoftwareOrder) (map[string]*Container, error) {
 			BaseImage:     order.BaseImage,
 		}
 		container.Tag = container.GetTag()
-		containers[container.Name] = &container
+		containers = append(containers, &container)
 	}
 
 	return containers, nil
@@ -1086,7 +1120,7 @@ func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
 		return
 	}
 	dockerConfigPath := fmt.Sprintf("%s/.docker/config.json", userObject.HomeDir)
-	order.WriteLog(true, "Reading config from "+dockerConfigPath)
+	order.WriteLog(true, true, "Reading config from "+dockerConfigPath)
 	configError := "Cannot read Docker configuration or file read permission is not permitted for the ~/.docker/config.json file. Run a `docker login <registry>`.\n"
 	configStat, err := os.Stat(dockerConfigPath)
 	if err != nil {
@@ -1202,7 +1236,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 		commandBuilder = append(commandBuilder, "--deployment-type programming")
 	}
 	playbookCommand := strings.Join(commandBuilder, " ")
-	order.WriteLog(false, playbookCommand)
+	order.WriteLog(true, false, playbookCommand)
 
 	// The following is to fully provide the output of anything that goes wrong
 	// when generating the playbook.
@@ -1309,7 +1343,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 
 		// Make sure there is at least 1 image that's going to be built
 		if len(order.BuildOnly) != len(imageNameMatches) {
-			order.WriteLog(true, fmt.Sprintf("\nSelected Image Builds: %s\nAvailable Image Builds: %s\n", order.BuildOnly, imageNameOptions))
+			order.WriteLog(true, true, fmt.Sprintf("\nSelected Image Builds: %s\nAvailable Image Builds: %s\n", order.BuildOnly, imageNameOptions))
 			fail <- "One or more of the chosen --build-only containers do not exist. "
 			return
 		}
@@ -1362,16 +1396,16 @@ func (order *SoftwareOrder) Prepare() error {
 				return nil
 			}
 		case failure := <-fail:
-			order.WriteLog(true, failure)
+			order.WriteLog(true, true, failure)
 		case progress := <-progress:
-			order.WriteLog(true, progress)
+			order.WriteLog(true, true, progress)
 		}
 	}
 }
 
 // GenerateManifests runs the generate_manifests playbook to output Kubernetes configs
 func (order *SoftwareOrder) GenerateManifests() error {
-	order.WriteLog(true, "Creating deployment manifests ...")
+	order.WriteLog(true, true, "Creating deployment manifests ...")
 
 	if order.GenerateManifestsOnly {
 		// If we are only generating manifests then use the previous run.
@@ -1603,7 +1637,7 @@ settings:
 		return errors.New(result)
 	}
 
-	order.WriteLog(true, "Finished creating deployment manifests\n")
+	order.WriteLog(true, true, "Finished creating deployment manifests\n")
 
 	return nil
 }
@@ -1678,24 +1712,25 @@ func getOrchestrationTool() error {
 	return nil
 }
 
-// Finish removes all temporary build files: sas_viya_playbook and all Docker contexts (tar files) in the /tmp directory
+// Close any open files and stop displaying progress bars
 func (order *SoftwareOrder) Finish() {
+	uiprogress.Stop()
 	order.EndTime = time.Now()
-	// TODO
-	//for _, container := range order.Containers {
-	//	if container.Status != DoNotBuild {
-	//		container.Finish()
-	//	}
-	//}
+	for _, container := range order.Containers {
+		if container.Status != DoNotBuild {
+			container.Finish()
+		}
+	}
 }
 
-// Helper function to convert an image size to a human readable value
+// bytesToGB is a helper function to convert an image size to a human readable value
 func bytesToGB(bytes int64) string {
 	return fmt.Sprintf("%.2f GB", float64(bytes)/float64(1000000000))
 }
 
 // ShowSummary displays metrics and next steps for deployment
 func (order *SoftwareOrder) ShowSummary() error {
+	// Display the unique instructions for running the single container
 	if order.DeploymentType == "single" {
 
 		nextStepInstructions := "\n" + fmt.Sprintf(`Run the following to start the container:
@@ -1709,39 +1744,21 @@ sed -i 's|@REPLACE_ME_WITH_TAG@|%s|' launchsas.sh
 Note: If you used the auth-sssd addon or customised the user in the auth-demo addon, 
       make sure to update the CASENV_ADMIN_USER in run/launchsas.sh to contain a valid username.
 `, order.TagOverride)
-		order.WriteLog(true, nextStepInstructions)
+		order.WriteLog(true, true, nextStepInstructions)
 
 		order.EndTime = time.Now()
 		fmt.Println(fmt.Sprintf("\nTotal Elapsed Time: %s\n", order.EndTime.Sub(order.StartTime).Round(time.Second)))
 		return nil
 	}
 
-	if !order.GenerateManifestsOnly {
-		// Special case where the single deployment does not use the order.Containers list
-		// Print each container's metrics in a table
-		summaryHeader := fmt.Sprintf("\n%s  Summary  ( %s, %s ) %s", strings.Repeat("-", 23),
-			order.EndTime.Sub(order.StartTime).Round(time.Second),
-			bytesToGB(order.TotalBuildSize),
-			strings.Repeat("-", 23))
-		fmt.Println(summaryHeader)
-		order.WriteLog(false, summaryHeader)
-		for _, container := range order.Containers {
-			if container.Status == Pushed {
-				output := fmt.Sprintf("%s\n\tSize: %s\tBuild Time: %s\tPush Time: %s",
-					container.GetWholeImageName(),
-					bytesToGB(container.ImageSize),
-					container.BuildEnd.Sub(container.BuildStart).Round(time.Second),
-					container.PushEnd.Sub(container.PushStart).Round(time.Second))
-				fmt.Println(output)
-				order.WriteLog(false, output)
-			}
-		}
+	// Output all the container names and sizes to the build log
+	finalOutput := ""
+	for _, container := range order.Containers {
+		finalOutput += fmt.Sprintf("%s, %s\n", container.Name, bytesToGB(container.ImageSize))
 	}
+	order.WriteLog(false, false, finalOutput)
 
-	lineSeparator := strings.Repeat("-", 79)
-	fmt.Println(lineSeparator)
-	order.WriteLog(false, lineSeparator)
-
+	// Display details on how to deploy to Kubernetes
 	// TODO: Make the list of directories reflective of the manifests generated.
 	//       In a TLS build there will be an account type. Also, the "manifests"
 	//       directory and Kubernetes namespaces are changeable. Should probably
@@ -1795,8 +1812,8 @@ kubectl -n %s apply -f %s/kubernetes/deployments
 
 	fmt.Println(manifestLocation)
 	fmt.Println(manifestInstructions)
-	order.WriteLog(false, manifestLocation)
-	order.WriteLog(false, manifestInstructions)
+	order.WriteLog(true, false, manifestLocation)
+	order.WriteLog(true, false, manifestInstructions)
 
 	if order.SkipDockerRegistryPush {
 		dockerPushInstructions := fmt.Sprintf(`
@@ -1821,7 +1838,7 @@ The images that need to be pushed are referenced in
 			order.TimestampTag)
 
 		fmt.Println(dockerPushInstructions)
-		order.WriteLog(false, dockerPushInstructions)
+		order.WriteLog(true, false, dockerPushInstructions)
 		dockerPushFile, err := os.Create(symlinkBuildPath + "/dockerPush")
 		if err != nil {
 			return err
@@ -1835,7 +1852,7 @@ The images that need to be pushed are referenced in
 		for _, container := range order.Containers {
 			dockerPushString := fmt.Sprintf("docker push %s/%s/%s-%s:%s", order.DockerRegistry, order.DockerNamespace, order.ProjectName, container.Name, order.TagOverride)
 			fmt.Println(dockerPushString)
-			order.WriteLog(false, dockerPushString)
+			order.WriteLog(true, false, dockerPushString)
 			_, err = dockerPushFile.WriteString(dockerPushString + "\n")
 			if err != nil {
 				return err
@@ -1847,11 +1864,8 @@ The images that need to be pushed are referenced in
 		}
 		dockerPushFile.Sync()
 		fmt.Println(dockerPushFileInstructions)
-		order.WriteLog(false, dockerPushFileInstructions)
+		order.WriteLog(true, false, dockerPushFileInstructions)
 	}
-
-	fmt.Println(lineSeparator)
-	order.WriteLog(false, lineSeparator)
 
 	return nil
 }

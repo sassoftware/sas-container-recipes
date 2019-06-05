@@ -4,8 +4,7 @@ A framework for building SAS Viya Docker images and creating deployments using K
 Single Container
 ----------------
 
-  Required arguments:
-
+  Required arguments: 
     --zip <value>
         Specifies the path to the SAS_Viya_deployment_data.zip file from your Software Order Email (SOE).
         Example: /path/to/SAS_Viya_deployment_data.zip  
@@ -110,10 +109,6 @@ Multiple Containers
     --workers <integer>
         Specifies the number of CPU cores to allocate for the build process.
         Default: Utilize all cores on the build machine
-
-    --verbose
-        Outputs the result of each Docker layer creation.
-        Default: false
 
     --skip-docker-url-validation
         Skips validating the Docker registry URL.
