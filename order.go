@@ -28,7 +28,6 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-    "encoding/base64"
 	"archive/zip"
 	"bufio"
 	"bytes"
