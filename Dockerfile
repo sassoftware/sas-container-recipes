@@ -13,7 +13,7 @@ RUN apt-get update && \
 RUN go get -x -u gopkg.in/yaml.v2 \
 	github.com/docker/docker/api/types \
 	github.com/docker/docker/client \
-	github.com/docker/cli/cli/config/configfile
+	github.com/docker/cli/cli/config/configfile \
 	github.com/gosuri/uiprogress
 
 RUN groupadd --gid ${DOCKER_GID} docker
