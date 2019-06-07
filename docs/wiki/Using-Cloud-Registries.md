@@ -1,21 +1,36 @@
-### Google Cloud Registry (GCR)
-1. Install the Google Cloud SDK on your host machine
-	https://cloud.google.com/sdk/docs/
-2. Add the "credHelpers" section to your ~/.docker/config.json
-	`gcloud auth configure-docker`
-3. Add the access token to your ~/.docker/config.json
-	`docker login https://gcr.io` (Note: you must add "https://" to the URL)
-4. Run the build command with the arguments
-	Provide your GCP project name as the value for the `--docker-namespace` argument and gcr.io as the value for the `--docker-registry-url` argument
+### Google Cloud Container Registry
 
+1. Make sure that the Google Cloud SDK is installed on your host machine. For more information, see https://cloud.google.com/sdk/docs/.
+	
+2. Add the credential helpers (credHelpers) section to the ~/.docker/config.json file:
+
+   ```
+   gcloud auth configure-docker
+   ```
+
+3. Add the access token to the ~/.docker/config.json file:
+
+   ```
+   docker login https://gcr.io
+   ``` 
+   
+   **Note:** You must use https (not http) in the address for gcr.io.
+
+4. Run the `build.sh` command with the `--docker-namespace` and `--docker-registry-url` arguments. Provide your Google Cloud Platform (GCP) project name as the value for `--docker-namespace` and gcr.io as the value for `--docker-registry-url`.
+
+   Here is an example:
+
+   ```
+   ./build.sh --docker-namespace My GCP Project Name --docker-registry-url gcr.io
+   ```
 
 ### Amazon Elastic Container Registry (ECR)
-1. Install the AWS CLI
-	https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html
-2. Create your ECR registries for each image that is going to be built (Amazon calls this a Container Repository)
-	https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html
-3. If you have not already, create an IAM user
-	https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-started_create-admin-group.html
+
+1. Make sure that you have the AWS CLI installed on your host machine. For more information, see https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html.
+
+2. Create the ECR registries for each image that is going to be built (Amazon calls this a Container Repository). For more information, see https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html.
+
+3. If you do not have an IAM user, create one. For more information, see https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-started_create-admin-group.html.
 	Then run `aws configure`
 4. Add your access token to your ~/.docker/config.json using
 	`aws ecr get-login`
