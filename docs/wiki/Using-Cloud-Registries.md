@@ -28,31 +28,62 @@
 
 1. Make sure that you have the AWS CLI installed on your host machine. For more information, see https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html.
 
-2. Create the ECR registries for each image that is going to be built (Amazon calls this a Container Repository). For more information, see https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html.
+2. Create the ECR repositories for each image that will be built. For more information, see https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html.
 
-3. If you do not have an IAM user, create one. For more information, see https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-started_create-admin-group.html.
-	Then run `aws configure`
-4. Add your access token to your ~/.docker/config.json using
-	`aws ecr get-login`
-	Then copy and paste the `docker login` command that was returned
-5. Run the build command with the arguments
+3. If you do not have an dentity and Access Management IAM user, create one. For more information, see https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-started_create-admin-group.html.
 
-    The value specified for the required `--docker-namespace` argument will be ignored, but you must specify a dummy value. Provide the registry URI (found at https://console.aws.amazon.com/ecr/repositories) for the value of the `--docker-registry-url` argument.
+4. Run the following command: 
+
+   ```
+   aws configure
+   ```
+
+5. Add the access token to the ~/.docker/config.json file:
+
+	```
+    aws ecr get-login
+    ```
+
+6. Copy and paste the `docker login` command that was returned.
+
+7. Run the `build.sh` command with the `--docker-namespace` and `--docker-registry-url` arguments. Provide a dummy value for `--docker-namespace` and the repository URI as the value for `--docker-registry-url`.
+
+   Here is an example:
+
+   ```
+   ./build.sh --docker-namespace dummy-value --docker-registry-url 1234567890123.dkr.ecr.us-east-1.amazonaws.com/my-repo-name
+   ```   
+
+   **Note:**
+
+   - The value for the `--docker-namespace` argument will be ignored, but you must specify a dummy value.
+   - For information about the repository URI, see https://console.aws.amazon.com/ecr/repositories.
     
-6. If an error such as the following appears then you need to create a registry for each image that is being built.
+    If the following error occurs, then you need to create a repository for each image that will be built.
 
 	> The repository with the name 'sas-viya-httpproxy' does not exist in the registry with the id '12345678910'
 	
-	Create the registry named 'sas-viya-httpproxy' at https://console.aws.amazon.com/ecr/repositories
+	Create the repository named sas-viya-httpproxy at https://console.aws.amazon.com/ecr/repositories.
 
 
 ### Azure Container Registry (ACR)
-1. Install the Azure CLI
-	https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
-2. Create the resource group and container registry space
-	https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-azure-cli
-3. Add the auth and identity token to your ~/.docker/config.json
-	`az acr login --name <registry-name>`
-	Note: the registry name comes from the "--name" argument used when your resource group and container registry space was created. For example, `az acr create --resource-group myResourceGroup --name myContainerRegistry --sku Basic`
-4. Run the build command with the arguments
-	--docker-namespace as your registry name the --docker-registry-url as the login server name ("<name>.azurecr.io")
+
+1. Make sure that you have the Azure CLI installed on your host machine. For more information, see https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest.
+
+2. Create the resource group and container registry space. For more information, see https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-azure-cli.
+
+3. Add the auth and identity token to the ~/.docker/config.json file:
+
+	```
+    az acr login --name <registry-name>
+    ```
+	
+   **Note:** The registry name comes from the `--name` argument that was used when the resource group and container registry space were created. For example, `az acr create --resource-group myResourceGroup --name myContainerRegistry --sku Basic`
+
+4. Run the `build.sh` command with the `--docker-namespace` and `--docker-registry-url` arguments. Provide the registy name as the value for `--docker-namespace` and the login server name as the value for `--docker-registry-url`.  
+
+   Here is an example:
+
+   ```
+   ./build.sh --docker-namespace registry-name --docker-registry-url login-server-name.azurecr.io
+   ```
