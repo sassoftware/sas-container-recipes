@@ -6,7 +6,7 @@
 3. Add the access token to your ~/.docker/config.json
 	`docker login https://gcr.io` (Note: you must add "https://" to the URL)
 4. Run the build command with the arguments
-	--docker-namespace as your GCE project name and the --docker-registry-url gcr.io
+	Provide your GCP project name as the value for the `--docker-namespace` argument and gcr.io as the value for the `--docker-registry-url` argument
 
 
 ### Amazon Elastic Container Registry (ECR)
@@ -21,7 +21,9 @@
 	`aws ecr get-login`
 	Then copy and paste the `docker login` command that was returned
 5. Run the build command with the arguments
-	Provide any --docker-namespace argument (since this is not used) and provide the --docker-registry-url as the registry URI (found at https://console.aws.amazon.com/ecr/repositories)
+
+    The value specified for the required `--docker-namespace` argument will be ignored, but you must specify a dummy value. Provide the registry URI (found at https://console.aws.amazon.com/ecr/repositories) for the value of the `--docker-registry-url` argument.
+    
 6. If an error such as the following appears then you need to create a registry for each image that is being built.
 
 	> The repository with the name 'sas-viya-httpproxy' does not exist in the registry with the id '12345678910'
