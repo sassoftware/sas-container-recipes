@@ -21,7 +21,7 @@
    Here is an example:
 
    ```
-   ./build.sh --docker-namespace My GCP Project Name --docker-registry-url gcr.io
+   ./build.sh --docker-namespace <my-gcp-project-name> --docker-registry-url gcr.io
    ```
 
 ### Amazon Elastic Container Registry (ECR)
@@ -44,7 +44,7 @@
     aws ecr get-login
     ```
 
-6. Copy and paste the `docker login` command that was returned.
+6. Copy the `docker login` command that was returned, paste it into a terminal, and run the command.
 
 7. Run the `build.sh` command with the `--docker-namespace` and `--docker-registry-url` arguments. Provide a dummy value for `--docker-namespace` and the repository URI as the value for `--docker-registry-url`.
 
