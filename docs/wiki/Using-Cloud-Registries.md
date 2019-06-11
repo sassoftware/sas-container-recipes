@@ -51,7 +51,7 @@
    Here is an example:
 
    ```
-   ./build.sh --docker-namespace dummy-value --docker-registry-url 1234567890123.dkr.ecr.us-east-1.amazonaws.com/my-repo-name
+   ./build.sh --docker-namespace dummy-value --docker-registry-url 1234567890123.dkr.ecr.us-east-1.amazonaws.com
    ```   
 
    **Note:**
