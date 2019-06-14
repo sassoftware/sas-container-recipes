@@ -30,7 +30,7 @@
 
 2. Create the ECR repositories for each image that will be built. For more information, see https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html.
 
-3. If you do not have an dentity and Access Management IAM user, create one. For more information, see https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-started_create-admin-group.html.
+3. If you do not have an identity and Access Management IAM user, create one. For more information, see https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-started_create-admin-group.html.
 
 4. Run the following command: 
 
