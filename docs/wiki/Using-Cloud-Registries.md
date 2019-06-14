@@ -8,7 +8,7 @@
    gcloud auth configure-docker
    ```
 
-3. Add the access token to the ~/.docker/config.json file:
+3. Log into the repository to add the access token to the ~/.docker/config.json file:
 
    ```
    docker login https://gcr.io
@@ -30,7 +30,7 @@
 
 2. Create the ECR repositories for each image that will be built. For more information, see https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html.
 
-3. If you do not have an dentity and Access Management IAM user, create one. For more information, see https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-started_create-admin-group.html.
+3. If you do not have an identity and Access Management IAM user, create one. For more information, see https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-started_create-admin-group.html.
 
 4. Run the following command: 
 
@@ -38,7 +38,7 @@
    aws configure
    ```
 
-5. Add the access token to the ~/.docker/config.json file:
+5. Log into the repository to add the access token to the ~/.docker/config.json file:
 
 	```
     aws ecr get-login
@@ -72,13 +72,13 @@
 
 2. Create the resource group and container registry space. For more information, see https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-azure-cli.
 
-3. Add the auth and identity token to the ~/.docker/config.json file:
+3. Log into the repository to add the auth and identity token to the ~/.docker/config.json file:
 
 	```
     az acr login --name <registry-name>
     ```
-	
-   **Note:** The registry name comes from the `--name` argument that was used when the resource group and container registry space were created. For example, `az acr create --resource-group myResourceGroup --name myContainerRegistry --sku Basic`
+    
+    The registry name can be found on the "Resource Groups" page.
 
 4. Run the `build.sh` command with the `--docker-namespace` and `--docker-registry-url` arguments. Provide the registy name as the value for `--docker-namespace` and the login server name as the value for `--docker-registry-url`.  
 
