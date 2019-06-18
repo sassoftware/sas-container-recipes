@@ -46,7 +46,6 @@
 
 7. Apply the Kubernetes manifest using the output from the build result script
 
-
 ### Amazon Elastic Container Service for Kubernetes (EKS)
 1. Install the AWS CLI so ECR registries can be created
 	https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html
@@ -60,7 +59,7 @@
 3. Create ECR registries for each image that is going to be built
 	https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html
 
-4. If you do not have an identity and Access Management IAM user, create one.
+4. If you do not have an Identity and Access Management (IAM) user, create one.
 	For more information, see https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-started_create-admin-group.html.
 
 5. Run the following command:
@@ -140,8 +139,7 @@
 	```
     az acr login --name <registry-name>
     ```
-
-   **Note:** The registry name comes from the `--name` argument that was used when the resource group and container registry space were created. For example, `az acr create --resource-group myResourceGroup --name myContainerRegistry --sku Basic`
+	The registry name can be found on the "Resource Groups" page.
 
 4. Run the `build.sh` command with the `--docker-namespace` and `--docker-registry-url` arguments. Provide the registy name as the value for `--docker-namespace` and the login server name as the value for `--docker-registry-url`.
 
