@@ -28,9 +28,13 @@ spec:
       containers:
       - name: {{ settings.project_name }}-{{ item.key | lower }}
 {% for regkey,regvalue in registries.items() %}
-        image: {{ regvalue.url }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
+	{% if 'amazonaws' in regvalue.url %}
+	image: {{ regvalue.url }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
+	{% else %}
+	image: {{ regvalue.url }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
+	{% endif %}
 {% endfor %}
-        imagePullPolicy: Always
+	imagePullPolicy: Always
 {% if item.value.ports is defined and item.value.ports %}
         ports:
 {%   for ports in item.value.ports %}
