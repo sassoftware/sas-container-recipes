@@ -25,11 +25,11 @@ spec:
       containers:
       - name: {{ settings.project_name }}-esp-metered-billing
 {% for regkey,regvalue in registries.items() %}
-	{% if 'amazonaws' in regvalue.url %}
-		image: {{ regvalue.url }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
-	{% else %}
-		image: {{ regvalue.url }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
-	{% endif %}
+    {% if 'amazonaws' in regvalue.url %}
+        image: {{ regvalue.url }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
+    {% else %}
+        image: {{ regvalue.url }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
+    {% endif %}
 {% endfor %}
         imagePullPolicy: Always
         ports:
