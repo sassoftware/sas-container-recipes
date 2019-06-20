@@ -30,11 +30,7 @@ spec:
       - name: {{ settings.project_name }}-{{ item.key }}
 {% endif %}
 {% for regkey,regvalue in registries.items() %}
-    {% if 'amazonaws' in regvalue.url %}
     image: {{ regvalue.url }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }
-    {% else %}
-    image: {{ regvalue.url }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
-    {% endif %}
 {% endfor %}
     imagePullPolicy: Always
 {% if item.value.ports is defined and item.value.ports %}

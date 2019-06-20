@@ -35,14 +35,12 @@
 5. Add the access token to the ~/.docker/config.json file:
 	`docker login https://gcr.io` (Note: you must add "https://" to the URL)
 
-6. Run the `build.sh` command with the `--docker-namespace` and `--docker-registry-url` arguments.
-	Provide your Google Cloud Platform (GCP) project name as the value for
-	`--docker-namespace` and gcr.io as the value for `--docker-registry-url`.
+6. Run the `build.sh` command with the `--docker-registry-url` argument.
+	Provide your Google Cloud Platform (GCP) project name at the end of gcr.io
 
-   Here is an example:
-
-   ```
-   ./build.sh --docker-namespace <my-gcp-project-name> --docker-registry-url gcr.io
+	Example (**do not copy**):
+	```
+	./build.sh --docker-registry-url gcr.io/<my-project-name> ...
 	```
 
 7. Apply the Kubernetes manifest using the output from the build result script
@@ -112,21 +110,16 @@
 	aws eks update-kubeconfig --name sas-viya
 	```
 
-13. Run the `build.sh` command with the `--docker-namespace` and `--docker-registry-url` arguments.
-	Provide a dummy value for `--docker-namespace` and the repository URI as the value for `--docker-registry-url`.
+13. Run the `build.sh` command with the `--docker-registry-url` argument being the repository URI
 
-   Here is an example:
-
+   Example (**do not copy**)
    ```
-   ./build.sh --docker-namespace dummy-value --docker-registry-url 1234567890123.dkr.ecr.us-east-1.amazonaws.com
+   ./build.sh --docker-registry-url 1234567890123.dkr.ecr.us-east-1.amazonaws.com
    ```
 
-   **Note:**
+   For information about the repository URI, see https://console.aws.amazon.com/ecr/repositories
 
-   - The value for the `--docker-namespace` argument will be ignored, but you must specify a dummy value.
-   - For information about the repository URI, see https://console.aws.amazon.com/ecr/repositories
-
-    If the following error occurs, then you need to create a repository for each image that will be built.
+   If the following error occurs, then you need to create a repository for each image that will be built.
 
 	> The repository with the name 'sas-viya-httpproxy' does not exist in the registry with the id '12345678910'
 
@@ -168,12 +161,9 @@
 	az aks get-credentials --resource-group sas-viya --name sas-viya-cluster
 	```
 
-6. Run the `build.sh` command with the `--docker-namespace` and `--docker-registry-url` arguments.
-	Provide the registy name as the value for `--docker-namespace` and the
-	login server name as the value for `--docker-registry-url`.
+6. Run the `build.sh` command with the registry login server address in the `--docker-registry-url` argument.
 
-	Here is an example:
-
+   Example (**do not copy**):
    ```
-   ./build.sh --docker-namespace <my-registry-name> --docker-registry-url <login-server-name>.azurecr.io
+   ./build.sh --docker-registry-url <login-server-name>.azurecr.io
    ```

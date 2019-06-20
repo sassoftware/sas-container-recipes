@@ -54,7 +54,7 @@ This prefix indicates an environment variable that is included in the cas_docker
 This prefix indicates setting the LD_LIBRARY_PATH variable in the cas_docker.settings file.
 
 ### Order of Configuration
-The configuration of software follows the order of the methods (configuration files or environment variables) shown below, where the last method used sets the configuration:  
+The configuration of software follows the order of the methods (configuration files or environment variables) shown below, where the last method used sets the configuration:
 
 * files in the /tmp directory
 * files in the /sasinside the directory
@@ -63,7 +63,7 @@ The configuration of software follows the order of the methods (configuration fi
 ## How to Build
 ### Overview
 
-Use the `build.sh` script in the root of the directory: sas-container-recipes/build.sh. You will be able to pass in the base image, tag what you want to build from, and provide any addons to create your custom images. 
+Use the `build.sh` script in the root of the directory: sas-container-recipes/build.sh. You will be able to pass in the base image, tag what you want to build from, and provide any addons to create your custom images.
 
 **Note:** The following examples use a mirror repository, which is [strongly recommended](Tips#create-a-local-mirror-repository).
 
@@ -75,12 +75,12 @@ build.sh --help
 
 The `build.sh` script will validate several of the settings that are needed to help with the deployment process. The `docker-registry-url` and `docker-namespace` arguments are expected. If these arguments are not provided, then the script will exit early until they are provided.
 
-* The `docker-registry-url` and `docker-namespace` arguments are used so that the process can push the containers to the Docker registry with a specific Docker tag. This same information is then used to generate the Kubernetes manifests. 
+* The `docker-registry-url` and `docker-namespace` arguments are used so that the process can push the containers to the Docker registry with a specific Docker tag. This same information is then used to generate the Kubernetes manifests.
 * The `virtual-host` argument points to the ingress hostname that represents the end point for the sas-viya-httpproxy container. This is an optional parameter for the programming-only deployment. The value can be changed or added after `build.sh` is run but before the images are deployed to Kubernetes.
 
 **Note:** If the value for `virtual-host` is not updated after the build, then the user-interface links between SAS Studio and CAS Server Monitor will not work for a programming-only deployment. The `virtual-host` argument has no impact on a full deployment.
 
-Passing in `--addons` will follow a convention to automatically add the layers to the correct SAS images. 
+Passing in `--addons` will follow a convention to automatically add the layers to the correct SAS images.
 
 * Addons that begin with _auth_ will be added to the computeserver, programming, and cas containers
 * Addons that begin with _access_ will be added to the computeserver, programming, and cas containers
@@ -98,7 +98,7 @@ The instructions in this section are for Red Hat Enterprise Linux (RHEL) 7 or de
 
 In the following example, the most recent "CentOS:7" image is pulled from DockerHub and multiple images of a programming-only deployment are built, including the addons/auth-sssd and  addons/access-odbc layers. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
 
-To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--base-image` and `--base-tag` arguments. 
+To change the base image from which the SAS image will be built to any RHEL 7 derivative, change the values for the `--base-image` and `--base-tag` arguments.
 
 ```
 build.sh \
@@ -108,7 +108,6 @@ build.sh \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repos \
 --docker-registry-url docker.registry.company.com \
---docker-namespace sas \
 --addons "auth-sssd access-odbc"
 ```
 
@@ -122,7 +121,6 @@ build.sh \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repos \
 --docker-registry-url docker.registry.company.com \
---docker-namespace sas \
 --addons "auth-sssd access-odbc"
 ```
 
@@ -199,7 +197,7 @@ During the manifest generation, a YML file was created that helps with creating 
 kubectl apply -f $MANIFESTS/kubernetes/namespace/sas-viya.yml
 ```
 
-After a namespace is available, run the manifests in the following order: 
+After a namespace is available, run the manifests in the following order:
 
 ```
 kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/ingress
@@ -211,9 +209,9 @@ kubectl -n sas-viya apply -f $MANIFESTS/kubernetes/deployments
 
 **Notes:**
 
-- The examples use _sas-viya_ for the namespace. If you created a different namespace, use that value. 
+- The examples use _sas-viya_ for the namespace. If you created a different namespace, use that value.
 - Make sure that the file in the $MANIFESTS/kubernetes/ingress directory contains the correct Ingress domain. An example value _company.com_ is used by default, which will not work in your environment. To change the value, see [Kubernetes Manifest Inputs](Pre-build-Tasks#kubernetes-manifest-inputs) (a pre-build task) for information about how to set it, and then see [(Optional) Regenerating Manifests](post-run-tasks#optional-regenerating-manifests) (a post-run task) for information about how to regenerate the manifests.
-- If you are setting up TLS, make sure that the TLS section of the file in the $MANIFESTS/kubernetes/ingress directory is configured correctly. For more information, see the [Ingress Configuration](Pre-build-Tasks#ingress-configuration) (a pre-build task). 
+- If you are setting up TLS, make sure that the TLS section of the file in the $MANIFESTS/kubernetes/ingress directory is configured correctly. For more information, see the [Ingress Configuration](Pre-build-Tasks#ingress-configuration) (a pre-build task).
 - By default, the user account for the CAS administrator (the casenv_admin_user variable) is sasdemo. If you built the images with the auth-sssd addon or customized the user in the auth-demo addon, make sure to specify a valid user name for the casenv_admin_user variable, which is in one of the following files:
   - builds/multiple/manifests/kubernetes/configmaps/cas.yml for a `--type multiple` build
   - builds/full/manifests/kubernetes/configmaps/cas.yml for a `--type full` build
