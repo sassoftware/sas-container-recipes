@@ -880,6 +880,7 @@ func getContainers(order *SoftwareOrder) ([]*Container, error) {
 	var ignoredContainers = [...]string{
 		"all", "sas-all", "CommandLine",
 		"sas-casserver-secondary", "sas-casserver-worker",
+		"sas_all", "sas_casserver_secondary", "sas_casserver_worker",
 	}
 
 	// The names inside the playbook's inventory file are mapped to hosts
@@ -890,7 +891,13 @@ func getContainers(order *SoftwareOrder) ([]*Container, error) {
 	}
 	inventory := string(inventoryBytes)
 	startLine := 0
-	startOfSection := "[sas-all:children]"
+
+	// Backwards compatibility for Ansible 2.10 dropping support for hyphens in host group names
+	// Parse host group names with hyphens or underscores
+	startOfSection := "[sas_all:children]"
+	if strings.Contains(inventory, "[sas-all:children]") {
+		startOfSection = "[sas-all:children]"
+	}
 	lines := strings.Split(inventory, "\n")
 	for index, line := range lines {
 		if line == startOfSection {
