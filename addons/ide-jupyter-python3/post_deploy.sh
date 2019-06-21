@@ -70,21 +70,10 @@ export JPY_COOKIE_SECRET=`openssl rand -hex 32`
 export AUTHINFO="${RUN_USER_HOME}/authinfo.txt"
 export SSLCALISTLOC="${SASHOME}/SASSecurityCertificateFramework/cacerts/trustedcerts.pem"
 export CAS_CLIENT_SSL_CA_LIST="/data/casconfig/sascas.pem"
-[[ -z ${PLATFORM+x} ]] && PLATFORM=@PLATFORM@
 
-
-if [[ "${PLATFORM}" == "redhat" ]]; then
-    cp /usr/local/lib/python3.6/site-packages/saspy/sascfg.py /usr/local/lib/python3.6/site-packages/saspy/sascfg_personal.py
-    sed -i -e "s#/opt/sasinside/SASHome/SASFoundation/9.4/bin/sas_u8#/opt/sas/spre/home/SASFoundation/sas#g" \
-        /usr/local/lib/python3.6/site-packages/saspy/sascfg_personal.py
-elif [[ "${PLATFORM}" == "suse" ]]; then
-    cp /usr/lib/python3.4/site-packages/saspy/sascfg.py /usr/lib/python3.4/site-packages/saspy/sascfg_personal.py
-    sed -i -e "s#/opt/sasinside/SASHome/SASFoundation/9.4/bin/sas_u8#/opt/sas/spre/home/SASFoundation/sas#g" \
-        /usr/lib/python3.4/site-packages/saspy/sascfg_personal.py
-else
-    echo "[ERROR] : Unknown platform of '${PLATFORM}'...exiting"
-    exit 3
-fi
+cp /usr/local/lib/python3.6/site-packages/saspy/sascfg.py /usr/local/lib/python3.6/site-packages/saspy/sascfg_personal.py
+sed -i -e "s#/opt/sasinside/SASHome/SASFoundation/9.4/bin/sas_u8#/opt/sas/spre/home/SASFoundation/sas#g" \
+	/usr/local/lib/python3.6/site-packages/saspy/sascfg_personal.py
 
 # Handle previous pids on container restarts
 _jupyterpid="/var/run/jupyter.pid"
