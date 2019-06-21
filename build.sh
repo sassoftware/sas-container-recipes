@@ -124,7 +124,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -u|--docker-url|--docker-registry-url)
             shift # past argument
-            export DOCKER_REGISTRY_URL=$(echo $1 | cut -d'/' -f3)
+            export DOCKER_REGISTRY_URL=$1
             shift # past value
             ;;
         -n|--docker-namespace|--docker-registry-namespace)

@@ -64,6 +64,12 @@ const SasViyaVersion = "34"
 // NOTE: this path changes to config-<deployment-type>.yml
 var ConfigPath = "config-full.yml"
 
+// Used to determine how much padding should be on the progress bar
+var LongestContainerName = 0
+
+// UI Progress Bar Size
+const ProgressBarWidth = 60
+
 // SoftwareOrder is the structure to hold the order information.
 type SoftwareOrder struct {
 
@@ -251,12 +257,12 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 		return order, nil
 	}
 
-	order.WriteLog(false, true, order.BuildArgumentsSummary())
-
 	// Configure a new isolated build space
 	if err := order.SetupBuildDirectory(); err != nil {
 		return order, err
 	}
+
+	order.WriteLog(false, true, order.BuildArgumentsSummary())
 
 	// Determine if the binary is being run inside the sas-container-recipes-builder
 	order.InDocker = true
@@ -628,11 +634,8 @@ func (order *SoftwareOrder) LoadCommands() error {
 	return nil
 }
 
-// Used to determine how much padding should be on the progress bar
-var LongestContainerName = 0
-
-const ProgressBarWidth = 60
-
+// Start a worker pool that ranges through the containers and builds as many as
+// the --workers argument permits (default: use all available cores)
 func buildWorker(id int, containers <-chan *Container, done chan<- string, progress chan string, fail chan string) {
 	for container := range containers {
 		if container.Status != Loaded {
