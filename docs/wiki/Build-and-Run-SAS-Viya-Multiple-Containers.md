@@ -7,7 +7,6 @@
 - [How to Build](#how-to-build)
   - [Overview](#overview)
   - [Building on an Image Based on Red Hat Enterprise Linux](#building-on-an-image-based-on-red-hat-enterprise-linux)
-  - [Building on a SUSE Linux Image](#building-on-a-suse-linux-image)
   - [Logging](#logging)
   - [Errors During the Build](#errors-during-the-build)
 - [How to Run](#how-to-run)
@@ -125,10 +124,6 @@ build.sh \
 ```
 
 Building multiple images could take several hours to complete. After the process has completed, you will have 3 (programming-only) to around 25 (full) Docker images that are local on your build machine, as well as in the Docker registry that you provided. An example set of manifests is also provided, which is covered in [How to Run](#how-to-run).
-
-### Building on a SUSE Linux Image
-
-Building multiple containers on SUSE Linux-based images are not currently supported.
 
 ### Logging
 

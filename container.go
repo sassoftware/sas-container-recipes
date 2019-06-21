@@ -456,8 +456,8 @@ func readDockerStream(responseStream io.ReadCloser,
 			errSummary += fmt.Sprintf("For error details, review the following log files: \n\t%s\n\t%s\n",
 				container.LogPath, container.SoftwareOrder.LogPath)
 			errSummary += "If you cannot resolve the problem, create an " +
-				"issue on GitHub at the link below and attach these log files."
-			"\n\thttps://github.com/sassoftware/sas-container-recipes/issues\n\n"
+				"issue on GitHub at the link below and attach these log files." +
+				"\n\thttps://github.com/sassoftware/sas-container-recipes/issues\n\n"
 			return errors.New(errSummary)
 		}
 	}

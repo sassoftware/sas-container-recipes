@@ -570,18 +570,10 @@ func (order *SoftwareOrder) LoadCommands() error {
 
 	// Detect the platform based on the image
 	order.BaseImage = *baseImage
-	if strings.Contains(order.BaseImage, "suse") {
-		order.Platform = "suse"
-	} else {
-		// By default use rpm + yum
-		order.Platform = "redhat"
-	}
+	order.Platform = "redhat"
 
-	// A mirror is optional, except in the case of using an opensuse base image for single container
+	// A mirror is optional
 	order.MirrorURL = *mirrorURL
-	if len(order.MirrorURL) == 0 && order.DeploymentType == "single" && order.Platform == "suse" {
-		return errors.New("a --mirror-url argument is required for a base suse single container")
-	}
 	if strings.Contains(order.MirrorURL, "http://") {
 		fmt.Println(fmt.Sprintf(
 			"WARNING: the --mirror-url argument '%s' does not have TLS.", order.MirrorURL))

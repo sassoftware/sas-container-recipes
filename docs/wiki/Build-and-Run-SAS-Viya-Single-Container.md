@@ -8,7 +8,6 @@
 - [How to Build](#how-to-build)
   - [Overview](#overview)
   - [Building on a CentOS Image](#building-on-a-centos-image)
-  - [Building on a SUSE Linux Image](#building-on-a-suse-linux-image)
   - [Advanced Building Options](#advanced-building-options)
   - [Logging](#logging)
   - [Errors During Build](#errors-during-build)
@@ -23,14 +22,14 @@
 Before you build the images and run the container, read about the different ways that you can modify the configuration.
 
 ### Using Custom Values to Override the Playbook Settings
-You can override the default configuration settings for the SAS Programming 
-Runtime Environment (SPRE) and the SAS Cloud Analytic Services (CAS) server 
-that are applied to the image when it is being created. To set these 
-configuration values, copy the util/vars_usermods.yml file into the 
+You can override the default configuration settings for the SAS Programming
+Runtime Environment (SPRE) and the SAS Cloud Analytic Services (CAS) server
+that are applied to the image when it is being created. To set these
+configuration values, copy the util/vars_usermods.yml file into the
 sas-container-recipes project directory, and then edit the values in the new copy.
 
 ```
-# The following is the initial Admin user for use with CAS Server Monitor. 
+# The following is the initial Admin user for use with CAS Server Monitor.
 # This is the user you will log into CAS Server Monitor with
 # in order to create global CAS libs and set access rights.
 # If not set, the casenv_user will be used by default.
@@ -39,7 +38,7 @@ sas-container-recipes project directory, and then edit the values in the new cop
 # review how to define a password as documented with the sas_users
 # collection above.
 
-#casenv_admin_user: 
+#casenv_admin_user:
 
 #### CAS Specific ####
 # Anything in this list will end up in the cas.settings file
@@ -57,9 +56,9 @@ sas-container-recipes project directory, and then edit the values in the new cop
 #     Example: cas.port = 5570
 #
 # If you have defined hosts for the sas-casserver-worker then the MODE will
-# automatically be set to 'mpp'. If the environment variables HADOOP_HOME and 
+# automatically be set to 'mpp'. If the environment variables HADOOP_HOME and
 # HADOOP_NAMENODE are set, the COLOCATION option will automatically equal 'hdfs'.
-# If HADOOP_HOME and HADOOP_NAMENODE are not set, then the COLOCATION option 
+# If HADOOP_HOME and HADOOP_NAMENODE are not set, then the COLOCATION option
 # will automatically equal 'none'.
 
 CAS_CONFIGURATION:
@@ -164,7 +163,7 @@ This prefix indicates an environment variable that is included in the cas_docker
 This prefix indicates setting the LD_LIBRARY_PATH variable in the cas_docker.settings file.
 
 ### Order of Configuration
-The configuration of software follows the order of the methods (configuration files or environment variables) shown below, where the last method used sets the configuration:  
+The configuration of software follows the order of the methods (configuration files or environment variables) shown below, where the last method used sets the configuration:
 
 * vars.yml from the playbook
 * vars_usermods.yml (override the playbook settings)
@@ -207,22 +206,6 @@ build.sh \
 **Note:** If the `--base-image` and `--base-tag` arguments are not provided, then centos:latest from DockerHub will be used. Although building on other Red Hat Enterprise Linux (RHEL) based images is not currently
 not supported, different options for the `--base-image` and `--base-tag` arguments can be provided on an experimental basis.
 
-### Building on a SUSE Linux Image
-
-In the following example, the opensuse/leap:42 image is pulled from DockerHub, and the addons/auth-sssd and addons/access-odbc layers are added after the main SAS image is built. If you decide to use more addons, add them to the space-delimited list, and make sure that the list is enclosed in double quotation marks.
-
-To change the base image from which the SAS image will be built to any SUSE variant, change the values for the `--base-image` and `--base-tag` arguments. Currently, opensuse/leap with tags 42.* is supported.
-
-```
-build.sh \
---type single \
---base-image opensuse/leap \
---base-tag 42 \
---zip /path/to/SAS_Viya_deployment_data.zip \
---mirror-url http://host.company.com/sas_repo \
---addons "auth-sssd access-odbc"
-```
-
 ### Advanced Building Options
 #### Running Docker build
 
@@ -239,18 +222,18 @@ docker build . \
 
 The result will create a Docker image tagged as sas-viya-single-programming-only:latest.
 
-To change the base image, change the `BASEIMAGE` and `BASETAG` options. If using a SUSE-based operating system, make sure to set `PLATFORM=suse`.  
+To change the base image, change the `BASEIMAGE` and `BASETAG` options.
 
 #### Extending the Base Image
 
-To add to the base image, navigate to any of the subdirectories and run a build 
-with the provided Dockerfile. Below are examples of adding the sasdemo user to 
-the initial image and then adding Jupyter with python3 support to the 
-svc-auth-demo image. 
+To add to the base image, navigate to any of the subdirectories and run a build
+with the provided Dockerfile. Below are examples of adding the sasdemo user to
+the initial image and then adding Jupyter with python3 support to the
+svc-auth-demo image.
 
 **Note:** Unless a custom base image that already
-supports host-level authentication is provided, the addons/auth-sssd 
-or addons/auth-demo layers must be 
+supports host-level authentication is provided, the addons/auth-sssd
+or addons/auth-demo layers must be
 added in order to support full functionality of the SAS Viya container.
 
 ##### To Create an Image with the sasdemo User
@@ -299,7 +282,7 @@ The command between the parentheses returns the image IDs that meet the filter c
 
 ### Using Docker
 
-In the root of the directory, locate the samples/viya-single-container/example_launchsas.sh file, which contains the `docker run` command. Copy the file, and then edit it so that it matches your environment. 
+In the root of the directory, locate the samples/viya-single-container/example_launchsas.sh file, which contains the `docker run` command. Copy the file, and then edit it so that it matches your environment.
 
 Here is example of running the script:
 
@@ -310,11 +293,11 @@ sed -i 's|@REPLACE_ME_WITH_TAG@|<tag>|' ${PWD}/run/launchsas.sh
 cd run
 ```
 
-**Note:** 
+**Note:**
 - Replace `<tag>` with the tag value of the sas-viya-single-programming-only image. To retrieve the tag value, run the `docker images` command.
 - By default, the user account for the CAS administrator (the CASENV_ADMIN_USER variable) is sasdemo. If you built the image with the auth-sssd addon or customized the user in the auth-demo addon, make sure to specify a valid user name for the CASENV_ADMIN_USER variable.
 
-When the script is run, it will create several directories for you. These are set up either to cause data to persist or to help with [configuration](#configuration). 
+When the script is run, it will create several directories for you. These are set up either to cause data to persist or to help with [configuration](#configuration).
 
 ```
 mkdir -p ${PWD}/sasinside      # Configuration
@@ -516,7 +499,7 @@ vi run/programming.yml
 
 In samples/viya-single-container/programming.yml file, find each occurrence of @REPLACE_ME*@ and replace it with the appropriate value. Also, replace the line `contents-of-license-file` with the contents of the SAS license file. Make sure that spacing remains intact after the contents are copied.
 
-The manifest already contains several defined paths where data that needs to persist between restarts can be stored. By default, these paths are set up to point to local storage that will disappear after the Kubernetes pod is deleted. Update this part of the manifest to support how your site implements persistence storage. It is recommended that you review [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) for details about available options. 
+The manifest already contains several defined paths where data that needs to persist between restarts can be stored. By default, these paths are set up to point to local storage that will disappear after the Kubernetes pod is deleted. Update this part of the manifest to support how your site implements persistence storage. It is recommended that you review [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) for details about available options.
 
 ```
       volumes:
