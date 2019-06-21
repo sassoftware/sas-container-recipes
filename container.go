@@ -453,11 +453,11 @@ func readDockerStream(responseStream io.ReadCloser,
 		if response.Error != nil {
 			errSummary := fmt.Sprintf("error: %s: %v\n\n",
 				container.Name, response.Error)
-			errSummary += fmt.Sprintf("To see the details of the error, view the log files: \n\t%s\n\t%s\n",
+			errSummary += fmt.Sprintf("For error details, review the following log files: \n\t%s\n\t%s\n",
 				container.LogPath, container.SoftwareOrder.LogPath)
-			errSummary += "If you cannot determine a solution to the problem then " +
-				"create an issue on GitHub and attach the log files.\n\t" +
-				"https://github.com/sassoftware/sas-container-recipes/issues\n\n"
+			errSummary += "If you cannot resolve the problem, create an " +
+				"issue on GitHub at the link below and attach these log files."
+			"\n\thttps://github.com/sassoftware/sas-container-recipes/issues\n\n"
 			return errors.New(errSummary)
 		}
 	}
