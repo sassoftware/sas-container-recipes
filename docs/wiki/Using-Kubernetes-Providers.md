@@ -112,14 +112,14 @@
 
 13. Run the `build.sh` command with the `--docker-registry-url` argument being the repository URI
 
-   Example (**do not copy**)
-   ```
-   ./build.sh --docker-registry-url 1234567890123.dkr.ecr.us-east-1.amazonaws.com
-   ```
+	Example (**do not copy**)
+	```
+	./build.sh --docker-registry-url 1234567890123.dkr.ecr.us-east-1.amazonaws.com
+	```
 
-   For information about the repository URI, see https://console.aws.amazon.com/ecr/repositories
+	For information about the repository URI, see https://console.aws.amazon.com/ecr/repositories
 
-   If the following error occurs, then you need to create a repository for each image that will be built.
+	If the following error occurs, then you need to create a repository for each image that will be built.
 
 	> The repository with the name 'sas-viya-httpproxy' does not exist in the registry with the id '12345678910'
 

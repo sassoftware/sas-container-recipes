@@ -3,7 +3,7 @@ sitedefault.yml
 vars_usremods.yml
 Makefile
 builds/
-logs/
+run/
 **/sas-orchestration
 **/sas_viya_playbook/
 **/*.retry
