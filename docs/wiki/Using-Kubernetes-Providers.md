@@ -2,7 +2,7 @@
 1. Make sure that the Google Cloud SDK is installed on your host machine.
 	For more information, see https://cloud.google.com/sdk/docs/.
 
-2. Create a Kubernetes cluster
+2. Create a Kubernetes cluster:
 
 	A cluster for a full SAS Visual Analytics deployment requires a minimum of approximately 32 vCPUS and 128GB RAM.
 	The requirements for your software order may be higher due to the products included in it.
@@ -25,7 +25,7 @@
 	If you do not reserve adequate machine resources, you will receive a 
 	"Does not have minimum availability" message in the GKE Workloads page.
 
-3. Add the cluster's configuration information to your Kubernetes config file
+3. Add the cluster's configuration information to your Kubernetes config file:
 
 	`gcloud container clusters get-credentials sas-viya-cluster --zone us-central1-a`
 
@@ -39,7 +39,7 @@
 
 	`docker login https://gcr.io` (Note: you must use "https://" and not "http://" for the URL)
 
-6. Run the `build.sh` command with the `--docker-registry-url` argument.
+6. Run the `build.sh` command with the `--docker-registry-url` argument:
 
 	Provide your Google Cloud Platform (GCP) project name at the end of gcr.io
 
