@@ -124,8 +124,9 @@ type SoftwareOrder struct {
 	// │   └── SASViyaV0300_XXXXXX_Linux_x86-64.txt
 	// │   └── SASViyaV0300_XXXXXX_XXXXXXXX_Linux_x86-64.jwt
 	// └── order.oom
-	SOEZipPath string `yaml:"-"` // Used to load licenses
-	OrderOOM   struct {
+	SOEZipPath  string `yaml:"-"` // Used to load licenses
+	OrderNumber string `yaml:"Order Number            "`
+	OrderOOM    struct {
 		OomFormatVersion string `json:"oomFormatVersion"`
 		MetaRepo         struct {
 			URL        string   `json:"url"`
@@ -261,8 +262,6 @@ func NewSoftwareOrder() (*SoftwareOrder, error) {
 	if err := order.SetupBuildDirectory(); err != nil {
 		return order, err
 	}
-
-	order.WriteLog(false, true, order.BuildArgumentsSummary())
 
 	// Determine if the binary is being run inside the sas-container-recipes-builder
 	order.InDocker = true
@@ -971,6 +970,7 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 
 		if strings.Contains(zippedFile.Name, "Linux_x86-64.txt") {
 			order.License = fileBytes
+			order.OrderNumber = zippedFile.Name
 		} else if strings.Contains(zippedFile.Name, "Linux_x86-64.jwt") {
 			order.MeteredLicense = fileBytes
 		} else if strings.Contains(zippedFile.Name, "SAS_CA_Certificate.pem") {
@@ -994,6 +994,7 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 
 	go order.Serve()
 
+	order.WriteLog(false, true, order.BuildArgumentsSummary())
 	progress <- "Finished reading Software Order Email"
 	done <- 1
 }
