@@ -183,7 +183,7 @@ func (order *SoftwareOrder) SetupBuildDirectory() error {
 	}
 
 	// Start a new build log inside the isolated build directory
-	order.LogPath = order.BuildPath + "/build.log"
+	order.LogPath = order.BuildPath + "build.log"
 	logHandle, err := os.Create(order.LogPath)
 	if err != nil {
 		return err
