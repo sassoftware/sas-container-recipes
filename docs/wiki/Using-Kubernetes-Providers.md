@@ -1,5 +1,6 @@
 ### Google Kubernetes Engine (GKE)
-1. Make sure that the Google Cloud SDK is installed on your host machine.
+1. Confirm that the Google Cloud SDK is installed on your host machine.
+
 	For more information, see https://cloud.google.com/sdk/docs/.
 
 2. Create a Kubernetes cluster:
@@ -52,21 +53,21 @@
 
 
 ### Amazon Elastic Container Service for Kubernetes (EKS)
-1. Install the AWS CLI so ECR registries can be created
+1. Install the AWS CLI so ECR registries can be created.
 
 	https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html
 
-2. Make sure that you have the AWS CLI installed on your host machine.
+2.Confirm that you have the AWS CLI installed on your host machine.
 
 	For more information, see https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html.
 
-3. Make sure that you have the EKS CLI installed on your host machine so a Kubernetes cluster can be created.
+3. Confirm that you have the EKS CLI installed on your host machine so a Kubernetes cluster can be created.
 
 	For more information, see https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html#installing-eksctl
 
-4. Create ECR registries for each image that is going to be built
+4. Create ECR registries for each image that is going to be built.
 
-	https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html
+	For more information, see https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html
 
 5. If you do not have an Identity and Access Management (IAM) user, create one.
 
@@ -99,11 +100,11 @@
 	}
 	```
 
-10. Import your SSH key into EC2 if you have not already
+10. Import your SSH key into EC2 if you have not already done so.
 
 	For more information, see https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName
 
-11. Ceate a Kubernetes cluster
+11. Create a Kubernetes cluster:
 
 	A cluster requires a minimum of approximately 32 vCPUS and 128GB RAM total for a full VA deployment.
 	The requirement may be higher depending on your software order.
@@ -116,13 +117,13 @@
 
 	Where `<my_ec2_key>` is the name of the key imported in the previous step.
 
-12. Add the cluster's config to your Kubernetes config file
+12. Add the cluster's config to your Kubernetes config file:
 
 	```
 	aws eks update-kubeconfig --name sas-viya
 	```
 
-13. Run the `build.sh` command with the `--docker-registry-url` argument being the repository URI
+13. Run the `build.sh` command with the `--docker-registry-url` argument specifying the repository URI:
 
 	Example (**do not copy**)
 	```
@@ -135,11 +136,11 @@
 
 	> The repository with the name 'sas-viya-httpproxy' does not exist in the registry with the id '12345678910'
 
-14. Apply the Kubernetes manifest using the output from the build result script
+14. Apply the Kubernetes manifest provided in the output of the build script.
 
 
 ### Azure Kubernetes Service (AKS)
-1. Make sure that you have the Azure CLI installed on your host machine.
+1. Confirm that you have the Azure CLI installed on your host machine.
 
 	For more information, see https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
@@ -155,7 +156,7 @@
 
 	Your registry name can be found on the "Resource Groups" page.
 
-4. Create a Kubernetes cluster
+4. Create a Kubernetes cluster:
 
 	A cluster requires a minimum of approximately 32 vCPUS and 128GB RAM total for a full VA deployment.
 	The requirement may be higher depending on your software order.
@@ -170,15 +171,17 @@
 	--generate-ssh-key
 	```
 
-5. Add the cluster's config to your Kubernetes config file
+5. Add the cluster's config to your Kubernetes config file:
 
 	```
 	az aks get-credentials --resource-group sas-viya --name sas-viya-cluster
 	```
 
-6. Run the `build.sh` command with the registry login server address in the `--docker-registry-url` argument.
+6. Run the `build.sh` command with the registry login server address in the `--docker-registry-url` argument:
 
    Example (**do not copy**):
    ```
    ./build.sh --docker-registry-url <login-server-name>.azurecr.io
    ```
+
+7. Apply the Kubernetes manifest provided in the output of the build script.
