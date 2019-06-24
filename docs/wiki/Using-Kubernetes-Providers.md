@@ -4,8 +4,8 @@
 
 2. Create a Kubernetes cluster
 
-	A cluster requires a minimum of approximately 32 vCPUS and 128GB RAM total for a full VA deployment.
-	The requirement may be higher depending on your software order.
+	A cluster for a full SAS Visual Analytics deployment requires a minimum of approximately 32 vCPUS and 128GB RAM.
+	The requirements for your software order may be higher due to the products included in it.
 
 	This command creates 3 nodes, each with 16 vCPUs and 60GB RAM:
 
