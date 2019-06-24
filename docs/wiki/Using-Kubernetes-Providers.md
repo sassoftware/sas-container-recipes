@@ -136,8 +136,8 @@
 3. Add the auth and identity token to the ~/.docker/config.json file:
 
 	```
-    az acr login --name <my-registry-name>
-    ```
+	az acr login --name <my-registry-name>
+	```
 
 	Your registry name can be found on the "Resource Groups" page.
 
@@ -149,10 +149,10 @@
 
 	```
 	az aks create --resource-group sas-viya \
-		--name sas-viya-cluster \
-		--node-vm-size Standard_B4ms \
-		--node-count 4 \
-		--generate-ssh-key
+	--name sas-viya-cluster \
+	--node-vm-size Standard_B4ms \
+	--node-count 4 \
+	--generate-ssh-key
 	```
 
 5. Add the cluster's config to your Kubernetes config file
