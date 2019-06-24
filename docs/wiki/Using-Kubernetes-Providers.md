@@ -20,7 +20,7 @@
 	of zones in that region. For example, if you specify 
 	`--num-nodes 3 --region us-central1` then a total of 9 nodes will be
 	created, 3 in each of the 3 zones available in the us-central1 region.
-	This combination of settings may lead to over-allocation of resources and an inflated
+ 	This combination of settings may lead to over-allocation of resources and an inflated
 	Google Kubernetes Engine bill.
  
 	If you do not reserve adequate machine resources, you will receive a 
@@ -57,7 +57,7 @@
 
 	https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html
 
-2.Confirm that you have the AWS CLI installed on your host machine.
+2. Confirm that you have the AWS CLI installed on your host machine.
 
 	For more information, see https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html.
 
@@ -87,7 +87,7 @@
 
 8. Copy the `docker login` command that was returned, paste it into a terminal, and run the command.
 
-9. Get a Security Token Service
+9. Get a Security Token Service:
 
 	Run the command `aws sts get-caller-identity`
 
