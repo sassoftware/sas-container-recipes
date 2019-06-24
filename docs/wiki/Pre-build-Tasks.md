@@ -233,7 +233,7 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: sas-viya-httpproxy
+          serviceName: sas-viya-single-programming-only
           servicePort: 80
 #  tls:
 #  - hosts:
