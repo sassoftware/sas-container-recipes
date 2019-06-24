@@ -14,15 +14,15 @@
 		--num-nodes 3 --machine-type n1-standard-16 --zone us-central1-a
 	```
 
-	Note: You can use any `--zone` argument. If you provide a `--region` argument
-	then the gcloud tool will multiply your `--num-nodes` argument by the number
-	of zones in that region. For example, if the argument
-	`--num-nodes 3 --region us-central1` is provided then 9 total nodes will be
+	Note: You can use any zone for the `--zone` argument. If you provide a `--region` argument,
+	the gcloud tool will multiply your `--num-nodes` argument by the number
+	of zones in that region. For example, if you specify 
+	`--num-nodes 3 --region us-central1` then 9 total nodes will be
 	created, 3 in each of the 3 zones available in the us-central1 region.
-	This may lead to over-allocation of resources and an increase in your
+	This combination of settings may lead to over-allocation of resources and increase in your
 	Google Kubernetes Engine bill.
  
-	If you do not reserve adequate machine specs then you will see the message
+	If you do not reserve adequate machine specs, you will see the 
 	"Does not have minimum availability" message in the GKE Workloads page.
 
 3. Add the cluster's config to your Kubernetes config file
