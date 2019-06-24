@@ -3,6 +3,7 @@
 	For more information, see https://cloud.google.com/sdk/docs/.
 
 2. Create a Kubernetes cluster
+
 	A cluster requires a minimum of approximately 32 vCPUS and 128GB RAM total for a full VA deployment.
 	The requirement may be higher depending on your software order.
 
@@ -25,17 +26,20 @@
 	"Does not have minimum availability" message in the GKE Workloads page.
 
 3. Add the cluster's config to your Kubernetes config file
+
 	`gcloud container clusters get-credentials sas-viya-cluster --zone us-central1-a`
 
 	Use the same `--zone` argument as the previous step.
 
 4. Add the credential helpers (credHelpers) section to the ~/.docker/config.json file:
+
 	`gcloud auth configure-docker`
 
 5. Add the access token to the ~/.docker/config.json file:
 	`docker login https://gcr.io` (Note: you must add "https://" to the URL)
 
 6. Run the `build.sh` command with the `--docker-registry-url` argument.
+
 	Provide your Google Cloud Platform (GCP) project name at the end of gcr.io
 
 	Example (**do not copy**):
