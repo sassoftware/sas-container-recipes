@@ -15,28 +15,29 @@
 	```
 
 	Note: You can use any zone for the `--zone` argument. If you provide a `--region` argument,
-	the gcloud tool will multiply your `--num-nodes` argument by the number
+	the gcloud tool will multiply the value of your `--num-nodes` argument by the number
 	of zones in that region. For example, if you specify 
-	`--num-nodes 3 --region us-central1` then 9 total nodes will be
+	`--num-nodes 3 --region us-central1` then a total of 9 nodes will be
 	created, 3 in each of the 3 zones available in the us-central1 region.
-	This combination of settings may lead to over-allocation of resources and increase in your
+	This combination of settings may lead to over-allocation of resources and an inflated
 	Google Kubernetes Engine bill.
  
-	If you do not reserve adequate machine specs, you will see the 
+	If you do not reserve adequate machine resources, you will receive a 
 	"Does not have minimum availability" message in the GKE Workloads page.
 
-3. Add the cluster's config to your Kubernetes config file
+3. Add the cluster's configuration information to your Kubernetes config file
 
 	`gcloud container clusters get-credentials sas-viya-cluster --zone us-central1-a`
 
-	Use the same `--zone` argument as the previous step.
+	Use the same `--zone` argument that you used in the previous step.
 
 4. Add the credential helpers (credHelpers) section to the ~/.docker/config.json file:
 
 	`gcloud auth configure-docker`
 
 5. Add the access token to the ~/.docker/config.json file:
-	`docker login https://gcr.io` (Note: you must add "https://" to the URL)
+
+	`docker login https://gcr.io` (Note: you must use "https://" and not "http://" for the URL)
 
 6. Run the `build.sh` command with the `--docker-registry-url` argument.
 
@@ -47,7 +48,7 @@
 	./build.sh --docker-registry-url gcr.io/<my-project-name> ...
 	```
 
-7. Apply the Kubernetes manifest using the output from the build result script
+7. Apply the Kubernetes manifest provided in the output of the build script.
 
 
 ### Amazon Elastic Container Service for Kubernetes (EKS)
