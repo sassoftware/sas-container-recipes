@@ -1,4 +1,4 @@
-# Copy this file, place it in the sas-container-recipes project directory, 
+# Copy this file, place it in the sas-container-recipes project directory,
 # and add any overrides that are desired.
 # See https://github.com/sassoftware/sas-container-recipes/wiki/Pre-build-Tasks#kubernetes-manifest-inputs
 
@@ -21,29 +21,39 @@
 #
 # - environments
 # - secrets
+# - volumes
+# - volume mounts
 #
+# Note: when uncommenting this section, use caution not to change the relative indentation
+# of the blocks. The indentation of 'environment', 'volumes', and 'volume_mounts' should all
+# match (6 spaces). Also, the embedded comment block may be removed.
 
 #custom_services:
 #  sas-casserver-primary:
 #    deployment_overrides:
 #      environment:
 #        - "CASCFG_MODE=mpp"
-
-# In the following structures, define the custom volumes and volume mounts that
-# are desired per service. If the same set of volumes and volume mounts are used
-# across multiple services they will need to be defined per service. This will 
-# add to or replace defaults. The structure is that everything after the pipe '|'
-# is added to the manifest. It is a straight copy of what is provided to the
-# generated manifest.
-
-#custom_volume_mounts:
-#  sas-casserver-primary: |
-#    - name: someserver
-#      mountPath: /specific/path/to/mount
-
-#custom_volumes:
-#  sas-casserver-primary: |
-#    - name: someserver
-#      nfs:
-#        server: server.company.com
-#        path: "/path"
+#
+#      # In the following structures, define the custom volumes and volume mounts that
+#      # are desired per service. If the same set of volumes and volume mounts are used
+#      # across multiple services they will need to be defined per service. This will
+#      # add to or replace defaults. The structure is that everything after the pipe '|'
+#      # is added to the manifest. It is a straight copy of what is provided to the
+#      # generated manifest. For more information about Kubernetes Volumes, see
+#      # https://kubernetes.io/docs/concepts/storage/volumes/
+#
+#      volumes: |
+#        - name: volume_identifier
+#          nfs:
+#            server: nfs_server_hostname
+#            path: "/path_on_nfs_server/"
+#        - name: EBS-volume
+#          # This AWS EBS volume must already exist.
+#          awsElasticBlockStore:
+#            volumeID: <volume-id>
+#            fsType: ext4
+#      volume_mounts: |
+#        - name: volume_identifier
+#          mountPath: /path_inside_container
+#        - name: EBS-volume
+#          mountPath: /path_inside_container

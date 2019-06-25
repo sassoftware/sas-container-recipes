@@ -73,7 +73,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --verbose)
             shift # past argument
-            VERBOSE=true
+	    	echo -e "\nNote: --verbose has been deprecated. Verbose logging for each container is inside the builds/<deployment-type/<container-name>/log.txt file.\n"
             ;;
         -i|--baseimage|--base-image)
             shift # past argument
@@ -102,7 +102,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -k|--skip-mirror-url-validation)
             shift # past argument
-            CHECK_MIRROR_URL=false
+            echo -e "\nNote: -k|--skip-mirror-url-validation has been deprecated. This function is no longer performed and its usage can be ignored.\n"
             ;;
         -d|--skip-docker-url-validation)
             shift # past argument
@@ -211,10 +211,6 @@ if [[ -n ${WORKERS} ]]; then
     run_args="${run_args} --workers ${WORKERS}"
 fi
 
-if [[ -n ${VERBOSE} ]]; then
-    run_args="${run_args} --verbose"
-fi
-
 if [[ -n ${DOCKER_REGISTRY_URL} ]]; then
     run_args="${run_args} --docker-registry-url ${DOCKER_REGISTRY_URL}"
 fi
@@ -244,10 +240,6 @@ fi
 
 if [[ ${CHECK_DOCKER_URL} == false ]]; then
     run_args="${run_args} --skip-docker-url-validation"
-fi
-
-if [[ ${CHECK_MIRROR_URL} == false ]]; then
-    run_args="${run_args} --skip-mirror-url-validation"
 fi
 
 if [[ ${GENERATE_MANIFESTS_ONLY} == true ]]; then

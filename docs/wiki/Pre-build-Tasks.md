@@ -341,4 +341,31 @@ custom_services:
 
 After you save the file, CAS will start in MPP mode and a default of three CAS worker containers will start.
 
+Custom volumes and volume mounts are also defined in the `custom_services` section. If the same set of volumes
+and volume mounts are used across multiple services, they will need to be defined per service. This will add to
+or replace defaults. The structure is that everything after the pipe '|' is added to the manifest. It is a
+straight copy of what is provided to the generated manifest. For more information about Kubernetes Volumes,
+see https://kubernetes.io/docs/concepts/storage/volumes/
+
+Add entries specific to the desired storage type, using caution to preserve indentation relative to the
+block above (e.g. `environment:`, `volumes:`, and `volume_mounts:` should align):
+
+```
+      volumes: |
+        - name: volume_identifier
+          nfs:
+            server: nfs_server_hostname
+            path: "/path_on_nfs_server/"
+        - name: EBS-volume
+          # This AWS EBS volume must already exist.
+          awsElasticBlockStore:
+            volumeID: <volume-id>
+            fsType: ext4
+      volume_mounts: |
+        - name: volume_identifier
+          mountPath: /path_inside_container
+        - name: EBS-volume
+          mountPath: /path_inside_container
+```
+
 **Note:** If customizing is not done prior to the build process, you can do it after the build to regenerate the manifests. For more information, see [(Optional) Regenerating Manifests](post-run-tasks#optional-regenerating-manifests).

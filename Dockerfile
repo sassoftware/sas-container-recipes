@@ -10,7 +10,11 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # We need to use dep or go mod to handle deps.
-RUN go get -x -u gopkg.in/yaml.v2 github.com/docker/docker/api/types github.com/docker/docker/client
+RUN go get -x -u gopkg.in/yaml.v2 \
+	github.com/docker/docker/api/types \
+	github.com/docker/docker/client \
+	github.com/docker/cli/cli/config/configfile \
+	github.com/gosuri/uiprogress
 
 RUN groupadd --gid ${DOCKER_GID} docker
 RUN useradd --uid ${USER_UID} \

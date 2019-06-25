@@ -1,0 +1,643 @@
+#!/bin/bash
+# chkconfig: 345 86 01
+# description: This script controls SAS Viya services
+### BEGIN INIT INFO
+# Provides: sas-viya-all-services
+# Required-Start: $network
+# Required-Stop: $network
+# Should-Start: $network
+# Should-Stop: $network
+# Default-Start: 3 4 5
+# Default-Stop: 0 1 2 6
+# Short-Description: start and stop all SAS services
+# Description: all-services control script
+### END INIT INFO
+#set -x
+SYSTYPE=$(ps -p 1 | grep -v PID | awk '{ print $4 }')
+
+if [[ "${SYSTYPE}" == "systemd" ]]
+then
+	_SYSTEMCTL_SKIP_REDIRECT=1
+	export SYSTEMCTL_SKIP_REDIRECT=1
+        SVC_START="systemctl start SVC"
+        SVC_RESTART="systemctl restart SVC"
+        SVC_STOP="systemctl stop SVC"
+else
+        SVC_START="service SVC start"
+        SVC_RESTART="service SVC restart"
+        SVC_STOP="service SVC stop"
+fi
+
+if [ -e /etc/profile.d/lang.sh ]; then
+    . /etc/profile.d/lang.sh
+fi
+
+# ctrl-c to kill this script will also kill started processes so let's not allow that...
+trap cleanup SIGINT
+SCRIPTNAME=$(readlink -f "$0")
+BASENAME=$(basename "$SCRIPTNAME")
+OLD_IFS=$IFS
+IFS='-'
+read -r -a name_parts <<<"$BASENAME"
+
+IFS=$OLD_IFS
+
+SVC_PREFIX=${name_parts[0]}
+DEPLOYMENT=${name_parts[1]}
+
+PATH=$PATH:/opt/${SVC_PREFIX}/${DEPLOYMENT}/home/bin
+
+INSTANCE=default
+
+# root directory for the active PID file(s) for the service
+SASPIDROOT="/var/run/sas"
+
+if [[ "$EUID" == "0" ]]
+then
+	LOG_DIR=/opt/${SVC_PREFIX}/${DEPLOYMENT}/config/var/log/all-services/${INSTANCE}
+	if [ ! -d "${LOG_DIR}" ]
+	then
+		mkdir -p "${LOG_DIR}"
+		chown -R sas:sas /opt/"${SVC_PREFIX}"/"${DEPLOYMENT}"/config/var/log/all-services/
+	fi
+# This should not be needed but due to issues on RHEL 7 I'm just going to make this work for now
+	mkdir -p $SASPIDROOT
+	chown sas:sas $SASPIDROOT
+
+	LOG_FILE=${LOG_DIR}/all-services_$(date +%Y-%m-%d_%H-%M-%S).log
+else
+	LOG_FILE=/dev/null
+	# Also set some environment variables so sas-csq can work
+	USER=$(id -un)
+	export USER
+	HOME=$(getent passwd "${USER}" | cut -d: -f6)
+	export HOME
+fi
+
+PID_FILE="${SASPIDROOT}/${BASENAME}.pid"
+I_OWN_PID_FILE=0
+
+CONCUR_START=$(nproc)
+if [[ "$CONCUR_START" -lt "4" ]]
+then
+	CONCUR_START=4
+fi
+
+TIMEOUT_MIN=4
+MAX_RESTARTS=4
+
+noregister_scripts=(consul connect spawner casworker cascontroller httpproxy sasdatasvrc
+sasstudio)
+
+# these come from the header => sas-consul-register: False
+parsed_noregister_scripts=()
+
+# these come from the header => allservices-check-started: False
+# Note these are stored as the complete basename
+parsed_nomonitor_scripts=()
+
+thispath=/opt/${SVC_PREFIX}/${DEPLOYMENT}/config/etc/${DEPLOYMENT}-svc-mgr
+MY_TEMP_DIR="/tmp/sas-services_$$"
+mkdir -p $MY_TEMP_DIR
+
+started=()
+ctl_script_name=()
+action_start_time=()
+action_end_time=()
+ready=()
+restarted=()
+service_status=()
+
+declare -A combined_names=()
+declare -A consul_lowercase_names=()
+declare -A service_pid=()
+declare -A service_port=()
+declare -A service_address=()
+
+if [[ -z "$SSL_CERT_FILE" ]]; then
+    export SSL_CERT_FILE=/opt/${SVC_PREFIX}/${DEPLOYMENT}/config/etc/SASSecurityCertificateFramework/cacerts/trustedcerts.pem
+fi
+
+show_usage() {
+echo
+echo "${0##/*}" Usage:
+echo "When executed with no arguments this script will default to processing"
+echo "the viya deployment and default instances.  "
+echo
+echo "valid arguments are:"
+echo "     -timeout=<t>      (set timeout value to t minutes. defaults to 5)"
+echo "     -max-restart=<r>  (set max number of times to attempt to restart a"
+echo "                        failing service to r.  Defaults to 3)"
+echo "     start             (start services in defined order)"
+echo "     stop              (stop services)"
+echo "     status            (display status)"
+echo "     -h | -?           (Shows this usage message)"
+exit
+}
+
+SASCONFIG=/opt/${SVC_PREFIX}/${DEPLOYMENT}/config
+
+function cleanup() {
+
+	rm -rf $MY_TEMP_DIR
+
+	if [ ${I_OWN_PID_FILE} -eq 1 ]
+	then
+		rm -f "${PID_FILE}".active
+	fi
+
+	exit
+}
+
+function print_elapsed() {
+
+	re='^[0-9]+$'
+	if ! [[ ${1} =~ $re ]] ; then
+		echo "${1}"
+	else
+		((h=${1}/3600))
+		((m=(${1}%3600)/60))
+		((s=${1}%60))
+		printf "%02d:%02d:%02d" $h $m $s
+	fi
+}
+function get_init_script_data() {
+
+local noregister_line
+local nomonitor_line
+local short_name
+
+	/bin/ls /etc/init.d/"${SVC_PREFIX}"-"${DEPLOYMENT}"-* >${MY_TEMP_DIR}/sas_init_scripts
+	>${MY_TEMP_DIR}/sas_start_order
+	>${MY_TEMP_DIR}/sas_stop_order
+
+	while read init_script
+	do
+		chkconfig_line=$(grep chkconfig "${init_script}")
+		name=$(echo "$init_script" | awk -F '/'  '{ print $4 }')
+		ignore=$(sed -e 's/#.*$//' -e '/^$/d' "$thispath"/svc-ignore | grep "$name")
+		# if the service name is in our ignore file then do nothing with it
+		# if the service name is my name then do nothing with it
+		if [[ "$ignore" == "" ]] && [[ ! "$name" =~ sas-${DEPLOYMENT}-all-services ]] 
+		then
+			start_pri=$(echo "$chkconfig_line" | awk '{ print $4 }' )
+			start_pri=$(echo "$start_pri" | tr -d \'-)
+			if [[ "$start_pri" == "60" ]]
+			then
+				start_pri=99
+			fi
+			start_pri=${start_pri#0}
+			if [[ $start_pri -lt 86 ]]
+			then
+				start_pri=92
+			fi
+			stop_pri=$(echo "$chkconfig_line" | awk '{ print $5 }' )
+			stop_pri=$(echo "$stop_pri" | tr -d \')
+			if [[ "$stop_pri" == "50" ]]
+			then
+				stop_pri=01
+			fi
+			if [[ "$stop_pri" == "#" ]]
+			then
+				stop_pri="08"
+			fi
+			consul_name=$(sed -n '5p' "$init_script")
+			consul_name=$(echo "$consul_name" | awk '{print $3}')
+			echo "$start_pri:$name:$consul_name" >>/${MY_TEMP_DIR}/sas_start_order
+			echo "$stop_pri:$name:$consul_name" >>${MY_TEMP_DIR}/sas_stop_order
+		fi
+
+		if [[ "$ignore" == "" ]] && [[ ! "$name" =~ sas-${DEPLOYMENT}-all-services ]]; then
+            noregister_line=$(grep "sas-consul-register: False" "${init_script}")
+            if [ $? -eq 0 ]; then
+                short_name=$(basename "${init_script}")
+                short_name=${short_name##${SVC_PREFIX}-${DEPLOYMENT}-}
+                short_name=${short_name%-$INSTANCE}
+                parsed_noregister_scripts+=(${short_name})
+            fi
+        fi
+
+		if [[ "$ignore" == "" ]] && [[ ! "$name" =~ sas-${DEPLOYMENT}-all-services ]]; then
+            nomonitor_line=$(grep "allservices-check-started: False" "${init_script}")
+            if [ $? -eq 0 ]; then
+                short_name=$(basename "${init_script}")
+                parsed_nomonitor_scripts+=(${short_name})
+            fi
+        fi
+
+	done <${MY_TEMP_DIR}/sas_init_scripts
+
+	sort <${MY_TEMP_DIR}/sas_start_order >${MY_TEMP_DIR}/sas_start_order_sorted
+	sort <${MY_TEMP_DIR}/sas_stop_order >${MY_TEMP_DIR}/sas_stop_order_sorted
+
+}
+
+function is_started() {
+
+	if [[ $1 =~ rabbitmq-server ]]; then
+	    if [[ $(/etc/init.d/"$1" status | grep -o " is stopped") ]]; then
+		echo FALSE
+	    else
+		echo TRUE
+	    fi	
+	elif [[ $(/etc/init.d/"$1" status | grep -o " is running") == " is running" ]]
+	then
+		echo TRUE
+	else
+		echo FALSE
+	fi
+
+}
+
+
+function get_consul_service_info() {
+local service_info
+local theLowercaseName
+local process_info
+local i
+
+[[ -f $SASCONFIG/consul.conf ]] && source "$SASCONFIG"/consul.conf
+
+# query consul to get a list of all known services; strip off formatting and blank lines
+# put in an array named consul_svc_names
+        read -a consul_svc_names <<<$(sas-csq list-services)
+
+# for each defined service query consul for the address and port where listening
+	for (( i=0; i<${#consul_svc_names[@]}; i++ ))
+	do
+        theLowercaseName=${consul_svc_names[$i],,}
+ 		consul_lowercase_names["${consul_svc_names[$i]}"]="${theLowercaseName}"
+		service_info=$(sas-csq service-info --service "${consul_svc_names[${i}]]}" | tr -d [{}]\",' ' | grep -v ^$)
+		service_address["${theLowercaseName}"]=$(echo "$service_info" | grep ^Address: | cut -f2 -d:)
+		if [[ "${service_address[${theLowercaseName}]}" == "" ]]
+		then
+			service_address["${theLowercaseName}"]="None"
+		fi
+		service_port["${theLowercaseName}"]=$(echo "$service_info" | grep ^ServicePort: | cut -f2 -d:)
+		if [[ "${service_port["${theLowercaseName}"]}" == "" ]]
+		then
+			service_port["${theLowercaseName}"]="None"
+		fi
+	done
+    if [[ -n "$CONSUL_HTTP_ADDR" ]]; then
+        unset CONSUL_HTTP_ADDR
+    fi
+
+}
+
+function status_consul() {
+
+[[ -f $SASCONFIG/consul.conf ]] && source "$SASCONFIG"/consul.conf
+
+	status=$(sas-csq consul-status | grep ^leader)
+
+	if [[ "$status" = "" ]]
+	then
+		echo down
+	else
+		echo up
+	fi
+    if [[ -n "$CONSUL_HTTP_ADDR" ]]; then
+        unset CONSUL_HTTP_ADDR
+    fi
+
+}
+
+function get_status_from_consul() {
+	status=up
+
+[[ -f $SASCONFIG/consul.conf ]] && source "$SASCONFIG"/consul.conf
+
+	stat_string=$(sas-csq service-health --service "$1")
+	if  [[ "$stat_string" != "" ]]
+	then
+		read -a vals <<<$(sas-csq service-health --service "$1")
+		for i in "${vals[@]}"
+		do
+			if [[ "$i" != "" ]]
+			then
+				s=$(echo  "$i" | cut -f2 -d,)
+				r=$(echo  "$i" | cut -f1 -d,)
+				if [[ "$s" != "passing" ]] && [[ "$s" != "warning" ]]
+				then
+					status="not ready"
+					echo "$(date) Service $1 is not yet passing due to: $r" >>$LOG_FILE
+					break 1
+				fi
+			fi
+		done
+		if [[ "$status" == "up" ]]
+		then
+			echo "$(date) Service $1 is now up." >>$LOG_FILE
+		fi
+	else
+		status=down
+		echo "$(date) Service $1 is not found in consul" >>$LOG_FILE
+	fi
+    if [[ -n "$CONSUL_HTTP_ADDR" ]]; then
+        unset CONSUL_HTTP_ADDR
+    fi
+
+	echo $status
+}
+
+function get_rabbit_pid() {
+local rabbPid
+
+    rabbPid=$(/etc/init.d/sas-"${DEPLOYMENT}"-rabbitmq-server-default status | grep pid)
+    rabbPid=$(echo "$rabbPid" | tr -d '[{},pid')
+    echo "$rabbPid"
+}
+
+function get_pid() {
+	pid_file=""
+	s_pid="N/A"
+	# get the PID from the pidfile
+	if [[ "$1" =~ sasdatasvrc ]]
+	then
+		pid_file=$(grep pidfile /etc/init.d/"$1" | awk '{ print $3 }' | tr -d \")
+	fi
+	if [[ "$1" =~ rabbit ]]
+	then
+		s_pid=$(get_rabbit_pid)
+	fi
+	if [[ "$pid_file" == "" ]]
+	then
+		pid_file=$(find /var/run/sas/ -name "${1}".pid)
+	fi
+	if [[ -f ${pid_file} ]]
+	then
+		s_pid=$(head -n1 "${pid_file}" )
+	fi
+	echo "$s_pid"
+}
+
+function get_status() {
+
+    case "$1" in
+		sas-${DEPLOYMENT}-consul-*)
+			status=$(status_consul)
+			;;
+		sas-${DEPLOYMENT}-httpproxy-*)
+			if [[ "$(is_started $1)" == "TRUE" ]]
+			then
+				status=up
+			else
+				status=down
+			fi
+			;;
+ 
+        sas-${DEPLOYMENT}-rabbitmq-server-*)
+            rmq_pid=$(get_rabbit_pid)
+            if [[ "$rmq_pid" != "" ]]
+            then
+                status=up
+            else
+                status=down
+            fi
+            ;;
+
+        *)
+            consul_name=${combined_names["$1"]}
+            if [[ "$(is_started $1)" == "TRUE" ]]
+            then
+                if [[ "${consul_name}" == "_NOT_REGISTERED_" ]]
+                then
+                    status=up
+                else
+                     status=$(get_status_from_consul $consul_name)
+                fi
+            else
+                status=down
+            fi
+            ;;
+	esac
+
+	echo $status
+}
+
+function our_status {
+local theService
+local i
+
+	#epmd is being started when rabbit is queried (even if rabbit was down before) so make note of status
+    rabbit_pid=$(pgrep epmd)
+
+    for (( i=0; i<${#svcs[@]}; i++ ))
+	do
+        theService=${svcs[$i]}
+        svc_status=$(get_status "${theService}")
+        consul_name=${combined_names["${theService}"]}
+        if [[ "${consul_name}" == "_NOT_REGISTERED_" ]]
+        then
+			s_pid="N/A"
+            if [[ "${svc_status}" == "up" ]]
+			then
+				svc_status=up
+				pid_file=""
+				s_pid=$(get_pid "${theService}")
+			else
+				svc_status=down
+			fi
+			printf "$status_fmt_string" "${theService}" "$svc_status"  "N/A" "N/A" "$s_pid" | /usr/bin/tee -a $LOG_FILE
+		else
+            s=${consul_lowercase_names["${consul_name}"]}
+			if [[ "$s" != "" ]]
+			then
+				need_port_info=$( echo "rabbitmq|httpd|sasdatasvrc"  | grep "${consul_name,,}" )
+				if [[ "$need_port_info" == "" ]]
+				then
+					service_pid["${s}"]=$(get_pid "${theService}")
+				else
+					service_pid["${s}"]="None"
+				fi
+				printf "$status_fmt_string" ${theService} "$svc_status" ${service_address["${s}"]} ${service_port["${s}"]} ${service_pid["${s}"]} | /usr/bin/tee -a $LOG_FILE
+			else
+				if [[ "$CONSUL_STATE" == "up" && "$(is_started ${theService})" == "TRUE" ]]
+				then
+					svc_status="not ready"
+				fi
+				if [[ "$(is_started ${theService})" != "TRUE" ]]
+				then
+					svc_status=down
+				fi
+				printf "$status_fmt_string" ${svcs[${i}]} "$svc_status"  "N/A" "N/A" "N/A" | /usr/bin/tee -a $LOG_FILE
+			fi
+		fi
+	done
+
+	# if epmd was not running when we started but was started when rabbit is queried sure it goes down again
+	if [[ "$rabbit_pid" == "" ]]
+	then
+        pgrep epmd | xargs --no-run-if-empty kill
+	fi
+
+}
+
+# Begin "main"
+get_init_script_data
+
+SCRIPT_START_TIME=$(date +%s)
+
+ACTION=status
+
+for ARG in "$@" ; do
+    ARG=$(echo "$ARG" | tr '[:upper:]' '[:lower:]')
+    case $ARG in
+        start)
+			ACTION=start
+			shift ;;
+        stop)
+			ACTION=stop
+            shift ;;
+        status)
+            ACTION=status
+            shift ;;
+		-verbose)
+			VERBOSE=1
+			shift ;;
+		-timeout=*)
+			TIMEOUT_MIN=${ARG:9}
+			shift ;;
+		-max-restart=*)
+			MAX_RESTARTS=${ARG:13}
+			shift ;;
+                -h|-?)
+                        show_usage ;;
+                *)
+                        echo "ERROR: Unrecognized argument: $ARG"
+                        show_usage ;;
+
+	esac
+done
+
+TO_SECS=$((TIMEOUT_MIN * 60))
+
+function do_action() {
+
+	if [[ "$ACTION" == "status" ]]
+	then
+		status_fmt_string="  %-50s %-10s %-15s %7s %7s\n"
+		if [[ "$heading_printed" == "" ]]
+		then
+            if [[ -f /etc/init.d/sas-${DEPLOYMENT}-consul-default ]]
+            then
+                echo "Getting service info from consul..." | /usr/bin/tee -a $LOG_FILE
+                CONSUL_STATE=$(status_consul)
+                if [[ "$CONSUL_STATE" == "up" ]]
+                then
+                    get_consul_service_info
+                else
+                    echo "Consul is down - unable to obtain extended status info" | /usr/bin/tee -a $LOG_FILE
+                fi
+            fi
+			printf "$status_fmt_string" "Service" "Status" "Host" "Port" "PID" | /usr/bin/tee -a $LOG_FILE
+			heading_printed="TRUE"
+		fi
+		our_status
+	fi
+}
+
+
+driving_file="sas_start_order_sorted"
+
+TO_PROCESS=$(/usr/bin/wc -l $MY_TEMP_DIR/${driving_file} | awk '{ print $1 }')
+PROCESSED=0
+heading_printed=""
+curr_level="-1"
+prefix="*${SVC_PREFIX}-${DEPLOYMENT}-"
+readarray -t scripts_to_process < $MY_TEMP_DIR/${driving_file}
+
+# This is for a programming-only multi-machine deployment.
+numScripts=${#scripts_to_process[@]} 
+if [[ ${numScripts} -le 0 ]]; then
+    echo "There are no SAS Viya services that need to be started." | /usr/bin/tee -a $LOG_FILE
+    rm -f /var/lock/subsys/"${BASENAME}"
+    rm -f "${PID_FILE}"
+    cleanup
+    exit 1
+fi
+
+for ((index=0; index<=${numScripts}; index++))
+do
+	line=${scripts_to_process[${index}]}
+	level=$(echo "$line" | cut -f1 -d:)
+	script=$(echo "$line" | cut -f2 -d:)
+	suffix=${script##*-}
+	short_name=${script##$prefix}
+	short_name=${short_name%-$suffix}
+	if [[ ${curr_level#0} -eq -1 ]]
+	then
+		curr_level="$level"
+	fi
+	# the #0 suffix below is to ensure values are treated as base 10 even
+	# if they have a leading 0 - this is to prevent errors by stripping leading 0s
+	if [[ (${level#0} -ne ${curr_level#0}) || ${index} -eq ${numScripts} ]]
+	then
+		do_action
+		svcs=()
+		curr_level="$level"
+	fi
+	svcs+=(${script})
+	consul_name=$(echo "$line" | cut -f3 -d:)
+
+    # special case for watch-log to reflect multi-tenant environments
+    if [[ "$consul_name" == "watch-log" ]]; then
+        depID=$(echo "$script" | awk -F'-' '{print $2}')
+        consul_name="watch-log-$depID"
+    fi
+
+	foundIt=0
+	for (( i=0; i<${#noregister_scripts[@]}; i++ ))
+	do
+		if [[ "$short_name" =~ ${noregister_scripts[$i]} ]]
+		then
+			consul_name="_NOT_REGISTERED_"
+			foundIt=1
+			break 1
+		fi
+	done
+
+# Eventually the above loop will be replaced by this one as the sas-consul-register: False
+# header is in all of the no-registering scripts.
+	if [[ $foundIt -eq 0 ]]; then
+        for (( i=0; i<${#parsed_noregister_scripts[@]}; i++ ))
+        do
+            if [[ "$short_name" =~ ${parsed_noregister_scripts[$i]} ]]
+            then
+                consul_name="_NOT_REGISTERED_"
+                foundIt=1
+                break 1
+            fi
+        done
+    fi
+
+    if [[ -n $script ]]; then
+        combined_names["${script}"]="${consul_name}"
+    fi
+done
+
+
+# If action = stop and any services are still hanging around terminate with extreme prejudice
+if [[ "$ACTION" == "stop" ]]
+then
+
+#httpproxy is always a pain to go down and it is not registered with consul - ensure it is dead
+	echo "killing any consul-template processes that may still be running..." >>$LOG_FILE
+    pgrep consul-template | xargs --no-run-if-empty kill -9
+	#epmd is not being brought down when we take down rabbit so make sure it is also dead
+	echo "if our epmd is still running kill it..." >>$LOG_FILE
+	pgrep epmd | xargs --no-run-if-empty kill
+
+	rm -f /var/lock/subsys/"${BASENAME}"
+	rm -f "${PID_FILE}"
+
+fi
+
+echo "$(date) End of sas-services processing" >>$LOG_FILE
+SCRIPT_RUN_TIME=$(( $(date +%s)-SCRIPT_START_TIME ))
+echo
+echo "sas-services completed in $(print_elapsed $SCRIPT_RUN_TIME)" | /usr/bin/tee -a $LOG_FILE
+
+cleanup
+SASLOCKROOT="/opt/sas/viya/config/var/lock"

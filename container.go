@@ -23,6 +23,13 @@
 package main
 
 import (
+	"github.com/gosuri/uiprogress"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+
+	"gopkg.in/yaml.v2"
+
 	"archive/tar"
 	"encoding/base64"
 	"encoding/json"
@@ -35,17 +42,15 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
-
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"gopkg.in/yaml.v2"
 )
 
-// State of the Container
+// State of the Container for the enumeration (see const definitions below)
 type State int
 
+// Enumeration for the container's state
 // Note: this omits 0 and 1 to prevent evaluation to True or False
 const (
 	Unknown    State = 2  // Default unset status, no configurations have been loaded
@@ -57,6 +62,7 @@ const (
 	Built      State = 8  // Docker client has built and tagged the last layer
 	Pushing    State = 9  // Image is in the process of being pushed to the provided registry
 	Pushed     State = 10 // Image has finished pushing to the provided registry
+	Done       State = 11 // Image has finished building, pushing, and is ready to deploy
 )
 
 // DockerAPIVersion is the minimum version of the API we support
@@ -64,15 +70,19 @@ const DockerAPIVersion = "1.37"
 
 // Container defines the attributes for a single host
 type Container struct {
-	// Reference to the parent SOE
-	SoftwareOrder *SoftwareOrder
+	SoftwareOrder *SoftwareOrder // Reference to the parent SOE
 
 	// Basic default attributes set on creation
-	Status    State  // See `type State` above
 	Name      string // Hostname without a project name prefix - such as httpproxy, sas-casserver-primary, consul
 	Tag       string // Use container.GetTag or container.GetWholeImageName instead
 	BaseImage string // Set by the order's --base-image argument
 	IsStatic  bool   // Set by the CreateDockerContext function. Determined by the existence of the util/static-roles-<deployment>/<container-name> directory
+
+	// Tracks the container's build progress and status
+	Status       State           // See `type State` above
+	CurrentLayer int             // Set by the Docker build response that echoes "Step x/y", with 'x' being the current layer being built and 'y' being the layer count
+	LayerCount   int             // Set by the CreateDockerfile function, counts the number of layers after the Dockerfile is created
+	ProgressBar  *uiprogress.Bar // Terminal UI element that displays layer progress
 
 	// Builder attributes
 	BuildArgs         map[string]*string // Arguments that are passed into the Docker builder https://docs.docker.com/engine/reference/commandline/build/
@@ -114,8 +124,8 @@ type ContainerConfig struct {
 	} `yaml:"resources"`
 }
 
-// effectedImage holdes the docker file that will need to be applied to the container
-type effectedImage struct {
+// affectedImage holdes the docker file that will need to be applied to the container
+type affectedImage struct {
 	Dockerfiles []string
 }
 
@@ -137,6 +147,29 @@ type DockerResponse struct {
 	Stream string      `json:"stream"`      // Shows up in an Image Build response
 	Status string      `json:"status"`      // Shows up in an Image Push response
 	Error  interface{} `json:"errorDetail"` // Only shows if there's an error image build response
+}
+
+// GetStatus translates an integer represenatation of a container's status into a string.
+// For example, in the container.Status state 5 is "Loading".
+func (container *Container) GetStatus() string {
+	switch container.Status {
+	case 5:
+		return "Loading "
+	case 6:
+		return "Loaded  "
+	case 7:
+		return "Building"
+	case 8:
+		return "Built   "
+	case 9:
+		return "Pushing "
+	case 10:
+		return "Pushed  "
+	case 11:
+		return "DONE    "
+	default:
+		return "Unknown "
+	}
 }
 
 // WriteLog writes any number of object info to the container's log file
@@ -181,6 +214,14 @@ func (container *Container) GetWholeImageName() string {
 		len(container.SoftwareOrder.DockerRegistry) == 0 {
 		return container.GetName() + ":" + container.GetTag()
 	}
+
+	// AWS requires the creation of a registry for each image
+	// do not append the Docker namespace in this case.
+	if strings.Contains(container.SoftwareOrder.DockerRegistry, "amazonaws") {
+		return container.SoftwareOrder.DockerRegistry +
+			"/" + container.GetName() + ":" + container.GetTag()
+	}
+
 	return container.SoftwareOrder.DockerRegistry +
 		"/" + container.SoftwareOrder.DockerNamespace +
 		"/" + container.GetName() + ":" + container.GetTag()
@@ -342,7 +383,6 @@ func (container *Container) Build(progress chan string) error {
 
 	// Build the image and get the response
 	container.WriteLog("----- Starting Docker Build -----")
-	progress <- "Starting Docker build: " + container.GetWholeImageName() + " ... "
 	buildResponseStream, err := container.DockerClient.ImageBuild(
 		container.SoftwareOrder.BuildContext,
 		dockerBuildContext,
@@ -350,8 +390,8 @@ func (container *Container) Build(progress chan string) error {
 	if err != nil {
 		return err
 	}
-	return readDockerStream(buildResponseStream.Body,
-		container, container.SoftwareOrder.Verbose, progress)
+	container.Status = Building
+	return readDockerStream(buildResponseStream.Body, container, progress)
 }
 
 // Push the image to the docker registry that's defined in the software order's attributes
@@ -375,14 +415,13 @@ func (container *Container) Push(progress chan string) error {
 	if err != nil {
 		return err
 	}
-	return readDockerStream(pushResponseStream, container,
-		container.SoftwareOrder.Verbose, progress)
+	return readDockerStream(pushResponseStream, container, progress)
 }
 
 // readDockerStream is a helper function for container.Build and container.Push
 // Read the response stream from a Docker client API call
 func readDockerStream(responseStream io.ReadCloser,
-	container *Container, verbose bool, progress chan string) error {
+	container *Container, progress chan string) error {
 
 	// Stream the response into a json decoder and return it to the progress channel
 	defer responseStream.Close()
@@ -396,21 +435,32 @@ func readDockerStream(responseStream io.ReadCloser,
 			}
 		}
 
-		// The raw response is noisy with lots of spaces, so trim the spacing
-		// and print it to standard output
+		// Note: the raw response is noisy with lots of spaces so trim the spacing
 		response.Stream = strings.TrimSpace(string(response.Stream))
 		responses = append(responses, *response)
 		container.WriteLog(response)
-		if verbose && len(response.Stream) > 0 {
-			if progress != nil {
-				progress <- container.Name + ":\n" + response.Stream
-			} else {
-				// Work-around to allow single container to build without a progress stream
-				log.Println(response.Stream)
-			}
+
+		// The Docker builder outputs the format "Step x/y : <layer>" on some
+		// lines, which can be parsed to get the current progress and total layer count
+		progressDelimiter := "Step "
+		if strings.Contains(response.Stream, progressDelimiter) {
+			// Makes the format "x/y"
+			rawProgress := strings.TrimSpace(response.Stream[:strings.Index(response.Stream, ":")])
+			rawProgress = response.Stream[len(progressDelimiter):]
+
+			currentLayerString := rawProgress[:strings.Index(rawProgress, "/")]
+			currentLayerInt, _ := strconv.ParseInt(currentLayerString, 10, 64)
+			container.CurrentLayer = int(currentLayerInt)
+
+			layerCountString := strings.TrimSpace(rawProgress[strings.Index(rawProgress, "/")+1 : strings.Index(rawProgress, ":")])
+			layerCountInt, _ := strconv.ParseInt(layerCountString, 10, 64)
+			container.LayerCount = int(layerCountInt)
+
+			container.ProgressBar.Incr()
 		}
+
+		// If anything goes wrong then dump the error and provide debugging options
 		if response.Error != nil {
-			// If anything goes wrong then dump the error and provide debugging options
 			errSummary := fmt.Sprintf("[ERROR] %s: %v \n\nDebugging: %s\n",
 				container.Name, response.Error, container.LogPath)
 			return errors.New(errSummary)
@@ -423,19 +473,12 @@ const dockerfileFromBase = `# Generated Dockerfile for %s
 FROM %s
 ARG PLATFORM
 ARG PLAYBOOK_SRV
-ENV PLATFORM=$PLATFORM ANSIBLE_CONFIG=/ansible/ansible.cfg ANSIBLE_CONTAINER=true
+ENV ANSIBLE_CONFIG=/ansible/ansible.cfg ANSIBLE_CONTAINER=true
 RUN mkdir --parents /opt/sas/viya/home/{lib/envesntl,bin}
-RUN if [ "$PLATFORM" = "redhat" ]; then \
-        yum install --assumeyes ansible; \
-		rm -rf /root/.cache /var/cache/yum; \
-		echo -e "minrate=1" >> /etc/yum.conf; \
-		echo -e "timeout=300" >> /etc/yum.conf; \
-    elif [ "$PLATFORM" = "suse" ]; then \
-        zypper install --no-confirm ansible curl && rm -rf /var/cache/zypp; \
-	else \
-		echo -e "Platform $PLATFORM not supported"; \
-		exit 1; \
-    fi
+RUN yum install --assumeyes ansible && \
+	rm -rf /root/.cache /var/cache/yum && \
+	echo -e "minrate=1" >> /etc/yum.conf && \
+	echo -e "timeout=300" >> /etc/yum.conf
 ADD *.yml *.cfg /ansible/
 ADD roles /ansible/roles
 `
@@ -513,23 +556,29 @@ func (container *Container) CreateDockerfile() (string, error) {
 
 	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Config.User, container.Config.User, container.Name)
 	dockerfile += "\n" + fmt.Sprintf(dockerfileLabels, RecipeVersion, container.Name, container.Name)
+
+	container.LayerCount = getLayerCount(dockerfile)
 	return dockerfile, nil
 }
 
-// readAddonConf reads the yaml file and return the data.
-func readAddonConf(fileName string) (map[string]effectedImage, error) {
+// getLayerCount is a helper function for CreateDockerfile that counts the
+// number of layers in a Dockerfile string and returns the integer
+func getLayerCount(dockerfile string) int {
+	layerRegex := regexp.MustCompile("FROM|RUN|CMD|LABEL|EXPOSE|ENV|ADD|COPY|ENTRYPOINT|VOLUME|USER|WORKDIR|ARG|ONBUILD|STOPSIGNAL|HEALTHCHECK|SHELL")
+	matches := layerRegex.FindAllStringIndex(dockerfile, -1)
+	return len(matches)
+}
 
-	imageData := make(map[string]effectedImage)
-
+// readAddonConf reads an addon's config file and returns the data.
+func readAddonConf(fileName string) (map[string]affectedImage, error) {
+	imageData := make(map[string]affectedImage)
 	yamlFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return imageData, err
 	}
-	err = yaml.Unmarshal(yamlFile, &imageData)
-	if err != nil {
+	if err = yaml.Unmarshal(yamlFile, &imageData); err != nil {
 		return imageData, err
 	}
-
 	return imageData, nil
 }
 
@@ -539,75 +588,76 @@ func appendAddonLines(name string, dockerfile string, deploymentType string, add
 
 	// This function now reads an addon_config.yml file in the addon directory to determine
 	// which containers are affected by the Dockerfiles.
-	if len(addons) > 0 {
+	if len(addons) == 0 {
+		return dockerfile, nil
+	}
 
-		// If we add an addon to a container then set to True and we add sas.recipe.addons=true to the image
-		labelRecipeAddons := false
-		for _, addon := range addons {
-			images, err := readAddonConf(addon + "addon_config.yml")
-			if err != nil {
-				return "", err
-			}
+	// If we add an addon to a container then set to True and we add sas.recipe.addons=true to the image
+	labelRecipeAddons := false
+	for _, addon := range addons {
+		images, err := readAddonConf(addon + "addon_config.yml")
+		if err != nil {
+			return "", err
+		}
 
-			// If we don't find the image name listed we skip.
-			targetImage, targetFound := images[name]
-			if !targetFound {
-				continue
-			}
+		// If we don't find the image name listed we skip.
+		targetImage, targetFound := images[name]
+		if !targetFound {
+			continue
+		}
 
-			labelRecipeAddons = true
+		labelRecipeAddons = true
 
-			// Read the addon's Dockerfile and only grab the RUN, ADD, COPY, USER, lines
-			dockerfile += "\n# AddOn(s)"
-			dockerfile += "\n# " + addon + "\n"
+		// Read the addon's Dockerfile and only grab the RUN, ADD, COPY, USER, lines
+		dockerfile += "\n# AddOn(s)"
+		dockerfile += "\n# " + addon + "\n"
 
-			// addonPath is a split out of the addon var, which includes the path to the addons.
-			addonName := filepath.Base(addon)
+		// addonPath is a split out of the addon var, which includes the path to the addons.
+		addonName := filepath.Base(addon)
 
-			dockerfile += "LABEL sas.recipe.addons." + addonName + "=\"true\"\n"
+		dockerfile += "LABEL sas.recipe.addons." + addonName + "=\"true\"\n"
 
-			// This will need to loop through list.
-			for _, addonDockerfile := range targetImage.Dockerfiles {
-				bytes, _ := ioutil.ReadFile(addon + addonDockerfile)
-				lines := strings.Split(string(bytes), "\n")
-				endsWithSlashRe := regexp.MustCompile("\\\\s*")
-				for index, line := range lines {
-					line = strings.TrimSpace(line)
-					if len(line) == 0 {
-						continue
+		// This will need to loop through list.
+		for _, addonDockerfile := range targetImage.Dockerfiles {
+			bytes, _ := ioutil.ReadFile(addon + addonDockerfile)
+			lines := strings.Split(string(bytes), "\n")
+			endsWithSlashRe := regexp.MustCompile("\\\\s*")
+			for index, line := range lines {
+				line = strings.TrimSpace(line)
+				if len(line) == 0 {
+					continue
+				}
+
+				if strings.HasPrefix(line, "RUN ") ||
+					strings.HasPrefix(line, "ADD ") ||
+					strings.HasPrefix(line, "ARG") ||
+					strings.HasPrefix(line, "WORKDIR") ||
+					strings.HasPrefix(line, "USER") ||
+					strings.HasPrefix(line, "COPY ") {
+
+					if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") != 0 && strings.Contains(line, "BASEIMAGE") {
+						dockerfile += "ARG BASEIMAGE=non-single-container\n"
+					} else if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") == 0 && strings.Contains(line, "BASEIMAGE") {
+						dockerfile += line + "\n"
+					} else {
+						dockerfile += line + "\n"
 					}
 
-					if strings.HasPrefix(line, "RUN ") ||
-						strings.HasPrefix(line, "ADD ") ||
-						strings.HasPrefix(line, "ARG") ||
-						strings.HasPrefix(line, "WORKDIR") ||
-						strings.HasPrefix(line, "USER") ||
-						strings.HasPrefix(line, "COPY ") {
-
-						if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") != 0 && strings.Contains(line, "BASEIMAGE") {
-							dockerfile += "ARG BASEIMAGE=non-single-container\n"
-						} else if strings.Compare(addonName, "ide-jupyter-python3") == 0 && strings.Compare(deploymentType, "single") == 0 && strings.Contains(line, "BASEIMAGE") {
-							dockerfile += line + "\n"
-						} else {
-							dockerfile += line + "\n"
-						}
-
-						// If there's a "\" then it's a multi-line command
-						if strings.Contains(line, "\\") {
-							for _, nextLine := range lines[index+1:] {
-								dockerfile += nextLine + "\n"
-								if !endsWithSlashRe.MatchString(nextLine) {
-									break
-								}
+					// If there's a "\" then it's a multi-line command
+					if strings.Contains(line, "\\") {
+						for _, nextLine := range lines[index+1:] {
+							dockerfile += nextLine + "\n"
+							if !endsWithSlashRe.MatchString(nextLine) {
+								break
 							}
 						}
 					}
 				}
 			}
 		}
-		if labelRecipeAddons == true {
-			dockerfile += "LABEL sas.recipe.addons=\"true\""
-		}
+	}
+	if labelRecipeAddons == true {
+		dockerfile += "LABEL sas.recipe.addons=\"true\""
 	}
 
 	return dockerfile, nil
@@ -874,7 +924,7 @@ func (container *Container) AddDirectoryToContext(externalPath string, contextPa
 		if info != nil {
 			if !info.IsDir() {
 				if strings.Contains(path, "Dockerfile") || strings.Contains(path, "addon_config.yml") {
-					log.Println("Skipping adding file to " + container.Name + " Docker context: ", path)
+					log.Println("Skipping adding file to "+container.Name+" Docker context: ", path)
 					return nil
 				}
 				paths = append(paths, path)
