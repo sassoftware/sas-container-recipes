@@ -886,8 +886,7 @@ func getContainers(order *SoftwareOrder) ([]*Container, error) {
 	inventory := string(inventoryBytes)
 	startLine := 0
 
-	// Backwards compatibility for Ansible 2.10 dropping support for hyphens in host group names
-	// Parse host group names with hyphens or underscores
+	// Parse host group names with hyphens or underscores (pre and post Ansible 2.10)
 	startOfSection := "[sas_all:children]"
 	if strings.Contains(inventory, "[sas-all:children]") {
 		startOfSection = "[sas-all:children]"
@@ -905,19 +904,24 @@ func getContainers(order *SoftwareOrder) ([]*Container, error) {
 	// Parse each line of the inventory file's hosts section
 	for i := startLine + 1; i < len(lines); i++ {
 		skip := false
-		name := lines[i]
+
+		// Name parsing includes backwards compatibility for Ansible 2.10 which
+		// drops support for hyphens in host group names
+		name := strings.ToLower(strings.TrimSpace(lines[i]))
+		name = strings.Replace(name, "_", "-", -1)
+
 		for _, ignored := range ignoredContainers {
 			if name == ignored {
 				skip = true
 			}
 		}
-		if skip || len(strings.TrimSpace(name)) == 0 {
+		if skip || len(name) == 0 {
 			continue
 		}
 
 		// Add the new container to the containers array
 		container := Container{
-			Name:          strings.ToLower(name),
+			Name:          name,
 			SoftwareOrder: order,
 			Status:        Unknown,
 			BaseImage:     order.BaseImage,

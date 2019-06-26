@@ -12,18 +12,18 @@
 
 	```
 	gcloud container clusters create sas-viya-cluster \
-		--num-nodes 3 --machine-type n1-standard-16 --zone us-central1-a
+	--num-nodes 3 --machine-type n1-standard-16 --zone us-central1-a
 	```
 
 	Note: You can use any zone for the `--zone` argument. If you provide a `--region` argument,
 	the gcloud tool will multiply the value of your `--num-nodes` argument by the number
-	of zones in that region. For example, if you specify 
+	of zones in that region. For example, if you specify
 	`--num-nodes 3 --region us-central1` then a total of 9 nodes will be
 	created, 3 in each of the 3 zones available in the us-central1 region.
  	This combination of settings may lead to over-allocation of resources and an inflated
 	Google Kubernetes Engine bill.
- 
-	If you do not reserve adequate machine resources, you will receive a 
+
+	If you do not reserve adequate machine resources, you will receive a
 	"Does not have minimum availability" message in the GKE Workloads page.
 
 3. Add the cluster's configuration information to your Kubernetes config file:
@@ -49,7 +49,7 @@
 	./build.sh --docker-registry-url gcr.io/<my-project-name> ...
 	```
 
-7. Apply the Kubernetes manifest provided in the output of the build script.
+7. Apply the Kubernetes manifests provided in the output of the build script.
 
 
 ### Amazon Elastic Container Service for Kubernetes (EKS)
@@ -136,7 +136,7 @@
 
 	> The repository with the name 'sas-viya-httpproxy' does not exist in the registry with the id '12345678910'
 
-14. Apply the Kubernetes manifest provided in the output of the build script.
+14. Apply the Kubernetes manifests provided in the output of the build script.
 
 
 ### Azure Kubernetes Service (AKS)
@@ -184,4 +184,4 @@
    ./build.sh --docker-registry-url <login-server-name>.azurecr.io
    ```
 
-7. Apply the Kubernetes manifest provided in the output of the build script.
+7. Apply the Kubernetes manifests provided in the output of the build script.
