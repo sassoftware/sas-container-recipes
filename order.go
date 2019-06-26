@@ -77,16 +77,21 @@ type SoftwareOrder struct {
 	BaseImage              string   `yaml:"Base Image              "`
 	MirrorURL              string   `yaml:"Mirror URL              "`
 	VirtualHost            string   `yaml:"Virtual Host            "`
+	DockerNamespace        string   `yaml:"Docker Namespace        "`
 	DockerRegistry         string   `yaml:"Docker Registry         "`
 	DeploymentType         string   `yaml:"Deployment Type         "`
 	Platform               string   `yaml:"Platform                "`
 	ProjectName            string   `yaml:"Project Name            "`
 	TagOverride            string   `yaml:"Tag Override            "`
 	AddOns                 []string `yaml:"AddOns                  "`
+	DebugContainers        []string `yaml:"Debug Containers        "`
 	WorkerCount            int      `yaml:"Worker Count            "`
+	Verbose                bool     `yaml:"Verbose                 "`
+	SkipMirrorValidation   bool     `yaml:"Skip Mirror Validation  "`
 	SkipDockerValidation   bool     `yaml:"Skip Docker Validation  "`
 	GenerateManifestsOnly  bool     `yaml:"Generate Manifests Only "`
 	SkipDockerRegistryPush bool     `yaml:"Skip Docker Registry    "`
+	OperatingSystem        string   `yaml:"Operating System        "`
 
 	// Build attributes
 	Log          *os.File             `yaml:"-"`                        // File handle for log path
@@ -461,6 +466,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	generateManifestsOnly := flag.Bool("generate-manifests-only", false, "")
 	builderPort := flag.String("builder-port", "1976", "")
 	skipDockerRegistryPush := flag.Bool("skip-docker-registry-push", false, "")
+	operatingSystem := flag.String("os", "linux", "")
 
 	// By default detect the cpu core count and utilize all of them
 	defaultWorkerCount := runtime.NumCPU()
@@ -492,6 +498,7 @@ func (order *SoftwareOrder) LoadCommands() error {
 	order.DockerRegistry = *dockerRegistry
 	order.BuilderPort = *builderPort
 	order.SkipDockerRegistryPush = *skipDockerRegistryPush
+	order.OperatingSystem = *operatingSystem
 
 	// Disallow all other flags except --type with --generate-manifests-only
 	// Note: --tag is always passed from build.sh, so will have to ignore that
@@ -1213,7 +1220,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 
 	// Check to see if the tool exists
 	progress <- "Fetching orchestration tool ..."
-	err := getOrchestrationTool()
+	err := getOrchestrationTool(order.OperatingSystem)
 	if err != nil {
 		fail <- "Failed to install sas-orchestration tool. " + err.Error()
 		return
@@ -1669,7 +1676,7 @@ func (order *SoftwareOrder) LoadUsermods(usermodsFileName string) error {
 }
 
 // Download the orchestration tool locally if it is not in the util directory
-func getOrchestrationTool() error {
+func getOrchestrationTool(operatingSystem string) error {
 	_, err := os.Stat("util/sas-orchestration")
 	if !os.IsNotExist(err) {
 		return nil
@@ -1677,6 +1684,9 @@ func getOrchestrationTool() error {
 
 	// HTTP GET the file
 	fileURL := fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/lax/sas-orchestration-linux.tgz", SasViyaVersion)
+	if operatingSystem == "darwin" {
+		fileURL = fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/mac/sas-orchestration-osx.tgz", SasViyaVersion)
+	}
 	resp, err := http.Get(fileURL)
 	if err != nil {
 		return errors.New("Cannot fetch sas-orchestration tool. support.sas.com must be accessible, " + err.Error())

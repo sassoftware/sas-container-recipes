@@ -25,19 +25,20 @@ The following software and hardware requirements are for the machine that is use
 | --- | --- | --- |
 | Docker | Community Edition or Enterprise Edition, Docker 17.06 or later | Community Edition or Enterprise Edition, Docker 17.06 or later |
 | Docker storage driver <sup>1</sup>  | overlay2 | overlay2 |
-| Operating system | Linux | Linux |
-| Docker registry | (Optional) Access to a Docker registry | Access to a Docker registry is required. <sup>2</sup> |  
-| Disk space | Approximately 15-20 GB of free disk space in the /var/lib/docker directory | Approximately 100 GB <sup>3</sup> of free disk space in the /var/lib/docker directory | 
-| Cores | 2 minimum | Programming-only deployment: 2 minimum, 4 is optimal <sup>4</sup> <br> Full deployment: 2 minimum, 10 or more is optimal <sup>3</sup>| 
+| Operating system | Linux, Mac <sup>2</sup> | Linux, Mac <sup>2</sup> |
+| Docker registry | (Optional) Access to a Docker registry | Access to a Docker registry is required. <sup>3</sup> |  
+| Disk space | Approximately 15-20 GB of free disk space in the /var/lib/docker directory | Approximately 100 GB <sup>4</sup> of free disk space in the /var/lib/docker directory | 
+| Cores | 2 minimum | Programming-only deployment: 2 minimum, 4 is optimal <sup>5</sup> <br> Full deployment: 2 minimum, 10 or more is optimal <sup>4</sup>| 
 | RAM | 4 GB minimum |  4 GB minimum |
 | Internet access| Required | Required | 
 
 **Notes:**
 
 - <sup>1</sup> Use of overlay is not supported.
-- <sup>2</sup> The build process will push built Docker images automatically to the Docker registry. Before running build.sh, log on to docker.registry.company.com and make sure that the $HOME/.docker/config.json file is filled in correctly.
-- <sup>3</sup> The disk space requirement depends on the products in the software order
-- <sup>4</sup> The optimal build time occurs when the number of cores is equal to the number of containers that are being built. The number of containers varies based on your software order.
+- <sup>2</sup> To build images on the Mac OS, Docker and the following software must be installed: [Go](https://golang.org/dl/), Java, and [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#latest-releases-on-macos).
+- <sup>3</sup> The build process will push built Docker images automatically to the Docker registry. Before running build.sh, log on to docker.registry.company.com and make sure that the $HOME/.docker/config.json file is filled in correctly.
+- <sup>4</sup> The disk space requirement depends on the products in the software order
+- <sup>5</sup> The optimal build time occurs when the number of cores is equal to the number of containers that are being built. The number of containers varies based on your software order.
 
 ### Run Machine Requirements
 

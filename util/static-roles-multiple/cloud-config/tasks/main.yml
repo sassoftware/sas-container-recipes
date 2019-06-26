@@ -26,7 +26,7 @@
     path: "{{ SASHOME }}/lib/envesntl/sas-init-functions"
     regexp: '\$RU \$uid -c "\$\*"'
     line: '  $*'
-  when: container_name != "sas-casserver-primary" and container_name != "httpproxy" and container_name != "computeserver"
+  when: container_name != "sas-casserver-primary" and container_name != "httpproxy" and container_name != "programming"
 
 - name: list all sas init files
   find:
