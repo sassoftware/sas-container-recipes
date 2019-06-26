@@ -45,3 +45,14 @@ To include any future updates of the SAS Viya 3.4 software, you must rebuild rec
 ### How do I remove `<none>` images?
 
 An error during the build process might result in dangling images which represent intermediate build containers. If you encounter the error, see [Single Container Errors During Build](Build-and-Run-SAS-Viya-Multiple-Containers#errors-during-build) or [Multiple Container Errors During Build](Build-and-Run-SAS-Viya-Multiple-Containers#errors-during-build).
+
+### Can I build images on my Mac?
+
+Yes, as long as you have installed the following prerequisite software:
+
+- Docker
+- Go [download](https://golang.org/dl/)
+- Java 
+- Ansible [instructions](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#latest-releases-on-macos)
+
+For more information, see the [System Requirements](System-Requirements).
