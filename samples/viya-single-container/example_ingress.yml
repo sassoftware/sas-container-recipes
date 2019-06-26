@@ -9,7 +9,7 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: sas-programming
+          serviceName: sas-viya-single-programming-only
           servicePort: 80
 #  tls:
 #  - hosts:
