@@ -943,7 +943,7 @@ func getContainers(order *SoftwareOrder) ([]*Container, error) {
 // LoadLicense once the path to the Software Order Email (SOE) zip file has been provided then unzip it
 // and load the content into the SoftwareOrder struct for use in the build process.
 func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, done chan int) {
-	progress <- "Reading Software Order Email Zip ..."
+	order.WriteLog(true, true, "Reading Software Order Email Zip ...")
 
 	if _, err := os.Stat(order.SOEZipPath); os.IsNotExist(err) {
 		fail <- err.Error()
@@ -1006,7 +1006,7 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 	go order.Serve()
 
 	order.WriteLog(false, true, order.BuildArgumentsSummary())
-	progress <- "Finished reading Software Order Email"
+	order.WriteLog(true, true, "Finished reading Software Order Email")
 	done <- 1
 }
 
@@ -1014,17 +1014,17 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 func (order *SoftwareOrder) LoadDocker(progress chan string, fail chan string, done chan int) {
 
 	// Make sure Docker is able to connect
-	progress <- "Connecting to the Docker daemon  ..."
+	order.WriteLog(true, true, "Connecting to the Docker daemon  ...")
 	dockerConnection, err := client.NewClientWithOpts(client.WithVersion("1.37"))
 	if err != nil {
 		fail <- "Unable to connect to Docker daemon. Ensure Docker is installed and the service is started."
 		return
 	}
 	order.DockerClient = dockerConnection
-	progress <- "Finished connecting to Docker daemon"
+	order.WriteLog(true, true, "Finished connecting to Docker daemon")
 
 	// Pull the base image depending on what the argument was
-	progress <- "Pulling base container image '" + order.BaseImage + "'" + " ..."
+	order.WriteLog(true, true, fmt.Sprintf("Pulling base container image '%s' ...", order.BaseImage))
 	order.BuildContext = context.Background()
 	_, err = order.DockerClient.ImagePull(order.BuildContext, order.BaseImage, types.ImagePullOptions{})
 	if err != nil {
@@ -1032,13 +1032,13 @@ func (order *SoftwareOrder) LoadDocker(progress chan string, fail chan string, d
 		return
 	}
 
-	progress <- "Finished pulling base container image '" + order.BaseImage + "'"
+	order.WriteLog(true, true, fmt.Sprintf("Finished pulling base container image '%s'", order.BaseImage))
 	done <- 1
 }
 
 // LoadSiteDefault will load the user provided sitedefault.yml file if available.
 func (order *SoftwareOrder) LoadSiteDefault(progress chan string, fail chan string, done chan int) {
-	progress <- "Reading sitedefault.yml ..."
+	order.WriteLog(true, true, "Reading sitedefault.yml ...")
 
 	// If the user provided a sitedefault.yml file copy it over or copy the default version
 	if _, err := os.Stat("sitedefault.yml"); !os.IsNotExist(err) {
@@ -1047,9 +1047,9 @@ func (order *SoftwareOrder) LoadSiteDefault(progress chan string, fail chan stri
 			fail <- "Unable to open sitedefault.yml:" + err.Error()
 			return
 		}
-		progress <- "Finished loading sitedefault.yml"
+		order.WriteLog(true, true, "Finished loading sitedefault.yml")
 	} else {
-		progress <- "Skipping loading sitedefault.yml"
+		order.WriteLog(true, true, "Skipping loading sitedefault.yml")
 	}
 	done <- 1
 }
@@ -1071,7 +1071,7 @@ func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string,
 	url := order.DockerRegistry
 	url = strings.Replace(url, "http://", "", -1)
 	url = strings.Replace(url, "https://", "", -1)
-	progress <- "Checking the Docker registry URL for validity ... curl http://" + url
+	order.WriteLog(true, true, "Checking the Docker registry URL for validity ... curl http://"+url)
 	timeout := time.Duration(5 * time.Second)
 	client := http.Client{
 		Timeout: timeout,
@@ -1087,7 +1087,7 @@ func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string,
 		if response != nil {
 			errorMessage += fmt.Sprintf("\nReturned status code %d", response.StatusCode)
 		}
-		progress <- errorMessage
+		order.WriteLog(true, true, errorMessage)
 
 		// Try the TLS address
 		secondResponse, secondError := client.Get("https://" + url)
@@ -1104,7 +1104,7 @@ func (order *SoftwareOrder) TestRegistry(progress chan string, fail chan string,
 		}
 	}
 
-	progress <- "Finished checking the Docker registry URL for validity"
+	order.WriteLog(true, true, "Finished checking the Docker registry URL for validity")
 	done <- 1
 }
 
@@ -1219,16 +1219,21 @@ func (order *SoftwareOrder) LoadRegistryAuth(fail chan string, done chan int) {
 func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string, done chan int) {
 
 	// Check to see if the tool exists
-	progress <- "Fetching orchestration tool ..."
+	order.WriteLog(true, true, "Fetching orchestration tool ...")
 	err := getOrchestrationTool(order.OperatingSystem)
 	if err != nil {
 		fail <- "Failed to install sas-orchestration tool. " + err.Error()
 		return
 	}
-	progress <- "Finished fetching orchestration tool"
+	version, err := exec.Command("sh", "-c", "util/sas-orchestration --version").Output()
+	if err != nil {
+		fail <- "Cannot get the sas-orchestration tool version. " + err.Error()
+		return
+	}
+	order.WriteLog(true, true, "Finished fetching orchestration tool "+strings.TrimSpace(string(version)))
 
 	// Run the orchestration tool to make the playbook
-	progress <- "Generating playbook for order ..."
+	order.WriteLog(true, true, "Generating playbook for order ...")
 	commandBuilder := []string{"util/sas-orchestration build"}
 	commandBuilder = append(commandBuilder, "--platform redhat")
 	commandBuilder = append(commandBuilder, "--input "+order.SOEZipPath)
@@ -1258,9 +1263,9 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	go func() {
 		for scanner.Scan() {
 			result := scanner.Text()
-			progress <- fmt.Sprintf("Generate playbook output | %s", result)
+			order.WriteLog(false, true, fmt.Sprintf("Generate playbook output | %s", result))
 			if strings.Contains(result, "Connection refused") || strings.Contains(result, "No route to host") {
-				progress <- fmt.Sprintf("Error: unable to generate the playbook. The mirror URL provided by '--mirror-url %s' did not point to a host with an accessible mirrormgr repository. The IP address, hostname, or port might be incorrect.\n", order.MirrorURL)
+				order.WriteLog(true, true, fmt.Sprintf("Error: unable to generate the playbook. The mirror URL provided by '--mirror-url %s' did not point to a host with an accessible mirrormgr repository. The IP address, hostname, or port might be incorrect.\n", order.MirrorURL))
 			}
 		}
 	}()
@@ -1298,7 +1303,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	}
 
 	// TODO replace with "golang.org/x/build/internal/untar"
-	progress <- "Extracting generated playbook content ..."
+	order.WriteLog(true, true, "Extracting generated playbook content ...")
 	untarPlaybookCommand := fmt.Sprintf("tar --extract --file %ssas_viya_playbook.tgz -C %s", order.BuildPath, order.BuildPath)
 	_, err = exec.Command("sh", "-c", untarPlaybookCommand).Output()
 	if err != nil {
@@ -1311,16 +1316,16 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 		fail <- "Unable to untar playbook. " + err.Error()
 		return
 	}
-	progress <- "Finished extracting and generating playbook for order"
+	order.WriteLog(true, true, "Finished extracting and generating playbook for order")
 
 	// Get a list of the containers to be built
-	progress <- "Fetching the list of containers in the order ..."
+	order.WriteLog(true, true, "Fetching the list of containers in the order ...")
 	order.Containers, err = getContainers(order)
 	if err != nil {
 		fail <- err.Error()
 		return
 	}
-	progress <- "Finished fetching the container list"
+	order.WriteLog(true, true, "Finished fetching the container list")
 
 	// Handle --build-only options without modifying the order's container attributes
 	if len(order.BuildOnly) > 0 {
