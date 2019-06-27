@@ -129,7 +129,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -n|--docker-namespace|--docker-registry-namespace)
             shift # past argument
-            echo -e "\nNote: -n|--docker-namespace|--docker-registry-namespace has been deprecated. This function is no longer performed and its usage can be ignored.\n"
+            echo -e "\nNote: -n|--docker-namespace|--docker-registry-namespace has been deprecated.\nInstead use '--docker-registry-url <my-registry>.domain.com/<my-name>'\nor see the 'Using Kubernetes Providers' Wiki documentation for using cloud registries (docs/wiki/Using-Kubernetes-Providers.md)\n"
             shift # past value
             ;;
         -v|--virtual-host)

@@ -62,7 +62,12 @@ Multiple Containers
 
     --docker-registry-url <value>
         Specifies the URL of the Docker registry where Docker images will be pushed.
-        Example: 10.12.13.14:5000 or my-registry.docker.com
+        Examples:
+            hub.docker.com/my-name
+            harbor.mydomain.com/my-name
+            gcr.io/my-project-name
+            my-project-name.azurecr.io
+            1234567890123.dkr.ecr.us-east-1.amazonaws.com
 
   Optional arguments:
 
