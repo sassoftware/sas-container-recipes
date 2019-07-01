@@ -268,6 +268,18 @@ Several SAS Viya containers will need persistent storage configured to make sure
 
 - Decide whether to set up persistent storage.
 - No persistance is the default condition. The default is useful if you are evaluating SAS Viya containers. Otherwise you will want to make sure that your Kubernetes environment is configured for container persistence. For more information, see [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/). 
+- Dynamic persistent volumes can be enabled for the SAS Viya containers either at build time or when regenerating manifests. Dynamic provisioning does require a one or more Storage Class objects for use. See [Dynamic Volume Provisioning](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/) for more details. To enable dynamic provisioning, `manifests_usermods.yml` (see the Kubernetes Manifests inputs section below) needs to be modified. The manifests for the consul, rabbitmq, sasdatasvrc, and cas containers will be created to use [volumeClaimTemplates](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#components) in place of emptyDir().
+Edit this section of the `manifests_usermods.yml`:
+```
+# Defines if dynamic persistent storage is enabled.
+# If no storage class is given, uses the default storage class.
+# DYNAMIC_PERSISTENT_STORAGE: true
+# Defines storage class to be used with dynamic persistence storage. Leave commented out
+# to use default storage class.
+# STORAGE_CLASS: <storage class object name>
+```
+Remove the preceding # of the DYNAMIC_PERSISTENT_STORAGE line. Save file. Build or regenerate manifests to create manifests using the default storage class.
+If a specific storage class name is needed, also remove the preceding # from the STORAGE_CLASS line. This will populate the manifests with the correct storage class upon build or regenerate.
 
 ### Data Import
 

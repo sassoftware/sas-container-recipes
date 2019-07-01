@@ -33,6 +33,14 @@
 #    deployment_overrides:
 #      environment:
 #        - "CASCFG_MODE=mpp"
+
+# Defines if dynamic persistent storage is enabled.
+# If no storage class is given, uses the default storage class.
+# DYNAMIC_PERSISTENT_STORAGE: true
+# Defines storage class to be used with dynamic persistence storage. Leave commented out
+# to use default storage class.
+# STORAGE_CLASS: <storage class object name>
+
 #
 #      # In the following structures, define the custom volumes and volume mounts that
 #      # are desired per service. If the same set of volumes and volume mounts are used

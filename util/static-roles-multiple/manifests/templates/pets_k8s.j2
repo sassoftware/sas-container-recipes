@@ -308,12 +308,45 @@ spec:
 {%     endfor %}
 {%   else %}
 {%     for volumes in item.value.volumes %}
-{%       if item.key == "sas-casserver-primary" %}
+{%       if volumes.split('=')[0] == "log" %}
+{%         if item.key == "sas-casserver-primary" %}
       - name: {{ settings.project_name }}-cas-{{ volumes.split('=')[0] }}-volume
-{%       else %}
+{%         else %}
       - name: {{ settings.project_name }}-{{ item.key | lower }}-{{ volumes.split('=')[0] }}-volume
-{%       endif %}
+{%         endif %}
         emptyDir: {}
+{%       endif %}
+{%     endfor %}
+{%     if DYNAMIC_PERSISTENT_STORAGE is defined and DYNAMIC_PERSISTENT_STORAGE %}   
+  volumeClaimTemplates:
+{%     endif %}
+{%     for volumes in item.value.volumes %}
+{%       if DYNAMIC_PERSISTENT_STORAGE is defined and DYNAMIC_PERSISTENT_STORAGE and volumes.split('=')[0] != "log" %}   
+  - metadata:
+{%         if item.key == "sas-casserver-primary" %}
+      name: {{ settings.project_name }}-cas-{{ volumes.split('=')[0] }}-volume
+{%         else %}
+      name: {{ settings.project_name }}-{{ item.key | lower }}-{{ volumes.split('=')[0] }}-volume
+{%         endif %}
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 2Gi
+{%         if STORAGE_CLASS is defined %}
+      storageClassName: {{ STORAGE_CLASS }}
+{%         endif %}
+{%       else %}
+{%         if volumes.split('=')[0] != "log" %}
+{%           if item.key == "sas-casserver-primary" %}
+      - name: {{ settings.project_name }}-cas-{{ volumes.split('=')[0] }}-volume
+{%           else %}
+      - name: {{ settings.project_name }}-{{ item.key | lower }}-{{ volumes.split('=')[0] }}-volume
+{%           endif %}
+        emptyDir: {}
+{%         endif %}
+{%       endif %}
 {%     endfor %}
 {%   endif %}
 {% endif %}

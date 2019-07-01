@@ -1,6 +1,7 @@
 sas-container-recipes
 sitedefault.yml
 vars_usremods.yml
+manifests_usermods.yml
 Makefile
 builds/
 logs/
