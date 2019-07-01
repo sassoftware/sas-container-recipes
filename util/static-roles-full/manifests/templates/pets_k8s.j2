@@ -339,6 +339,13 @@ spec:
         - name: tokens
           mountPath: /tokens
       volumes:
+      # Needed for TLS configurations
+      - name: tokens
+        configMap:
+          name: consul-tokens-configmap
+      - name: anchors
+        configMap:
+          name: {{ settings.project_name }}-cacerts-configmap
 {% if custom_services is defined and custom_services %}
       # Writing out user defined volumes
 {%   for key,value in custom_services.items() %}
@@ -380,20 +387,46 @@ spec:
 {%     endfor %}
 {%   else %}
 {%     for volumes in item.value.volumes %}
-{%       if item.key == "sas-casserver-primary" %}
+{%       if volumes.split('=')[0] == "log" %}
+{%         if item.key == "sas-casserver-primary" %}
       - name: {{ settings.project_name }}-cas-{{ volumes.split('=')[0] }}-volume
-{%       else %}
+{%         else %}
       - name: {{ settings.project_name }}-{{ item.key | lower }}-{{ volumes.split('=')[0] }}-volume
-{%       endif %}
+{%         endif %}
         emptyDir: {}
+{%       endif %}
+{%     endfor %}
+{%     if DYNAMIC_PERSISTENT_STORAGE is defined and DYNAMIC_PERSISTENT_STORAGE %}   
+  volumeClaimTemplates:
+{%     endif %}
+{%     for volumes in item.value.volumes %}
+{%       if DYNAMIC_PERSISTENT_STORAGE is defined and DYNAMIC_PERSISTENT_STORAGE and volumes.split('=')[0] != "log" %}   
+  - metadata:
+{%         if item.key == "sas-casserver-primary" %}
+      name: {{ settings.project_name }}-cas-{{ volumes.split('=')[0] }}-volume
+{%         else %}
+      name: {{ settings.project_name }}-{{ item.key | lower }}-{{ volumes.split('=')[0] }}-volume
+{%         endif %}
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 2Gi
+{%         if STORAGE_CLASS is defined %}
+      storageClassName: {{ STORAGE_CLASS }}
+{%         endif %}
+{%       else %}
+{%         if volumes.split('=')[0] != "log" %}
+{%           if item.key == "sas-casserver-primary" %}
+      - name: {{ settings.project_name }}-cas-{{ volumes.split('=')[0] }}-volume
+{%           else %}
+      - name: {{ settings.project_name }}-{{ item.key | lower }}-{{ volumes.split('=')[0] }}-volume
+{%           endif %}
+        emptyDir: {}
+{%         endif %}
+{%       endif %}
 {%     endfor %}
 {%   endif %}
 {% endif %}
-      # Needed for TLS configurations
-      - name: tokens
-        configMap:
-          name: consul-tokens-configmap
-      - name: anchors
-        configMap:
-          name: {{ settings.project_name }}-cacerts-configmap
 ...
