@@ -1220,7 +1220,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 
 	// Check to see if the tool exists
 	order.WriteLog(true, true, "Fetching orchestration tool ...")
-	err := getOrchestrationTool(order.OperatingSystem)
+	err := order.GetOrchestrationTool(order.OperatingSystem)
 	if err != nil {
 		fail <- "Failed to install sas-orchestration tool. " + err.Error()
 		return
@@ -1263,7 +1263,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	go func() {
 		for scanner.Scan() {
 			result := scanner.Text()
-			order.WriteLog(false, true, fmt.Sprintf("Generate playbook output | %s", result))
+			order.WriteLog(false, true, fmt.Sprintf("  Generate Playbook | %s", result))
 			if strings.Contains(result, "Connection refused") || strings.Contains(result, "No route to host") {
 				order.WriteLog(true, true, fmt.Sprintf("Error: unable to generate the playbook. The mirror URL provided by '--mirror-url %s' did not point to a host with an accessible mirrormgr repository. The IP address, hostname, or port might be incorrect.\n", order.MirrorURL))
 			}
@@ -1681,11 +1681,12 @@ func (order *SoftwareOrder) LoadUsermods(usermodsFileName string) error {
 }
 
 // Download the orchestration tool locally if it is not in the util directory
-func getOrchestrationTool(operatingSystem string) error {
+func (order *SoftwareOrder) GetOrchestrationTool(operatingSystem string) error {
 	_, err := os.Stat("util/sas-orchestration")
 	if !os.IsNotExist(err) {
 		return nil
 	}
+	order.WriteLog(true, true, "Fetching sas-orchestration tool ...")
 
 	// HTTP GET the file
 	fileURL := fmt.Sprintf("https://support.sas.com/installation/viya/%s/sas-orchestration-cli/lax/sas-orchestration-linux.tgz", SasViyaVersion)
