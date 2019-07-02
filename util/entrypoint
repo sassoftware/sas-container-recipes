@@ -83,7 +83,9 @@ source ${SASHOME}/lib/envesntl/docker-functions
 ###############################################################################
 
 # Write tokens to disk if needed and echo CONSUL_HTTP_ADDR to file
-docker_define_consul_environment
+if [[ ! -f /etc/init.d/sas-viya-espstudio-default ]]; then
+  docker_define_consul_environment
+fi
 
 ###############################################################################
 # Shutdown
@@ -96,63 +98,72 @@ trap docker_shutdown_sas_services SIGINT
 # Run something
 ###############################################################################
 
-docker_run_local_consul
+if [[ "${SAS_ESP_STANDALONE}" ]]; then
+  # In ESP standalone mode start ESP alone and do not run Consul or any other Viya startup scripts
+  /etc/init.d/sas-viya-espvm-default start
 
-# Updating config data for dataexplorer patch
-if [[ -f /etc/init.d/sas-viya-dataexplorer-default ]]; then
-    ${SASHOME}/bin/sas-bootstrap-config \
-        --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token kv write \
-        --site-default config/SASDataExplorer/jvm/java_option_fjpcp -Djava.util.concurrent.ForkJoinPool.common.parallelism=16
+else 
+  docker_run_local_consul
+
+  # Updating config data for dataexplorer patch
+  if [[ -f /etc/init.d/sas-viya-dataexplorer-default ]]; then
+      ${SASHOME}/bin/sas-bootstrap-config \
+          --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token kv write \
+          --site-default config/SASDataExplorer/jvm/java_option_fjpcp -Djava.util.concurrent.ForkJoinPool.common.parallelism=16
+  fi
+  if [[ -f /etc/init.d/sas-viya-espvm-default ]]; then
+      # If we are in the ESP Studio container and are configured to use RDS, register the RDS content
+      [[ -z ${SAS_DATABASE_TYPE+x} ]] && SAS_DATABASE_TYPE=sasdatasvrc
+      echo_line "[INFO]  : In the ESP Studio container and checking SAS_DATABASE_TYPE"
+      if [[ "${SAS_DATABASE_TYPE,,}" == "rds" ]]; then
+          echo_line "[INFO]  : Using RDS for a database. Registering information into Consul"
+          echo_line "[INFO]  : RDS Host = $SAS_DATABASE_HOST"
+          echo_line "[INFO]  : RDS Port = $SAS_DATABASE_PORT"
+          if [[ -z $SAS_DATABASE_PASSWORD ]]; then
+              echo_line "[ERROR] : The SAS_DATABASE_PASSWORD was not set...exiting"
+              exit 5
+          fi
+  
+          ${SASHOME}/bin/setup_rds_postgres.sh $SAS_DATABASE_HOST $SAS_DATABASE_PORT $SAS_DATABASE_PASSWORD
+          rds_postgres_rc=$?
+          if [[ "$rds_postgres_rc" != "0" ]]; then
+              echo_line "[ERROR] : Unable to register the database type of $SAS_DATABASE_TYPE in Consul...exiting"
+              exit $rds_postgres_rc
+          else
+              echo_line "[INFO]  : Database type of $SAS_DATABASE_TYPE is registered in Consul"
+              unset SAS_DATABASE_PASSWORD
+          fi
+      else
+          echo_line "[INFO]  : SAS_DATABASE_TYPE=$SAS_DATABASE_TYPE"
+      fi
+  
+      ## TODO: when Consul is NOT available in SAS_ESP_STANDALONE mode where is this info stored???
+      # Run the additional whitelabeling setup if it exists
+      if [[ -f ${SASHOME}/share/esp/whitelabel/config.yml ]]; then
+          config_file_size=$(wc -l < ${SASHOME}/share/esp/whitelabel/config.yml)
+          if (( $config_file_size > 0 )); then
+              ${SASHOME}/sas-bootstrap-config \
+                  --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token \
+                  kv \
+                  bulkload \
+                  --force \
+                  --site-default \
+                  --yaml ${SASHOME}/share/esp/whitelabel/config.yml
+          fi
+      fi
+  fi
+
+  # Start and continually check the ops-agent process.
+  ${SASHOME}/lib/envesntl/docker-ops-agent &
+  
+  docker_run_sas_services
+
+  ###############################################################################
+  # Keep the container alive until it is killed
+  ###############################################################################
+  
+  docker_check_sas_services
+
 fi
 
-if [[ -f /etc/init.d/sas-viya-espvm-default ]]; then
-    # If we are in the ESP Studio container and are configured to use RDS, register the RDS content
-    [[ -z ${SAS_DATABASE_TYPE+x} ]] && SAS_DATABASE_TYPE=sasdatasvrc
-    echo_line "[INFO]  : In the ESP Studio container and checking SAS_DATABASE_TYPE"
-    if [[ "${SAS_DATABASE_TYPE,,}" == "rds" ]]; then
-        echo_line "[INFO]  : Using RDS for a database. Registering information into Consul"
-        echo_line "[INFO]  : RDS Host = $SAS_DATABASE_HOST"
-        echo_line "[INFO]  : RDS Port = $SAS_DATABASE_PORT"
-        if [[ -z $SAS_DATABASE_PASSWORD ]]; then
-            echo_line "[ERROR] : The SAS_DATABASE_PASSWORD was not set...exiting"
-            exit 5
-        fi
 
-        ${SASHOME}/bin/setup_rds_postgres.sh $SAS_DATABASE_HOST $SAS_DATABASE_PORT $SAS_DATABASE_PASSWORD
-        rds_postgres_rc=$?
-        if [[ "$rds_postgres_rc" != "0" ]]; then
-            echo_line "[ERROR] : Unable to register the database type of $SAS_DATABASE_TYPE in Consul...exiting"
-            exit $rds_postgres_rc
-        else
-            echo_line "[INFO]  : Database type of $SAS_DATABASE_TYPE is registered in Consul"
-            unset SAS_DATABASE_PASSWORD
-        fi
-    else
-        echo_line "[INFO]  : SAS_DATABASE_TYPE=$SAS_DATABASE_TYPE"
-    fi
-
-    # Run the additional whitelabeling setup if it exists
-    if [[ -f ${SASHOME}/share/esp/whitelabel/config.yml ]]; then
-        config_file_size=$(wc -l < ${SASHOME}/share/esp/whitelabel/config.yml)
-        if (( $config_file_size > 0 )); then
-            ${SASHOME}/sas-bootstrap-config \
-                --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token \
-                kv \
-                bulkload \
-                --force \
-                --site-default \
-                --yaml ${SASHOME}/share/esp/whitelabel/config.yml
-        fi
-    fi
-fi
-
-# Start and continually check the ops-agent process.
-${SASHOME}/lib/envesntl/docker-ops-agent &
-
-docker_run_sas_services
-
-###############################################################################
-# Keep the container alive until it is killed
-###############################################################################
-
-docker_check_sas_services
