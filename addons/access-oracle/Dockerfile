@@ -16,7 +16,7 @@
 #
 # BUILD:
 #   docker build --file Dockerfile  --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest . --tag svc-access-oracle
-# 
+#
 # RUN:
 #   docker run --detach --rm --publish-all --name svc-access-oracle --hostname svc-access-oracle svc-access-oracle
 #
@@ -25,8 +25,6 @@ ARG BASEIMAGE=viya-single-container
 ARG BASETAG=latest
 
 FROM $BASEIMAGE:$BASETAG
-
-ARG PLATFORM=redhat
 
 USER root
 
@@ -37,20 +35,10 @@ ADD tnsnames.ora /etc/
 
 RUN set -e; \
     mkdir -p /tmp/oracle; \
-    if [ "$PLATFORM" = "redhat" ]; then \
-        rpm --rebuilddb; \
-        yum install --assumeyes /tmp/oracle/*.rpm; \
-        yum clean all; \
-        rm --verbose --recursive --force /root/.cache /var/cache/yum; \
-    elif [ "$PLATFORM" = "suse" ]; then \
-        rpm --rebuilddb; \
-        zypper --no-gpg-checks install --no-confirm /tmp/oracle/*.rpm; \
-        zypper clean ; \
-        rm --verbose --recursive --force /var/cache/zypp; \
-    else \
-        echo; echo "####### [ERROR] : Unknown platform of \"$PLATFORM\" passed in"; echo; \
-        exit 1; \
-    fi
+	rpm --rebuilddb; \
+	yum install --assumeyes /tmp/oracle/*.rpm; \
+	yum clean all; \
+	rm --verbose --recursive --force /root/.cache /var/cache/yum;
 
 # SAS needs v11.1 but symlinking to your installed version will work.
 RUN source /tmp/oracle_cas.settings; \

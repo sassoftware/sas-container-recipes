@@ -19,18 +19,10 @@ ARG BASETAG=latest
 
 FROM $BASEIMAGE:$BASETAG
 
-ARG PLATFORM=redhat
 ARG PROJECT_NAME=sas-viya
 
 USER root
 COPY redirect.conf ./redirect.conf
 
 RUN set -e; \
-     if [ "$PLATFORM" = "redhat" ]; then \
-        cp ./redirect.conf /etc/httpd/conf.d/redirect.conf; \
-     elif [ "$PLATFORM" = "suse" ]; then \
-        cp ./redirect.conf /etc/apache2/conf.d/redirect.conf; \
-     else \
-         echo; echo "####### [ERROR] : Unknown platform of \"$PLATFORM\" passed in"; echo; \
-         exit 1; \
-    fi;
+	cp ./redirect.conf /etc/httpd/conf.d/redirect.conf;

@@ -124,12 +124,12 @@ while [[ $# -gt 0 ]]; do
             ;;
         -u|--docker-url|--docker-registry-url)
             shift # past argument
-            export DOCKER_REGISTRY_URL=$(echo $1 | cut -d'/' -f3)
+            export DOCKER_REGISTRY_URL=$1
             shift # past value
             ;;
         -n|--docker-namespace|--docker-registry-namespace)
             shift # past argument
-            export DOCKER_REGISTRY_NAMESPACE="$1"
+            echo -e "\nNote: -n|--docker-namespace|--docker-registry-namespace has been deprecated.\nInstead use '--docker-registry-url <my-registry>.domain.com/<my-name>'\nor see the 'Using Kubernetes Providers' Wiki documentation for using cloud registries (docs/wiki/Using-Kubernetes-Providers.md)\n"
             shift # past value
             ;;
         -v|--virtual-host)
@@ -215,10 +215,6 @@ if [[ -n ${DOCKER_REGISTRY_URL} ]]; then
     run_args="${run_args} --docker-registry-url ${DOCKER_REGISTRY_URL}"
 fi
 
-if [[ -n ${DOCKER_REGISTRY_NAMESPACE} ]]; then
-    run_args="${run_args} --docker-namespace ${DOCKER_REGISTRY_NAMESPACE}"
-fi
-
 if [[ -n ${SAS_DOCKER_TAG} ]]; then
     run_args="${run_args} --tag ${SAS_DOCKER_TAG}"
 fi
@@ -278,7 +274,6 @@ if [[ $OPERATING_SYSTEM == "linux" ]]; then
         --tag sas-container-recipes-builder:${SAS_DOCKER_TAG} \
         --file Dockerfile \
 
-
     echo
     echo "=============================="
     echo "Running Docker Build Container"
@@ -287,7 +282,7 @@ if [[ $OPERATING_SYSTEM == "linux" ]]; then
     # If a Docker config exists then run the builder with the config mounted as a volume.
     # Otherwise, not having a Docker config is acceptable if no registry authentication is required.
     DOCKER_CONFIG_PATH=${HOME}/.docker/config.json
-    if [[ -f ${DOCKER_CONFIG_PATH} ]]; then 
+    if [[ -f ${DOCKER_CONFIG_PATH} ]]; then
         docker run -d \
             --name ${SAS_BUILD_CONTAINER_NAME} \
             -u ${UID}:${DOCKER_GID} \
@@ -296,7 +291,7 @@ if [[ $OPERATING_SYSTEM == "linux" ]]; then
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v ${HOME}/.docker/config.json:/home/sas/.docker/config.json \
             sas-container-recipes-builder:${SAS_DOCKER_TAG} ${run_args}
-    else 
+    else
         docker run -d \
             --name ${SAS_BUILD_CONTAINER_NAME} \
             -u ${UID}:${DOCKER_GID} \

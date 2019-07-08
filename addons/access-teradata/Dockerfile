@@ -16,7 +16,7 @@
 #
 # BUILD:
 #   docker build --file Dockerfile  --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest . --tag svc-access-teradata
-# 
+#
 # RUN:
 #   docker run --detach --rm --publish-all --name svc-access-teradata --hostname svc-access-teradata svc-access-teradata
 #
@@ -26,25 +26,13 @@ ARG BASETAG=latest
 
 FROM $BASEIMAGE:$BASETAG
 
-ARG PLATFORM=redhat
-
 USER root
 RUN set -e; \
     mkdir /tmp/teradata_tools; \
-    if [ "$PLATFORM" = "redhat" ]; then \
-        rpm --rebuilddb; \
-        yum install --assumeyes ksh; \
-        yum clean all; \
-        rm --verbose --recursive --force /root/.cache /var/cache/yum; \
-    elif [ "$PLATFORM" = "suse" ]; then \
-        rpm --rebuilddb; \
-        zypper install --no-confirm ksh; \
-        zypper clean ; \
-        rm --verbose --recursive --force /var/cache/zypp; \
-    else \
-        echo; echo "####### [ERROR] : Unknown platform of \"$PLATFORM\" passed in"; echo; \
-        exit 1; \
-    fi
+	rpm --rebuilddb; \
+	yum install --assumeyes ksh; \
+	yum clean all; \
+	rm --verbose --recursive --force /root/.cache /var/cache/yum;
 
 ADD teradata.tgz /tmp/teradata_tools/
 RUN cd /tmp/teradata_tools/TeradataToolsAndUtilitiesBase && echo a|./setup.bat

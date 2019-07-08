@@ -25,7 +25,7 @@ spec:
       containers:
       - name: {{ settings.project_name }}-esp-metered-billing
 {% for regkey,regvalue in registries.items() %}
-        image: {{ regvalue.url }}/{{ regvalue.namespace }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
+        image: {{ regvalue.url }}/{{ settings.project_name }}-{{ item.key }}:{{ docker_tag | default('latest') }}
 {% endfor %}
         imagePullPolicy: Always
         ports:

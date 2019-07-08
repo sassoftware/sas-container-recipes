@@ -4,7 +4,7 @@ vars_usremods.yml
 manifests_usermods.yml
 Makefile
 builds/
-logs/
+run/
 **/sas-orchestration
 **/sas_viya_playbook/
 **/*.retry

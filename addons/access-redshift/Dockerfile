@@ -16,7 +16,7 @@
 #
 # BUILD:
 #   docker build --file Dockerfile --build-arg BASEIMAGE=viya-single-container --build-arg BASETAG=latest . --tag svc-access-redshift
-# 
+#
 # RUN:
 #   docker run --detach --rm --publish-all --name svc-access-redshift --hostname svc-access-redshift svc-access-redshift
 #
@@ -25,7 +25,6 @@ ARG BASEIMAGE=viya-single-container
 ARG BASETAG=latest
 
 FROM $BASEIMAGE:$BASETAG
-ARG PLATFORM=redhat
 
 USER root
 

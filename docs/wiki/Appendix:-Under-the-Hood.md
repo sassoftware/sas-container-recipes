@@ -19,7 +19,7 @@
 
 ## Addons
 
-The addons that you choose depends on your needs and the software that you have licensed. For some images, addons add content and create new versions of the images. 
+The addons that you choose depends on your needs and the software that you have licensed. For some images, addons add content and create new versions of the images.
 
 ### access-greenplum
 
@@ -63,10 +63,10 @@ The addons that you choose depends on your needs and the software that you have 
 ### access-hadoop
 
 - **Overview**
-    
+
     Use the files in the addons/access-hadoop directory to smoke test SAS/ACCESS Interface to Hadoop.
 
-    Before you build an image with the access-hadoop addon, collect the Hadoop configuration files (/config) and JAR files (/jars), and add them to this directory: [sas-container-recipes/addons/access-hadoop/hadoop](hadoop/README.md). When the Hadoop configuration and JAR files are in this directory, the files are added to a /hadoop directory in an image that includes the access-hadoop addon. 
+    Before you build an image with the access-hadoop addon, collect the Hadoop configuration files (/config) and JAR files (/jars), and add them to this directory: [sas-container-recipes/addons/access-hadoop/hadoop](hadoop/README.md). When the Hadoop configuration and JAR files are in this directory, the files are added to a /hadoop directory in an image that includes the access-hadoop addon.
 
     Here is an example of the directory structure:
 
@@ -101,7 +101,7 @@ The addons that you choose depends on your needs and the software that you have 
 
     - SAS Batch Server
         1. Edit the 'FIXME' text in achadoop.sas and dchadoop.sas with the correct values for the environment.
-        1. Edit the SAS_HADOOP_JAR_PATH and SAS_HADOOP_CONFIG_PATH to /hadoop/jars and /hadoop/config, respectively.  
+        1. Edit the SAS_HADOOP_JAR_PATH and SAS_HADOOP_CONFIG_PATH to /hadoop/jars and /hadoop/config, respectively.
         1. From the parent directory, run the following command:
             ```
             docker run \
@@ -157,7 +157,7 @@ The addons that you choose depends on your needs and the software that you have 
 
 - **Overview**
 
-    The content in this directory provides a simple way for smoke testing 
+    The content in this directory provides a simple way for smoke testing
 SAS/ACCESS Interface to Oracle. A user must provide:
 
     - Oracle client library RPMs must be placed in this directory. The Dockerfile will attempt to install any RPMs in this directory.
@@ -202,7 +202,7 @@ SAS/ACCESS Interface to Oracle. A user must provide:
 
 - **Overview**
 
-    The content in this directory provides a simple way for smoke testing 
+    The content in this directory provides a simple way for smoke testing
 SAS/ACCESS Interface to PC Files.
 
     **Note:** To see a list of images that this addon modifies, see the addons/access-pcfiles/addon_config.yml file.
@@ -240,7 +240,7 @@ SAS/ACCESS Interface to PC Files.
 
 - **Overview**
 
-    The content in this directory provides a simple way for smoke testing 
+    The content in this directory provides a simple way for smoke testing
 SAS/ACCESS Interface to PostgreSQL.
 
     **Note:** To see a list of images that this addon modifies, see the addons/access-postgres/addon_config.yml file.
@@ -265,7 +265,7 @@ SAS/ACCESS Interface to PostgreSQL.
     - SAS Batch Server
 
         1. Edit the 'FIXME' text in acpostgres.sas and dcpostgres.sas with the correct values for the environment.
-        1. From the parent directory, run the following 
+        1. From the parent directory, run the following
             ```
             docker run \
             --interactive \
@@ -280,7 +280,7 @@ SAS/ACCESS Interface to PostgreSQL.
 
 - **Overview**
 
-    The content in this directory provides a simple way for smoke testing 
+    The content in this directory provides a simple way for smoke testing
 SAS/ACCESS Interface to Amazon Redshift.
 
     **Note:** To see a list of images that this addon modifies, see the addons/access-redshift/addon_config.yml file.
@@ -417,7 +417,7 @@ SAS/ACCESS Interface to Amazon Redshift.
 
     This addon does have support to create the user's home directory if it does not exist when a user logs into SAS Studio. However, if users need to persist content in their home directories (for example, SAS programs created from SAS Studio, or Jupyter playbooks), then it is advised to re-configure the containers so that the home directories are either :
     - mounted docker volumes when using the single image on Docker
-    - persistent Volumes when using Kubernetes. 
+    - persistent Volumes when using Kubernetes.
 
 - **Files**
 
@@ -457,7 +457,7 @@ that has host authentication (auth-demo or auth-sssd) already added.
     | --- | --- | --- | --- |
     | BASEIMAGE |  Define the namespace and image name to build from | sas-viya-programming |  |
     | BASETAG | The verision of the image to build from | latest |  |
-    | PLATFORM | The type of host that the software is being installed on | redhat | redhat, suse |
+    | PLATFORM | The type of host that the software is being installed on | redhat | redhat |
     | SASPYTHONSWAT | The version of [SAS Scripting Wrapper for Analytics Transfer (SWAT) package](https://github.com/sassoftware/python-swat) | 1.4.0 |
     | JUPYTER_TOKEN | The value of the token that the the notebook uses to authenticate requests. By default it is empty turning off authentication. | '' |
     | ENABLE_TERMINAL | Indicates if the terminal should be accessible by the notebook. By default it will be enabled. | True | True, False (case sensitive) |
@@ -493,7 +493,7 @@ There could be additional applications depending on your order.
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Docker
     - Kubernetes
 - **Ports**
@@ -517,12 +517,12 @@ There could be additional applications depending on your order.
 
 - **Persistence**
     - Users that log into SAS Studio should have their home directories persisted
-    - The `/cas/data` directory is a location that is scratch space on Disk for CAS to use. You will want to point this to a fast-enough filesystem. It is likely that by leaving it as the default, it would end up hitting one of the internal docker paths, which would have neither the speed nor the space required. 
+    - The `/cas/data` directory is a location that is scratch space on Disk for CAS to use. You will want to point this to a fast-enough filesystem. It is likely that by leaving it as the default, it would end up hitting one of the internal docker paths, which would have neither the speed nor the space required.
     - The `/cas/permstore` directory is the location where CAS will store access permissions for caslibs. In this directory it will create a  folder based on the hostname. It is important to make sure the hostname is set the same way each time the container is run.
     - The `/cas/cache` directory is the location where CAS will cache data. The better solution for this would be to map multiple volumes to the container and set CASENV_CAS_DISK_CACHE to those mounted locations.
 - **Caveats**
     - The entrypoint is running as `root`
-    - The container will need some level of host authentication. The [auth-demo](#auth-demo) and [auth-sssd](#auth-sssd) provide examples of how this is supported. auth-demo will only allow one user/password combination to access the containers. so it's ok if you alone use the container. auth-sssd, once configured, allows multiple simultaneous users to access the applications. 
+    - The container will need some level of host authentication. The [auth-demo](#auth-demo) and [auth-sssd](#auth-sssd) provide examples of how this is supported. auth-demo will only allow one user/password combination to access the containers. so it's ok if you alone use the container. auth-sssd, once configured, allows multiple simultaneous users to access the applications.
     - The container has multiple applications running in it
     - Some process that are started in support of the application will be owned by `root`.
     - The SAS Object Spawner will start SAS Workspace Server sessions for each user that logs into SAS Studio.
@@ -536,7 +536,7 @@ Runs httpd and directs web traffic to _SAS Studio 4_ or _CAS Monitor_. Also Jupy
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Kubernetes
 
 - **Ports**
@@ -568,7 +568,7 @@ There could be additional applications depending on your order.
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Kubernetes.
 - **Ports**
     - 7080 for SAS Studio 4
@@ -584,7 +584,7 @@ There could be additional applications depending on your order.
     - The `/opt/sas/viya/config/var/log` directory is where processes will write their logs to. It is recommended to save these logs off so that if Kubernetes pods restart that the logs can provide information to understand why.
 - **Caveats**
     - The entrypoint is running as `root`
-    - The container will need some level of host authentication. The [auth-demo](#auth-demo) and [auth-sssd](#auth-sssd) provide examples of how this is supported. auth-demo will only allow one user/password combination to access the containers. so it's ok if you alone use the container. auth-sssd, once configured, allows multiple simultaneous users to access the applications. 
+    - The container will need some level of host authentication. The [auth-demo](#auth-demo) and [auth-sssd](#auth-sssd) provide examples of how this is supported. auth-demo will only allow one user/password combination to access the containers. so it's ok if you alone use the container. auth-sssd, once configured, allows multiple simultaneous users to access the applications.
     - The container has multiple applications running in it
     - Some process that are started in support of the application will be owned by `root`.
     - The SAS Object Spawner will start SAS Workspace Server sessions for each user that logs into SAS Studio 4
@@ -597,7 +597,7 @@ This runs Cloud Analytic Services (CAS). This image can be run as the controller
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Kubernetes.
 - **Ports**
     - 5570 is the binary port
@@ -620,12 +620,12 @@ This runs Cloud Analytic Services (CAS). This image can be run as the controller
 
 - **Persistence**
     - Users that log into SAS Studio 4 should have their home directories persisted
-    - The `/cas/data` directory is a location that is scratch space on Disk for CAS to use. You will want to point this to a fast-enough filesystem. It is likely that by leaving it as the default, it would end up hitting one of the internal docker paths, which would have neither the speed nor the space required. 
+    - The `/cas/data` directory is a location that is scratch space on Disk for CAS to use. You will want to point this to a fast-enough filesystem. It is likely that by leaving it as the default, it would end up hitting one of the internal docker paths, which would have neither the speed nor the space required.
     - The `/cas/permstore` directory is the location where CAS will store access permissions for caslibs. In this directory it will create a  folder based on the hostname. It is important to make sure the hostname is set the same way each time the container is run.
     - The `/cas/cache` directory is the location where CAS will cache data. The better solution for this would be to map multiple volumes to the container and set CASENV_CAS_DISK_CACHE to those mounted locations.
 - **Caveats**
     - The entrypoint is running as `root`
-    - The container will need some level of host authentication. The [auth-demo](#auth-demo) and [auth-sssd](#auth-sssd) provide examples of how this is supported. auth-demo will only allow one user/password combination to access the containers. so it's ok if you alone use the container. auth-sssd, once configured, allows multiple simultaneous users to access the applications. 
+    - The container will need some level of host authentication. The [auth-demo](#auth-demo) and [auth-sssd](#auth-sssd) provide examples of how this is supported. auth-demo will only allow one user/password combination to access the containers. so it's ok if you alone use the container. auth-sssd, once configured, allows multiple simultaneous users to access the applications.
     - The container has multiple applications running in it
     - Some process that are started in support of the application will be owned by `root`.
 
@@ -651,7 +651,7 @@ Processes running in these containers will pick an ephemeral port and register i
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Kubernetes
 - **Ports**
     * None are exposed
@@ -686,7 +686,7 @@ In addition to the CAS process running, there are SAS operational components tha
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Kubernetes.
 - **Ports**
     - 5600 for the runlauncher
@@ -706,7 +706,7 @@ In addition to the CAS process running, there are SAS operational components tha
     - The `/opt/sas/viya/config/var/log` directory is where processes will write their logs to. It is recommended to save these logs off so that if Kubernetes pods restart that the logs can provide information to understand why.
 - **Caveats**
     - The entrypoint is running as `root`
-    - The container will need some level of host authentication. The [auth-demo](#auth-demo) and [auth-sssd](#auth-sssd) provide examples of how this is supported. auth-demo will only allow one user/password combination to access the containers. so it's ok if you alone use the container. auth-sssd, once configured, allows multiple simultaneous users to access the applications. 
+    - The container will need some level of host authentication. The [auth-demo](#auth-demo) and [auth-sssd](#auth-sssd) provide examples of how this is supported. auth-demo will only allow one user/password combination to access the containers. so it's ok if you alone use the container. auth-sssd, once configured, allows multiple simultaneous users to access the applications.
     - The container has multiple applications running in it
     - Some process that are started in support of the application will be owned by `root`.
     - The runlauncher will start SAS Compute Server sessions for each user that logs into SAS Studio V
@@ -724,7 +724,7 @@ In addition to the httpd process running, there are SAS operational components t
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Kubernetes.
 - **Ports**
     - 8300
@@ -741,7 +741,7 @@ In addition to the httpd process running, there are SAS operational components t
     | SAS_DEBUG | Enables `set -x` in the entrypoint | |
     | DEPLOYMENT_NAME | The name of the overall project | sas-viya |
     | CONSUL_BOOTSTRAP_EXPECT | How many Consul servers to expect in the cluster | 1 |
-    | CONSUL_CLIENT_ADDRESS | The address to which Consul will bind client interfaces | 0.0.0.0 | 
+    | CONSUL_CLIENT_ADDRESS | The address to which Consul will bind client interfaces | 0.0.0.0 |
     | CONSUL_DATA_DIR | The location to store Consul data | /consul/data |
     | CONSUL_KEY_VALUE_DATA_ENC | base64 encoded data to load on the initial start up. | |
     | CONSUL_SERVER_FLAG | Boolean indicating if this is a Consul server or agent | true |
@@ -770,7 +770,7 @@ In addition to the httpd process running, there are SAS operational components t
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Kubernetes
 - **Ports**
     - 80 for http via httpd
@@ -807,7 +807,7 @@ In addition to the SAS Operations server process running, there are SAS operatio
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Kubernetes.
 - **Ports**
     - none exposed
@@ -845,7 +845,7 @@ In addition to pgpool II running, there are SAS operational components that are 
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Kubernetes.
 - **Ports**
     - 5431
@@ -888,7 +888,7 @@ In addition to SAS Studio 4 and SAS Object Spawner running, there are SAS operat
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Kubernetes.
 - **Ports**
     - 7080 for SAS Studio 4
@@ -908,7 +908,7 @@ In addition to SAS Studio 4 and SAS Object Spawner running, there are SAS operat
     - The `/opt/sas/viya/config/var/log` directory is where processes will write their logs to. It is recommended to save these logs off so that if Kubernetes pods restart that the logs can provide information to understand why.
 - **Caveats**
     - The entrypoint is running as `root`
-    - The container will need some level of host authentication. The [auth-demo](#auth-demo) and [auth-sssd](#auth-sssd) provide examples of how this is supported. auth-demo will only allow one user/password combination to access the containers. so it's ok if you alone use the container. auth-sssd, once configured, allows multiple simultaneous users to access the applications. 
+    - The container will need some level of host authentication. The [auth-demo](#auth-demo) and [auth-sssd](#auth-sssd) provide examples of how this is supported. auth-demo will only allow one user/password combination to access the containers. so it's ok if you alone use the container. auth-sssd, once configured, allows multiple simultaneous users to access the applications.
     - The container has multiple applications running in it
     - Some process that are started in support of the application will be owned by `root`.
     - The SAS Object Spawner will start SAS Workspace Server sessions for each user that logs into SAS Studio 4
@@ -927,7 +927,7 @@ In addition to RabbitMQ running, there are SAS operational components that are r
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Kubernetes.
 - **Ports**
     - 5672
@@ -964,7 +964,7 @@ In addition to the CAS process running, there are SAS operational components tha
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Kubernetes.
 
 - **Ports**
@@ -994,13 +994,13 @@ In addition to the CAS process running, there are SAS operational components tha
 - **Persistence**
     - The `/opt/sas/viya/config/var/log` directory is where processes will write their logs to. It is recommended to save these logs off so that if Kubernetes pods restart that the logs can provide information to understand why.
     - Users that log into SAS Studio 4 should have their home directories persisted
-    - The `/cas/data` directory is a location that is scratch space on Disk for CAS to use. You will want to point this to a fast-enough filesystem. It is likely that by leaving it as the default, it would end up hitting one of the internal docker paths, which would have neither the speed nor the space required. 
+    - The `/cas/data` directory is a location that is scratch space on Disk for CAS to use. You will want to point this to a fast-enough filesystem. It is likely that by leaving it as the default, it would end up hitting one of the internal docker paths, which would have neither the speed nor the space required.
     - The `/cas/permstore` directory is the location where CAS will store access permissions for caslibs. In this directory it will create a  folder based on the hostname. It is important to make sure the hostname is set the same way each time the container is run.
     - The `/cas/cache` directory is the location where CAS will cache data. The better solution for this would be to map multiple volumes to the container and set CASENV_CAS_DISK_CACHE to those mounted locations.
 
 - **Caveats**
     - The entrypoint is running as `root`
-    - The container will need some level of host authentication. The [auth-demo](#auth-demo) and [auth-sssd](#auth-sssd) provide examples of how this is supported. auth-demo will only allow one user/password combination to access the containers. so it's ok if you alone use the container. auth-sssd, once configured, allows multiple simultaneous users to access the applications. 
+    - The container will need some level of host authentication. The [auth-demo](#auth-demo) and [auth-sssd](#auth-sssd) provide examples of how this is supported. auth-demo will only allow one user/password combination to access the containers. so it's ok if you alone use the container. auth-sssd, once configured, allows multiple simultaneous users to access the applications.
     - The container has multiple applications running in it
     - Some process that are started in support of the application will be owned by `root`.
 
@@ -1008,7 +1008,7 @@ In addition to the CAS process running, there are SAS operational components tha
 
 **Overview**
 
-Runs the SAS Database Server process. 
+Runs the SAS Database Server process.
 
 In addition to the SAS Database Server process running, there are SAS operational components that are running as well:
 - Consul agent
@@ -1018,7 +1018,7 @@ In addition to the SAS Database Server process running, there are SAS operationa
 
 **Details**
 
-- **Run-time Targets** 
+- **Run-time Targets**
     - Kubernetes.
 - **Ports**
     - 5432

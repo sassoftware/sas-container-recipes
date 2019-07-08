@@ -206,24 +206,15 @@ func (container *Container) GetTag() string {
 		container.SoftwareOrder.TimestampTag)
 }
 
-// GetWholeImageName gets a <registry>/<namespace>/<project_name>-<container_name>
-// format if it has a Docker namespace and Docker registry.
+// GetWholeImageName gets a <registry>//<project_name>-<container_name>
+// format if it has a Docker registry.
 // Otherwise return the <container_name>:<tag> format.
 func (container *Container) GetWholeImageName() string {
-	if len(container.SoftwareOrder.DockerNamespace) == 0 ||
-		len(container.SoftwareOrder.DockerRegistry) == 0 {
+	if len(container.SoftwareOrder.DockerRegistry) == 0 {
 		return container.GetName() + ":" + container.GetTag()
 	}
 
-	// AWS requires the creation of a registry for each image
-	// do not append the Docker namespace in this case.
-	if strings.Contains(container.SoftwareOrder.DockerRegistry, "amazonaws") {
-		return container.SoftwareOrder.DockerRegistry +
-			"/" + container.GetName() + ":" + container.GetTag()
-	}
-
 	return container.SoftwareOrder.DockerRegistry +
-		"/" + container.SoftwareOrder.DockerNamespace +
 		"/" + container.GetName() + ":" + container.GetTag()
 }
 
@@ -400,10 +391,9 @@ func (container *Container) Push(progress chan string) error {
 		return nil
 	}
 
-	// A Docker namespace and registry url is optional in the single container deployment type
-	if container.SoftwareOrder.DeploymentType == "single" &&
-		(len(container.SoftwareOrder.DockerNamespace) == 0 ||
-			len(container.SoftwareOrder.DockerRegistry) == 0) {
+	// A Docker registry url is optional in the single container deployment type
+	if container.SoftwareOrder.DeploymentType == "single" ||
+		len(container.SoftwareOrder.DockerRegistry) == 0 {
 		return nil
 	}
 
@@ -461,8 +451,13 @@ func readDockerStream(responseStream io.ReadCloser,
 
 		// If anything goes wrong then dump the error and provide debugging options
 		if response.Error != nil {
-			errSummary := fmt.Sprintf("[ERROR] %s: %v \n\nDebugging: %s\n",
-				container.Name, response.Error, container.LogPath)
+			errSummary := fmt.Sprintf("error: %s: %v\n\n",
+				container.Name, response.Error)
+			errSummary += fmt.Sprintf("For error details, review the following log files: \n\t%s\n\t%s\n",
+				container.LogPath, container.SoftwareOrder.LogPath)
+			errSummary += "If you cannot resolve the problem, create an " +
+				"issue on GitHub at the link below and attach these log files." +
+				"\n\thttps://github.com/sassoftware/sas-container-recipes/issues\n\n"
 			return errors.New(errSummary)
 		}
 	}
