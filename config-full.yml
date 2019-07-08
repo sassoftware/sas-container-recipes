@@ -1,5 +1,4 @@
 computeserver:
-  user: root
   roles:
   - tini
   - sas-prerequisites
@@ -160,7 +159,6 @@ pgpoolc:
   - "SAS_DATAMINING_PASSWORD=ChangePassword"
 
 programming:
-  user: root
   roles:
   - tini
   - sas-prerequisites
@@ -209,7 +207,6 @@ rabbitmq:
   - "data=/rabbitmq/data"
 
 sas-casserver-primary:
-  user: root
   roles:
   - tini
   - sas-prerequisites
@@ -238,9 +235,7 @@ sas-casserver-primary:
   - "SETINIT_TEXT_ENC="
   - "CASKEY=REPLACE ME with unique text. This is used to allow CAS workers to talk to the CAS controller"
   volumes:
-  - "data=/cas/data"
-  - "cache=/cas/cache"
-  - "permstore=/cas/permstore"
+  - "cas=/cas"
 
 sasdatasvrc:
   roles:

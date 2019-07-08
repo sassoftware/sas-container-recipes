@@ -30,3 +30,5 @@ USER root
 
 ADD redshift_cas.settings /tmp/
 ADD redshift_sasserver.sh /tmp/
+
+USER sas

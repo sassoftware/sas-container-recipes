@@ -28,9 +28,9 @@ CLUSTER_DEFINITIONS:
       tenant: shared
 {% endif %}
 {% if casenv_user is defined %}
-      casenv_user: {{ casenv_user | default('cas') }}
+      casenv_user: {{ casenv_user | default('sas') }}
 {% else %}
-      casenv_user: cas
+      casenv_user: sas
 {% endif %}
 {% if casenv_group is defined %}
       casenv_group: {{ casenv_group | default('sas') }}

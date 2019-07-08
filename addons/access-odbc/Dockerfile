@@ -30,3 +30,5 @@ USER root
 
 ADD odbc_cas.settings /tmp/
 ADD odbc_sasserver.sh /tmp/
+
+USER sas

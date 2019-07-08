@@ -32,7 +32,6 @@
     path: "{{ SASHOME }}/lib/envesntl/sas-init-functions"
     regexp: '\$RU \$uid -c "\$\*"'
     line: '  $*'
-  when: container_name != "sas-casserver-primary" and container_name != "programming" and container_name != "computeserver"
 
 - name: list all sas init files
   find:
@@ -46,3 +45,4 @@
     regexp: '^SASLOCKROOT="/var/lock/subsys"'
     line: 'SASLOCKROOT="/opt/sas/{{ DEPLOYMENT_ID }}/config/var/lock"'
   with_items: "{{ init_files.files }}"
+

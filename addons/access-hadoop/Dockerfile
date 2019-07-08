@@ -30,3 +30,5 @@ USER root
 
 COPY hadoop/config/ /hadoop/config/
 COPY hadoop/jars/ /hadoop/jars/
+
+USER sas

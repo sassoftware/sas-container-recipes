@@ -39,3 +39,5 @@ RUN cd /tmp/teradata_tools/TeradataToolsAndUtilitiesBase && echo a|./setup.bat
 
 ADD teradata_cas.settings /tmp/
 ADD teradata_sasserver.sh /tmp/
+
+USER sas

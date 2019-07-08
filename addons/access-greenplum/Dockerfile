@@ -29,3 +29,5 @@ FROM $BASEIMAGE:$BASETAG
 USER root
 
 ADD greenplum_sasserver.sh /tmp/
+
+USER sas

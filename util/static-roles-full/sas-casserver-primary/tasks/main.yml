@@ -43,3 +43,21 @@
 - name: Add sas-viya-cas as san-dns to cert
   shell: |
     sed -ibak 's/--san-dns localhost \\/--san-dns localhost \\\n        --san-dns sas-viya-cas \\/' /opt/sas/viya/home/SASFoundation/utilities/bin/cas-tls.sh
+    #chown -v sas:sas /opt/sas/viya/config/etc/cas/default/node.lua
+    #chmod 0640 /opt/sas/viya/config/etc/cas/default/node.lua
+    #mkdir -p /opt/sas/viya/config/etc/cas/default/start.d/
+    #chmod 0660 /opt/sas/viya/config/etc/cas/default/start.d/
+    #chown root /opt/sas/viya/home/SASFoundation/utilities/bin/caslaunch
+    #chmod 4755 /opt/sas/viya/home/SASFoundation/utilities/bin/caslaunch
+
+
+- name: chown directories
+  file: path="{{ item }}" owner="{{ INSTALL_USER }}" group="{{ INSTALL_GROUP }}" state=directory recurse=yes
+  with_items:
+    - "{{ SAS_CONFIG_ROOT }}/etc/cas/default/permstore"
+    - "{{ SAS_CONFIG_ROOT }}//data/cas/"
+
+- name: chown files
+  file: path="{{ item }}" owner="{{ INSTALL_USER }}" group="{{ INSTALL_GROUP }}"
+  with_items:
+    - "{{ SAS_CONFIG_ROOT }}/etc/cas/default/node.lua"

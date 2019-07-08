@@ -45,3 +45,5 @@ RUN source /tmp/oracle_cas.settings; \
     if [[ ! -f $ORACLE_HOME/lib/libclntsh.so.11.1 ]]; then \
         ln -s $ORACLE_HOME/lib/libclntsh.so.* $ORACLE_HOME/lib/libclntsh.so.11.1; \
     fi
+
+USER sas

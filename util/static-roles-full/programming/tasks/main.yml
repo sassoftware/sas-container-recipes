@@ -27,3 +27,8 @@
 - name: Post install build samples config
   command: "runuser --shell \"/bin/sh\" --login sas --command \"{{ SPREHOME }}/SASFoundation/utilities/bin/post_install build_samples_config\" "
 
+- name: Set stuff here..
+  shell: |
+    set -e
+    yum install --assumeyes sudo 
+

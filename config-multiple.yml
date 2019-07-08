@@ -7,9 +7,6 @@ httpproxy:
   ports:
   - "80:8080"
   - "443:6443"
-  # TODO
-  #volumes:
-  #- static-content:/httpproxy
   resources:
     limits:
     - "memory=1024Mi"
@@ -17,7 +14,6 @@ httpproxy:
     - "memory=250Mi"
 
 programming:
-  user: root
   roles:
   - tini
   - sas-prerequisites
@@ -39,12 +35,12 @@ programming:
   - "SETINIT_TEXT_ENC="
 
 sas-casserver-primary:
-  user: root
   roles:
   - tini
   - sas-prerequisites
   - sas-java
   - sas-casserver-primary
+  - casserver-config
   - cloud-config
   ports:
   - "5570:5570"
@@ -66,6 +62,4 @@ sas-casserver-primary:
   - "SETINIT_TEXT_ENC="
   - "CASKEY=REPLACE ME with unique text. This is used to allow CAS workers to talk to the CAS controller"
   volumes:
-  - "data=/cas/data"
-  - "cache=/cas/cache"
-  - "permstore=/cas/permstore"
+  - "cas=/cas"

@@ -13,18 +13,13 @@
 - name: Copy files to remote host
   copy:
     src: "{{ item.name }}"
-    dest: "/opt/sas/viya/home/{{ item.path }}/{{ item.name }}"
+    dest: "{{ SASHOME }}/{{ item.path }}/{{ item.name }}"
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
     mode: "{{ item.mode }}"
   with_items:
   - { name: register_cas.sh, path: "SASFoundation/utilities/bin", mode: "0755" }
   - { name: tenant_setup_docker.sh, path: "bin", mode: "0755" }
-
-- name: configure cas server
-  include_role:
-    name: casserver-config
-    tasks_from: start
 
 - name: Copy over entrypoint script
   template:
@@ -33,3 +28,7 @@
     mode: "0755"
     owner: "{{ INSTALL_USER }}"
     group: "{{ INSTALL_GROUP }}"
+
+- name: Add grant permissions on node.lua 
+  shell: |
+    chown -v sas:sas /opt/sas/viya/config/etc/cas/default/node.lua

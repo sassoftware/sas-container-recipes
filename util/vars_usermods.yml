@@ -19,6 +19,10 @@
 # sas_viya_playbook/vars.yml file.
 #
 
+# The user that the CAS process will run under
+#
+casenv_user: sas
+
 
 
 

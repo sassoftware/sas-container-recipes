@@ -192,28 +192,27 @@ function docker_shutdown_sas_services()
     echo_line "Shutting down SAS services"
     echo
 
-    for _pidf in $(ls -1 /var/run/sas/sas-viya-*); do
-        if [[ "${_pidf}" != *"sas-${SASDEPLOYID}-consul-${SASINSTANCE}"* ]]; then
-            SERVICE_PID=$(cat ${_pidf})
-            set +e
-            ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
-            process_check_rc=$?
-            set -e
-            if (( ${process_check_rc} == 0 )); then
-                echo "      Stopping process from ${_pidf}"
-                kill -TERM $(cat ${_pidf})
-            fi
+    for viya_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-*); do
+        echo ${viya_process}
+        if [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
+           [[ "${viya_process}" != *"sas-${SASDEPLOYID}-vault"* ]] &&
+           [[ "${viya_process}" != *"sas-${SASDEPLOYID}-consul-"* ]]; then
+            echo "[INFO]  : Stopping ${viya_process}"
+            ${viya_process} stop &
         fi
     done
 
-    if ${SAS_LOGS_TO_STDOUT}; then
+    # Pause to give the services a moment to stop
+    sleep 5
+
+    if [[ ${SAS_LOGS_TO_STDOUT} == "true" ]]; then
         # Kill log tailing
         pkill -9 tail
     fi
 
     if [ -f "/etc/init.d/sas-viya-consul-default" ]; then
         echo_line "Stop local consul"
-        ${SASHOME}/bin/consul leave && sleep 5
+	${SASHOME}/bin/consul leave -token=$(cat ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token) && sleep 5
         /etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE} stop
     fi
 
@@ -246,27 +245,36 @@ function docker_check_process()
 
 function docker_check_sas_services()
 {
+    set +e
+    grep -q "^sas-${SASDEPLOYID}-sasgpud-${SASINSTANCE}" ${SASCONFIG}/etc/${SASDEPLOYID}-svc-mgr/svc-ignore
+    gpudisabled=$?
+    set -e
+
     while :; do
         sleep 3
-        for _pidf in $(ls -1 /var/run/sas/sas-${SASDEPLOYID}-*); do
-            if [[ "${_pidf}" != *"sas-${SASDEPLOYID}-all-services"* ]]; then
-                if [ -f ${_pidf} ]; then
-                    SERVICE_PID=$(cat ${_pidf})
-                    set +e
-                    ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
-                    process_check_rc=$?
-                    set -e
-                    if (( ${process_check_rc} != 0 )); then
-                        echo;
-                        echo "Process is not running..."
-                        echo "    File = ${_pidf}";
-                        echo "    PID = ${SERVICE_PID}";
-                        docker_shutdown_sas_services
-                    fi
-                else
-                    echo; echo "PID file not found: $_pidf"; echo
-                    docker_shutdown_sas_services
-                fi
+        for viya_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-*); do
+            viya_service_status_rc=0
+            if [[ "${viya_process}" == *"sas-${SASDEPLOYID}-sasgpud-" ]] &&
+               (( ${gpudisabled} != 0 )); then
+                set +e
+                /etc/init.d/sas-${SASDEPLOYID}-sasgpud-${SASINSTANCE} status >/dev/null
+                viya_service_status_rc=$?
+                set -e
+            elif [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
+               [[ "${viya_process}" != *"sas-${SASDEPLOYID}-httpproxy-"* ]] &&
+               [[ "${viya_process}" != *"sas-${SASDEPLOYID}-sasgpud-"* ]] &&
+               [[ "${viya_process}" != *"sas-${SASDEPLOYID}-vault"* ]] &&
+               [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-"* ]]; then
+                set +e
+                ${viya_process} status >/dev/null
+                viya_service_status_rc=$?
+                set -e
+            fi
+            if (( ${viya_service_status_rc} != 0 )); then
+                echo;
+                echo "[ERROR] : ${viya_process} is not running..."
+                echo "[ERROR] : Shutting down container";
+                docker_shutdown_sas_services
             fi
         done
     done

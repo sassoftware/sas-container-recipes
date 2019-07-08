@@ -29,13 +29,18 @@ FROM $BASEIMAGE:$BASETAG
 USER root
 
 WORKDIR /tmp
-
-COPY demo_pre_deploy.sh ./010_demo_pre_deploy.sh
+RUN set -e; \
+    yum install --assumeyes  sudo; \
+    yum clean all; \
+    rm --verbose --recursive --force /root/.cache /var/cache/yum; 
+RUN echo "%sas        ALL=(ALL)       NOPASSWD: /usr/sbin/useradd" >> /etc/sudoers
+RUN echo "%sas        ALL=(ALL)       NOPASSWD: /usr/sbin/chpasswd" >> /etc/sudoers
+RUN echo "%sas        ALL=(ALL)       NOPASSWD: /usr/bin/chown" >> /etc/sudoers
+RUN echo "%sas        ALL=(ALL)       NOPASSWD: /usr/bin/chmod" >> /etc/sudoers
 
 #
 # Creation of the user is delayed until startup
 #
+COPY demo_pre_deploy.sh ./010_demo_pre_deploy.sh
 
-#RUN /tmp/010_demo_pre_deploy.sh
-
-#VOLUME ${ADMIN_USER_HOME}
+USER sas 
