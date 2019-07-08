@@ -54,13 +54,16 @@ function create_user()
         echo; echo "####### [WARN] : User '${user_name}' already exists"; echo;
     else
         echo; echo "####### Create the '${user_name}' user"; echo;
-        /usr/sbin/useradd --uid ${user_id} --gid ${user_gid} --home-dir ${user_home} --create-home ${user_name};
-        echo "${user_name}:${user_passwd}" | chpasswd &&
+        sudo /usr/sbin/useradd --uid ${user_id} --gid ${user_gid} --home-dir ${user_home} --create-home ${user_name};
+        echo "${user_name}:${user_passwd}" | sudo chpasswd &&
+        sudo chmod --verbose 0777 ${user_home};
         echo "default user ${user_name} password ${user_passwd}" > ${user_home}/authinfo.txt;
-        chown --verbose ${user_id}:${user_gid} ${user_home}/authinfo.txt;
-        chmod --verbose 0600 ${user_home}/authinfo.txt;
+        sudo chown --verbose ${user_id}:${user_gid} ${user_home}/authinfo.txt;
+        sudo chmod --verbose 0770 ${user_home}/authinfo.txt;
         cp --verbose ${user_home}/authinfo.txt ${user_home}/.authinfo;
-        chown --verbose ${user_id}:${user_gid} ${user_home}/.authinfo;
+        sudo chown --verbose ${user_id}:${user_gid} ${user_home}/.authinfo;
+        sudo chmod --verbose 0600 ${user_home}/authinfo.txt;
+        sudo chmod --verbose 0700 ${user_home};
     fi
 }
 

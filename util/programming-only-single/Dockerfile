@@ -23,6 +23,8 @@
 
 FROM centos:7
 
+ARG PLATFORM=redhat
+ENV PLATFORM=$PLATFORM
 ARG ANSIBLE_VERSION=2.7
 ARG TINI_RPM_NAME=tini_0.18.0.rpm
 ARG TINI_URL=https://github.com/krallin/tini/releases/download/v0.18.0
@@ -105,8 +107,11 @@ RUN set -e; \
     mkdir --verbose ~/.ssh ; \
     touch ~/.ssh/known_hosts ; \
     chmod --verbose 644 ~/.ssh/known_hosts ; \
+    echo; echo "####### Remove ansible directory /tmp/..ansible"; echo; \
+    rm -rf /tmp/..ansible ; \
     echo; echo "####### Create the sas group and the cas user"; echo; \
     groupadd -g 1001 sas; \
+    useradd -c "SAS User" -g 1001 -u 1001 sas; \  
     useradd -c "CAS User" -g 1001 -m -u 1002 cas; \
     pushd sas_viya_playbook ; \
     echo; echo "####### Modify the input to ignore verification failures"; echo; \
@@ -243,3 +248,6 @@ RUN chmod +x /opt/sas/viya/home/bin/replace_httpd_default_cert.sh
 COPY entrypoint /opt/sas/viya/home/bin/entrypoint
 RUN chmod +x /opt/sas/viya/home/bin/entrypoint
 
+RUN usermod -aG apache sas
+
+RUN echo "sas        ALL=(ALL)       NOPASSWD: ALL" >>/etc/sudoers

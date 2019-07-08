@@ -32,8 +32,21 @@ USER root
 COPY proxy.conf ./jpy3_proxy.conf
 
 RUN set -e; \
-	if [ "$BASEIMAGE" != "viya-single-container" ]; then \
-		sed "s/localhost/$PROJECT_NAME-programming/g" ./jpy3_proxy.conf > /etc/httpd/conf.d/jpy3_proxy.conf; \
-	else \
-		cp ./jpy3_proxy.conf /etc/httpd/conf.d/jpy3_proxy.conf; \
-	fi;
+     if [ "$PLATFORM" = "redhat" ]; then \
+        if [ "$BASEIMAGE" != "viya-single-container" ]; then \
+            sed "s/localhost/$PROJECT_NAME-programming/g" ./jpy3_proxy.conf > /etc/httpd/conf.d/jpy3_proxy.conf; \
+        else \
+            cp ./jpy3_proxy.conf /etc/httpd/conf.d/jpy3_proxy.conf; \
+        fi; \
+     elif [ "$PLATFORM" = "suse" ]; then \
+        if [ "$BASEIMAGE" != "viya-single-container" ]; then \
+            sed "s/localhost/$PROJECT_NAME-programming/g" ./jpy3_proxy.conf > /etc/apache2/conf.d/jpy3_proxy.conf; \
+        else \
+            cp ./jpy3_proxy.conf /etc/apache2/conf.d/jpy3_proxy.conf; \
+        fi; \
+     else \
+         echo; echo "####### [ERROR] : Unknown platform of \"$PLATFORM\" passed in"; echo; \
+         exit 1; \
+    fi;
+
+USER sas

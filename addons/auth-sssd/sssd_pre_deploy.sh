@@ -22,5 +22,5 @@ if [[ -f $sssd_pid_file ]];then
     rm -f $sssd_pid
     set +e;/usr/sbin/sssd -g --config /etc/sssd/sssd.conf;set -e
 else
-    /usr/sbin/sssd --config /etc/sssd/sssd.conf
+    sudo /usr/sbin/sssd --config /etc/sssd/sssd.conf
 fi

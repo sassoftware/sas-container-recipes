@@ -106,17 +106,11 @@ fi
 [[ ! -z ${SETINIT_TEXT_ENC+x} ]]  && echo "${SETINIT_TEXT_ENC}" | base64 --decode --ignore-garbage > ${SASLICENSEDIR}/${SASLICENSEFILE}
 [[ -z ${CAS_CONTROLLER_PORT+x} ]] && export CAS_CONTROLLER_PORT=5570
 
-runuser --shell "/bin/sh" --login sas \
-    --command "${SASPREHOME}/SASFoundation/utilities/bin/apply_license \
-    ${SASLICENSEDIR}/${SASLICENSEFILE}"
+${SASPREHOME}/SASFoundation/utilities/bin/apply_license ${SASLICENSEDIR}/${SASLICENSEFILE}
 
-runuser --shell "/bin/sh" \
-    --login sas \
-    --command "${SASPREHOME}/SASFoundation/utilities/bin/post_install build_nickname"
+${SASPREHOME}/SASFoundation/utilities/bin/post_install build_nickname
 
-runuser --shell "/bin/sh" \
-    --login sas \
-    --command "${SASPREHOME}/SASFoundation/utilities/bin/post_install build_add_cmacros"
+${SASPREHOME}/SASFoundation/utilities/bin/post_install build_add_cmacros
 
 [[ ! -z ${CAS_CONTROLLER_HOST+x} ]] && sed -i "s|options cashost=.*$|options cashost=\"${CAS_CONTROLLER_HOST}\" casport=${CAS_CONTROLLER_PORT};|" ${SASCONFIG}/etc/workspaceserver/default/autoexec_deployment.sas
 [[ ! -z ${CAS_CONTROLLER_HOST+x} ]] && sed -i "s|options cashost=.*$|options cashost=\"${CAS_CONTROLLER_HOST}\" casport=${CAS_CONTROLLER_PORT};|" ${SASCONFIG}/etc/batchserver/default/autoexec_deployment.sas

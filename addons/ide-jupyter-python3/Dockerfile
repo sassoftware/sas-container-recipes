@@ -72,3 +72,5 @@ RUN set -e; \
     if [ "${ENABLE_NATIVE_KERNEL}" = "False" ]; then \
         jupyter kernelspec remove python3 -f; \
     fi
+
+USER sas

@@ -7,11 +7,7 @@
 
 export SASUSER={{ INSTALL_USER | string | quote }}
 export SASGROUP={{ INSTALL_GROUP | string | quote }}
-{% if item.value.casenv_user is defined %}
-export CASUSER={{ item.value.casenv_user | default('cas') | string | quote }}
-{% else %}
-export CASUSER=cas
-{% endif %}
+export CASUSER=sas
 {% if item.value.casenv_group is defined %}
 export CASGROUP={{ item.value.casenv_group | default('sas') | string | quote }}
 {% else %}

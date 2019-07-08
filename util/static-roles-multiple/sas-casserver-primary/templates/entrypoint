@@ -1,23 +1,4 @@
-#! /bin/bash
-
-# Exit out if any process returns a non zero return code
-set -e
-
-
-###############################################################################
-# Variables
-###############################################################################
-
-[[ -z ${SASROOT+x} ]]           && export SASROOT=/opt/sas
-[[ -z ${SASDEPLOYID+x} ]]       && export SASDEPLOYID=viya
-[[ -z ${SASINSTANCE+x} ]]       && export SASINSTANCE=default
-[[ -z ${SASHOME+x} ]]           && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
-[[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
-[[ -z ${SASCASINSTANCE+x} ]]    && export SASCASINSTANCE="${SASINSTANCE}"
-[[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=localhost
-
-_deployid=${SASDEPLOYID}
-export CASCONFIG="${SASROOT}/${_deployid}/config"
+#! /bin/bash -e
 
 # Enable debugging if SAS_DEBUG is set
 [[ -z ${SAS_DEBUG+x} ]] && export SAS_DEBUG=0
@@ -25,51 +6,43 @@ if [ ${SAS_DEBUG} -gt 0 ]; then
     set -x
 fi
 
+# if given a command, run that
+if [[ -n "$1" ]]; then
+  exec "$@"
+fi
+
+###############################################################################
+# Variables
+###############################################################################
+
+[[ -z ${DEPLOYMENT_NAME+x} ]]   && export DEPLOYMENT_NAME="viya"
+[[ -z ${SASSERVICENAME+x} ]]    && export SASSERVICENAME="sas-cas"
+[[ -z ${SASSERVICECONTEXT+x} ]] && export SASSERVICECONTEXT=${SASSERVICENAME#sas-}
+[[ -z ${SASROOT+x} ]]           && export SASROOT=/opt/sas
+[[ -z ${SASDEPLOYID+x} ]]       && export SASDEPLOYID=viya
+[[ -z ${SASINSTANCE+x} ]]       && export SASINSTANCE=default
+[[ -z ${SASHOME+x} ]]           && export SASHOME=${SASROOT}/${SASDEPLOYID}/home
+[[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
+[[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
+[[ -z ${SASCASINSTANCE+x} ]]    && export SASCASINSTANCE="${SASINSTANCE}"
+[[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
+
+_deployid=${SASDEPLOYID}
+export SAS_CAS_CONFIG="${SASROOT}/${_deployid}/config"
+
+# The following are used in sas-start-functions
+servicename=${SASSERVICENAME}
+servicecontext=${SASSERVICECONTEXT}
+
 # Set of functions for supporting docker containers
 source ${SASHOME}/lib/envesntl/docker-functions
 
 ###############################################################################
-# Configuration by convention
-###############################################################################
-
-
-###############################################################################
 # Shutdown
 ###############################################################################
-function gracefulshutdown {
-    echo
-    echo_line "Shutting down!"
-    echo
-    echo "    Stop CAS service"
 
-    pidfiles="/var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
-    for _pidf in ${pidfiles}; do
-        if [ -f ${_pidf} ]; then
-            SERVICE_PID=$(cat ${_pidf})
-            set +e
-            ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
-            process_check_rc=$?
-            set -e
-            if (( ${process_check_rc} == 0 )); then
-                echo "      Stopping process from ${_pidf}"
-                kill -TERM $(cat ${_pidf})
-            fi
-        fi
-    done
-
-    n_stop_count=$(find /tmp -type f -name "*stop.sh" | wc -c)
-    if (( ${n_stop_count} > 0 )); then
-        for str_stop_script in $(ls -1 /tmp/*stop.sh); do
-            echo "Running stop script \"${str_stop_script}\""
-            ${str_stop_script}
-        done
-    fi
-
-    exit 0
-}
-
-trap gracefulshutdown SIGTERM
-trap gracefulshutdown SIGINT
+trap docker_shutdown_sas_services SIGTERM
+trap docker_shutdown_sas_services SIGINT
 
 ###############################################################################
 # Pre Deploy
@@ -88,6 +61,10 @@ if (( ${n_pre_deploy_count} > 0 )); then
         ${str_pre_script}
     done
 fi
+
+###############################################################################
+# Configuration by convention
+###############################################################################
 
 #
 # Take a collection of configurations and cat them into the usermod files.
@@ -169,12 +146,16 @@ fi
 # Clean up some other CAS configuration for a Docker image
 #
 
+[[ -z ${CASKEY+x} ]]       && CASKEY="REPLACE ME with unique text. This is used to allow CAS workers to talk to the CAS controller"
 [[ -z ${SERVICE_NAME+x} ]] && export SERVICE_NAME="cascontroller"
 is_controller=true
 
 if [ "${SERVICE_NAME}" = "cascontroller" ]; then
     export CASCONTROLLERHOST="${SAS_CURRENT_HOST}"
     export CASWORKERHOSTS=""
+    # Update the controller host before updating Consul
+    sed -i "s|REPLACE_KEY_WITH_RUN_TIME_VALUE|${CASKEY}|" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
+    sed -i "s|SASCONTROLLERHOST: .*|SASCONTROLLERHOST: ${CASCONTROLLERHOST}|" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
 elif [ "${SERVICE_NAME}" = "cassecondary" ]; then
     export CASBACKUPHOST="${SAS_CURRENT_HOST}"
     export CASCFG_MODE=mpp
@@ -187,54 +168,64 @@ else
     exit 11
 fi
 
+if [[ ! -f ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker ]]; then
+    touch ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
+    chown --verbose sas:sas ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
+    chmod --verbose 0644 ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
+fi
+
 if [ "${CASCFG_MODE}" = "mpp" ]; then
     if [[ -z ${CASKEY+x} ]]; then
         echo "[INFO]  - Running in MPP mode but CASKEY was *not* provided as an environment variable."
-        echo "[INFO]  - Checking if CASKEY is defined in ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment"
+        echo "[INFO]  - Checking if CASKEY is defined in ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment"
         set +e
-        grep "CASKEY=" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+        grep "CASKEY=" ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
         grep_rc=$?
         set -e
         if (( ${grep_rc} != 0 )); then
-            echo "[ERROR] - Unknown service type passed in."
+            echo "[ERROR] - Running in MPP mode but CASKEY cannot be found."
             exit 11
         else
-            echo "[INFO]  - CASKEY found in ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment"
+            echo "[INFO]  - CASKEY found in ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment"
         fi
     else
         echo "[INFO]  - Running in MPP mode and CASKEY *was* provided as an environment variable."
-        echo "CASKEY=\"${CASKEY}\"" >> ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+        echo "CASKEY=\"${CASKEY}\"" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
     fi
 
     [[ -z ${CASCFG_GCPORT+x} ]]         && export CASCFG_GCPORT=5571
     [[ -z ${CASCFG_INITIALBACKUPS+x} ]] && export CASCFG_INITIALBACKUPS=0
     [[ -z ${CASCFG_INITIALWORKERS+x} ]] && export CASCFG_INITIALWORKERS=1
-    [[ -z ${CASCFG_KEYFILE+x} ]]        && export CASCFG_KEYFILE=${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_key
+    [[ -z ${CASCFG_KEYFILE+x} ]]        && export CASCFG_KEYFILE=${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas_key
     [[ -z ${CASCFG_ELASTIC+x} ]]        && export CASCFG_ELASTIC=true
     [[ -z ${CASCFG_COLOCATION+x} ]]     && export CASCFG_COLOCATION=none
 fi
 
+# Forcing this so it will get sourced into supporting scripts. Was having issues 
+# when registering the services. They would register as localhost instead of the
+# defined host name.
+echo "SAS_CURRENT_HOST=${SAS_CURRENT_HOST}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 
-# Update the ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+# Update the ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 # to have updated settings.
 
-if [ -n "${CASCONTROLLERHOST}" ]; then
-    sed -i "s|SASCONTROLLERHOST=.*|SASCONTROLLERHOST=${CASCONTROLLERHOST}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+if [[ -n ${CASCONTROLLERHOST} ]]; then
+    echo "SASCONTROLLERHOST=${CASCONTROLLERHOST}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 fi
-if [ -n "${CASWORKERHOSTS}" ]; then
-    sed -i "s|SASWORKERHOSTS=.*|SASWORKERHOSTS=${CASWORKERHOSTS}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+if [[ -n ${CASWORKERHOSTS} ]]; then
+    echo "SASWORKERHOSTS=${CASWORKERHOSTS}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 fi
-if [ -n "${CASENV_CASDATADIR}" ]; then
-    sed -i "s|SASCASDATADIR=.*|SASCASDATADIR=${CASENV_CASDATADIR}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+if [[ -n ${CASENV_CASDATADIR} ]]; then
+    echo "SASCASDATADIR=${CASENV_CASDATADIR}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 fi
 # DOCKER-404: Make sure the USERLOC starts from the CASDATADIR value
-if [ -n "${CASUSERLOCDIR}" ]; then
-    sed -i "s|SASUSERLOCDIR=.*|SASUSERLOCDIR=${CASUSERLOCDIR}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+if [[ -n ${CASUSERLOCDIR} ]]; then
+    echo "SASUSERLOCDIR=${CASUSERLOCDIR}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 else
-    sed -i "s|SASUSERLOCDIR=.*|SASUSERLOCDIR=\${SASCASDATADIR}/casuserlibraries/%USER|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+    echo "SASUSERLOCDIR=\${SASCASDATADIR}/casuserlibraries/%USER" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 fi
-if [ -n "${CASENV_CASPERMSTORE}" ]; then
-    sed -i "s|SASPERMSTORE=.*|SASPERMSTORE=${CASENV_CASPERMSTORE}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+if [[ -n ${CASENV_CASPERMSTORE} ]]; then
+    echo "SASPERMSTORE=${CASENV_CASPERMSTORE}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 fi
 
 # Define JAVA_HOME and update the LD_LIBRARY_PATH
@@ -244,8 +235,8 @@ source ${SASCONFIG}/etc/sysconfig/sas-javaesntl/sas-java
 [[ -z ${CASLLP_JAVA+x} ]]      && export CASLLP_JAVA=\$LD_LIBRARY_PATH:\$JAVA_HOME/lib/amd64/server
 
 # If the license is being passed in via an environment variable then echo it into a file.
-[[ ! -z ${SETINIT_TEXT+x} ]]     && echo "${SETINIT_TEXT}" > ${SASLICENSEDIR}/${SASLICENSEFILE}
-[[ ! -z ${SETINIT_TEXT_ENC+x} ]] && echo "${SETINIT_TEXT_ENC}" | base64 --decode --ignore-garbage > ${SASLICENSEDIR}/${SASLICENSEFILE}
+[[ ! -z ${SETINIT_TEXT+x} ]]     && echo "${SETINIT_TEXT}" > ${SASLICENSEDIR}/${SASLICENSEFILE} && unset SETINIT_TEXT
+[[ ! -z ${SETINIT_TEXT_ENC+x} ]] && echo "${SETINIT_TEXT_ENC}" | base64 --decode --ignore-garbage > ${SASLICENSEDIR}/${SASLICENSEFILE} && unset SETINIT_TEXT_ENC
 
 # Tell CAS where the license lives if the user has not already set it.
 [[ -z ${CASENV_CAS_LICENSE+x} ]] && export CASENV_CAS_LICENSE=${SASLICENSEDIR}/${SASLICENSEFILE}
@@ -259,8 +250,8 @@ source ${SASCONFIG}/etc/sysconfig/sas-javaesntl/sas-java
 # configuration files.
 #
 
-echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua ""
-echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "-- Inserting section capturing variables set on container creation."
+echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_docker.lua ""
+echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_docker.lua "-- Inserting section capturing variables set on container creation."
 
 set +e
 # Process configuration option settings
@@ -268,9 +259,9 @@ while IFS='=' read -r name value ; do
     key=$(cut -d'_' -f2- <<<"${name}")
     if [[ ${name} == 'CASCFG_'* ]]; then
         if [[ ${!name} =~ ^[0-9]+$ ]]; then
-            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "cas.$(echo $key | awk '{print tolower($0)}') = ${!name}"
+            echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_docker.lua "cas.$(echo $key | awk '{print tolower($0)}') = ${!name}"
         else
-            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "cas.$(echo $key | awk '{print tolower($0)}') = '${!name}'"
+            echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_docker.lua "cas.$(echo $key | awk '{print tolower($0)}') = '${!name}'"
         fi
     fi
 done < <(env | grep "CASCFG")
@@ -280,15 +271,15 @@ while IFS='=' read -r name value ; do
     key=$(cut -d'_' -f2- <<<"${name}")
     if [[ ${name} == 'CASENV_'* ]]; then
         if [[ ${!name} =~ ^[0-9]+$ ]]; then
-            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "env.$(echo $key | awk '{print toupper($0)}') = ${!name}"
+            echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_docker.lua "env.$(echo $key | awk '{print toupper($0)}') = ${!name}"
         else
-            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_deployment.lua "env.$(echo $key | awk '{print toupper($0)}') = '${!name}'"
+            echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/casconfig_docker.lua "env.$(echo $key | awk '{print toupper($0)}') = '${!name}'"
         fi
     fi
 done < <(env | grep "CASENV")
 
-echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings ""
-echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "# Inserting section capturing variables set on container creation."
+echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings ""
+echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "# Inserting section capturing variables set on container creation."
 
 # Process settings option settings
 while IFS='=' read -r name value ; do
@@ -297,24 +288,24 @@ while IFS='=' read -r name value ; do
         if [[ ${!name} =~ ^[0-9]+$ ]]; then
             echo ${key} | grep -q ^[0-9]*_
             if [ $? -eq 0 ]; then
-                echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key#*_} | awk '{print toupper($0)}')=${!name}"
+                echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key#*_} | awk '{print toupper($0)}')=${!name}"
             else
-                echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key} | awk '{print toupper($0)}')=${!name}"
+                echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key} | awk '{print toupper($0)}')=${!name}"
             fi
         else
             echo ${key} | grep -q ^[0-9]*_
             if [ $? -eq 0 ]; then
-                echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key#*_} | awk '{print toupper($0)}')='${!name}'"
+                echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key#*_} | awk '{print toupper($0)}')='${!name}'"
             else
-                echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key} | awk '{print toupper($0)}')='${!name}'"
+                echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export $(echo ${key} | awk '{print toupper($0)}')='${!name}'"
             fi
         fi
     fi
 done < <(env | grep "CASSET" | sort)
 set -e
 
-echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings ""
-echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "# LD_LIBRARY_PATH being pulled from passed in variables"
+echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings ""
+echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "# LD_LIBRARY_PATH being pulled from passed in variables"
 
 # Process ld.library.path option settings
 while IFS='=' read -r name value ; do
@@ -322,32 +313,46 @@ while IFS='=' read -r name value ; do
     if [[ ${name} == 'CASLLP_'* ]]; then
         if [[ ${!name} == *'$LD_LIBRARY_PATH'* ]]; then
             # If the value passed in already is adding the LD_LIBRARY_PATH, then do not add it
-            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export LD_LIBRARY_PATH=${!name}"
+            echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export LD_LIBRARY_PATH=${!name}"
         else
             # If the value passed in does not have the LD_LIBRARY_PATH as part of the value, then add it
-            echo >> ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:${!name}"
+            echo >> ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas_docker.settings "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:${!name}"
         fi
     fi
 done < <(env | grep "CASLLP" | sort)
 
+# Update the casconfig.lua file to process the Docker lua post what was done
+# setting up the image but before processing any settings in the usermods file
+
+sed -i "/-- Process a user specific file if available/i pass,err = pcall(dofile, config_loc .. 'casconfig_docker.lua')" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/casconfig.lua
+sed -i "/-- Process a user specific file if available/i \ " ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/casconfig.lua
+
 # Update the cas.settings file to process the Docker settings post what was done
 # setting up the image but before processing any settings in the usermods file
 
-sed -i '/cas_usermods.settings/i [ -f \$DIR/cas_docker.settings ]   && source \$DIR/cas_docker.settings' ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/cas.settings
+sed -i '/cas_usermods.settings/i [ -f \$DIR/cas_docker.settings ]   && source \$DIR/cas_docker.settings' ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.settings
+sed -i '/\\$DIR\/cas_usermods.settings/i [ -f \\$DIR/cas_docker.settings ]   && source \\$DIR/cas_docker.settings' ${SASHOME}/bin/cas_setup.sh
+
+# Update the sas-cas sysconfig file to process the Docker settings post what was done
+# setting up the image but before processing any settings in the usermods file
+
+sed -i '/sas-${SASDEPLOYID}-cas-${SASINSTID}-deployment/a \    [ -f ${_sysconf_dir}/sas/sas-${SASDEPLOYID}-cas-${SASINSTID}-docker ]     && source ${_sysconf_dir}/sas/sas-${SASDEPLOYID}-cas-${SASINSTID}-docker' ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas
+sed -i '/sas-cas-deployment/a \    [ -f ${_conf_dir_name}/sas-cas-docker ] && source ${_conf_dir_name}/sas-cas-docker' ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas
 
 # echo some stuff back to the user for helpfulness
 
-if [ -n "${CASENV_CASDATADIR}" ]; then
+if [[ -n ${CASENV_CASDATADIR} ]]; then
     echo "[INFO] : CASENV_CASDATADIR is '${CASENV_CASDATADIR}'"
 fi
 
 echo "[INFO] : CASENV_CAS_VIRTUAL_HOST is '${CASENV_CAS_VIRTUAL_HOST}'"
 echo "[INFO] : CASENV_CAS_VIRTUAL_PORT is '${CASENV_CAS_VIRTUAL_PORT}'"
 
-if [ -n "${CASENV_ADMIN_USER}" ]; then
+if [[ -n ${CASENV_ADMIN_USER} ]]; then
     echo "[INFO] : CASENV_ADMIN_USER is '${CASENV_ADMIN_USER}'"
 else
-    echo "[INFO] : CASENV_ADMIN_USER is 'cas'"
+    export CASENV_ADMIN_USER=sas
+    echo "[INFO] : CASENV_ADMIN_USER is 'sas'"
 fi
 
 # DOCKER-390: Make sure the location of the data directory is used for the referenceData path
@@ -355,21 +360,24 @@ sed -i 's|casData = getDataPath()|casData = os.getenv("CASDATADIR")|' ${SASHOME}
 
 # When set to zero, will make sure that the system will not get the servicesbaseurl from Consul
 [[ -z ${CHECK_HTTP+x} ]] && export CHECK_HTTP=1
-sed -i "s|^CHECK_HTTP=.*|CHECK_HTTP=${CHECK_HTTP}|" ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+echo "CHECK_HTTP=${CHECK_HTTP}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 
 # Make sure node.lua is pointing to the correct spot
-sed -i "s/config_loc \.\./current_dir \.\./g" ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/node.lua
-sed -i "s/^config_loc/-- config_loc/g" ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/node.lua
+sed -i "s/config_loc \.\./current_dir \.\./g" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/node.lua
+sed -i "s/^config_loc/-- config_loc/g" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/node.lua
 
 # Remove startup.lua files
-rm -f ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/start.d/05updateperms_startup.lua
+rm -f ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/start.d/05updateperms_startup.lua
 
 # Disable waiting on the worker nodes. Cloud deployments are elastic in nature
 # and will not use this feature
-echo "export CAS_CONSUL_WAIT_DISABLED=true" >> ${CASCONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-deployment
+echo "export CAS_CONSUL_WAIT_DISABLED=true" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
 
-# DOCKER-392: Using a specific docker perms file that will create the public caslib
-cat > ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/perms.xml << PERMSXML
+# Believe this is only needed if we are not in a full stack deployment.
+# Using the consul token to define if we are in a full stack or not.
+if [ -z ${CONSUL_TOKENS_CLIENT} ]; then
+    # DOCKER-392: Using a specific docker perms file that will create the public caslib
+    cat > ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/perms.xml << PERMSXML
 <?xml version="1.0" encoding="utf-8"?>
 
 <!-- Customer permissions file/template -->
@@ -527,15 +535,11 @@ cat > ${CASCONFIG}/etc/cas/${SASCASINSTANCE}/perms.xml << PERMSXML
 
 </AccessControls>
 PERMSXML
+fi
 
 ###############################################################################
-# Run CAS
+# Post Deploy
 ###############################################################################
-
-echo "Starting Cloud Analytic Services..."
-mkdir -pv -m 2770 /var/log/sas/viya/cas/default_audit
-chown sas:sas /var/log/sas/viya/cas/default_audit
-docker_run_sas_services
 
 #
 # Run any post deploy scripts
@@ -553,50 +557,38 @@ if (( ${n_post_deploy_count} > 0 )); then
         ${str_post_script}
     done
 fi
+
+###############################################################################
+# Run CAS
+###############################################################################
+
+echo "Starting Cloud Analytic Services..."
+mkdir -pv -m 2770 /var/log/sas/viya/cas/default_audit
+chown sas:sas /var/log/sas/viya/cas/default_audit
+
+docker_run_sas_services
+
 #
 # Output the file locations to make it a little easier to look at logs
 #
 # Pause to allow the processes to start and create log files
-sleep 10
-set +e
-env | grep -q KUBERNETES
-k8s_check=$?
-set -e
-for item in $(tree -fi --prune /opt/sas/viya/config/var/log/); do
-    if ((${k8s_check} == 0)); then
-        if [ -f ${item} ]; then echo kubectl exec -it ${HOSTNAME} -- tail -f ${item}; fi
-    elif [ -f /.dockerenv ]; then
-        if [ -f ${item} ]; then echo docker exec -it $(hostname) tail -f ${item}; fi
-    fi
-done
+# sleep 10
+# set +e
+# env | grep -q KUBERNETES
+# k8s_check=$?
+# set -e
+# for item in $(tree -fi --prune /opt/sas/viya/config/var/log/); do
+#     if ((${k8s_check} == 0)); then
+#         if [ -f ${item} ]; then echo kubectl exec -it ${HOSTNAME} -- tail -f ${item}; fi
+#     elif [ -f /.dockerenv ]; then
+#         if [ -f ${item} ]; then echo docker exec -it $(hostname) tail -f ${item}; fi
+#     fi
+# done
 
 ###############################################################################
 # Keep the container alive until it is killed
 ###############################################################################
 
-pidfiles="/var/run/sas/cas/default/sas-viya-cascontroller-default.pid"
-while :; do
-    sleep 3
-    for _pidf in ${pidfiles}; do
-        if [ -f ${_pidf} ]; then
-            SERVICE_PID=$(cat ${_pidf})
-            set +e
-            ps -p ${SERVICE_PID} | grep -q ${SERVICE_PID} 2>/dev/null
-            process_check_rc=$?
-            set -e
-            if (( ${process_check_rc} != 0 )); then
-                echo;
-                echo "Process is not running..."
-                echo "    File = ${_pidf}";
-                echo "    PID = ${SERVICE_PID}";
-                gracefulshutdown
-            fi
-        else
-            echo; echo "PID file not found: $_pidf"; echo
-            gracefulshutdown
-        fi
-    done
-done
-
+docker_check_sas_services
 
 exit 0
