@@ -217,6 +217,13 @@ function write_services_to_configmap()
 
 function docker_define_consul_environment()
 {
+    if [ ${SAS_VIYA_ENABLED} = "false" ] && \
+       [ -n ${ESP_STUDIO_DB} ]; then
+       echo_line "[INFO]  : Running ESP with SAS_VIYA_ENABLED = false"
+       # do not define consul env and exit successfully
+       return 0
+    fi
+
     echo_line "Defining the Consul Environment"
     [[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
     [[ -z ${RUNNING_IN_DOCKER+x} ]] && export RUNNING_IN_DOCKER=true
@@ -581,19 +588,19 @@ function docker_run_sas_services()
        # process to generate a pid file as well as a log file.
        [[ -z ${SAS_PID_PAUSE+x} ]] && SAS_PID_PAUSE=5
        sleep ${SAS_PID_PAUSE}
+    fi
    
-       if ${SAS_LOGS_TO_STDOUT}; then
-           for logdir in $(ls -1 "/var/log/sas/${SASDEPLOYID}"); do
-               if [ "${logdir}" != "all-services" ]; then
-                   logfile=$(ls -1r "/var/log/sas/${SASDEPLOYID}/${logdir}/${SASINSTANCE}/" | head -n 1 )
-                   if [ -f "/var/log/sas/${SASDEPLOYID}/${logdir}/${SASINSTANCE}/${logfile}" ]; then
-                       tail -f --verbose "/var/log/sas/${SASDEPLOYID}/${logdir}/${SASINSTANCE}/${logfile}" |
-                           awk '/^==> / {a=substr($0, 5, length-8); next}
-                                        {print a":"$0}' &
-                   fi
-               fi
-           done
-       fi
+    if ${SAS_LOGS_TO_STDOUT}; then
+        for logdir in $(ls -1 "/var/log/sas/${SASDEPLOYID}"); do
+            if [ "${logdir}" != "all-services" ]; then
+                logfile=$(ls -1r "/var/log/sas/${SASDEPLOYID}/${logdir}/${SASINSTANCE}/" | head -n 1 )
+                if [ -f "/var/log/sas/${SASDEPLOYID}/${logdir}/${SASINSTANCE}/${logfile}" ]; then
+                    tail -f --verbose "/var/log/sas/${SASDEPLOYID}/${logdir}/${SASINSTANCE}/${logfile}" |
+                        awk '/^==> / {a=substr($0, 5, length-8); next}
+                                     {print a":"$0}' &
+                fi
+            fi
+        done
     fi
 }
 

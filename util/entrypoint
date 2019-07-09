@@ -83,9 +83,7 @@ source ${SASHOME}/lib/envesntl/docker-functions
 ###############################################################################
 
 # Write tokens to disk if needed and echo CONSUL_HTTP_ADDR to file
-if [[ ! -f /etc/init.d/sas-viya-espstudio-default ]]; then
-  docker_define_consul_environment
-fi
+docker_define_consul_environment
 
 ###############################################################################
 # Shutdown
