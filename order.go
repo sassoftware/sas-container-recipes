@@ -77,7 +77,6 @@ type SoftwareOrder struct {
 	BaseImage              string   `yaml:"Base Image              "`
 	MirrorURL              string   `yaml:"Mirror URL              "`
 	VirtualHost            string   `yaml:"Virtual Host            "`
-	DockerNamespace        string   `yaml:"Docker Namespace        "`
 	DockerRegistry         string   `yaml:"Docker Registry         "`
 	DeploymentType         string   `yaml:"Deployment Type         "`
 	Platform               string   `yaml:"Platform                "`
@@ -378,7 +377,7 @@ func (order *SoftwareOrder) Serve() {
 
 	builderIP, err := getIPAddr()
 	if err != nil {
-		panic("Could not determine hostname or host IP: " + err.Error())
+		panic("Failed to determine hostname or host IP: " + err.Error())
 	}
 	order.BuilderIP = builderIP
 
@@ -877,13 +876,6 @@ func (order *SoftwareOrder) Build() error {
 func getContainers(order *SoftwareOrder) ([]*Container, error) {
 	containers := []*Container{}
 
-	// These values are not added to the final hostGroup list result
-	var ignoredContainers = [...]string{
-		"all", "sas-all", "CommandLine",
-		"sas-casserver-secondary", "sas-casserver-worker",
-		"sas_all", "sas_casserver_secondary", "sas_casserver_worker",
-	}
-
 	// The names inside the playbook's inventory file are mapped to hosts
 	// Narrow down the text to show only the sas-all section
 	inventoryBytes, err := ioutil.ReadFile(order.BuildPath + "sas_viya_playbook/inventory.ini")
@@ -908,15 +900,25 @@ func getContainers(order *SoftwareOrder) ([]*Container, error) {
 		return containers, errors.New("Cannot find inventory.ini section with all container names")
 	}
 
+	// These values are not added to the final hostGroup list result
+	var ignoredContainers = [...]string{
+		"all", "sas-all", "CommandLine",
+		"sas-casserver-secondary", "sas-casserver-worker",
+	}
+
 	// Parse each line of the inventory file's hosts section
 	for i := startLine + 1; i < len(lines); i++ {
-		skip := false
 
 		// Name parsing includes backwards compatibility for Ansible 2.10 which
-		// drops support for hyphens in host group names
+		// drops support for hyphens in host group names.
+		// Also, some containers in the inventory already have the prefix "sas-"
+		// so remove the prefix to result in a uniform format
 		name := strings.ToLower(strings.TrimSpace(lines[i]))
 		name = strings.Replace(name, "_", "-", -1)
+		name = strings.TrimPrefix(name, "sas-")
 
+		// Ignore some containers if they're in the ignore list
+		skip := false
 		for _, ignored := range ignoredContainers {
 			if name == ignored {
 				skip = true
@@ -946,13 +948,15 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 	order.WriteLog(true, true, "Reading Software Order Email Zip ...")
 
 	if _, err := os.Stat(order.SOEZipPath); os.IsNotExist(err) {
-		fail <- err.Error()
+		fail <- fmt.Sprintf("Failed to find the SOE zip file specified " +
+			"by the '--zip' build argument.\nCheck that the file exists at " +
+			"the specified location on your build machine.\n")
 		return
 	}
 
 	zipped, err := zip.OpenReader(order.SOEZipPath)
 	if err != nil {
-		fail <- "Could not read the file specified by the `--zip` argument. This must be a valid Software Order Email (SOE) zip file.\n" + err.Error()
+		fail <- "Failed to read the file specified by the `--zip` argument. This must be a valid Software Order Email (SOE) zip file.\n" + err.Error()
 		return
 	}
 	defer zipped.Close()
@@ -1250,7 +1254,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	cmd := exec.Command("sh", "-c", playbookCommand)
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
-		fail <- "[ERROR] Could not create StdoutPipe for Cmd. " + err.Error() + "\n" + playbookCommand
+		fail <- "[ERROR] failed to create StdoutPipe for Cmd. " + err.Error() + "\n" + playbookCommand
 		return
 	}
 
