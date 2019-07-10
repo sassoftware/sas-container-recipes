@@ -876,13 +876,6 @@ func (order *SoftwareOrder) Build() error {
 func getContainers(order *SoftwareOrder) ([]*Container, error) {
 	containers := []*Container{}
 
-	// These values are not added to the final hostGroup list result
-	var ignoredContainers = [...]string{
-		"all", "sas-all", "CommandLine",
-		"sas-casserver-secondary", "sas-casserver-worker",
-		"sas_all", "sas_casserver_secondary", "sas_casserver_worker",
-	}
-
 	// The names inside the playbook's inventory file are mapped to hosts
 	// Narrow down the text to show only the sas-all section
 	inventoryBytes, err := ioutil.ReadFile(order.BuildPath + "sas_viya_playbook/inventory.ini")
@@ -907,15 +900,25 @@ func getContainers(order *SoftwareOrder) ([]*Container, error) {
 		return containers, errors.New("Cannot find inventory.ini section with all container names")
 	}
 
+	// These values are not added to the final hostGroup list result
+	var ignoredContainers = [...]string{
+		"all", "sas-all", "CommandLine",
+		"sas-casserver-secondary", "sas-casserver-worker",
+	}
+
 	// Parse each line of the inventory file's hosts section
 	for i := startLine + 1; i < len(lines); i++ {
-		skip := false
 
 		// Name parsing includes backwards compatibility for Ansible 2.10 which
-		// drops support for hyphens in host group names
+		// drops support for hyphens in host group names.
+		// Also, some containers in the inventory already have the prefix "sas-"
+		// so remove the prefix to result in a uniform format
 		name := strings.ToLower(strings.TrimSpace(lines[i]))
 		name = strings.Replace(name, "_", "-", -1)
+		name = strings.TrimPrefix(name, "sas-")
 
+		// Ignore some containers if they're in the ignore list
+		skip := false
 		for _, ignored := range ignoredContainers {
 			if name == ignored {
 				skip = true

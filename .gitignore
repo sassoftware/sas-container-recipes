@@ -12,3 +12,5 @@ run/
 **/*.pem
 **/*.swp
 **/*.swo
+**/*.cert
+**/sssd.conf
