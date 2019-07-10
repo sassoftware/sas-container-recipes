@@ -526,7 +526,7 @@ func (container *Container) CreateDockerfile() (string, error) {
 			// the name "data" and the mount path "/cas/data".
 			sections := strings.Split(volume, "=")
 			if !strings.Contains(volume, "=") && len(sections) != 2 {
-				errorOutput := fmt.Sprintf("Could not parse NAME=VALUE format from volume. %s, %s",
+				errorOutput := fmt.Sprintf("Fail to parse NAME=VALUE format from volume. %s, %s",
 					container.Name, volume)
 				return dockerfile, errors.New(errorOutput)
 			}
@@ -534,6 +534,7 @@ func (container *Container) CreateDockerfile() (string, error) {
 		}
 		dockerfile += "VOLUME " + strings.Join(mountPoints, " ")
 	}
+	dockerfile += "\n"
 
 	// Expose the ports that were specified in the config
 	if len(container.Config.Ports) > 0 {
@@ -548,7 +549,9 @@ func (container *Container) CreateDockerfile() (string, error) {
 	if err != nil {
 		return dockerfile, err
 	}
+	dockerfile += "\n"
 
+	// Add the USER and ENTRYPOINT lines
 	dockerfile += "\n" + fmt.Sprintf(dockerfileSetupEntrypoint, container.Config.User, container.Config.User, container.Name)
 	dockerfile += "\n" + fmt.Sprintf(dockerfileLabels, RecipeVersion, container.Name, container.Name)
 

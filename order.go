@@ -77,7 +77,6 @@ type SoftwareOrder struct {
 	BaseImage              string   `yaml:"Base Image              "`
 	MirrorURL              string   `yaml:"Mirror URL              "`
 	VirtualHost            string   `yaml:"Virtual Host            "`
-	DockerNamespace        string   `yaml:"Docker Namespace        "`
 	DockerRegistry         string   `yaml:"Docker Registry         "`
 	DeploymentType         string   `yaml:"Deployment Type         "`
 	Platform               string   `yaml:"Platform                "`
@@ -378,7 +377,7 @@ func (order *SoftwareOrder) Serve() {
 
 	builderIP, err := getIPAddr()
 	if err != nil {
-		panic("Could not determine hostname or host IP: " + err.Error())
+		panic("Failed to determine hostname or host IP: " + err.Error())
 	}
 	order.BuilderIP = builderIP
 
@@ -946,13 +945,15 @@ func (order *SoftwareOrder) LoadLicense(progress chan string, fail chan string, 
 	order.WriteLog(true, true, "Reading Software Order Email Zip ...")
 
 	if _, err := os.Stat(order.SOEZipPath); os.IsNotExist(err) {
-		fail <- err.Error()
+		fail <- fmt.Sprintf("Failed to find the SOE zip file specified " +
+			"by the '--zip' build argument.\nCheck that the file exists at " +
+			"the specified location on your build machine.\n")
 		return
 	}
 
 	zipped, err := zip.OpenReader(order.SOEZipPath)
 	if err != nil {
-		fail <- "Could not read the file specified by the `--zip` argument. This must be a valid Software Order Email (SOE) zip file.\n" + err.Error()
+		fail <- "Failed to read the file specified by the `--zip` argument. This must be a valid Software Order Email (SOE) zip file.\n" + err.Error()
 		return
 	}
 	defer zipped.Close()
@@ -1250,7 +1251,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	cmd := exec.Command("sh", "-c", playbookCommand)
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
-		fail <- "[ERROR] Could not create StdoutPipe for Cmd. " + err.Error() + "\n" + playbookCommand
+		fail <- "[ERROR] failed to create StdoutPipe for Cmd. " + err.Error() + "\n" + playbookCommand
 		return
 	}
 
