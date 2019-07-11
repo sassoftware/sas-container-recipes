@@ -902,8 +902,8 @@ func getContainers(order *SoftwareOrder) ([]*Container, error) {
 
 	// These values are not added to the final hostGroup list result
 	var ignoredContainers = [...]string{
-		"all", "sas-all", "CommandLine",
-		"sas-casserver-secondary", "sas-casserver-worker",
+		"all", "sas-all", "commandline",
+		"casserver-secondary", "casserver-worker",
 	}
 
 	// Parse each line of the inventory file's hosts section
