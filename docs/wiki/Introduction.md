@@ -2,7 +2,7 @@
 
 - [Before You Begin](#before-you-begin)
 - [The Basics for Running and Building SAS Viya](#the-basics-for-running-and-building-sas-viya)
-- [Considerations for Deployment](#considerations-for-deployment)
+- [Considerations for Using Recipes](#considerations-for-using-recipes)
 - [SAS Products and Supporting Components](#sas-products-and-supporting-components)
 - [Get Support](#get-support)
 
