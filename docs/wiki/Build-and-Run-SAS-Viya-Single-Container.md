@@ -540,7 +540,6 @@ To very that the system is running successfully, list the pods and identify the 
 
 ```
 kubectl -n sasviya get pods
-[TODO show list of pods]
 ```
 
 Check that all the services are started (there should be three services and the status for each should be "up"):
