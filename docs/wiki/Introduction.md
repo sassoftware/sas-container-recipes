@@ -2,8 +2,9 @@
 
 - [Before You Begin](#before-you-begin)
 - [The Basics for Running and Building SAS Viya](#the-basics-for-running-and-building-sas-viya)
+- [Considerations for Deployment](#considerations-for-deployment)
 - [SAS Products and Supporting Components](#sas-products-and-supporting-components)
-- [Support](#support)
+- [Get Support](#get-support)
 
 ### Before You Begin
 
@@ -39,7 +40,12 @@
   -  If you do not create a local mirror repository, then the RPM files are downloaded from servers that are hosted by SAS, which can take longer. Also, there is a limit to how many times that you can download a SAS Viya software order from the SAS servers.
   - For more information about creating a local mirror repository, see [Create a Mirror Repository](https://go.documentation.sas.com/?docsetId=dplyml0phy0lax&amp;docsetTarget=p1ilrw734naazfn119i2rqik91r0.htm&amp;docsetVersion=3.4) in _SAS Viya for Linux: Deployment Guide_.
 
-- SAS Viya that is built and run through the recipe process in this GitHub project does not support a SAS Viya multi-tenant environment.
+### Considerations for Using Recipes
+  
+  - A programming-only deployment is supported. A full deployment is experimental and includes limited support from SAS.
+  - A SAS Viya multi-tenant environment is not supported.
+  - High availability is not currently supported for full and multiple deployments using Kubernetes.
+  - Persistence is not currently functional when scaling. Scaling down to 0 and back up from 0 will result in the loss of data.
 
 ### SAS Products and Supporting Components
 
@@ -64,6 +70,6 @@ This wiki provides information about how to build and run the following SAS Viya
 - If you ordered SAS/ACCESS Interface to PC Files or SAS/ACCESS Interface to PostgreSQL, each is automatically included when you build and run SAS Viya. 
 - Currently, testing has focused on SAS Visual Analytics (on SAS Viya), SAS Visual Data Mining and Machine Learning, SAS Visual Statistics (on SAS Viya), and a subset of the SAS/ACCESS engines supported by SAS Viya. The process described in this guide should also work with other SAS offerings and all supported SAS/ACCESS engines. If you have problems, you can open issues at GitHub for SAS to consider. 
 
-### Support
+### Get Support
 
 GitHub is used for tracking bugs and feature requests. Please enter tickets via the [GitHub Project Issues Page](https://github.com/sassoftware/sas-container-recipes/issues) for questions and project improvements.

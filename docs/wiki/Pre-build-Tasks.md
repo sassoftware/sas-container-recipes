@@ -213,7 +213,7 @@ Find the example_ingress.yml file for the single container. Then, copy and edit 
 
 ```
 mkdir ${PWD}/run
-cp samples/single-container/example_ingress.yml ${PWD}/run/programming_ingress.yml
+cp samples/viya-single-container/example_ingress.yml ${PWD}/run/programming_ingress.yml
 vi ${PWD}/run/programming_ingress.yml
 ```
 
