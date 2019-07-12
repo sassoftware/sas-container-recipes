@@ -24,12 +24,6 @@ code and scoring accelerators, or specific analytic capabilities.
 
 For more information, see [SAS for Containers](http://support.sas.com/rnd/containers/).
 
-##### Considerations for Using Recipes
-  - A programming-only deployment is supported. A full deployment is **experimental** and includes limited support from SAS.
-  - A SAS Viya multi-tenant environment is not supported.
-  - High availability is not currently supported for full and multiple deployments using Kubernetes.
-  - Persistence is not currently functional when scaling. Scaling down to 0 and back up from 0 will result in the loss of data.
-
 <br>
 
 ## Quick Start
@@ -156,6 +150,12 @@ Here's a summary of what this command does:
 
 #### Example Two: Full Deployment, Multiple Containers (Experimental)
 
+##### Considerations before doing a Full Deployment
+  - This is **experimental** and includes limited support from SAS.
+  - A SAS Viya multi-tenant environment is not supported.
+  - High availability is not currently supported for full and multiple deployments using Kubernetes.
+  - Persistence is not currently functional when scaling. Scaling down to 0 and back up from 0 will result in the loss of data.
+
 ```
   ./build.sh \
   --type full \
@@ -170,6 +170,7 @@ Here's a summary of what this command does:
 - The software that is deployed is determined by the software entitlement that is provided in the ZIP file from the Software Order Email: `--zip /path/to/SAS_Viya_deployment_data.zip`.
 - The images are pushed to the namespace in the Docker Registry, which is located at the Docker registry URL: `--docker-registry-namespace myuniquename`, `--docker-registry-url myregistry.myhost.com`.
 - SSSD is configured inside the container to allow the container authentication to connect to LDAP or Active Directory: `--addons "auth-sssd"`.
+
 
 **Note:** Before you use the auth-sssd addon, see the [documentation wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#auth-sssd) for prerequisite information.
 
