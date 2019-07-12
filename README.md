@@ -24,6 +24,12 @@ code and scoring accelerators, or specific analytic capabilities.
 
 For more information, see [SAS for Containers](http://support.sas.com/rnd/containers/).
 
+##### Considerations for Using Recipes
+  - A programming-only deployment is supported. A full deployment is **experimental** and includes limited support from SAS.
+  - A SAS Viya multi-tenant environment is not supported.
+  - High availability is not currently supported for full and multiple deployments using Kubernetes.
+  - Persistence is not currently functional when scaling. Scaling down to 0 and back up from 0 will result in the loss of data.
+
 <br>
 
 ## Quick Start
@@ -148,7 +154,7 @@ Here's a summary of what this command does:
 - The images are pushed to the namespace in the Docker Registry, which is located at the Docker registry URL: `--docker-registry-namespace myuniquename`, `--docker-registry-url myregistry.myhost.com`.
 - A default user ID (sasdemo) and password (sasdemo) are added, which can be used to sign in to SAS Studio: `--addons "auth-demo"`.
 
-#### Example Two: Full Deployment, Multiple Containers
+#### Example Two: Full Deployment, Multiple Containers (Experimental)
 
 ```
   ./build.sh \
