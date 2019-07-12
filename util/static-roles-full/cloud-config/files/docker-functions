@@ -217,9 +217,10 @@ function write_services_to_configmap()
 
 function docker_define_consul_environment()
 {
-    if [ ${SAS_VIYA_ENABLED} = "false" ] && \
-       [ -n ${ESP_STUDIO_DB} ]; then
-       echo_line "[INFO]  : Running ESP with SAS_VIYA_ENABLED = false"
+    if [ "${SAS_VIYA_ENABLED}" = "false" ] || \
+       [ -n "${ESP_STUDIO_DB}" ] ||
+       [ -n "${ESP_STREAMVIEWER_DB}" ]; then
+       echo_line "[INFO]  : Running ESP in standalone mode"
        # do not define consul env and exit successfully
        return 0
     fi
@@ -447,8 +448,9 @@ function docker_create_pid_file()
 
 function docker_run_local_consul()
 {
-    if [ ${SAS_VIYA_ENABLED} = "false" ] || \
-       [ -n ${ESP_STUDIO_DB} ]; then
+    if [ "${SAS_VIYA_ENABLED}" = "false" ] || \
+       [ -n "${ESP_STUDIO_DB}" ] ||
+       [ -n "${ESP_STREAMVIEWER_DB}" ]; then
 
        # do not start Consul, used by ESP to run in standalone mode with no Viya dependencies
        echo_line "[INFO]  : Consul is disabled in ESP standalone mode"
@@ -557,8 +559,9 @@ function docker_run_sas_services()
         fi
     fi
 
-    if [ ${SAS_VIYA_ENABLED} = "false" ] && \
-       [ -n ${ESP_STUDIO_DB} ]; then
+    if [ "${SAS_VIYA_ENABLED}" = "false" ] || \
+       [ -n "${ESP_STUDIO_DB}" ] ||
+       [ -n "${ESP_STREAMVIEWER_DB}" ]; then
 
        # These env variables are used ONLY to run ESP components in standalone mode
        # Start ESP service(s) only - [sas*esp*, sas*esm*]
@@ -678,8 +681,9 @@ function docker_check_sas_services()
     gpudisabled=$?
     set -e
 
-    if [ ${SAS_VIYA_ENABLED} = "false" ] && \
-       [ -n ${ESP_STUDIO_DB} ]; then
+    if [ "${SAS_VIYA_ENABLED}" = "false" ] || \
+       [ -n "${ESP_STUDIO_DB}" ] ||
+       [ -n "${ESP_STREAMVIEWER_DB}" ]; then
 
        # These env variables are used ONLY to run ESP components in standalone mode
        # Start ESP service(s) only - [sas*esp*, sas*esm*]
