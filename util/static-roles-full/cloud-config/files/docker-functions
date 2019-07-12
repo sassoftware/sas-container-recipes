@@ -217,6 +217,14 @@ function write_services_to_configmap()
 
 function docker_define_consul_environment()
 {
+    if [ "${SAS_VIYA_ENABLED}" = "false" ] || \
+       [ -n "${ESP_STUDIO_DB}" ] ||
+       [ -n "${ESP_STREAMVIEWER_DB}" ]; then
+       echo_line "[INFO]  : Running ESP in standalone mode"
+       # do not define consul env and exit successfully
+       return 0
+    fi
+
     echo_line "Defining the Consul Environment"
     [[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
     [[ -z ${RUNNING_IN_DOCKER+x} ]] && export RUNNING_IN_DOCKER=true
@@ -440,28 +448,39 @@ function docker_create_pid_file()
 
 function docker_run_local_consul()
 {
-    # Store the instance
-    _tmpinstance=${SASINSTANCE}
+    if [ "${SAS_VIYA_ENABLED}" = "false" ] || \
+       [ -n "${ESP_STUDIO_DB}" ] ||
+       [ -n "${ESP_STREAMVIEWER_DB}" ]; then
 
-    # Need to export "default" as the instance value to be picked up by the sas-start-functions
-    export SASINSTANCE=default
+       # do not start Consul, used by ESP to run in standalone mode with no Viya dependencies
+       echo_line "[INFO]  : Consul is disabled in ESP standalone mode"
+   
+    else 
+       # continue as usual 
 
-    local viya_process="/etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE}"
-    if [ -f "${viya_process}" ] && \
-       [ -e ${SASTOKENDIR}/client.token ]; then
-
-        # start local consul
-        ${viya_process} start
-
-        # Wait for Consul to be up
-        docker_wait_for_consul_leader
-
-        [[ -z ${SAS_LOCAL_CONSUL_PAUSE+x} ]] && SAS_LOCAL_CONSUL_PAUSE=5
-        sleep ${SAS_LOCAL_CONSUL_PAUSE}
+       # Store the instance
+       _tmpinstance=${SASINSTANCE}
+   
+          # Need to export "default" as the instance value to be picked up by the sas-start-functions
+       export SASINSTANCE=default
+   
+       local viya_process="/etc/init.d/sas-${SASDEPLOYID}-consul-${SASINSTANCE}"
+       if [ -f "${viya_process}" ] && \
+          [ -e ${SASTOKENDIR}/client.token ]; then
+   
+           # start local consul
+           ${viya_process} start
+   
+           # Wait for Consul to be up
+           docker_wait_for_consul_leader
+   
+           [[ -z ${SAS_LOCAL_CONSUL_PAUSE+x} ]] && SAS_LOCAL_CONSUL_PAUSE=5
+           sleep ${SAS_LOCAL_CONSUL_PAUSE}
+       fi
+   
+       # Reset the instance to what was set for the container
+       export SASINSTANCE=${_tmpinstance}
     fi
-
-    # Reset the instance to what was set for the container
-    export SASINSTANCE=${_tmpinstance}
 }
 
 function copy_vault_token_for_sas_service()
@@ -540,25 +559,40 @@ function docker_run_sas_services()
         fi
     fi
 
-    for viya_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-*); do
-        echo ${viya_process}
-        if [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
-           [[ "${viya_process}" != *"sasgpud"* ]] &&
-           [[ "${viya_process}" != *"sas-${SASDEPLOYID}-vault"* ]] &&
-           [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-"* ]]; then
-            if [[ $SECURE_CONSUL == "true" ]]; then
-              copy_vault_token_for_sas_service "${viya_process}"
-            fi
-            echo_line "[INFO]  : Starting ${viya_process}"
-            ${viya_process} start
-        fi
-    done
+    if [ "${SAS_VIYA_ENABLED}" = "false" ] || \
+       [ -n "${ESP_STUDIO_DB}" ] ||
+       [ -n "${ESP_STREAMVIEWER_DB}" ]; then
 
-    # Pausing long enough to allow the services to get far enough in the start
-    # process to generate a pid file as well as a log file.
-    [[ -z ${SAS_PID_PAUSE+x} ]] && SAS_PID_PAUSE=5
-    sleep ${SAS_PID_PAUSE}
+       # These env variables are used ONLY to run ESP components in standalone mode
+       # Start ESP service(s) only - [sas*esp*, sas*esm*]
 
+       for esp_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-es*); do
+           echo ${esp_process}
+           echo_line "[INFO]  : Starting ${esp_process}"
+           ${esp_process} start
+       done
+
+    else
+       for viya_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-*); do
+           echo ${viya_process}
+           if [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
+              [[ "${viya_process}" != *"sasgpud"* ]] &&
+              [[ "${viya_process}" != *"sas-${SASDEPLOYID}-vault"* ]] &&
+              [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-"* ]]; then
+               if [[ $SECURE_CONSUL == "true" ]]; then
+                 copy_vault_token_for_sas_service "${viya_process}"
+               fi
+               echo_line "[INFO]  : Starting ${viya_process}"
+               ${viya_process} start
+           fi
+       done
+   
+       # Pausing long enough to allow the services to get far enough in the start
+       # process to generate a pid file as well as a log file.
+       [[ -z ${SAS_PID_PAUSE+x} ]] && SAS_PID_PAUSE=5
+       sleep ${SAS_PID_PAUSE}
+    fi
+   
     if ${SAS_LOGS_TO_STDOUT}; then
         for logdir in $(ls -1 "/var/log/sas/${SASDEPLOYID}"); do
             if [ "${logdir}" != "all-services" ]; then
@@ -647,34 +681,61 @@ function docker_check_sas_services()
     gpudisabled=$?
     set -e
 
-    while :; do
-        sleep 3
-        for viya_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-*); do
-            viya_service_status_rc=0
-            if [[ "${viya_process}" == *"sas-${SASDEPLOYID}-sasgpud-" ]] &&
-               (( ${gpudisabled} != 0 )); then
-                set +e
-                /etc/init.d/sas-${SASDEPLOYID}-sasgpud-${SASINSTANCE} status >/dev/null
-                viya_service_status_rc=$?
-                set -e
-            elif [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
-               [[ "${viya_process}" != *"sas-${SASDEPLOYID}-httpproxy-"* ]] &&
-               [[ "${viya_process}" != *"sas-${SASDEPLOYID}-sasgpud-"* ]] &&
-               [[ "${viya_process}" != *"sas-${SASDEPLOYID}-vault"* ]] &&
-               [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-"* ]]; then
-                set +e
-                ${viya_process} status >/dev/null
-                viya_service_status_rc=$?
-                set -e
-            fi
-            if (( ${viya_service_status_rc} != 0 )); then
-                echo;
-                echo "[ERROR] : ${viya_process} is not running..."
-                echo "[ERROR] : Shutting down container";
-                docker_shutdown_sas_services
-            fi
-        done
-    done
+    if [ "${SAS_VIYA_ENABLED}" = "false" ] || \
+       [ -n "${ESP_STUDIO_DB}" ] ||
+       [ -n "${ESP_STREAMVIEWER_DB}" ]; then
+
+       # These env variables are used ONLY to run ESP components in standalone mode
+       # Start ESP service(s) only - [sas*esp*, sas*esm*]
+
+       while :; do
+           sleep 3
+           for esp_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-es*); do
+               esp_service_status_rc=0
+               if [[ "${esp_process}" == *"sas-$SASDEPLOYID}-es"* ]]; then
+                   set +e
+                   ${esp_process} status >/dev/null
+                   esp_service_status_rc=$?
+                   set -e
+               fi
+               if (( ${esp_service_status_rc} != 0 )); then
+                   echo;
+                   echo "[ERROR] : ${esp_process} is not running..."
+                   echo "[ERROR] : Shutting down container";
+                   docker_shutdown_sas_services
+               fi
+           done
+       done
+    else
+       while :; do
+           sleep 3
+           for viya_process in $(ls -1 /etc/init.d/sas-${SASDEPLOYID}-*); do
+               viya_service_status_rc=0
+               if [[ "${viya_process}" == *"sas-${SASDEPLOYID}-sasgpud-" ]] &&
+                  (( ${gpudisabled} != 0 )); then
+                   set +e
+                   /etc/init.d/sas-${SASDEPLOYID}-sasgpud-${SASINSTANCE} status >/dev/null
+                   viya_service_status_rc=$?
+                   set -e
+               elif [[ "${viya_process}" != *"sas-${SASDEPLOYID}-all-services" ]] &&
+                  [[ "${viya_process}" != *"sas-${SASDEPLOYID}-httpproxy-"* ]] &&
+                  [[ "${viya_process}" != *"sas-${SASDEPLOYID}-sasgpud-"* ]] &&
+                  [[ "${viya_process}" != *"sas-${SASDEPLOYID}-vault"* ]] &&
+                  [[ "${viya_process}" != *"sas-${SASDEPLOYID}-ops-agent-"* ]]; then
+                   set +e
+                   ${viya_process} status >/dev/null
+                   viya_service_status_rc=$?
+                   set -e
+               fi
+               if (( ${viya_service_status_rc} != 0 )); then
+                   echo;
+                   echo "[ERROR] : ${viya_process} is not running..."
+                   echo "[ERROR] : Shutting down container";
+                   docker_shutdown_sas_services
+               fi
+           done
+       done
+    fi
 }
 
 ###############################################################################

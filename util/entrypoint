@@ -105,47 +105,6 @@ if [[ -f /etc/init.d/sas-viya-dataexplorer-default ]]; then
         --site-default config/SASDataExplorer/jvm/java_option_fjpcp -Djava.util.concurrent.ForkJoinPool.common.parallelism=16
 fi
 
-if [[ -f /etc/init.d/sas-viya-espvm-default ]]; then
-    # If we are in the ESP Studio container and are configured to use RDS, register the RDS content
-    [[ -z ${SAS_DATABASE_TYPE+x} ]] && SAS_DATABASE_TYPE=sasdatasvrc
-    echo_line "[INFO]  : In the ESP Studio container and checking SAS_DATABASE_TYPE"
-    if [[ "${SAS_DATABASE_TYPE,,}" == "rds" ]]; then
-        echo_line "[INFO]  : Using RDS for a database. Registering information into Consul"
-        echo_line "[INFO]  : RDS Host = $SAS_DATABASE_HOST"
-        echo_line "[INFO]  : RDS Port = $SAS_DATABASE_PORT"
-        if [[ -z $SAS_DATABASE_PASSWORD ]]; then
-            echo_line "[ERROR] : The SAS_DATABASE_PASSWORD was not set...exiting"
-            exit 5
-        fi
-
-        ${SASHOME}/bin/setup_rds_postgres.sh $SAS_DATABASE_HOST $SAS_DATABASE_PORT $SAS_DATABASE_PASSWORD
-        rds_postgres_rc=$?
-        if [[ "$rds_postgres_rc" != "0" ]]; then
-            echo_line "[ERROR] : Unable to register the database type of $SAS_DATABASE_TYPE in Consul...exiting"
-            exit $rds_postgres_rc
-        else
-            echo_line "[INFO]  : Database type of $SAS_DATABASE_TYPE is registered in Consul"
-            unset SAS_DATABASE_PASSWORD
-        fi
-    else
-        echo_line "[INFO]  : SAS_DATABASE_TYPE=$SAS_DATABASE_TYPE"
-    fi
-
-    # Run the additional whitelabeling setup if it exists
-    if [[ -f ${SASHOME}/share/esp/whitelabel/config.yml ]]; then
-        config_file_size=$(wc -l < ${SASHOME}/share/esp/whitelabel/config.yml)
-        if (( $config_file_size > 0 )); then
-            ${SASHOME}/sas-bootstrap-config \
-                --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token \
-                kv \
-                bulkload \
-                --force \
-                --site-default \
-                --yaml ${SASHOME}/share/esp/whitelabel/config.yml
-        fi
-    fi
-fi
-
 # Start and continually check the ops-agent process.
 ${SASHOME}/lib/envesntl/docker-ops-agent &
 
@@ -156,3 +115,7 @@ docker_run_sas_services
 ###############################################################################
 
 docker_check_sas_services
+
+
+
+
