@@ -33,7 +33,7 @@ see the [documentation wiki](https://github.com/sassoftware/sas-container-recipe
 For single and multiple containers, addons found in the 
 [addons directory](https://github.com/sassoftware/sas-container-recipes/tree/master/addons) 
 can enhance the base SAS Viya images with SAS/ACCESS software, LDAP configuration, and more. 
-For information about how to use the addons and any prerequisites, see the [documentation about addons](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#addons).
+For information about how to use the addons and any prerequisites, see the [documentation about addons](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix-Under-the-Hood#addons).
 
 1. Locate your SAS Viya for Linux Software Order Email (SOE), and retrieve the 
 `SAS_Viya_deployment_data.zip` file from it. Not sure if your organization 
@@ -172,7 +172,7 @@ Here's a summary of what this command does:
 - SSSD is configured inside the container to allow the container authentication to connect to LDAP or Active Directory: `--addons "auth-sssd"`.
 
 
-**Note:** Before you use the auth-sssd addon, see the [documentation wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix:-Under-the-Hood#auth-sssd) for prerequisite information.
+**Note:** Before you use the auth-sssd addon, see the [documentation wiki](https://github.com/sassoftware/sas-container-recipes/wiki/Appendix-Under-the-Hood#auth-sssd) for prerequisite information.
 
 ### Running Multiple Containers
 
