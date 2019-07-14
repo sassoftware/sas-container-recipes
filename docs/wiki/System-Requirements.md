@@ -125,7 +125,7 @@ For full deployments, see [Identity Management: CAS Roles](https://go.documentat
 
 - For a full deployment, you will configure the system for Identity Management as a post-deployment task.
 
-**Note:** For more information about which users are used for the different images, see [Appendix: Under the Hood](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/Appendix:-Under-the-Hood).
+**Note:** For more information about which users are used for the different images, see [Appendix: Under the Hood](https://gitlab.sas.com/sassoftware/sas-container-recipes/wikis/Appendix-Under-the-Hood).
 
 ## Client Requirements
 
