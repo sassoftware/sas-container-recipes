@@ -12,3 +12,4 @@ logs/
 **/*.pem
 **/*.swp
 **/*.swo
+.DS_Store
