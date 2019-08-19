@@ -71,11 +71,11 @@ fi
 
 docker_run_local_consul
 
-if [[ -e "{SASCONFIG}/consul/proxy.conf.ctmpl" ]]; then
+if [[ -f "${SASCONFIG}/consul/proxy.conf.ctmpl" ]]; then
   echo "[INFO]  : Change 80 to 64 as the deciding factor to use IP instead of hostname in ${SASCONFIG}/consul/proxy.conf.ctmpl"
   sed -i 's|gt 80|gt 64|g' ${SASCONFIG}/consul/proxy.conf.ctmpl
 else
-  cho "[INFO]  : Change 80 to 64 as the deciding factor to use IP instead of hostname in ${SASHOME}/lib/httpproxy/proxy.conf.ctmpl"
+  echo "[INFO]  : Change 80 to 64 as the deciding factor to use IP instead of hostname in ${SASHOME}/lib/httpproxy/proxy.conf.ctmpl"
   sed -i 's|gt 80|gt 64|g' ${SASHOME}/lib/httpproxy/proxy.conf.ctmpl
 fi
 
