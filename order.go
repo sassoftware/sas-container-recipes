@@ -1221,11 +1221,15 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	// Work-around for the 19w34 update to sas-orchestration which changes
 	// dashes in some container names to underscores.
 	// Convert the inventory ini so that any underscores are converted to back into dashes.
-	underbarConversionCommand := fmt.Sprintf("cp builds/full/sas_viya_playbook/inventory.ini builds/full/sas_viya_playbook/inventory.ini.bak; for sashost in $(grep '^sas_.*$' builds/full/sas_viya_playbook/inventory.ini); do echo $sashost; dashstring=$(echo $sashost | sed 's/_/-/g'); echo $dashstring; sed -i \"s/${sashost}/${dashstring}/g\" builds/full/sas_viya_playbook/inventory.ini; cp builds/full/sas_viya_playbook/group_vars/${sashost} builds/full/sas_viya_playbook/group_vars/${dashstring}; done; cp builds/full/sas_viya_playbook/group_vars/sas_all builds/full/sas_viya_playbook/group_vars/sas-all; sed -i 's/sas_all/sas-all/g' builds/full/sas_viya_playbook/inventory.ini;")
+	underbarConversionCommand := fmt.Sprintf("for sashost in $(grep '^sas_.*$' %s/inventory.ini); do echo $sashost; dashstring=$(echo $sashost | sed 's/_/-/g'); echo $dashstring; sed -i \"s/${sashost}/${dashstring}/g\" %s/inventory.ini; cp %s/group_vars/${sashost} %s/group_vars/${dashstring}; done; cp %s/group_vars/sas_all %s/group_vars/sas-all; sed -i 's/sas_all/sas-all/g' %s/inventory.ini;",
+		order.PlaybookPath, order.PlaybookPath, order.PlaybookPath,
+		order.PlaybookPath, order.PlaybookPath, order.PlaybookPath,
+		order.PlaybookPath)
 	order.WriteLog(false, false, underbarConversionCommand)
-	_, err = exec.Command("sh", "-c", underbarConversionCommand).Output()
+	result, err := exec.Command("sh", "-c", underbarConversionCommand).Output()
 	if err != nil {
-		fail <- "Unable to change inventory group_vars files. " + err.Error()
+		fail <- fmt.Sprintf("Unable to change inventory group_vars files. \n\n%s\n\n Returned error: %s\n%s",
+			underbarConversionCommand, result, err.Error())
 		return
 	}
 
