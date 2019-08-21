@@ -1221,9 +1221,7 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	// Work-around for the 19w34 update to sas-orchestration which changes
 	// dashes in some container names to underscores.
 	// Convert the inventory ini so that any underscores are converted to back into dashes.
-	underbarConversionCommand := fmt.Sprintf("for sashost in $(grep '^sas_.*$' %s/inventory.ini); do echo $sashost; dashstring=$(echo $sashost | sed 's/_/-/g'); echo $dashstring; sed -i \"s/${sashost}/${dashstring}/g\" %s/inventory.ini; cp %s/group_vars/${sashost} %s/group_vars/${dashstring}; done; cp %s/group_vars/sas_all %s/group_vars/sas-all; sed -i 's/sas_all/sas-all/g' %s/inventory.ini;",
-		order.PlaybookPath, order.PlaybookPath, order.PlaybookPath,
-		order.PlaybookPath, order.PlaybookPath, order.PlaybookPath,
+	underbarConversionCommand := fmt.Sprintf("for sashost in $(grep '^sas_.*$' %[1]v/inventory.ini); do echo $sashost; dashstring=$(echo $sashost | sed 's/_/-/g'); echo $dashstring; sed -i \"s/${sashost}/${dashstring}/g\" %[1]v/inventory.ini; cp %[1]v/group_vars/${sashost} %[1]v/group_vars/${dashstring}; done; cp %[1]v/group_vars/sas_all %[1]v/group_vars/sas-all; sed -i 's/sas_all/sas-all/g' %[1]v/inventory.ini;",
 		order.PlaybookPath)
 	order.WriteLog(false, false, underbarConversionCommand)
 	result, err := exec.Command("sh", "-c", underbarConversionCommand).Output()
