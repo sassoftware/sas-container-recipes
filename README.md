@@ -26,7 +26,7 @@ For more information, see [SAS for Containers](http://support.sas.com/rnd/contai
 
 <br>
 
-**Important Notice**: Currently all orders placed on August 2019 or after are failing to build. A bug fix is in development and progress is being tracked in [the GitHub Issues Section](https://github.com/sassoftware/sas-container-recipes/issues/35).
+**Important Notice**: Currently all orders are failing to build due to a change in behavior of the SAS Orchestration tool. A bug fix is in development and progress is being tracked in [the GitHub Issues Section](https://github.com/sassoftware/sas-container-recipes/issues/35).
 
 ## Quick Start
 Use the following instructions to quickly build and launch SAS Viya containers. 
