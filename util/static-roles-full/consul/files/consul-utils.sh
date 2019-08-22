@@ -114,7 +114,6 @@ rebuild_local_sas_truststore(){ #This should only run in Docker. This function w
   info_msg "Running sas-merge-certificates.sh"
   ${SASHOME}/SASSecurityCertificateFramework/bin/sas-merge-certificates.sh ${SASHOME} ${SASCONFIG}
   info_msg "SASUSER: ${SASUSER}, SASGROUP: ${SASGROUP}"
-  chown ${SASUSER}:${SASGROUP} /tmp/merge_certificates.result
 }
 
 is_cert_self_signed(){
