@@ -33,11 +33,13 @@ func main() {
 	if order.GenerateManifestsOnly {
 		err := order.GenerateManifests()
 		if err != nil {
+			fmt.Println("")
 			log.Fatal(err)
 		}
 	} else {
 		err = order.Build()
 		if err != nil {
+			fmt.Println("")
 			log.Fatal(err)
 		}
 	}

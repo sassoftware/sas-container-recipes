@@ -40,6 +40,7 @@ source ${SASHOME}/lib/envesntl/docker-functions
 # Set Docker mode
 export RUNNING_IN_DOCKER="true"
 
+mkdir -p  /opt/sas/viya/config/var/log/SASSecurityCertificateFramework/default
 
 ###############################################################################
 # Consul Functions
