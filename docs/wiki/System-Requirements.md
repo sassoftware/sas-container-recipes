@@ -52,7 +52,7 @@ The following software and hardware requirements are for the one or more machine
 
 ## Data Source Requirements
 
-SAS/ACCESS products and SAS In-Database Technologies products are configured to enable SAS Viya to access data sources, such as a Hadoop data store, Oracle database, PC files, and so on. Consider the following requirements to ensure that access to one or more data sources is configured correctly.
+SAS/ACCESS products are configured to enable SAS Viya to access data sources, such as a Hadoop data store, Oracle database, PC files, and so on. Consider the following requirements to ensure that access to one or more data sources is configured correctly.
 
 **Before you build the image:** Some data sources require configuration before you build the SAS Viya image. For example, additional SAS software is required in order to enable data retrieval from a Hadoop data store and from various data storage appliances. Depending on your software order, the image build process might include one or more SAS/ACCESS products or a SAS In-Database Technologies product. The data access software is included in the single image and the programming, computeserver, and sas-casserver-primary images. As a best practice, modify settings in the corresponding addons/access-* directory before building the images. For more information, see the following sources:
 
