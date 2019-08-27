@@ -52,14 +52,14 @@
 This wiki provides information about how to build and run the following SAS Viya software:
 
 - SAS Cloud Analytic Services for SAS Viya 3.4
-- SAS Econometrics 8.3
-- SAS In-Database Technologies for Hadoop (on SAS Viya)
-- SAS Optimization 8.3
+- SAS Econometrics 8.4
+- SAS Optimization 8.4
 - SAS Studio 5.1
 - SAS Studio 4.4
-- SAS Visual Analytics (on SAS Viya) 8.3
-- SAS Visual Data Mining and Machine Learning 8.3
-- SAS Visual Statistics (on SAS Viya) 8.3
+- SAS Visual Analytics (on SAS Viya) 8.4
+- SAS Visual Data Mining and Machine Learning 8.4
+- SAS Visual Forecasting 8.4
+- SAS Visual Statistics (on SAS Viya) 8.4
 - SAS/ACCESS (multiple data sources options) 
 - SAS/CONNECT (on SAS Viya)
 - SAS/IML (on SAS Viya)
