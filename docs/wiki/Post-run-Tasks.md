@@ -223,8 +223,8 @@ in the sas-container-recipes project directory. For more information, see
     
     **Note:** The preceding configuration adds a new `custom_services:` section to the manifests_usermods.yml file. If the `custom_services:` section already exists, you can perform one of the following steps to update the file:
     
-    * Manually add all the unique lines shown above for `custom_services:` to the existing section, and then remove the new `custom_services:` section that is added.
-    * Paste in the new lines instead of running the append, and then make sure you the value for `CONSUL_KEY_VALUE_DATA_ENC` is the encoded string from `$sitedefault_base64`.
+    * Manually add all the unique lines shown above for `custom_services:` to the existing section, and then remove the new `custom_services:` section that was added.
+    * Instead of running the `cat` command, paste in the new lines, and then make sure that the value for `CONSUL_KEY_VALUE_DATA_ENC` is the encoded string from `$sitedefault_base64`.
 
 1. Execute the build script with the `--generate-manifests-only` argument and the deployment type of the previous build.
 
