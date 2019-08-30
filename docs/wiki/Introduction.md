@@ -10,7 +10,7 @@
 
 - You must have purchased SAS software in order to use the SAS container recipes. If you are not sure if your organization has purchased SAS software, [contact us](https://www.sas.com/en_us/software/how-to-buy.html) or get [SAS license assistance](https://support.sas.com/en/technical-support/license-assistance.html).
 
-- Instead of using a recipe, you can use a predefined Docker image to run a SAS Viya programming-only container on a single machine. For more information, see the following websites:
+- Instead of using recipes, you can use a predefined Docker image to run a SAS Viya programming-only container on a single machine. For more information, see the following websites:
 
   - [SAS for Containers](http://support.sas.com/rnd/containers/)
   - [SAS Product Support for Virtualization Environments](https://support.sas.com/techsup/pcn/virtualization.html)
@@ -49,26 +49,9 @@
 
 ### SAS Products and Supporting Components
 
-This wiki provides information about how to build and run the following SAS Viya software:
-
-- SAS Cloud Analytic Services for SAS Viya 3.4
-- SAS Econometrics 8.4
-- SAS Optimization 8.4
-- SAS Studio 5.1
-- SAS Studio 4.4
-- SAS Visual Analytics (on SAS Viya) 8.4
-- SAS Visual Data Mining and Machine Learning 8.4
-- SAS Visual Forecasting 8.4
-- SAS Visual Statistics (on SAS Viya) 8.4
-- SAS/ACCESS (multiple data sources options) 
-- SAS/CONNECT (on SAS Viya)
-- SAS/IML (on SAS Viya)
-- SAS/QC (on SAS Viya)
-
-**Notes:**
-- Your Software Order Email (SOE) lists products and supporting components to which you are entitled. Other software to which you are entitled, such as SAS Studio, might not be listed in the SOE.
+- Testing for recipes has focused on SAS Visual Analytics (on SAS Viya), SAS Visual Data Mining and Machine Learning, SAS Visual Statistics (on SAS Viya), and a subset of the SAS/ACCESS engines supported by SAS Viya. The process described in this guide should also work with other SAS offerings and all supported SAS/ACCESS engines. If you have problems, you can open issues at GitHub for SAS to consider.
+- Your Software Order Email (SOE) lists the products and supporting components to which you are entitled. Other software to which you are entitled, such as SAS Studio, might not be listed in the SOE.
 - If you ordered SAS/ACCESS Interface to PC Files or SAS/ACCESS Interface to PostgreSQL, each is automatically included when you build and run SAS Viya. 
-- Currently, testing has focused on SAS Visual Analytics (on SAS Viya), SAS Visual Data Mining and Machine Learning, SAS Visual Statistics (on SAS Viya), and a subset of the SAS/ACCESS engines supported by SAS Viya. The process described in this guide should also work with other SAS offerings and all supported SAS/ACCESS engines. If you have problems, you can open issues at GitHub for SAS to consider. 
 
 ### Get Support
 
