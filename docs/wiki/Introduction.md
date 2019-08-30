@@ -29,10 +29,7 @@
 
 - You can use addons found in the addons directory to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more. For each addon that you plan to include in the build, review the information in [Pre-build Tasks](Pre-build-Tasks) for any prerequisites.
 
-- Your software can be built and run with a single CAS server or multiple CAS servers.
-
-  - Distributing the CAS server across multiple containers allows for massively parallel processing (MPP) by users. To take advantage of MPP, SAS Viya must be built by using multiple containers. An advantage to MPP is that, whenever possible, data is loaded into memory in parallel, which can result in faster load times. Also, the distributed CAS server can be configured for fault tolerance. For example, if a CAS worker fails, another CAS worker can use a redundant copy of the data to continue data analysis.
-  - If MPP is not available, the CAS server allows for symmetric multi-processing (SMP) by users, which provides serial loads of data into memory from a supported data source. SMP is a feature of SAS Viya that is available in both a single image or multiple images. 
+- Distributing the CAS server across multiple containers allows for massively parallel processing (MPP) by users. To take advantage of MPP, SAS Viya must be built by using multiple containers. An advantage to MPP is that, whenever possible, data is loaded into memory in parallel, which can result in faster load times. Also, the distributed CAS server can be configured for fault tolerance. For example, if a CAS worker fails, another CAS worker can use a redundant copy of the data to continue data analysis. If MPP is not available, the CAS server allows for symmetric multi-processing (SMP) by users, which provides serial loads of data into memory from a supported data source. SMP is a feature of SAS Viya that is available in both a single image or multiple images. 
 
 - A local mirror repository can save you time whenever you run a build, and it protects against download limits.
 
