@@ -40,6 +40,7 @@
 ### Considerations for Using Recipes
   
   - A programming-only deployment is supported. A full deployment is experimental and includes limited support from SAS.
+  - You can deploy a single CAS server. Deploying multiple CAS servers is not supported.
   - A SAS Viya multi-tenant environment is not supported.
   - High availability is not currently supported for full and multiple deployments using Kubernetes.
   - Persistence is not currently functional when scaling. Scaling down to 0 and back up from 0 will result in the loss of data.
