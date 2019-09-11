@@ -216,9 +216,11 @@ if [ "${CASCFG_MODE}" = "mpp" ]; then
     [[ -z ${CASCFG_KEYFILE+x} ]]        && export CASCFG_KEYFILE=${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas_key
     [[ -z ${CASCFG_ELASTIC+x} ]]        && export CASCFG_ELASTIC=true
     [[ -z ${CASCFG_COLOCATION+x} ]]     && export CASCFG_COLOCATION=none
+else
+	unset CASKEY
 fi
 
-# Forcing this so it will get sourced into supporting scripts. Was having issues 
+# Forcing this so it will get sourced into supporting scripts. Was having issues
 # when registering the services. They would register as localhost instead of the
 # defined host name.
 echo "SAS_CURRENT_HOST=${SAS_CURRENT_HOST}" >> ${SAS_CAS_CONFIG}/etc/sysconfig/cas/${SASCASINSTANCE}/sas-cas-docker
@@ -583,13 +585,13 @@ ${SASHOME}/lib/envesntl/docker-ops-agent &
 
 exit_loop=false
 source ${SASCONFIG}/consul.conf
-while ! $exit_loop; do 
+while ! $exit_loop; do
     httpd_url=$(${SASHOME}/bin/sas-bootstrap-config \
     --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token catalog serviceurl httpd)
-    
-     if [[ "${httpd_url}" != "" ]]; then 
-        exit_loop=true; 
-    else 
+
+     if [[ "${httpd_url}" != "" ]]; then
+        exit_loop=true;
+    else
         sleep 5
     fi
 done

@@ -45,6 +45,7 @@ servicecontext=${SASSERVICECONTEXT}
 # Set of functions for supporting docker containers
 source ${SASHOME}/lib/envesntl/docker-functions
 
+
 ###############################################################################
 # Save environment variables
 ###############################################################################
@@ -88,6 +89,7 @@ set +e
 _k8senvcount=$(env | grep -c KUBERNETES)
 set -e
 
+[[ -z ${POSTGRESHOME+x} ]] && export POSTGRESHOME=${SASROOT}/${SASDEPLOYID}/home/postgresql11
 [[ -z ${DATABASE_CLUSTER_NAME+x} ]] && export DATABASE_CLUSTER_NAME="postgres"
 [[ -z ${SASPOSTGRESDBSIZE+x} ]]     && export SASPOSTGRESDBSIZE="large"
 [[ -z ${PG_VOLUME+x} ]]             && export PG_VOLUME="/database/data"

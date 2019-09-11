@@ -172,7 +172,12 @@ fi
 
 # Start postgres via pg_ctl => This will create the PIDFILE
 echo_line "[postgresql] Starting postgres via pg_ctl..."
-${SASHOME}/bin/pg_ctl -o "-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf" -D ${PG_DATADIR} -w -t 30 start
+if [ -f ${SASHOME}/bin/pg_ctl ]; then
+	${SASHOME}/bin/pg_ctl -o "-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf" -D ${PG_DATADIR} -w -t 30 start
+else
+	# Different location of pg_ctl for 19w47+
+	${POSTGRESHOME}/bin/pg_ctl -o "-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf" -D ${PG_DATADIR} -w -t 30 start
+fi
 
 if [ $? = 0 ]; then
   echo_line "[postgresql] PostgreSQL started successfully"

@@ -30,7 +30,12 @@ function primary_data_node() {
 
     # If no file existed, then lets see if the data dir exists yet
     if [ ! -d ${PG_DATADIR} ]; then
-        ${SASHOME}/bin/pg_ctl -D ${PG_DATADIR} initdb || rm -rf ${PG_DATADIR}
+		if [ -f ${SASHOME}/bin/pg_ctl ]; then
+        	${SASHOME}/bin/pg_ctl -D ${PG_DATADIR} initdb || rm -rf ${PG_DATADIR}
+		else
+			# Different location of pg_ctl for 19w47+
+        	${POSTGRESHOME}/bin/pg_ctl -D ${PG_DATADIR} initdb || rm -rf ${PG_DATADIR}
+		fi
 
         success=false
         mkdir ${PG_DATADIR}/archivedir && success=true
@@ -113,7 +118,12 @@ EOL
     chmod 0644 ${PG_DATADIR}/recovery.conf
 
     if ${perform_restart}; then
-        ${SASHOME}/bin/pg_ctl -o "-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf" -D ${PG_DATADIR} -w -t 30 restart
+		if [ -f ${SASHOME}/bin/pg_ctl ]; then
+        	${SASHOME}/bin/pg_ctl -o "-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf" -D ${PG_DATADIR} -w -t 30 restart
+		else
+			# Different location of pg_ctl for 19w47+
+        	${POSTGRESHOME}/bin/pg_ctl -o "-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf" -D ${PG_DATADIR} -w -t 30 restart
+		fi
     fi
     echo_line "INFO: Recording primary ip in Consul at config/${SASSERVICENAME}/sas.dataserver.pool/backend/${SASINSTANCE}/primary"
     ${BOOTSTRAP_CONFIG} kv write --force config/${SASSERVICENAME}/sas.dataserver.pool/backend/${SASINSTANCE}/primary ${primary_ip}
