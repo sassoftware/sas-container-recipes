@@ -155,21 +155,30 @@ fi
 # Clean up some other CAS configuration for a Docker image
 #
 
-[[ -z ${CASKEY+x} ]]       && CASKEY="REPLACE ME with unique text. This is used to allow CAS workers to talk to the CAS controller"
+unset CASKEY
 [[ -z ${SERVICE_NAME+x} ]] && export SERVICE_NAME="cascontroller"
 is_controller=true
 
 if [ "${SERVICE_NAME}" = "cascontroller" ]; then
     export CASCONTROLLERHOST="${SAS_CURRENT_HOST}"
     export CASWORKERHOSTS=""
-    # Update the controller host before updating Consul
-    sed -i "s|REPLACE_KEY_WITH_RUN_TIME_VALUE|${CASKEY}|" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
-    sed -i "s|SASCONTROLLERHOST: .*|SASCONTROLLERHOST: ${CASCONTROLLERHOST}|" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
-    echo "[INFO]  : Load the cas.yml file into consul"
-    ${SASHOME}/bin/sas-bootstrap-config kv bulkload \
-        --force \
-        --site-default \
-        --yaml ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
+	sed -i "s|SASCONTROLLERHOST: .*|SASCONTROLLERHOST: ${CASCONTROLLERHOST}|" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
+
+	if [ "${CASCFG_MODE}" = "mpp" ]; then
+		echo_line "[INFO]  - Updating CAS to support elastic configuration"
+		sed -i "s|        #CASKEY:.*|        CASKEY: '${CASKEY}'|" ${SAS_CAS_CONFIG}/etc/cas/default/cas.yml
+		sed -i "s|        #keyfile:.*|        keyfile: '${CASCFG_KEYFILE}'|" ${SAS_CAS_CONFIG}/etc/cas/default/cas.yml
+		sed -i "s|        #elastic:.*|        elastic: '${CASCFG_ELASTIC}'|" ${SAS_CAS_CONFIG}/etc/cas/default/cas.yml
+	fi
+
+	if [[ -n ${CONSUL_TOKEN_CLIENT} ]]; then
+		echo "[INFO]  : Load the cas.yml file into consul"
+		${SASHOME}/bin/sas-bootstrap-config kv bulkload \
+			--force \
+			--site-default \
+			--yaml ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
+	fi
+
 elif [ "${SERVICE_NAME}" = "cassecondary" ]; then
     export CASBACKUPHOST="${SAS_CURRENT_HOST}"
     export CASCFG_MODE=mpp
@@ -216,8 +225,6 @@ if [ "${CASCFG_MODE}" = "mpp" ]; then
     [[ -z ${CASCFG_KEYFILE+x} ]]        && export CASCFG_KEYFILE=${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas_key
     [[ -z ${CASCFG_ELASTIC+x} ]]        && export CASCFG_ELASTIC=true
     [[ -z ${CASCFG_COLOCATION+x} ]]     && export CASCFG_COLOCATION=none
-else
-	unset CASKEY
 fi
 
 # Forcing this so it will get sourced into supporting scripts. Was having issues

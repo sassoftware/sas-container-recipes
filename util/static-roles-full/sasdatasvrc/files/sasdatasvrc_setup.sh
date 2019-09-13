@@ -335,10 +335,10 @@ function create_user {
 
 	dbuser_exists=false
 	if [ -f ${SASHOME}/bin/psql ]; then
-		dbuser_exists=${SASHOME}/bin/psql postgres -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -tAc "SELECT 1 FROM pg_roles WHERE rolname='${dbuser}'" | grep -q 1
+		dbuser_exists=$(${SASHOME}/bin/psql postgres -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -tAc "SELECT 1 FROM pg_roles WHERE rolname='${dbuser}'" | grep -q 1)
 	else
 		# Different location of psql for 19w47+
-		dbuser_exists=${POSTGRESHOME}/bin/psql postgres -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -tAc "SELECT 1 FROM pg_roles WHERE rolname='${dbuser}'" | grep -q 1
+		dbuser_exists=$(${POSTGRESHOME}/bin/psql postgres -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -tAc "SELECT 1 FROM pg_roles WHERE rolname='${dbuser}'" | grep -q 1)
 	fi
     if dbuser_exists; then
       echo_line "User ${dbuser} already exists"
@@ -386,10 +386,10 @@ function create_database {
     # To see if the db exists:
 	db_exists=false
 	if [ -f ${SASHOME}/bin/psql ]; then
-		db_exists=${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -lqt | cut -d \| -f 1 | grep -qw ${SAS_DBNAME}
+		db_exists=$(${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -lqt | cut -d \| -f 1 | grep -qw ${SAS_DBNAME})
 	else
 		# Different location of psql for 19w47+
-		db_exists=${POSTGRESHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -lqt | cut -d \| -f 1 | grep -qw ${SAS_DBNAME}
+		db_exists=$(${POSTGRESHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -lqt | cut -d \| -f 1 | grep -qw ${SAS_DBNAME})
 	fi
     if db_exists; then
       echo_line "Database ${SAS_DBNAME} already exists"
