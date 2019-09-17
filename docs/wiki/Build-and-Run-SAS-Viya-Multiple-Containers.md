@@ -108,7 +108,7 @@ build.sh \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repos \
 --docker-registry-url docker.registry.company.com \
---docker-namespace sas \
+--docker-namespace sas-viya \
 --addons "auth-sssd access-odbc"
 ```
 
@@ -122,7 +122,7 @@ build.sh \
 --zip /path/to/SAS_Viya_deployment_data.zip \
 --mirror-url http://host.company.com/sas_repos \
 --docker-registry-url docker.registry.company.com \
---docker-namespace sas \
+--docker-namespace sas-viya \
 --addons "auth-sssd access-odbc"
 ```
 
