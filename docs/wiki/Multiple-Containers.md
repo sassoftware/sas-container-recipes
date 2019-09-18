@@ -43,7 +43,13 @@ To change the CASENV_ADMIN_USER information, add the following to the cas manife
         - name: ADMIN_USER_GID
           value: "1001"
 ```
-If these changes are made post pod deployment, then run `kubectl replace -f path/to/manifest` on the appropriate manifest to update the pod. Next, run `kubectl delete pod <pod>` and the new values will be applied when the new pod is deployed.
+If these changes are made post pod deployment, then run `kubectl -n sas-viya replace -f <path/to/manifest>` on the appropriate manifest to update the pod. Next, run `kubectl -n sas-viya delete pod <pod>` and the new values will be applied when the new pod is deployed.
+
+**Notes:** 
+
+- The example commands use *sas-viya* for the namespace. If you created a different namespace, use that value.
+- For a SAS Viya programming-only deployment, the manifests are located at `builds/multiple/manifests/`.
+- For a SAS Viya full deployment, the manifests are located at `builds/full/manifests/`.
 
 ### How do I build Jupyter Notebook in a multiple-container environment?
 
@@ -103,7 +109,9 @@ By default the Docker build process sets the Jupyter token to empty. To set the 
           value: "Unique Value Here"
 ```
 
-If this is being set post deployment or maybe changed after the pod is deployed, then you need to run `kubectl replace -f path/to/programming` to update the pod. Then run `kubectl delete pod sas-viya-programming-0` and the token value will be applied when the new pod is deployed.
+If this is being set post deployment or maybe changed after the pod is deployed, then you need to run `kubectl -n sas-viya replace -f <path/to/programming>` to update the pod. Then run `kubectl -n sas-viya delete pod sas-viya-programming-0` and the token value will be applied when the new pod is deployed.
+
+**Note:** The example commands use *sas-viya* for the namespace. If you created a different namespace, use that value.
 
 ### How do I set the RUN_USER for Jupyter Notebook?
 
