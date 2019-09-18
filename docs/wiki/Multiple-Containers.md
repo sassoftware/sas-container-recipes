@@ -10,15 +10,6 @@ docker images --filter "label=sas.recipe.version=$(cat VERSION)" | grep latest
 
 For each image that meets that criteria, run the `docker tag` and `docker push` commands. Make sure that the tag is the same for each image pushed. If the tag is not the same, then edit the Kubernetes manifests to apply the correct tag.
 
-### How do I deploy to my Kubernetes cluster?
-
-To run multiple containers, use the Kubernetes manifests that are created by the build process.
-
-   * For a SAS Viya programming-only deployment, the Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests`
-   * For a SAS Viya full deployment, the Kubernetes manifests are located at `$PWD/viya-visuals/working/manifests`
-
-For information about using the manifests, see [Build and Run SAS Viya Multiple Containers](https://github.com/sassoftware/sas-container-recipes/wiki/Build-and-Run-SAS-Viya-Multiple-Containers).
-
 ### How do I change the information associated with the users created by the auth-demo addon?
 
 In the 18m11 release, the auth-demo addon was modified so that it creates two users. There is the DEMO_USER and the CASENV_ADMIN_USER. To change the values of the DEMO_USER, add the following lines to the programming and cas manifests (values shown are the defaults): 
