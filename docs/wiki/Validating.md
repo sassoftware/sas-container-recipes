@@ -75,7 +75,7 @@ If the image is not running, here are several recovery actions that you can perf
 
 Here is an example for validating that a single image pod of sas-programming is running in Kubernetes:
 
-`kubectl get -f run/programming.yml`
+`kubectl -n sas-viya get -f run/programming.yml`
 
 For a single-container deployment, run the command from the directory where the programming.yml file is located: $PWD/run/programming.yml.
 
@@ -105,9 +105,9 @@ If you do not get the results that you expect, run the following command to enab
 **Note:** Enter the command on a single line. Multiple lines are used here to improve readability.
 
 ```
-kubectl get configmap poac-config -o yaml | \
+kubectl -n sas-viya get configmap poac-config -o yaml | \
 sed &'s|poac.SAS\_DEBUG: "0"|poac.SAS\_DEBUG: "1"|' | \
-kubectl replace -f -
+kubectl -n sas-viya replace -f -
 ```
 
 After you run the command, delete the sas-viya-programming pod. Removing the pod forces the creation of a new sas-viya-programming pod. The new pod will provide additional information about the pod start, which can be reviewed by using the kubectl logs command.
