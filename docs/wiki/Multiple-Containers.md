@@ -88,7 +88,7 @@ docker build \
 --tag sas-viya-programming
 ```
 
-If you follow the preceding instructions, then you should be able to use ansible-container to tag and push the images to the Docker registry. Make sure that you are in the viya-programming/viya-multi-container directory, and run the following commands:
+If you follow the preceding instructions, then you should be able to use ansible-container to tag and push the images to the Docker registry. Make sure that you are in the builds/multiple directory, and run the following commands:
 
 ```
 # Source the virtualenv
@@ -111,7 +111,10 @@ By default the Docker build process sets the Jupyter token to empty. To set the 
 
 If this is being set post deployment or maybe changed after the pod is deployed, then you need to run `kubectl -n sas-viya replace -f <path/to/programming>` to update the pod. Then run `kubectl -n sas-viya delete pod sas-viya-programming-0` and the token value will be applied when the new pod is deployed.
 
-**Note:** The example commands use *sas-viya* for the namespace. If you created a different namespace, use that value.
+**Notes:** 
+
+- The example commands use *sas-viya* for the namespace. If you created a different namespace, use that value.
+- The default path for `<path/to/programming>` depends on which build.sh `--type` option was used: builds/full/manifests/deployments/programming.yml for `--type full` or builds/multiple/manifests/deployments/programming.yml for `--type multiple`. 
 
 ### How do I set the RUN_USER for Jupyter Notebook?
 
