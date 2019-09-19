@@ -1218,6 +1218,16 @@ func (order *SoftwareOrder) LoadPlaybook(progress chan string, fail chan string,
 	}
 	progress <- "Finished extracting and generating playbook for order"
 
+	// Convert the inventory ini so that any underscores are converted to dashes
+	progress <- "Massaging inventory and group_vars files..."
+	underbarConversionCommand := fmt.Sprintf("SAS_PLAYBOOK_PATH=%s; cp ${SAS_PLAYBOOK_PATH}/inventory.ini ${SAS_PLAYBOOK_PATH}/inventory.ini.bak; for sashost in $(grep '^sas_.*$' ${SAS_PLAYBOOK_PATH}/inventory.ini); do echo $sashost; dashstring=$(echo $sashost | sed 's/_/-/g'); echo $dashstring; sed -i \"s/${sashost}/${dashstring}/g\" ${SAS_PLAYBOOK_PATH}/inventory.ini; cp ${SAS_PLAYBOOK_PATH}/group_vars/${sashost} ${SAS_PLAYBOOK_PATH}/group_vars/${dashstring}; done; cp ${SAS_PLAYBOOK_PATH}/group_vars/sas_all ${SAS_PLAYBOOK_PATH}/group_vars/sas-all; sed -i 's/sas_all/sas-all/g' ${SAS_PLAYBOOK_PATH}/inventory.ini;", order.PlaybookPath)
+	_, err = exec.Command("sh", "-c", underbarConversionCommand).Output()
+	if err != nil {
+		fail <- "Unable to massage inventory group_vars files. " + err.Error()
+		return
+	}
+	progress <- "Finished massaging inventory and group_vars files"
+
 	// Get a list of the containers to be built
 	progress <- "Fetching the list of containers in the order ..."
 	order.Containers, err = getContainers(order)

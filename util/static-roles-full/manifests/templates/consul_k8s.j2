@@ -189,14 +189,37 @@ spec:
 {%     endfor %}
 {%   endif %}
 {% endif %}
-{% if item.value.resources is defined and item.value.resources %}
         resources:
-{%   for key,value in item.value.resources.items() %}
-          {{ key }}:
-{%     for items in value %}
-            {{ items.split('=')[0] }}: {{ items.split('=')[1] }}
-{%     endfor %}
+{% if custom_services is defined and custom_services and item.key in custom_services %}
+          # Writing out user defined resources
+{%   if vars.update({'found': False}) %} {% endif %}
+{%   for key,value in custom_services.items() %}
+{%     if key == item.key and value.deployment_overrides.resources is defined and value.deployment_overrides.resources %}
+{%      if vars.update({'found': True}) %} {% endif %}
+          {{ value.deployment_overrides.resources | indent(10) }}
+{%     endif %}
 {%   endfor %}
+{%   if not vars.found %}
+{%     if item.value.resources is defined and item.value.resources %}
+          # Writing out pre-defined resources
+{%       for key,value in item.value.resources.items() %}
+          {{ key }}:
+{%         for items in value %}
+            {{ items.split('=')[0] }}: {{ items.split('=')[1] }}
+{%         endfor %}
+{%       endfor %}
+{%     endif %}
+{%   endif %}
+{% else %}
+{%   if item.value.resources is defined and item.value.resources %}
+          # Writing out pre-defined resources
+{%     for key,value in item.value.resources.items() %}
+          {{ key }}:
+{%       for items in value %}
+            {{ items.split('=')[0] }}: {{ items.split('=')[1] }}
+{%       endfor %}
+{%     endfor %}
+{%   endif %}
 {% endif %}
         volumeMounts:
 {% if SECURE_CONSUL %}
