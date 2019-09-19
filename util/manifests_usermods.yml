@@ -57,3 +57,15 @@
 #          mountPath: /path_inside_container
 #        - name: EBS-volume
 #          mountPath: /path_inside_container
+#      resources: |
+#        requests:
+#          memory: "10Gi"
+#        limits:
+#          memory: "30Gi"
+#  rabbitmq:
+#    deployment_overrides:
+#      resources: |
+#        requests:
+#          memory: "10Gi"
+#        limits:
+#          memory: "10Gi"
