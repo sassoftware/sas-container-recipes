@@ -114,7 +114,8 @@ If this is being set post deployment or maybe changed after the pod is deployed,
 **Notes:** 
 
 - The example commands use *sas-viya* for the namespace. If you created a different namespace, use that value.
-- The default path for `<path/to/programming>` depends on which build.sh `--type` option was used: builds/full/manifests/deployments/programming.yml for `--type full` or builds/multiple/manifests/deployments/programming.yml for `--type multiple`. 
+- For a SAS Viya programming-only deployment, the default path for `<path/to/programming>` is builds/multiple/manifests/deployments/programming.yml. 
+- For a SAS Viya full deployment, the default path for `<path/to/programming>` is builds/full/manifests/deployments/programming.yml.
 
 ### How do I set the RUN_USER for Jupyter Notebook?
 
