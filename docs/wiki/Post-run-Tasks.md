@@ -8,7 +8,9 @@
 
 ## Configure Your Environment with SAS Environment Manager
 
-**Note:** The tasks in this section are applicable for a full deployment. Skip this section if you performed a programming-only deployment.
+**Notes:** 
+- The following tasks are applicable for a full deployment. Skip this section if you performed a programming-only deployment.
+- The examples use *sas-viya* for the namespace. If you created a different namespace, use that value.
 
 ### Sign In as the sasboot User
 
@@ -21,11 +23,12 @@ To reset the password:
 1. Search the log for the characters sasboot:
 
     ```
-    kubectl -n <k8s namespace> get pods | grep coreservices
-    kubectl -n <k8s namespace> exec -it sas-viya-coreservices-<uuid> -- ls -l /var/log/sas/viya/saslogon/default
-    kubectl -n <k8s namespace> exec -it sas-viya-coreservices-<uuid> -- grep 'sasboot' /var/log/sas/viya/saslogon/default/sas- 
+    kubectl -n sas-viya get pods | grep coreservices
+    kubectl -n sas-viya exec -it sas-viya-coreservices-<uuid> -- ls -l /var/log/sas/viya/saslogon/default
+    kubectl -n sas-viya exec -it sas-viya-coreservices-<uuid> -- grep 'sasboot' /var/log/sas/viya/saslogon/default/sas- 
     saslogon_date-and-time-stamp.log 2> /dev/null
     ```
+    
     Here is a typical message:
 
     ```
@@ -34,7 +37,7 @@ To reset the password:
 
 3. Sign in from a URL with this format:
 
-    `https://igress-path/SASLogon/reset_password?code=password`
+    `https://ingress-path/SASLogon/reset_password?code=password`
 
     Make a note of this URL to share with any other users of your SAS Viya software.
 
@@ -42,8 +45,8 @@ To reset the password:
 
     **Note:** If the URL has expired, you will need to restart the coreservices pod:
 
-    `kubectl -n <k8s namespace> delete pod sas-viya-coreservices-<uuid>`
-
+    `kubectl -n sas-viya delete pod sas-viya-coreservices-<uuid>`
+    
     Then go to the log and obtain the new URL. The URL expires 24 hours after the SAS Logon service restarts. For security purposes, the URL that is specified in a browser or in a text editor also expires, even if the password is not reset.
 
     After you reset the password, SAS Environment Manager automatically opens in your browser.
@@ -98,7 +101,7 @@ While signed in as sasboot, configure the connection to your identity provider:
 
 7. Restart the Identities and SAS Logon Manager services by starting a new coreservices pod:
 
-    `kubectl -n <k8s namespace> delete pod sas-viya-coreservices-<uuid>`
+    `kubectl -n sas-viya delete pod sas-viya-coreservices-<uuid>`
 
 ### Set Up Administrative Users
 
@@ -158,7 +161,7 @@ Configure the connection to your mailservice. Complete these steps while you are
 
 5. Restart the mail service.
 
-    `kubectl -n <k8s namespace> delete pod sas-viya-coreservices-<uuid>`
+    `kubectl -n sas-viya delete pod sas-viya-coreservices-<uuid>`
 
 ### Disable the Password Reset Feature and Reset the sasboot Password
 
@@ -176,7 +179,7 @@ After you are finished setting up LDAP and the initial administrative users, you
 
 1. Restart the SAS LogonManager services:
 
-    `kubectl -n <k8s namespace> delete pod sas-viya-coreservices-<uuid>`
+    `kubectl -n sas-viya delete pod sas-viya-coreservices-<uuid>`
 
     For more information, see [General Servers and Services: Operate](http://documentation.sas.com/?cdcId=calcdc&amp;cdcVersion=3.4&amp;docsetId=calchkadm&amp;docsetTarget=n00003ongoingtasks00000admin.htm&amp;locale=en) in  _SAS Viya Administration: General Servers and Services_.
 
@@ -221,7 +224,10 @@ in the sas-container-recipes project directory. For more information, see
     EOF
     ```
     
-    **Note:** The preceding configuration adds a new `custom_services:` section to the manifests_usermods.yml file. If this section already exists, you must manually add all the unique lines shown above for `custom_services:` to the existing section, and then remove the new `custom_services:` section that is added.
+    **Note:** The preceding configuration adds a new `custom_services:` section to the manifests_usermods.yml file. If the `custom_services:` section already exists, you can perform one of the following steps to update the file:
+    
+    * Manually add all the unique lines shown above for `custom_services:` to the existing section, and then remove the new `custom_services:` section that was added.
+    * Instead of running the `cat` command, paste in the new lines, and then make sure that the value for `CONSUL_KEY_VALUE_DATA_ENC` is the encoded string from `$sitedefault_base64`.
 
 1. Execute the build script with the `--generate-manifests-only` argument and the deployment type of the previous build.
 
@@ -244,21 +250,22 @@ By default, the CAS deployment is set up as SMP. If a MPP environment is needed,
 * If you have already deployed the environment:
     1. Scale down the CAS controller to 0: 
 
-        `kubectl -n <k8s namespace> scale statefulsets sas-viya-cas --replicas=0`
+        `kubectl -n sas-viya scale statefulsets sas-viya-cas --replicas=0`
 
     1. Edit the CAS configmap and set the cascfg_mode to "mpp": 
 
-        `kubectl -n <k8s namespace> edit configmap sas-viya-cas`
+        `kubectl -n sas-viya edit configmap sas-viya-cas`
 
     1. Scale up the CAS controller to 1: 
 
-        `kubectl -n <k8s namespace> scale statefulsets sas-viya-cas --replicas=1`
+        `kubectl -n sas-viya scale statefulsets sas-viya-cas --replicas=1`
 
     1. Scale up the CAS workers: 
 
-        `kubectl -n <k8s namespace> scale deployment.v1.apps/sas-viya-cas-worker --replicas=3`
+        `kubectl -n sas-viya scale deployment.v1.apps/sas-viya-cas-worker --replicas=3`
 
   **Important:**
+  - The examples use *sas-viya* for the namespace. If you created a different namespace, use that value.
   - When scaling CAS workers, be aware that data will not automatically be reloaded to either take advantage of new CAS workers just added to the cluster or remove data before a CAS worker is removed from the cluster. If you scale up the CAS workers, you will need to reload the data in order to distribute it.
   - It is strongly recommended that you do not set up auto-scaling rules.
 
