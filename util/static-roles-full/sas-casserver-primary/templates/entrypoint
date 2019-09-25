@@ -155,29 +155,44 @@ fi
 # Clean up some other CAS configuration for a Docker image
 #
 
-unset CASKEY
+if [[ ${CASCFG_MODE} = "smp" ]]; then
+    unset CASKEY
+else
+    [[ -z ${CASKEY+x} ]] && CASKEY="REPLACE ME with unique text. This is used to allow CAS workers to talk to the CAS controller"
+fi
+
 [[ -z ${SERVICE_NAME+x} ]] && export SERVICE_NAME="cascontroller"
 is_controller=true
 
 if [ "${SERVICE_NAME}" = "cascontroller" ]; then
     export CASCONTROLLERHOST="${SAS_CURRENT_HOST}"
     export CASWORKERHOSTS=""
-	sed -i "s|SASCONTROLLERHOST: .*|SASCONTROLLERHOST: ${CASCONTROLLERHOST}|" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
+    sed -i "s|SASCONTROLLERHOST: .*|SASCONTROLLERHOST: ${CASCONTROLLERHOST}|" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
 
-	if [ "${CASCFG_MODE}" = "mpp" ]; then
-		echo_line "[INFO]  - Updating CAS to support elastic configuration"
-		sed -i "s|        #CASKEY:.*|        CASKEY: '${CASKEY}'|" ${SAS_CAS_CONFIG}/etc/cas/default/cas.yml
-		sed -i "s|        #keyfile:.*|        keyfile: '${CASCFG_KEYFILE}'|" ${SAS_CAS_CONFIG}/etc/cas/default/cas.yml
-		sed -i "s|        #elastic:.*|        elastic: '${CASCFG_ELASTIC}'|" ${SAS_CAS_CONFIG}/etc/cas/default/cas.yml
-	fi
+    if [ "${CASCFG_MODE}" = "mpp" ]; then
+        echo_line "[INFO]  - Updating CAS to support elastic configuration"
+        sed -i "s|        #CASKEY:.*|        CASKEY: '${CASKEY}'|" ${SAS_CAS_CONFIG}/etc/cas/default/cas.yml
+        sed -i "s|        CASKEY:.*|        CASKEY: '${CASKEY}'|" ${SAS_CAS_CONFIG}/etc/cas/default/cas.yml
+        sed -i "s|        #keyfile:.*|        keyfile: '${CASCFG_KEYFILE}'|" ${SAS_CAS_CONFIG}/etc/cas/default/cas.yml
+        sed -i "s|        keyfile:.*|        keyfile: '${CASCFG_KEYFILE}'|" ${SAS_CAS_CONFIG}/etc/cas/default/cas.yml
+        sed -i "s|        #elastic:.*|        elastic: '${CASCFG_ELASTIC}'|" ${SAS_CAS_CONFIG}/etc/cas/default/cas.yml
+        sed -i "s|        elastic:.*|        elastic: '${CASCFG_ELASTIC}'|" ${SAS_CAS_CONFIG}/etc/cas/default/cas.yml
+    else
+        sed -i 's|        CASKEY:.*$|        #CASKEY:|' /opt/sas/viya/config/etc/cas/default/cas.yml;
+        sed -i 's|        keyfile:.*$|        #keyfile:|' /opt/sas/viya/config/etc/cas/default/cas.yml;
+        sed -i 's|        elastic:.*$|        #elastic:|' /opt/sas/viya/config/etc/cas/default/cas.yml;
+        sed -i 's|^CASKEY=.*$|#CASKEY=|' /opt/sas/viya/config/etc/sysconfig/cas/default/sas-cas-deployment;
+        sed -i 's|cas.keyfile|--cas.keyfile|' /opt/sas/viya/config/etc/cas/default/casconfig_deployment.lua;
+        sed -i 's|cas.elastic|--cas.elastic|' /opt/sas/viya/config/etc/cas/default/casconfig_deployment.lua;
+    fi
 
-	if [[ -n ${CONSUL_TOKEN_CLIENT} ]]; then
-		echo "[INFO]  : Load the cas.yml file into consul"
-		${SASHOME}/bin/sas-bootstrap-config kv bulkload \
-			--force \
-			--site-default \
-			--yaml ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
-	fi
+    if [[ -n ${CONSUL_TOKENS_CLIENT} ]]; then
+        echo "[INFO]  : Load the cas.yml file into consul"
+        ${SASHOME}/bin/sas-bootstrap-config kv bulkload \
+            --force \
+            --site-default \
+            --yaml ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
+fi
 
 elif [ "${SERVICE_NAME}" = "cassecondary" ]; then
     export CASBACKUPHOST="${SAS_CURRENT_HOST}"
