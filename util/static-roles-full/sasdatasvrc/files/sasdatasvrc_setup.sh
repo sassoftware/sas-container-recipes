@@ -337,7 +337,7 @@ function create_user {
         echo_line "User ${dbuser} already exists"
     else
         echo_line "Creating user ${dbuser}..."
-        ${SASHOME}/bin/createuser -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -Eldrs ${dbuser}
+        ${POSTGRESHOME}/bin/createuser -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -Eldrs ${dbuser}
     fi
 
     echo_line "Updating password for user ${dbuser}..."
@@ -369,7 +369,7 @@ function create_database {
     if ${POSTGRESHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -lqt | cut -d \| -f 1 | grep -qw ${SAS_DBNAME}; then
       echo_line "Database ${SAS_DBNAME} already exists"
     else
-      ${SASHOME}/bin/createdb -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -O ${SASPOSTGRESOWNER} -E UTF8 -T template0 --locale=en_US.utf8 ${SAS_DBNAME}
+      ${POSTGRESHOME}/bin/createdb -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -O ${SASPOSTGRESOWNER} -E UTF8 -T template0 --locale=en_US.utf8 ${SAS_DBNAME}
     fi
 
     echo_line "grant all privileges on ${SAS_DBNAME} to ${SAS_DEFAULT_PGUSER}"
