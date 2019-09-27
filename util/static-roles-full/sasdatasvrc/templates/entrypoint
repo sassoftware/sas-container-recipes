@@ -99,8 +99,8 @@ set -e
 # Default to the pre-19w47 location
 export POSTGRESHOME=${SASHOME}
 if [ ! -f ${SASHOME}/bin/pg_ctl ]; then
-	# Use the 19w47+ location
-	export POSTGRESHOME=${SASROOT}/${SASDEPLOYID}/home/postgresql11
+    # Use the 19w47+ location
+    export POSTGRESHOME=${SASROOT}/${SASDEPLOYID}/home/postgresql11
 fi
 
 if [ ${_k8senvcount} -ne 0 ]; then
