@@ -32,7 +32,7 @@ function is_password_empty() {
 export POSTGRESHOME=${SASHOME}
 if [ ! -f ${SASHOME}/bin/pg_ctl ]; then
 	# Use the 19w47+ location
-	export POSTGRESHOME=${SASROOT}/${SASDEPLOYID}/home/postgresql11
+	export POSTGRESHOME=${SASROOT}/${SASDEPLOYID}/home/pgpool-II40
 fi
 
 # This is being defined in support of Vault tokens. Used in docker-functions
