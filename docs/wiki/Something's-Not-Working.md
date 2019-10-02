@@ -1,5 +1,5 @@
 ### Inotify Settings
-The error `InotifyInit: too many open files` in the SAS Watch logs
+The error `InotifyInit: too many open files` in standard output
 indicates that the maximum number of file system event monitors has been
 reached. Inotify settings on the Kubernetes nodes need to be adjusted to
 accommodate the SAS Watch Service. These are system wide settings so all
