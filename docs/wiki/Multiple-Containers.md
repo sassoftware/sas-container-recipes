@@ -10,15 +10,6 @@ docker images --filter "label=sas.recipe.version=$(cat VERSION)" | grep latest
 
 For each image that meets that criteria, run the `docker tag` and `docker push` commands. Make sure that the tag is the same for each image pushed. If the tag is not the same, then edit the Kubernetes manifests to apply the correct tag.
 
-### How do I deploy to my Kubernetes cluster?
-
-To run multiple containers, use the Kubernetes manifests that are created by the build process.
-
-   * For a SAS Viya programming-only deployment, the Kubernetes manifests are located at `$PWD/viya-programming/viya-multi-container/working/manifests`
-   * For a SAS Viya full deployment, the Kubernetes manifests are located at `$PWD/viya-visuals/working/manifests`
-
-For information about using the manifests, see [Build and Run SAS Viya Multiple Containers](https://github.com/sassoftware/sas-container-recipes/wiki/Build-and-Run-SAS-Viya-Multiple-Containers).
-
 ### How do I change the information associated with the users created by the auth-demo addon?
 
 In the 18m11 release, the auth-demo addon was modified so that it creates two users. There is the DEMO_USER and the CASENV_ADMIN_USER. To change the values of the DEMO_USER, add the following lines to the programming and cas manifests (values shown are the defaults): 
@@ -52,7 +43,13 @@ To change the CASENV_ADMIN_USER information, add the following to the cas manife
         - name: ADMIN_USER_GID
           value: "1001"
 ```
-If these changes are made post pod deployment, then run `kubectl replace -f path/to/manifest` on the appropriate manifest to update the pod. Next, run `kubectl delete pod <pod>` and the new values will be applied when the new pod is deployed.
+If these changes are made post pod deployment, then run `kubectl -n sas-viya replace -f <path/to/manifest>` on the appropriate manifest to update the pod. Next, run `kubectl -n sas-viya delete pod <pod>` and the new values will be applied when the new pod is deployed.
+
+**Notes:** 
+
+- The example commands use *sas-viya* for the namespace. If you created a different namespace, use that value.
+- For a SAS Viya programming-only deployment, the manifests are located at `builds/multiple/manifests/`.
+- For a SAS Viya full deployment, the manifests are located at `builds/full/manifests/`.
 
 ### How do I build Jupyter Notebook in a multiple-container environment?
 
@@ -91,7 +88,7 @@ docker build \
 --tag sas-viya-programming
 ```
 
-If you follow the preceding instructions, then you should be able to use ansible-container to tag and push the images to the Docker registry. Make sure that you are in the viya-programming/viya-multi-container directory, and run the following commands:
+If you follow the preceding instructions, then you should be able to use ansible-container to tag and push the images to the Docker registry. Make sure that you are in the builds/multiple directory, and run the following commands:
 
 ```
 # Source the virtualenv
@@ -112,7 +109,13 @@ By default the Docker build process sets the Jupyter token to empty. To set the 
           value: "Unique Value Here"
 ```
 
-If this is being set post deployment or maybe changed after the pod is deployed, then you need to run `kubectl replace -f path/to/programming` to update the pod. Then run `kubectl delete pod sas-viya-programming-0` and the token value will be applied when the new pod is deployed.
+If this is being set post deployment or maybe changed after the pod is deployed, then you need to run `kubectl -n sas-viya replace -f <path/to/programming>` to update the pod. Then run `kubectl -n sas-viya delete pod sas-viya-programming-0` and the token value will be applied when the new pod is deployed.
+
+**Notes:** 
+
+- The example commands use *sas-viya* for the namespace. If you created a different namespace, use that value.
+- For a SAS Viya programming-only deployment, the default path for `<path/to/programming>` is builds/multiple/manifests/deployments/programming.yml. 
+- For a SAS Viya full deployment, the default path for `<path/to/programming>` is builds/full/manifests/deployments/programming.yml.
 
 ### How do I set the RUN_USER for Jupyter Notebook?
 

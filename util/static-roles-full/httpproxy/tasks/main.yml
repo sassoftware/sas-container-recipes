@@ -43,6 +43,12 @@
     - /etc/pki/tls/certs/localhost.crt
     - /etc/pki/tls/private/localhost.key
 
+- name: chown httpproxy
+  file: path="{{ item }}" owner="{{ INSTALL_USER }}" group="{{ INSTALL_GROUP }}" state=directory recurse=yes 
+  with_items:
+    - "{{ SASHOME }}/lib/httpproxy"
+  ignore_errors: yes 
+
 - name: Comment out conflicting X-Forwarded headers
   shell: |
     LINE_NUM=$(grep -n '# Default the X-Forwarded-Proto header to http' /etc/httpd/conf.d/petrichor.conf|cut -f1 -d:)

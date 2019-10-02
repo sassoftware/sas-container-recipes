@@ -3,14 +3,13 @@
 - [Before You Begin](#before-you-begin)
 - [The Basics for Running and Building SAS Viya](#the-basics-for-running-and-building-sas-viya)
 - [Considerations for Using Recipes](#considerations-for-using-recipes)
-- [SAS Products and Supporting Components](#sas-products-and-supporting-components)
 - [Get Support](#get-support)
 
 ### Before You Begin
 
 - You must have purchased SAS software in order to use the SAS container recipes. If you are not sure if your organization has purchased SAS software, [contact us](https://www.sas.com/en_us/software/how-to-buy.html) or get [SAS license assistance](https://support.sas.com/en/technical-support/license-assistance.html).
 
-- Instead of using a recipe, you can use a predefined Docker image to run a SAS Viya programming-only container on a single machine. For more information, see the following websites:
+- Instead of using recipes, you can use a predefined Docker image to run a SAS Viya programming-only container on a single machine. For more information, see the following websites:
 
   - [SAS for Containers](http://support.sas.com/rnd/containers/)
   - [SAS Product Support for Virtualization Environments](https://support.sas.com/techsup/pcn/virtualization.html)
@@ -29,10 +28,7 @@
 
 - You can use addons found in the addons directory to enhance the base SAS Viya image with SAS/ACCESS, LDAP configuration, and more. For each addon that you plan to include in the build, review the information in [Pre-build Tasks](Pre-build-Tasks) for any prerequisites.
 
-- Your software can be built and run with a single CAS server or multiple CAS servers.
-
-  - Distributing the CAS server across multiple containers allows for massively parallel processing (MPP) by users. To take advantage of MPP, SAS Viya must be built by using multiple containers. An advantage to MPP is that, whenever possible, data is loaded into memory in parallel, which can result in faster load times. Also, the distributed CAS server can be configured for fault tolerance. For example, if a CAS worker fails, another CAS worker can use a redundant copy of the data to continue data analysis.
-  - If MPP is not available, the CAS server allows for symmetric multi-processing (SMP) by users, which provides serial loads of data into memory from a supported data source. SMP is a feature of SAS Viya that is available in both a single image or multiple images. 
+- Distributing the CAS server across multiple containers allows for massively parallel processing (MPP) by users. To take advantage of MPP, SAS Viya must be built by using multiple containers. An advantage to MPP is that, whenever possible, data is loaded into memory in parallel, which can result in faster load times. Also, the distributed CAS server can be configured for fault tolerance. For example, if a CAS worker fails, another CAS worker can use a redundant copy of the data to continue data analysis. If MPP is not available, the CAS server allows for symmetric multi-processing (SMP) by users, which provides serial loads of data into memory from a supported data source. SMP is a feature of SAS Viya that is available in both a single image or multiple images. 
 
 - A local mirror repository can save you time whenever you run a build, and it protects against download limits.
 
@@ -42,34 +38,14 @@
 
 ### Considerations for Using Recipes
   
+  - Testing for recipes has focused on SAS Visual Analytics (on SAS Viya), SAS Visual Data Mining and Machine Learning, SAS Visual Statistics (on SAS Viya), and a subset of the SAS/ACCESS engines supported by SAS Viya. The process described in this guide should work with other SAS offerings and all supported SAS/ACCESS engines.
+  - Your Software Order Email (SOE) lists the products and supporting components to which you are entitled. Other software to which you are entitled, such as SAS Studio, might not be listed in the SOE. If you ordered SAS/ACCESS Interface to PC Files or SAS/ACCESS Interface to PostgreSQL, each is automatically included when you build and run SAS Viya.
   - A programming-only deployment is supported. A full deployment is experimental and includes limited support from SAS.
+  - You can deploy a single CAS server. Deploying multiple CAS servers is not supported.
   - A SAS Viya multi-tenant environment is not supported.
   - High availability is not currently supported for full and multiple deployments using Kubernetes.
   - Persistence is not currently functional when scaling. Scaling down to 0 and back up from 0 will result in the loss of data.
 
-### SAS Products and Supporting Components
-
-This wiki provides information about how to build and run the following SAS Viya software:
-
-- SAS Cloud Analytic Services for SAS Viya 3.4
-- SAS Econometrics 8.3
-- SAS In-Database Technologies for Hadoop (on SAS Viya)
-- SAS Optimization 8.3
-- SAS Studio 5.1
-- SAS Studio 4.4
-- SAS Visual Analytics (on SAS Viya) 8.3
-- SAS Visual Data Mining and Machine Learning 8.3
-- SAS Visual Statistics (on SAS Viya) 8.3
-- SAS/ACCESS (multiple data sources options) 
-- SAS/CONNECT (on SAS Viya)
-- SAS/IML (on SAS Viya)
-- SAS/QC (on SAS Viya)
-
-**Notes:**
-- Your Software Order Email (SOE) lists products and supporting components to which you are entitled. Other software to which you are entitled, such as SAS Studio, might not be listed in the SOE.
-- If you ordered SAS/ACCESS Interface to PC Files or SAS/ACCESS Interface to PostgreSQL, each is automatically included when you build and run SAS Viya. 
-- Currently, testing has focused on SAS Visual Analytics (on SAS Viya), SAS Visual Data Mining and Machine Learning, SAS Visual Statistics (on SAS Viya), and a subset of the SAS/ACCESS engines supported by SAS Viya. The process described in this guide should also work with other SAS offerings and all supported SAS/ACCESS engines. If you have problems, you can open issues at GitHub for SAS to consider. 
-
 ### Get Support
 
-GitHub is used for tracking bugs and feature requests. Please enter tickets via the [GitHub Project Issues Page](https://github.com/sassoftware/sas-container-recipes/issues) for questions and project improvements.
+If you have a question or an idea for a new feature, or if something's not working, [open an issue](https://github.com/sassoftware/sas-container-recipes/issues) to let us know.
