@@ -174,8 +174,8 @@ sed -ri -e 's!^Group apache!Group sas!g' $APACHE_CONF
 
 ###############################################################################
 # Change port
-###############################################################################	
-sed -ri -e 's!^Listen 80!Listen 8080!g' $APACHE_CONF
+###############################################################################
+sed -ri -e 's!^Listen 80*$!Listen 8080!g' $APACHE_CONF
 sed -ri -e 's!^Listen 443!Listen 6443!g' $APACHE_CONF_D/ssl.conf
 
 # Start and continually check the ops-agent process.
