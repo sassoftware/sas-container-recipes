@@ -7,9 +7,8 @@ by adding or modifying the following in `/etc/security/limits.conf`:
   *               -       nproc           131072
 ```
 
-The `NOFILES` limit can be increased for the Kublet service by appending the
-following line below to the services section
-of `/etc/systemd/system/kubelet.service`.
+The `NOFILES` limit can be increased for the Kublet service by appending a
+LimitNOFILE line below the '[Service]' section header in `/etc/systemd/system/kubelet.service`.
 
 ```
 [Service]
@@ -21,8 +20,8 @@ of `/etc/systemd/system/kubelet.service`.
 
 
 ## CAS_DISK_CACHE Location Customization
-The CAS Disk Cache location can be customized by specifying the following in the
-manifests_usermods.yml file.
+The CAS disk cache location can be customized by specifying the following settings
+in the manifests_usermods.yml file.
 
 ```
 sas-casserver-primary:
@@ -38,8 +37,8 @@ sas-casserver-worker:
 
 
 ## Resource Customization
-Resource requests and limits can be specified by adding the fields
-to the manifests_usermods.yml file, such as the following.
+Memory resources can be specified by adding requests and limits settings to the
+manifests_usermods.yml file. Here is an example:
 
 ```
 custom_services:
