@@ -205,7 +205,7 @@ rabbitmq:
     limits:
     - "memory=10Gi"
     requests:
-    - "memory=10Gi"
+    - "memory=1024Mi"
   volumes:
   - "data=/rabbitmq/data"
 
@@ -234,7 +234,7 @@ sas-casserver-primary:
     limits:
     - "memory=30Gi"
     requests:
-    - "memory=10Gi"
+    - "memory=1024Mi"
   secrets:
   - "SETINIT_TEXT_ENC="
   - "CASKEY=REPLACE ME with unique text. This is used to allow CAS workers to talk to the CAS controller"
