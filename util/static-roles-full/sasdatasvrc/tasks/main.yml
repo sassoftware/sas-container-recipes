@@ -9,6 +9,9 @@
   include_role:
     name: sas-install
 
+- name: Ensures directories exist before copying files to those locations
+  file: path={{ SASHOME }}/share/postgresql state=directory
+
 - name: Copy files to remote host
   copy:
     src: "{{ item.name }}"

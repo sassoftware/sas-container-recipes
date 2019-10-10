@@ -751,6 +751,11 @@ func getProgrammingOnlySingleContainer(order *SoftwareOrder) error {
 	if err != nil {
 		return err
 	}
+	err = container.AddFileToContext(resourceDirectory+"/sas-orchestration", "sas-orchestration", []byte{})
+	if err != nil {
+		return err
+	}
+
 	err = container.AddFileToContext(order.BuildPath+"/vars_usermods.yml", "vars_usermods.yml", []byte{})
 	if err != nil {
 		return err

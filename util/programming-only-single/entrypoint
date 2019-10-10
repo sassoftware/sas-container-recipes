@@ -802,9 +802,15 @@ if ! ${SAS_LOGS_TO_DISK}; then
     cp ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.stdout.xml ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.xml
     sed -i 's|Debug|Info|' ${SASCONFIG}/etc/workspaceserver/${SASINSTANCE}/logconfig.xml
 
-    # Configure SAS Studio to log to stdout
-    sed -i 's|^\$command.*$|\$command 2>\&1 \&|' ${SASHOME}/SASStudio/bin/appserver.sh
-    cat > ${SASCONFIG}/etc/sasstudio/${SASINSTANCE}/SASStudio-log4j.xml << SASSTUDIO
+    sasstudio5=false
+    if [[ ! -f ${SASHOME}/SASStudio/bin/appserver.sh ]]; then
+       sasstudio5=true
+    fi
+
+    if [[ $sasstudio5 == "false" ]]; then
+        # Configure SAS Studio to log to stdout
+        sed -i 's|^\$command.*$|\$command 2>\&1 \&|' ${SASHOME}/SASStudio/bin/appserver.sh
+        cat > ${SASCONFIG}/etc/sasstudio/${SASINSTANCE}/SASStudio-log4j.xml << SASSTUDIO
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration>
         <Appenders>
@@ -823,7 +829,7 @@ if ! ${SAS_LOGS_TO_DISK}; then
         </Loggers>
 </Configuration>
 SASSTUDIO
-
+    fi
 fi
 
 #
@@ -965,16 +971,20 @@ else
             -i ${SASINSTANCE}"
 
         echo "Starting SAS Studio..."
-        touch /var/run/sas/sas-viya-sasstudio-default.pid
-        chown sas /var/run/sas/sas-viya-sasstudio-default.pid
-        chmod 0644 /var/run/sas/sas-viya-sasstudio-default.pid
-        runuser --shell "/bin/sh" --login sas \
-            --command "${SASHOME}/SASStudio/bin/appserver.sh \
-            -p /var/run/sas/sas-viya-sasstudio-default.pid \
-            -r ${SASROOT}/${SASDEPLOYID} \
-            -l ${SASCONFIG}/var/log/sasstudio/${SASINSTANCE} \
-            -d ${SASDEPLOYID} \
-            -i ${SASINSTANCE}"
+        if [[ $sasstudio5 == "false" ]]; then
+            touch /var/run/sas/sas-viya-sasstudio-default.pid
+            chown sas /var/run/sas/sas-viya-sasstudio-default.pid
+            chmod 0644 /var/run/sas/sas-viya-sasstudio-default.pid
+            runuser --shell "/bin/sh" --login sas \
+                --command "${SASHOME}/SASStudio/bin/appserver.sh \
+                -p /var/run/sas/sas-viya-sasstudio-default.pid \
+                -r ${SASROOT}/${SASDEPLOYID} \
+                -l ${SASCONFIG}/var/log/sasstudio/${SASINSTANCE} \
+                -d ${SASDEPLOYID} \
+                -i ${SASINSTANCE}"
+        else
+            /etc/init.d/sas-viya-sasstudio-default start
+        fi
 
         #
         # Launch HTTPD

@@ -120,13 +120,13 @@ RUN set -e; \
 #
 # Get the SAS orchestrationCLI to generate the playbook then modify it so it will run
 #
-
+COPY sas-orchestration ./sas-orchestration
 RUN set -e; \
     if [ ! -d sas_viya_playbook ]; then \
         if [ "$PLATFORM" = "redhat" ] || [ "$PLATFORM" = "suse" ]; then \
-            echo; echo "####### Get the orchestrationCLI and generate the playbook"; echo; \
-            curl --silent --remote-name https://support.sas.com/installation/viya/34/sas-orchestration-cli/lax/sas-orchestration-linux.tgz ; \
-            tar xvf sas-orchestration-linux.tgz; \
+            #echo; echo "####### Get the orchestrationCLI and generate the playbook"; echo; \
+            #curl --silent --remote-name https://support.sas.com/installation/viya/34/sas-orchestration-cli/lax/sas-orchestration-linux.tgz ; \
+            #tar xvf sas-orchestration-linux.tgz; \
             ./sas-orchestration build --input SAS_Viya_deployment_data.zip --deployment-type programming --repository-warehouse $SAS_RPM_REPO_URL --platform $PLATFORM; \
             tar xvf SAS_Viya_playbook.tgz; \
         else \
@@ -153,6 +153,8 @@ RUN set -e; \
     sed -i 's|VERIFY_DEPLOYMENT: true|VERIFY_DEPLOYMENT: false|' vars.yml ; \
     echo; echo "####### Get the right inventory file"; echo; \
     cp --verbose samples/inventory_local.ini . ; \
+    echo; echo "####### For now defaulting to a installable Java version"; echo; \
+    sed -i 's/java-1.8.0-openjdk-1.8.0.151/java-1.8.0-openjdk/' roles/sas-requirements-java/defaults/main.yml; \
     echo; echo "####### Disable starting httpd"; echo; \
     if [ "$PLATFORM" = "redhat" ] ; then \
         sed -i "/ notify/,+9d" roles/httpd-x64_redhat_linux_6-yum/tasks/configure-and-start.yml; \

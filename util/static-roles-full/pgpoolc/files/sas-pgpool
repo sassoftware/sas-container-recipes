@@ -27,6 +27,14 @@ function is_password_empty() {
 [[ -z ${PG_VOLUME+x} ]]        && export PG_VOLUME="${SASCONFIG}/data/sasdatasvrc/${SASSERVICENAME}"
 [[ -z ${SAS_CURRENT_HOST+x} ]] && export SAS_CURRENT_HOST=$(hostname -f)
 
+# The location of postgres files changed in 19w47
+# Default to the pre-19w47 location
+export POSTGRESHOME=${SASHOME}
+if [ ! -f ${SASHOME}/bin/pg_ctl ]; then
+	# Use the 19w47+ location
+	export POSTGRESHOME=${SASROOT}/${SASDEPLOYID}/home/pgpool-II40
+fi
+
 # This is being defined in support of Vault tokens. Used in docker-functions
 # docker-functions just needs to find the value. To preserve functionality before
 # this change, we will capture whatever the value was prior and then reset it post.
@@ -121,7 +129,7 @@ PGPOOLPCP_CONF_SECTIONS=""
 [[ -z ${SAS_DATASERVER_POOL_COMMON_RECOVERY_RECOVERY_USER+x} ]] && export SAS_DATASERVER_POOL_COMMON_RECOVERY_RECOVERY_USER="${SAS_DEFAULT_PGUSER}"
 [[ -z ${SAS_DATASERVER_POOL_COMMON_RECOVERY_RECOVERY_PASSWORD+x} ]] && export SAS_DATASERVER_POOL_COMMON_RECOVERY_RECOVERY_USER="${SAS_DEFAULT_PGPWD}"
 [[ -z ${SAS_DATASERVER_POOL_COMMON_WATCHDOGENABLE_USE_WATCHDOG+x} ]] && export SAS_DATASERVER_POOL_COMMON_WATCHDOGENABLE_USE_WATCHDOG=off
-[[ -z ${SAS_DATASERVER_PCP_COMMON_PCP_01+x} ]] && export SAS_DATASERVER_PCP_COMMON_PCP_01="${SAS_PCPUSER}:$(${SASHOME}/bin/pg_md5 ${SAS_PCPPWD})"
+[[ -z ${SAS_DATASERVER_PCP_COMMON_PCP_01+x} ]] && export SAS_DATASERVER_PCP_COMMON_PCP_01="${SAS_PCPUSER}:$(${POSTGRESHOME}/bin/pg_md5 ${SAS_PCPPWD})"
 [[ -z ${SAS_DATASERVER_POOL_COMMON_FILELOCATIONS_LOGDIR+x} ]] && export SAS_DATASERVER_POOL_COMMON_FILELOCATIONS_LOGDIR="${SASLOGROOT}/sasdatasvrc/${SASSERVICENAME}"
 
 if [[ "${SECURE_CONSUL}" == "true" ]]; then
@@ -561,10 +569,10 @@ export PCPPASSFILE=${pgpool_pcppass_conf_file}
 # The pool_password file created is used for authentication
 echo_line "[pgpool] Create the pool_password file"
 if [ ! -f ${SASPGPOOLCONFIGDIR}/pool_passwd ]; then
-    ${SASHOME}/bin/pg_md5 -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -m -u ${SAS_DEFAULT_PGUSER} ${SAS_DEFAULT_PGPWD}
-    ${SASHOME}/bin/pg_md5 -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -m -u ${SAS_DATAMINING_USER} ${SAS_DATAMINING_PASSWORD}
+    ${POSTGRESHOME}/bin/pg_md5 -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -m -u ${SAS_DEFAULT_PGUSER} ${SAS_DEFAULT_PGPWD}
+    ${POSTGRESHOME}/bin/pg_md5 -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -m -u ${SAS_DATAMINING_USER} ${SAS_DATAMINING_PASSWORD}
     if [[ ${SASPOSTGRESREPLICATION} == 'true' ]]; then
-        ${SASHOME}/bin/pg_md5 -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -m -u ${SASPOSTGRESREPLUSER} ${SASPOSTGRESREPLPWD}
+        ${POSTGRESHOME}/bin/pg_md5 -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -m -u ${SASPOSTGRESREPLUSER} ${SASPOSTGRESREPLPWD}
     fi
     chown ${SASPGPOOLOWNER}:${SASPGPOOLGROUP} ${SASPGPOOLCONFIGDIR}/pool_passwd
 fi
@@ -574,7 +582,7 @@ fi
 ###############################################################################
 
 echo_line "[pgpool] Run pgpool as ${SASPGPOOLOWNER}"
-${SASHOME}/bin/pgpool -n -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -F ${SASPGPOOLCONFIGDIR}/pcp.conf -a ${SASPGPOOLCONFIGDIR}/pool_hba.conf &
+${POSTGRESHOME}/bin/pgpool -n -f ${SASPGPOOLCONFIGDIR}/pgpool.conf -F ${SASPGPOOLCONFIGDIR}/pcp.conf -a ${SASPGPOOLCONFIGDIR}/pool_hba.conf &
 
 echo_line "[pgpool] Run pgpool node watcher as ${SASPGPOOLOWNER}"
 ${SASHOME}/libexec/sasdatasvrc/script/node_watcher.sh &

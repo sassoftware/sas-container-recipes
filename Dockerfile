@@ -28,6 +28,7 @@ COPY --chown=sas:docker samples ./samples
 COPY --chown=sas:docker tests ./tests
 COPY --chown=sas:docker util ./util
 COPY --chown=sas:docker *.yml *.go ./
+COPY --chown=sas:docker util/sas-orchestration ./util/programming-only-single/sas-orchestration
 
 RUN chown -R ${USER_GID}:${DOCKER_GID} /sas-container-recipes
 

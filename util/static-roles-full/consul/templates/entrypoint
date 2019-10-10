@@ -336,6 +336,11 @@ update_vault_token_list(){
 
 docker_define_consul_environment
 
+# Now that we have written the file to disk, unset the variables
+unset CONSUL_HTTP_TOKEN
+unset CONSUL_MANAGEMENT_TOKEN
+unset CONSUL_GOSSIP_TOKEN
+
 # Create default Consul setup for docker
 cat > ${SASCONFIG}/etc/consul.d/default/dockerfault.yml << DEFAULT
 config:

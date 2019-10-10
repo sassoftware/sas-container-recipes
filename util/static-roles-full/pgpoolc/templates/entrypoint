@@ -31,6 +31,15 @@ fi
 [[ -z ${SASCONFIG+x} ]]         && export SASCONFIG=${SASROOT}/${SASDEPLOYID}/config
 [[ -z ${SASTOKENDIR+x} ]]       && export SASTOKENDIR=${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default
 [[ -z ${SAS_CURRENT_HOST+x} ]]  && export SAS_CURRENT_HOST=$(hostname -f)
+[[ -z ${LD_LIBRARY_PATH+x} ]] && export LD_LIBRARY_PATH=${POSTGRESHOME}/lib64
+
+# The location of postgres files changed in 19w47
+# Default to the pre-19w47 location
+export POSTGRESHOME=${SASHOME}
+if [ ! -f ${SASHOME}/bin/pg_ctl ]; then
+    # Use the 19w47+ location
+    export POSTGRESHOME=${SASROOT}/${SASDEPLOYID}/home/pgpool-II40
+fi
 
 # The following are used in sas-start-functions
 servicename=${SASSERVICENAME}
