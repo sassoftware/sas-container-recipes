@@ -38,7 +38,7 @@
 
 ### Considerations for Using Recipes
   
-  - Persistence is not currently functional, ephemeral storage is used. Scaling down to 0 and back up from 0 will result in the loss of data.
+  - Persistence is not currently functional, ephemeral storage is used. Scaling down to 0 and back up from 0 in Kubernetes will result in the loss of data.
   - Testing for recipes has focused on SAS Visual Analytics (on SAS Viya), SAS Visual Data Mining and Machine Learning, SAS Visual Statistics (on SAS Viya), and a subset of the SAS/ACCESS engines supported by SAS Viya. The process described in this guide should work with other SAS offerings and all supported SAS/ACCESS engines.
   - Your Software Order Email (SOE) lists the products and supporting components to which you are entitled. Other software to which you are entitled, such as SAS Studio, might not be listed in the SOE. If you ordered SAS/ACCESS Interface to PC Files or SAS/ACCESS Interface to PostgreSQL, each is automatically included when you build and run SAS Viya.
   - A programming-only deployment is supported. A full deployment is experimental and includes limited support from SAS.
