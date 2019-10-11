@@ -45,6 +45,7 @@ servicecontext=${SASSERVICECONTEXT}
 # Set of functions for supporting docker containers
 source ${SASHOME}/lib/envesntl/docker-functions
 
+
 ###############################################################################
 # Save environment variables
 ###############################################################################
@@ -88,10 +89,19 @@ set +e
 _k8senvcount=$(env | grep -c KUBERNETES)
 set -e
 
+[[ -z ${LD_LIBRARY_PATH+x} ]] && export LD_LIBRARY_PATH=${POSTGRESHOME}/lib64
 [[ -z ${DATABASE_CLUSTER_NAME+x} ]] && export DATABASE_CLUSTER_NAME="postgres"
 [[ -z ${SASPOSTGRESDBSIZE+x} ]]     && export SASPOSTGRESDBSIZE="large"
 [[ -z ${PG_VOLUME+x} ]]             && export PG_VOLUME="/database/data"
 #[[ -z ${PG_VOLUME+x} ]]             && export PG_VOLUME="${SASCONFIG}/data/${SASSERVICECONTEXT}/${DATABASE_CLUSTER_NAME}"
+
+# The location of postgres files changed in 19w47
+# Default to the pre-19w47 location
+export POSTGRESHOME=${SASHOME}
+if [ ! -f ${SASHOME}/bin/pg_ctl ]; then
+    # Use the 19w47+ location
+    export POSTGRESHOME=${SASROOT}/${SASDEPLOYID}/home/postgresql11
+fi
 
 if [ ${_k8senvcount} -ne 0 ]; then
     _sasuuid=${PG_VOLUME}/${SAS_CURRENT_HOST}_sas_${SASDEPLOYID}_${SASSERVICECONTEXT}_uuid

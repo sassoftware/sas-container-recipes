@@ -14,6 +14,9 @@
   include_role:
     name: sas-java
 
+- name: Ensures directories exist before copying files to those locations
+  file: path={{ SASHOME }}/share/pgpool-II state=directory
+
 - name: Copy files to remote host
   copy:
     src: "{{ item.name }}"

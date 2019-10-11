@@ -1,5 +1,9 @@
 # Site Specific Defaults
 #
+# Copy this file to the sas-containers-recipes project directory and
+# rename it to "sitedefault.yml" then add any values that are desired.
+# See https://github.com/sassoftware/sas-container-recipes/wiki/Pre-build-Tasks#bulk-loading-of-configuration-values
+#
 # For instructions on how to use this file, see:
 # http://documentation.sas.com/?softwareId=calcdc&softwareVersion=production.a&softwareContextId=sitedefault
 config:

@@ -29,12 +29,12 @@ export PCPPASSFILE=${SASPGPOOLCONFIGDIR}/.pcppass
 
 # don't exit on error here. hacky way to deal with pgpool not listening yet
 set +e
-nodes=$(pcp_node_count ${pcp_args})
+nodes=$(${SASHOME}/pgpool-II40/bin/pcp_node_count ${pcp_args})
 while [[ $nodes == "" || $nodes == "0" ]]; do
     echo_line "$(date) [pgpool/watcher] no backends online yet."
     sleep 5
     echo_line "$(date) [pgpool/watcher] Pausing and then rechecking."
-    nodes=$(pcp_node_count ${pcp_args})
+    nodes=$(${SASHOME}/pgpool-II40/bin/pcp_node_count ${pcp_args})
 done
 set -e
 
@@ -43,18 +43,18 @@ function node_count_from_consul {
 }
 
 # PID of the current process
-echo_line "$(date) [pgpool/watcher] $(pcp_node_count ${pcp_args}) backends are now online."
+echo_line "$(date) [pgpool/watcher] $(${SASHOME}/pgpool-II40/bin/pcp_node_count ${pcp_args}) backends are now online."
 while :; do
     consul_node_cnt=$(node_count_from_consul)
 
-    nodes=$(pcp_node_count ${pcp_args})
+    nodes=$(${SASHOME}/pgpool-II40/bin/pcp_node_count ${pcp_args})
     if [[ ${consul_node_cnt} -gt ${nodes} ]];then
         update_config_from_consul \
             ${pgpool_ctmpl_file} \
             ${pgpool_conf_file} \
             ${SASPGPOOLOWNER} ${SASPGPOOLGROUP} 0755
         ${SASHOME}/bin/pgpool -n -f ${SASPGPOOLCONFIGDIR}/pgpool.conf reload
-        nodes=$(pcp_node_count ${pcp_args})
+        nodes=$(${SASHOME}/pgpool-II40/bin/pcp_node_count ${pcp_args})
     fi
     echo_line "$(date) [pgpool/watcher] Looping through to see what nodes we may need to attach"
 

@@ -106,7 +106,13 @@ while true;do
 
                 if [ "${registered_primary_uid}" == "${_current_uid}" ]; then
                     echo_line "$(date) [postgresql/watcher] I am being promoted from standby to primary"
-                    ${SASHOME}/bin/pg_ctl -o "${opts}" -D ${PG_DATADIR} promote
+
+					if [ -f ${SASHOME}/bin/pg_ctl ]; then
+                    	${SASHOME}/bin/pg_ctl -o "${opts}" -D ${PG_DATADIR} promote
+					else
+						# Different location of pg_ctl for 19w47+
+                    	${POSTGRESHOME}/bin/pg_ctl -o "${opts}" -D ${PG_DATADIR} promote
+					fi
 
                     echo_line "$(date) INFO: Recording primary host in Consul at config/${SASSERVICENAME}/sas.dataserver.pool/backend/${_current_uid}/primary"
                     ${BOOTSTRAP_CONFIG} kv write --force config/${SASSERVICENAME}/sas.dataserver.pool/backend/${_current_uid}/primary $(hostname -f)

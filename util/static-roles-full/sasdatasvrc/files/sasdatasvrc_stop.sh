@@ -17,7 +17,7 @@ set -e
 [[ -z ${PG_VOLUME+x} ]]        && export PG_VOLUME="${SASCONFIG}/data/sasdatasvrc/${SASSERVICENAME}"
 
 # In the case of Docker, we need to load up what the instance value is.
-# The instance was saved by the docker_entrypoint.sh so it can be used 
+# The instance was saved by the docker_entrypoint.sh so it can be used
 # by multiple scripts
 _sasuuidname=sas_${SASDEPLOYID}_${SASSERVICENAME}_uuid
 _k8ssasuuid=${PG_VOLUME}/${SAS_CURRENT_HOST}_${_sasuuidname}
@@ -116,7 +116,12 @@ export SASINSTANCE=${_tmpinstance}
 # Stop postgres via pg_ctl => This will create the PIDFILE
 echo_line "[postgresql] Stopping postgres via pg_ctl..."
 set -x
-${SASHOME}/bin/pg_ctl -o '-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf' -D ${PG_DATADIR} -w -t 30 stop
+if [ -f ${SASHOME}/bin/pg_ctl ]; then
+	${SASHOME}/bin/pg_ctl -o '-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf' -D ${PG_DATADIR} -w -t 30 stop
+else
+	# Different location of pg_ctl for 19w47+
+	${POSTGRESHOME}/bin/pg_ctl -o '-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf' -D ${PG_DATADIR} -w -t 30 stop
+fi
 set +x
 
 ###############################################################################

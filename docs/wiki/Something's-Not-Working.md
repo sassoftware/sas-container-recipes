@@ -1,3 +1,21 @@
+### Inotify Settings
+The error `InotifyInit: too many open files` in standard output
+indicates that the maximum number of file system event monitors has been
+reached. Inotify settings on the Kubernetes nodes need to be adjusted to
+accommodate the SAS Watch Service. These are system wide settings so all
+watches in all containers will be limited by these settings.
+
+##### Change the maximum amount of user instances
+```
+echo fs.inotify.max_user_instances=640 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+```
+
+#### Change the maximum amount of user watches
+```
+echo fs.inotify.max_user_watches=1048576 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+```
+
+
 ### Docker fails to push the newly built images to my registry, what are some common causes?
 
 You must first authenticate with your Docker registry using `docker login <my-registry>.mydomain.com`. This will prompt you for a username and password (with LDAP, if configured) and a file at ~/.docker/config.json is created to store that credential.

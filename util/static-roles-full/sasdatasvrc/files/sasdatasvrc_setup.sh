@@ -333,18 +333,18 @@ function create_user {
     # -r = role can create new roles
     # -s = role will be superuser
 
-    if ${SASHOME}/bin/psql postgres -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -tAc "SELECT 1 FROM pg_roles WHERE rolname='${dbuser}'" | grep -q 1; then
-      echo_line "User ${dbuser} already exists"
+	if ${POSTGRESHOME}/bin/psql postgres -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -tAc "SELECT 1 FROM pg_roles WHERE rolname='${dbuser}'" | grep -q 1; then
+        echo_line "User ${dbuser} already exists"
     else
-      echo_line "Creating user ${dbuser}..."
-      ${SASHOME}/bin/createuser -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -Eldrs ${dbuser}
+        echo_line "Creating user ${dbuser}..."
+        ${POSTGRESHOME}/bin/createuser -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -Eldrs ${dbuser}
     fi
 
     echo_line "Updating password for user ${dbuser}..."
-    ${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c "ALTER ROLE \"${dbuser}\" WITH PASSWORD '${dbpwd}'"
+	${POSTGRESHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c "ALTER ROLE \"${dbuser}\" WITH PASSWORD '${dbpwd}'"
 
     if [[ "${dbuser}" == "${SAS_DATAMINING_USER}" ]]; then
-        ${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c "ALTER ROLE \"${dbuser}\" WITH NOINHERIT"
+		${POSTGRESHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c "ALTER ROLE \"${dbuser}\" WITH NOINHERIT"
     fi
 }
 
@@ -366,20 +366,20 @@ function create_database {
     # -T, --template=TEMPLATE  template database to copy
 
     # To see if the db exists:
-    if ${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -lqt | cut -d \| -f 1 | grep -qw ${SAS_DBNAME}; then
+    if ${POSTGRESHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -lqt | cut -d \| -f 1 | grep -qw ${SAS_DBNAME}; then
       echo_line "Database ${SAS_DBNAME} already exists"
     else
-      ${SASHOME}/bin/createdb -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -O ${SASPOSTGRESOWNER} -E UTF8 -T template0 --locale=en_US.utf8 ${SAS_DBNAME}
+      ${POSTGRESHOME}/bin/createdb -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} -O ${SASPOSTGRESOWNER} -E UTF8 -T template0 --locale=en_US.utf8 ${SAS_DBNAME}
     fi
 
     echo_line "grant all privileges on ${SAS_DBNAME} to ${SAS_DEFAULT_PGUSER}"
     # -c = run only single command (SQL or internal) and exit
-    ${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c "GRANT ALL PRIVILEGES ON DATABASE \"${SAS_DBNAME}\" TO \"${SAS_DEFAULT_PGUSER}\""
+	${POSTGRESHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c "GRANT ALL PRIVILEGES ON DATABASE \"${SAS_DBNAME}\" TO \"${SAS_DEFAULT_PGUSER}\""
 
     if [ "${SAS_INSTANCE_PGUSER}" != "${SAS_DEFAULT_PGUSER}" ]; then
         echo_line "grant all privileges on ${SAS_DBNAME} to ${SAS_INSTANCE_PGUSER}"
         # -c = run only single command (SQL or internal) and exit
-        ${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c "GRANT ALL PRIVILEGES ON DATABASE \"${SAS_DBNAME}\" TO \"${SAS_INSTANCE_PGUSER}\""
+		${POSTGRESHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres -c "GRANT ALL PRIVILEGES ON DATABASE \"${SAS_DBNAME}\" TO \"${SAS_INSTANCE_PGUSER}\""
     fi
 }
 
@@ -644,7 +644,7 @@ fi
 
 # Start postgres via pg_ctl
 echo_line "[postgresql] Starting postgres via pg_ctl..."
-${SASHOME}/bin/pg_ctl -o "-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf" -D ${PG_DATADIR} -w -t 30 start
+${POSTGRESHOME}/bin/pg_ctl -o "-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf" -D ${PG_DATADIR} -w -t 30 start
 
 if [ $? = 0 ]; then
   echo_line "[postgresql] PostgreSQL started successfully"
@@ -668,7 +668,7 @@ END
 REPL
 
     # Run the script
-    ${SASHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres < ${SASPOSTGRESCONFIGDIR}/setup-replication.sql
+	${POSTGRESHOME}/bin/psql -h ${SASPOSTGRESRUNDIR} -p ${SASPOSTGRESPORT} -U ${SASPOSTGRESOWNER} postgres < ${SASPOSTGRESCONFIGDIR}/setup-replication.sql
   fi
 else
   echo_line "[postgresql] The PostgreSQL server start seems to have some problems, please see logs for details."
@@ -677,5 +677,4 @@ fi
 
 # Stop postgres via pg_ctl
 echo_line "[postgresql] Stopping postgres via pg_ctl..."
-${SASHOME}/bin/pg_ctl -o "-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf" -D ${PG_DATADIR} -w -t 30 stop
-
+${POSTGRESHOME}/bin/pg_ctl -o "-c config_file=${SASPOSTGRESCONFIGDIR}/postgresql.conf -c hba_file=${SASPOSTGRESCONFIGDIR}/pg_hba.conf" -D ${PG_DATADIR} -w -t 30 stop
