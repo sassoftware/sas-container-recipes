@@ -200,9 +200,10 @@ rabbitmq:
   - "SAS_DEBUG=0"
   - "APP_NAME=rabbitmq"
   - "SERVICE_NAME=rabbitmq"
+  - "RABBITMQ_LOGS=-"
   resources:
     limits:
-    - "memory=1024Mi"
+    - "memory=10Gi"
     requests:
     - "memory=1024Mi"
   volumes:
@@ -231,7 +232,7 @@ sas-casserver-primary:
   - "CASCFG_MODE=smp"
   resources:
     limits:
-    - "memory=12000Mi"
+    - "memory=30Gi"
     requests:
     - "memory=1024Mi"
   secrets:
