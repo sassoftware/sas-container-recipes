@@ -2,7 +2,7 @@
 The error `InotifyInit: too many open files` in standard output
 indicates that the maximum number of file system event monitors has been
 reached. Inotify settings on the Kubernetes nodes need to be adjusted to
-accommodate the SAS Watch Service. These are system wide settings so all
+accommodate the `sas-viya-watch-log-default` service. These are system wide settings so all
 watches in all containers will be limited by these settings.
 
 ##### Change the maximum amount of user instances
