@@ -29,13 +29,15 @@ spec:
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - {{ settings.project_name }}-cas
-            topologyKey: kubernetes.io/hostname
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - {{ settings.project_name }}-cas
+              topologyKey: kubernetes.io/hostname
 {% if SECURE_CONSUL %}
       securityContext:
         fsGroup: 1001
