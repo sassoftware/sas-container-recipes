@@ -842,7 +842,9 @@ ${SASHOME}/bin/replace_httpd_default_cert.sh
 echo "[INFO]  : Merging user-supplied certificates into trust store."
 ${SASHOME}/SASSecurityCertificateFramework/bin/sas-merge-certificates.sh ${SASHOME} ${SASCONFIG}
 
-cat > $APACHE_CONF_D/proxy.conf << HTTPD
+if [[ $sasstudio5 == "false" ]]; then
+    # This is the pre Viya 3.5/19w47 version of the proxy config.
+    cat > $APACHE_CONF_D/proxy.conf << HTTPD
 RedirectMatch "^/$" /SASStudio
 
 <location /cas-shared-default-http>
@@ -861,6 +863,30 @@ RedirectMatch "^/$" /SASStudio
   RequestHeader set Origin "http://localhost:7080"
 </Location>
 HTTPD
+
+else
+    # This is the Viya 3.5/19w47 version of the proxy config.
+    cat > $APACHE_CONF_D/proxy.conf << HTTPD
+ServerName localhost
+RedirectMatch "^/$" /SASStudio
+
+# Proxy configuration for SAS services
+ProxyPreserveHost On
+
+<location /cas-shared-default-http>
+  ProxyPass         http://localhost:8777/cas-shared-default-http
+  ProxyPassReverse  http://localhost:8777/cas-shared-default-http
+  RequestHeader set Origin "http://localhost:8777"
+</Location>
+
+RedirectMatch "^/SASStudio/mobile.*$" /SASStudio/not_supported
+
+Redirect         /SASStudio  /SASStudio/
+ProxyPass        /SASStudio/ http://localhost:7080/SASStudio/
+ProxyPassReverse /SASStudio/ http://localhost:7080/SASStudio/
+HTTPD
+ 
+fi # Creating the correct proxy config
 
 # removed shared memory segment files between restarts
 rm --verbose --force /run/httpd/authdigest_shm.*
