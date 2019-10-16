@@ -39,7 +39,11 @@ fi
 
 
 cat > $APACHE_CONF_D/proxy.conf << HTTPD
+ServerName localhost
 RedirectMatch "^/$" /SASStudio
+
+# Proxy configuration for SAS services
+ProxyPreserveHost On
 
 <location /cas-shared-default-http>
   ProxyPass         http://{{ PROJECT_NAME }}-cas:8777/cas-shared-default-http
@@ -47,15 +51,11 @@ RedirectMatch "^/$" /SASStudio
   RequestHeader set Origin "http://{{ PROJECT_NAME }}-cas:8777"
 </Location>
 
-<Location /SASStudio/mobile>
-  RedirectMatch "^/SASStudio/mobile.*$" /SASStudio/not_supported
-</Location>
+RedirectMatch "^/SASStudio/mobile.*$" /SASStudio/not_supported
 
-<Location /SASStudio>
-  ProxyPass        http://{{ PROJECT_NAME }}-programming:7080/SASStudio
-  ProxyPassReverse http://{{ PROJECT_NAME }}-programming:7080/SASStudio
-  RequestHeader set Origin "http://{{ PROJECT_NAME }}-programming:7080"
-</Location>
+Redirect         /SASStudio  /SASStudio/
+ProxyPass        /SASStudio/ http://{{ PROJECT_NAME }}-programming:7080/SASStudio/
+ProxyPassReverse /SASStudio/ http://{{ PROJECT_NAME }}-programming:7080/SASStudio/
 HTTPD
 
 #

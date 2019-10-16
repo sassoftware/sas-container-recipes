@@ -843,7 +843,11 @@ echo "[INFO]  : Merging user-supplied certificates into trust store."
 ${SASHOME}/SASSecurityCertificateFramework/bin/sas-merge-certificates.sh ${SASHOME} ${SASCONFIG}
 
 cat > $APACHE_CONF_D/proxy.conf << HTTPD
+ServerName localhost
 RedirectMatch "^/$" /SASStudio
+
+# Proxy configuration for SAS services
+ProxyPreserveHost On
 
 <location /cas-shared-default-http>
   ProxyPass         http://localhost:8777/cas-shared-default-http
@@ -851,15 +855,11 @@ RedirectMatch "^/$" /SASStudio
   RequestHeader set Origin "http://localhost:8777"
 </Location>
 
-<Location /SASStudio/mobile>
-  RedirectMatch "^/SASStudio/mobile.*$" /SASStudio/not_supported
-</Location>
+RedirectMatch "^/SASStudio/mobile.*$" /SASStudio/not_supported
 
-<Location /SASStudio>
-  ProxyPass        http://localhost:7080/SASStudio
-  ProxyPassReverse http://localhost:7080/SASStudio
-  RequestHeader set Origin "http://localhost:7080"
-</Location>
+Redirect         /SASStudio  /SASStudio/
+ProxyPass        /SASStudio/ http://localhost:7080/SASStudio/
+ProxyPassReverse /SASStudio/ http://localhost:7080/SASStudio/
 HTTPD
 
 # removed shared memory segment files between restarts
