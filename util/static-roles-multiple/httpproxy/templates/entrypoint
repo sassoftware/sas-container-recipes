@@ -53,6 +53,7 @@ ProxyPreserveHost On
 </Location>
 
 RedirectMatch "^/SASStudio/mobile.*$" /SASStudio/not_supported
+<<<<<<< HEAD
 
 Redirect         /SASStudio  /SASStudio/
 ProxyPass        /SASStudio/ http://{{ PROJECT_NAME }}-programming:7080/SASStudio/
@@ -79,6 +80,12 @@ RedirectMatch "^/$" /SASStudio
   ProxyPassReverse http://localhost:7080/SASStudio
   RequestHeader set Origin "http://localhost:7080"
 </Location>
+=======
+
+Redirect         /SASStudio  /SASStudio/
+ProxyPass        /SASStudio/ http://{{ PROJECT_NAME }}-programming:7080/SASStudio/
+ProxyPassReverse /SASStudio/ http://{{ PROJECT_NAME }}-programming:7080/SASStudio/
+>>>>>>> a1d6ec6a451eac11266f0d2aef822885a606ad1f
 HTTPD
 
 fi
