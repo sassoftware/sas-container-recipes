@@ -37,51 +37,26 @@ if [ -z $APACHE_CONF_D ]; then
   fi
 fi
 
-if [[ $SAS_VERSION == "3.5" ]]; then
-  # This is the Viya 3.5/19w47 version of the proxy config.
-  cat > $APACHE_CONF_D/proxy.conf << HTTPD
+cat > $APACHE_CONF_D/proxy.conf << HTTPD
 ServerName localhost
 RedirectMatch "^/$" /SASStudio
 
 # Proxy configuration for SAS services
 ProxyPreserveHost On
 
-<location /cas-shared-default-http>
-  ProxyPass         http://{{ PROJECT_NAME }}-cas:8777/cas-shared-default-http
-  ProxyPassReverse  http://{{ PROJECT_NAME }}-cas:8777/cas-shared-default-http
-  RequestHeader set Origin "http://{{ PROJECT_NAME }}-cas:8777"
-</Location>
+Redirect         /cas-shared-default-http  /cas-shared-default-http/
+ProxyPass        /cas-shared-default-http/ http://{{ PROJECT_NAME }}-cas:8777/cas-shared-default-http/
+ProxyPassReverse /cas-shared-default-http/ http://{{ PROJECT_NAME }}-cas:8777/cas-shared-default-http/
 
-RedirectMatch "^/SASStudio/mobile.*$" /SASStudio/not_supported
+<Location /SASStudio/mobile>
+  RedirectMatch "^/SASStudio/mobile.*$" /SASStudio/not_supported
+</Location>
 
 Redirect         /SASStudio  /SASStudio/
 ProxyPass        /SASStudio/ http://{{ PROJECT_NAME }}-programming:7080/SASStudio/
 ProxyPassReverse /SASStudio/ http://{{ PROJECT_NAME }}-programming:7080/SASStudio/
 HTTPD
 
-else
-    # This is the pre Viya 3.5/19w47 version of the proxy config.
-    cat > $APACHE_CONF_D/proxy.conf << HTTPD
-RedirectMatch "^/$" /SASStudio
-
-<location /cas-shared-default-http>
-  ProxyPass         http://{{ PROJECT_NAME }}-cas:8777/cas-shared-default-http
-  ProxyPassReverse  http://{{ PROJECT_NAME }}-cas:8777/cas-shared-default-http
-  RequestHeader set Origin "http://{{ PROJECT_NAME }}-cas:8777"
-</Location>
-
-<Location /SASStudio/mobile>
-  RedirectMatch "^/SASStudio/mobile.*$" /SASStudio/not_supported
-</Location>
-
-<Location /SASStudio>
-  ProxyPass        http://{{ PROJECT_NAME }}-programming:7080/SASStudio
-  ProxyPassReverse http://{{ PROJECT_NAME }}-programming:7080/SASStudio
-  RequestHeader set Origin "http://{{ PROJECT_NAME }}-programming:7080"
-</Location>
-HTTPD
-
-fi
 #
 # Write out a help page to be displayed when browsing port 80
 #
