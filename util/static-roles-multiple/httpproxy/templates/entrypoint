@@ -37,25 +37,24 @@ if [ -z $APACHE_CONF_D ]; then
   fi
 fi
 
-
 cat > $APACHE_CONF_D/proxy.conf << HTTPD
+ServerName localhost
 RedirectMatch "^/$" /SASStudio
 
-<location /cas-shared-default-http>
-  ProxyPass         http://{{ PROJECT_NAME }}-cas:8777/cas-shared-default-http
-  ProxyPassReverse  http://{{ PROJECT_NAME }}-cas:8777/cas-shared-default-http
-  RequestHeader set Origin "http://{{ PROJECT_NAME }}-cas:8777"
-</Location>
+# Proxy configuration for SAS services
+ProxyPreserveHost On
+
+Redirect         /cas-shared-default-http  /cas-shared-default-http/
+ProxyPass        /cas-shared-default-http/ http://{{ PROJECT_NAME }}-cas:8777/cas-shared-default-http/
+ProxyPassReverse /cas-shared-default-http/ http://{{ PROJECT_NAME }}-cas:8777/cas-shared-default-http/
 
 <Location /SASStudio/mobile>
   RedirectMatch "^/SASStudio/mobile.*$" /SASStudio/not_supported
 </Location>
 
-<Location /SASStudio>
-  ProxyPass        http://{{ PROJECT_NAME }}-programming:7080/SASStudio
-  ProxyPassReverse http://{{ PROJECT_NAME }}-programming:7080/SASStudio
-  RequestHeader set Origin "http://{{ PROJECT_NAME }}-programming:7080"
-</Location>
+Redirect         /SASStudio  /SASStudio/
+ProxyPass        /SASStudio/ http://{{ PROJECT_NAME }}-programming:7080/SASStudio/
+ProxyPassReverse /SASStudio/ http://{{ PROJECT_NAME }}-programming:7080/SASStudio/
 HTTPD
 
 #
