@@ -167,6 +167,7 @@ is_controller=true
 if [ "${SERVICE_NAME}" = "cascontroller" ]; then
     export CASCONTROLLERHOST="${SAS_CURRENT_HOST}"
     export CASWORKERHOSTS=""
+	sed -i "/environment/a\        CAS_CONSUL_TOKEN: '${SAS_CAS_CONFIG}/etc/SASSecurityCertificateFramework/tokens/cas'" ${SAS_CAS_CONFIG}/etc/cas/default/cas.yml
     sed -i "s|SASCONTROLLERHOST: .*|SASCONTROLLERHOST: ${CASCONTROLLERHOST}|" ${SAS_CAS_CONFIG}/etc/cas/${SASCASINSTANCE}/cas.yml
 
     if [ "${CASCFG_MODE}" = "mpp" ]; then
