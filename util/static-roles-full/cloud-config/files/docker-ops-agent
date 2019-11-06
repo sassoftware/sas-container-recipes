@@ -11,30 +11,37 @@
 function docker_run_ops_agent()
 {
     if [[ -f /etc/init.d/sas-${SASDEPLOYID}-ops-agent-default ]]; then
-        # Making sure the system can start ops-agent
-        if [[ -f ${SASHOME}/bin/sas-ops-agent ]]; then
-            opsagent_rc=1
-            while (( ${opsagent_rc} != 0 )); do
-                echo;echo "[INFO]  : Checking if environment is ready for sas-ops-agent";echo
-                set +e
-                ${SASHOME}/bin/sas-ops-agent query
-                opsagent_rc=$?
-                set -e
-                if (( ${opsagent_rc} == 0 )); then
-                    echo "[INFO]  : sas-ops-agent query returned success";
-                    break
-                else
-                    echo "[INFO]  : sas-ops-agent not ready. Pausing before checking again";
-                    sleep 2
-                fi
-            done
-            echo "[INFO]  : Environment is ready for sas-ops-agent"
+        if [[ ! -f ${SASHOME}/bin/ops-agent-cmd ]]; then
+            echo "[INFO]  : Appear to be running SAS Viya 3.4 or earlier. Query to see if ops-agent is ready."
+            # Making sure the system can start ops-agent
+            if [[ -f ${SASHOME}/bin/sas-ops-agent ]]; then
+                opsagent_rc=1
+                while (( ${opsagent_rc} != 0 )); do
+                    echo;echo "[INFO]  : Checking if environment is ready for sas-ops-agent";echo
+                    set +e
+                    ${SASHOME}/bin/sas-ops-agent query
+                    opsagent_rc=$?
+                    set -e
+                    if (( ${opsagent_rc} == 0 )); then
+                        echo "[INFO]  : sas-ops-agent query returned success";
+                        break
+                    else
+                        echo "[INFO]  : sas-ops-agent not ready. Pausing before checking again";
+                        sleep 2
+                    fi
+                done
+                echo "[INFO]  : Environment is ready for sas-ops-agent"
+            else
+                echo "[ERROR} : Looks like ops-agent is installed but files are missing. Exiting"
+                exit 80
+            fi
         else
-            echo "[ERROR} : Looks like ops-agent is installed but files are missing. Exiting"
-            exit 80
+            echo "[INFO]  : Appear to be running SAS Viya 3.5. Running ops-agent"
         fi
 
         /etc/init.d/sas-${SASDEPLOYID}-ops-agent-default start
+    else
+        echo "[INFO]  : ops-agent does not appear to be installed."
     fi
 }
 
