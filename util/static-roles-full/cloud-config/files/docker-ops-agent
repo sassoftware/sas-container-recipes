@@ -67,6 +67,23 @@ function docker_check_ops_agent()
     fi
 }
 
+set +e
+exit_loop=false
+source ${SASCONFIG}/consul.conf
+while ! $exit_loop; do
+    httpd_url=$(${SASHOME}/bin/sas-bootstrap-config \
+    --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token catalog serviceurl httpd)
+
+    if [[ "${httpd_url}" != "" ]]; then
+        echo "The httpd url is '${httpd_url}'"
+        exit_loop=true;
+    else
+        echo "Waiting on the httpd service..."
+        sleep 5
+    fi
+done
+set -e
+
 docker_run_ops_agent
 while :; do
     docker_check_ops_agent
