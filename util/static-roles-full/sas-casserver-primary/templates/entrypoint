@@ -202,7 +202,23 @@ elif [ "${SERVICE_NAME}" = "casworker" ]; then
     is_controller=false
     # Lookup in Consul for the kv pair....if it is not there, wait until it shows up. Look for the SASCONTROLLERHOST
     # The following would need to take into consideration, the tenant (shared).
-    ${SASHOME}/bin/sas-bootstrap-config catalog serviceurl cas-shared-${SASCASINSTANCE}
+    set +e
+    exit_loop=false
+    source ${SASCONFIG}/consul.conf
+    while ! $exit_loop; do
+        cas_url=$(${SASHOME}/bin/sas-bootstrap-config \
+            --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token \
+            catalog serviceurl --wait cas-shared-${SASCASINSTANCE})
+
+        if [[ "${cas_url}" != "" ]]; then
+            echo "The cas-shared-${SASCASINSTANCE} url is '${cas_url}'"
+            exit_loop=true;
+        else
+            echo "Waiting on the cas-shared-${SASCASINSTANCE} service..."
+            sleep 5
+        fi
+    done
+    set -e
     export CASWORKERHOSTS="${SAS_CURRENT_HOST}"
     export CASCFG_MODE=mpp
 else
@@ -603,9 +619,7 @@ fi
 # Run CAS
 ###############################################################################
 
-# Start and continually check the ops-agent process.
-${SASHOME}/lib/envesntl/docker-ops-agent &
-
+set +e
 exit_loop=false
 source ${SASCONFIG}/consul.conf
 while ! $exit_loop; do
@@ -613,11 +627,17 @@ while ! $exit_loop; do
     --token-file ${SASCONFIG}/etc/SASSecurityCertificateFramework/tokens/consul/default/client.token catalog serviceurl httpd)
 
      if [[ "${httpd_url}" != "" ]]; then
+        echo "The httpd url is '${httpd_url}'"
         exit_loop=true;
     else
+        echo "Waiting on the httpd service..."
         sleep 5
     fi
 done
+set -e
+
+# Start and continually check the ops-agent process.
+${SASHOME}/lib/envesntl/docker-ops-agent &
 
 echo "Starting Cloud Analytic Services..."
 mkdir -pv -m 2770 /var/log/sas/viya/cas/default_audit
