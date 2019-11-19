@@ -50,7 +50,7 @@ import (
 )
 
 // RecipeVersion format <year>.<month>.<numbered release>
-const RecipeVersion = "19.06.2"
+const RecipeVersion = "19.06.3"
 
 // SasViyaVersion is used to wget the corresponding sas-orchestration tool version
 // example: 34 = version 3.4
