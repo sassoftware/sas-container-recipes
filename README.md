@@ -65,7 +65,10 @@ data should be stored in a persistent location outside the container.
 This deployment includes SAS Studio, SAS Workspace Server, and a CAS server,
 which provides in-memory analytics for symmetric multi-processing (SMP).
 
-**A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-CE (Community Edition)](https://docs.docker.com/install/linux/docker-ce/centos/) is required.**
+### Prerequisites
+
+- **Strongly recommended:** Create a local mirror repository of the SAS software. [Here's why](https://github.com/sassoftware/sas-container-recipes/wiki/The-Basics#why-do-i-need-a-local-mirror-repository).
+- A [supported version](https://success.docker.com/article/maintenance-lifecycle) of [Docker-CE (Community Edition)](https://docs.docker.com/install/linux/docker-ce/centos/) is required.
 
 ### Build the Image
 
