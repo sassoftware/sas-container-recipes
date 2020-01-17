@@ -104,7 +104,7 @@ RUN set -e; \
         yum install --assumeyes  https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm ; \
         yum install --assumeyes python-setuptools python-devel openssl-devel; \
         yum install --assumeyes python-pip gcc wget tree automake python-six; \
-        pip install --upgrade pip setuptools; \
+    	pip install --upgrade pip==19.3 setuptools==44.0 ; \
         pip install ansible==${ANSIBLE_VERSION}; \
         yum install --assumeyes python iproute openssh-clients initscripts sudo; \
     elif [ "$PLATFORM" = "suse" ]; then \
