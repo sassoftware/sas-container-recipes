@@ -1,9 +1,12 @@
 ---
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ settings.project_name }}-{{ item.key | lower }}
 spec:
+  selector:
+    matchLabels:
+      app: {{ settings.project_name }}-{{ item.key | lower }}
   replicas: 1
   template:
     metadata:

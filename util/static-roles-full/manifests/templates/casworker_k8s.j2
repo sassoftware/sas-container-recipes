@@ -1,8 +1,11 @@
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ settings.project_name }}-cas-worker
 spec:
+  selector:
+    matchLabels:
+      app: {{ settings.project_name }}-cas-worker
 {% if custom_services is defined and custom_services %}
 {%   if vars.update({'mpp': False}) %} {% endif %}
 {%   for key,value in custom_services.items() %}

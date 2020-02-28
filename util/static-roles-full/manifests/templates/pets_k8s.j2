@@ -1,5 +1,5 @@
 ---
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
 {% if item.key == "sas-casserver-primary" %}
@@ -14,6 +14,9 @@ spec:
       app: {{ settings.project_name }}-cas
   serviceName: "{{ settings.project_name }}-cas"
 {% else %}
+  selector:
+    matchLabels:
+      app: {{ settings.project_name }}-{{ item.key }}
   serviceName: "{{ settings.project_name }}-{{ item.key }}"
 {% endif %}
   replicas: 1
