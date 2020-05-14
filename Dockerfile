@@ -1,12 +1,12 @@
 # Creates an environment for running the SAS Container Recipes tool.
 # This Dockerfile is built and run by the `build.sh` script.
-FROM golang:1.12.0
+FROM golang:1.14.0
 
 ARG USER_UID=1000
 ARG DOCKER_GID=997
 
 RUN apt-get update && \
-    apt-get install -y openjdk-8-jdk-headless ansible && \
+    apt-get install -y openjdk-11-jdk-headless ansible && \
     rm -rf /var/lib/apt/lists/*
 
 # We need to use dep or go mod to handle deps.
