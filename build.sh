@@ -275,6 +275,7 @@ docker build . \
     --build-arg DOCKER_GID=${DOCKER_GID} \
     --tag sas-container-recipes-builder:${SAS_DOCKER_TAG} \
     --file Dockerfile \
+    --ulimit memlock=-1
 
 
 echo
@@ -288,6 +289,7 @@ DOCKER_CONFIG_PATH=${HOME}/.docker/config.json
 if [[ -f ${DOCKER_CONFIG_PATH} ]]; then 
     docker run -d \
         --name ${SAS_BUILD_CONTAINER_NAME} \
+        --ulimit memlock=-1 \
         -u ${UID}:${DOCKER_GID} \
         -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
         -v ${PWD}/builds:/sas-container-recipes/builds \
@@ -297,6 +299,7 @@ if [[ -f ${DOCKER_CONFIG_PATH} ]]; then
 else 
     docker run -d \
         --name ${SAS_BUILD_CONTAINER_NAME} \
+        --ulimit memlock=-1 \
         -u ${UID}:${DOCKER_GID} \
         -v $(realpath ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}):/$(basename ${SAS_VIYA_DEPLOYMENT_DATA_ZIP}) \
         -v ${PWD}/builds:/sas-container-recipes/builds \
