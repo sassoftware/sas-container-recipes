@@ -816,6 +816,9 @@ func (container *Container) CreateDockerContext() error {
 	// Always include the sas-install role since its used by other roles
 	container.AddDirectoryToContext("util/static-roles-"+container.SoftwareOrder.DeploymentType+"/sas-install/", "roles/sas-install/", "sas-install")
 
+	// Close tar file
+	container.ContextWriter.Close()
+
 	return nil
 }
 
