@@ -1,6 +1,14 @@
+<div align="left">
+<h1>SAS<sup>®</sup> Viya<sup>®</sup> Container Recipes -- Archived Repository</h1>
+<p><strong>SAS has archived the SAS Viya 3.5 for containers repository in the sassoftware organization on GitHub.  No further changes or issues will be allowed in this repository. We recommend exploring the new cloud-ready version of SAS Viya for future deployments.</strong></p>
+
+---
+
+</div>
 <div align="center">
-<h1>SAS<sup>®</sup> Viya<sup>®</sup> Container Recipes</h1>
+
 <img src="docs/sas-container-icon.jpg" alt="SAS Containers Icon" height="200">
+
 <p>A framework to build SAS Viya Docker images and create deployments using Kubernetes.</p>
 
 <a href="https://www.sas.com/en_us/software/viya.html">
